@@ -2231,6 +2231,7 @@
         <div class="science-item"><b>A calculator reminder that fits the problem in front of you</b>The pre-answer calculator check used to be the same paragraph on every time-value-of-money question. It now reads the question itself and says what matters for that one: which key you are solving for, whether it is a monthly or annual problem, whether payments start at the beginning or end of the period (or there are none), and which numbers need the negative sign. Your personal slip reminder only appears when it applies to this problem, so a monthly-conversion tip no longer shows on an annual question.</div>
         <div class="science-item"><b>Waiting for an AI answer should look like waiting</b>When the tutor is writing an explanation, a memory trick, a glossary example or a podcast episode, the box used to just go a bit dim, which looks the same as "broken". Each one now shows a slim moving bar, and if the wait runs past ten seconds a line appears saying it is still working and can take up to a minute. Screen readers are told when something is loading and when the answer lands, and the tutor's typing dots now say "Tutor is typing". Along the way, a plain fact question about a dollar limit was being labelled a calculator slip; those misses are now labelled by what they were, and the calculator tip only mentions BEGIN/END when the question actually has payments.</div>
         <div class="science-item"><b>Plans for real study days, not 20-minute scraps</b>With the exam about two weeks out, the 20, 45 and 90 minute choices on Today's plan no longer matched how you actually study. The choices are now 2 hours, 2.5 hours and 3 hours, and a longer day gets a longer plan: a second adaptive round, extra drills on your next-weakest topics, and a reminder to take a break halfway. A shorter number saved from before is treated as 2.5 hours.</div>
+        <div class="science-item"><b>The plan learns how long you actually study</b>Until you pick 2, 2.5 or 3 hours, Today's plan now follows your last week of real study time instead of a fixed guess. The header shows how much of the plan is still left today, and if it is evening and the rest would run past bedtime, it suggests finishing tomorrow rather than cutting sleep.</div>
       </div>
     </div>
 
@@ -6367,7 +6368,20 @@ function computeNextStep(stats){
 // With the exam days away, short days no longer make sense: the plan is built for a real study block.
 const PLAN_MINUTE_CHOICES = [120, 150, 180];
 function planMinuteLabel(m){ return m === 120 ? '2 hrs' : m === 150 ? '2.5 hrs' : m === 180 ? '3 hrs' : (m % 60 === 0 ? (m/60) + ' hrs' : m + ' min'); }
-function planMinutes(){ const m = DATA && DATA.planMinutes; return (m >= 120 && m <= 240) ? Math.round(m) : 150; } // an older, shorter saved choice falls back to 2.5 hours
+function planMinutesChosen(){ const m = DATA && DATA.planMinutes; return (m >= 120 && m <= 240) ? Math.round(m) : 0; }
+// Until they pick a length, the plan follows how long they have really been studying: the average of their
+// recent study days, snapped to the nearest choice. With too little history it starts at 2.5 hours.
+function typicalStudyMinutes(){
+  try{
+    const byDay = {}; const cutoff = Date.now() - 8 * 86400000; const today = localDayKey();
+    (DATA.sessions || []).forEach(x => { const t = new Date(x.date).getTime(); if(!(t >= cutoff) || !x.minutes) return; const k = localDayKey(new Date(t)); if(k === today) return; byDay[k] = (byDay[k] || 0) + x.minutes; });
+    const days = Object.values(byDay); if(days.length < 3) return 0;
+    const avg = days.reduce((a, v) => a + v, 0) / days.length;
+    return PLAN_MINUTE_CHOICES.reduce((best, m) => Math.abs(m - avg) < Math.abs(best - avg) ? m : best, PLAN_MINUTE_CHOICES[0]);
+  }catch(e){ return 0; }
+}
+function planMinutes(){ return planMinutesChosen() || typicalStudyMinutes() || 150; }
+function planMinutesAuto(){ return !planMinutesChosen() && !!typicalStudyMinutes(); }
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
   if(days <= 1) return { key:'rest', label:'Light day' };
@@ -6529,6 +6543,11 @@ function renderTodayPlan(){
   try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; return; } // never let the plan break the Study tab
   const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
   const doneN = plan.steps.filter(x => x.done).length;
+  const leftMin = plan.steps.filter(x => !x.done).reduce((a, x) => a + x.minutes, 0);
+  const leftTxt = plan.steps.length && leftMin > 0 ? ` · about ${leftMin >= 90 ? (Math.round(leftMin / 6) / 10) + ' hrs' : leftMin + ' min'} left` : '';
+  const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
+    ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
+  const autoNote = planMinutesAuto() ? ' The length follows how long you have been studying lately; tap another to change it.' : '';
   const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
     : plan.phase.key === 'taper' ? 'Consolidate what you know. No big new pushes now.'
     : plan.phase.key === 'sharpen' ? 'Repair weak spots and rehearse the real exam conditions.'
@@ -6541,8 +6560,8 @@ function renderTodayPlan(){
       ${st.done ? '' : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${st.manual ? 'Open' : 'Start'}</button>`}
     </div>`).join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done` : ''}</div></div>
-    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}</p>
+  el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${rows || '<p class="hint">Nothing queued right now. Take an adaptive session to get started.</p>'}${blocks}`;
   el.style.display = 'block';
