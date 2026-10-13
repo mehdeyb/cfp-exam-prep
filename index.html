@@ -2160,6 +2160,7 @@
         <div class="science-item"><b>Drilling one topic at a time</b>Asked to keep making the app powerful enough to pass. The Syllabus checklist now shows, under each of the 70 official topics, how many matching questions you have seen and how you are doing on them, with a Drill button that starts 12 questions on that topic, missed ones first. The match between questions and topics is by keywords, so it is approximate. The coach now suggests drilling a topic where you are under 65% across at least six attempts, the tutor is told your three shakiest topics, and on the day before and the day of the exam the coach tells you to keep it light instead of starting another session.</div>
         <div class="science-item"><b>A plan for today, and a tutor that can run it</b>Asked to make sure the tutor can say what to do step by step and what the best use of time is. The Study tab now has a Today's plan card: an ordered list built from how many days you have left, what is due for review, which topics are weak, what you have missed, and what you have already done today, sized to the time you pick (20, 45 or 90 minutes). The order changes with the countdown: build coverage and review early, repair weak spots and rehearse the full exam in the last two weeks, consolidate in the last few days, and keep the last day light. The tutor can build the same plan, explain each step in plain language, and start a step when you say yes. The reasons given are the better-supported study methods: testing yourself, spacing reviews, mixing topics, going back over mistakes, and explaining concepts in your own words. The time estimates are rough, and the plan only knows what the app can see.</div>
         <div class="science-item"><b>Bigger, smoother buttons</b>The Start buttons on Today's plan, the 20/45/90 minute choices and the topic Drill buttons are now at least finger-sized (44 pixels) and respond when you hover or press them, matching the rest of the app.</div>
+        <div class="science-item"><b>Fixing blank AI answers</b>Some AI requests came back with nothing to show, which is what produced "no usable text" on the flashcard example button. The app now tells the AI not to spend its budget on hidden thinking, retries with more room if a reply still comes back empty, and says why when it fails.</div>
       </div>
     </div>
 
@@ -4108,6 +4109,7 @@ const ARTIFACT_MODEL = 'claude-sonnet-4-6'; // used only via the in-artifact pro
 // API says it does not know a model, the next one is tried and remembered.
 const DIRECT_MODELS = ['claude-sonnet-5-5', 'claude-sonnet-5'];
 let directModelIdx = 0;
+let directThinkingRejected = false;
 
 async function loadApiKey(){
   try{
@@ -9568,6 +9570,8 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";
     body.model = DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)];
+    // Newer models can spend the whole token budget on hidden thinking and return no text at all.
+    if(!directThinkingRejected) body.thinking = { type: 'disabled' };
   } else {
     body.model = ARTIFACT_MODEL;
   }
@@ -9610,6 +9614,10 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
   if(!response.ok){
     let detail = '';
     try{ const errJson = await response.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
+    if(aiMode === 'direct' && response.status === 400 && /thinking/i.test(detail) && !directThinkingRejected){
+      directThinkingRejected = true;
+      return anthropicMessagesRequestOnce({system, messages, maxTokens, tools});
+    }
     // An unknown or retired model ID shows up as a 404 (or a 400 that names the model).
     // Try the next ID instead of failing every AI feature in the app.
     if(aiMode === 'direct' && (response.status === 404 || (response.status === 400 && /model/i.test(detail))) && directModelIdx < DIRECT_MODELS.length - 1){
@@ -9647,7 +9655,13 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
     // at all, which is what let this occasionally surface as a permanent-
     // looking "couldn't come up with one" message from a single blank
     // completion rather than a transient one it would have recovered from.
-    throw new Error('AI response contained no usable text.');
+    // If the budget ran out before any text (hidden thinking), retry once with more room.
+    if(data && data.stop_reason === 'max_tokens' && (maxTokens || 1000) < 4000){
+      return anthropicMessagesRequestOnce({system, messages, maxTokens: Math.min(4000, (maxTokens || 1000) * 4), tools});
+    }
+    const emptyErr = new Error('AI response contained no usable text' + (data && data.stop_reason ? ' (' + data.stop_reason + ')' : '') + '.');
+    emptyErr.code = 'EMPTY';
+    throw emptyErr;
   }
   return reply;
 }
