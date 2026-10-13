@@ -1105,6 +1105,22 @@
   .syl-meta.good{color:var(--correct);}
   .syl-drill{flex:none;font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:600;padding:6px 10px;min-height:32px;border-radius:14px;border:1px solid var(--hair);background:var(--surface2);color:var(--gold);cursor:pointer;}
   .syl-drill:hover{border-color:var(--gold);}
+  .plan-today .pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .plan-today .pt-sub{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
+  .plan-today .pt-mins{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;}
+  .plan-today .pt-min{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 12px;min-height:34px;border-radius:16px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);cursor:pointer;}
+  .plan-today .pt-min.on{border-color:var(--gold);color:var(--gold);}
+  .pt-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--hair);}
+  .pt-step:first-of-type{border-top:none;}
+  .pt-num{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:1px;}
+  .pt-step.done .pt-num{background:var(--correct);border-color:var(--correct);color:var(--ink);}
+  .pt-body{flex:1;min-width:0;}
+  .pt-title{font-size:14px;font-weight:600;color:var(--paper);line-height:1.35;}
+  .pt-step.done .pt-title{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px;}
+  .pt-why{font-size:12px;color:var(--muted);line-height:1.5;margin-top:3px;}
+  .pt-time{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);margin-top:3px;}
+  .pt-go{flex:none;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 12px;min-height:34px;border-radius:16px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;}
+  .pt-block{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:12px;color:var(--muted);line-height:1.5;}
   .syllabus-item input{accent-color:var(--gold);width:14px;height:14px;flex:none;}
   .focus-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);background:var(--gold);border-radius:10px;padding:2px 8px;margin-left:8px;vertical-align:middle;}
   .focus-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:7px;}
@@ -1517,6 +1533,8 @@
     </div>
 
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
+
+    <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
 
     <div class="card" id="blueprintCard">
       <div class="card-head">
@@ -2134,6 +2152,7 @@
         <div class="science-item"><b>Fewer repeated questions</b>Reported that questions you have already seen kept showing up with a "repeat" tag. That tag means the app tried to reword the question and the attempt failed. Three changes: the app now tries the newest AI model first and falls back to the older one if the service does not recognise it, a fourth and final try accepts a reworded question that is slightly uneven in answer length rather than showing the identical one, and a failed reword is retried after an hour instead of three days. Tapping the tag now shows what went wrong. I could not see your phone's real error, so I cannot be sure which of these was the cause; if the tag keeps appearing, tap it and tell me what it says.</div>
         <div class="science-item"><b>Checking the app against the official exam handbook</b>Asked to make sure everything needed to pass is covered. The October 2026 CFP Board candidate handbook confirms the eight domains and their weights, the 170-question format, the approved calculators (the HP 10bII+ is on the list), and that exams through the October 2026 window test 2026 tax law, so those parts already matched. What was missing were 2026 figures the exam commonly uses. Added to Key Numbers, and to questions and flashcards, were the SIMPLE IRA limit, the defined contribution and defined benefit limits, the pay thresholds for highly compensated and key employees, the Roth and traditional IRA phase-out ranges, the Social Security taxable maximum, earnings test and credit amount, the Medicare Part A and Part B figures, the FSA limits and the QLAC limit. The retirement-plan figures come from the IRS notice and release, and the Social Security taxable maximum from ssa.gov. The Medicare and FSA figures come from summaries of the official announcements, and the credit amount and earnings test limits from one secondary source, so check those against ssa.gov and cms.gov. The results line on the Exam Day tab was also corrected.</div>
         <div class="science-item"><b>Drilling one topic at a time</b>Asked to keep making the app powerful enough to pass. The Syllabus checklist now shows, under each of the 70 official topics, how many matching questions you have seen and how you are doing on them, with a Drill button that starts 12 questions on that topic, missed ones first. The match between questions and topics is by keywords, so it is approximate. The coach now suggests drilling a topic where you are under 65% across at least six attempts, the tutor is told your three shakiest topics, and on the day before and the day of the exam the coach tells you to keep it light instead of starting another session.</div>
+        <div class="science-item"><b>A plan for today, and a tutor that can run it</b>Asked to make sure the tutor can say what to do step by step and what the best use of time is. The Study tab now has a Today's plan card: an ordered list built from how many days you have left, what is due for review, which topics are weak, what you have missed, and what you have already done today, sized to the time you pick (20, 45 or 90 minutes). The order changes with the countdown: build coverage and review early, repair weak spots and rehearse the full exam in the last two weeks, consolidate in the last few days, and keep the last day light. The tutor can build the same plan, explain each step in plain language, and start a step when you say yes. The reasons given are the better-supported study methods: testing yourself, spacing reviews, mixing topics, going back over mistakes, and explaining concepts in your own words. The time estimates are rough, and the plan only knows what the app can see.</div>
       </div>
     </div>
 
@@ -2454,6 +2473,7 @@
       </div>
 
       <div class="tutor-chips" id="tutorChips">
+        <button class="chip" onclick="askTutorQuick('plan')">What should I do with my time today?</button>
         <button class="chip" onclick="askTutorQuick('weakest')">Explain my weakest domain</button>
         <button class="chip" onclick="askTutorQuick('missed')">Walk through a question I missed</button>
         <button class="chip" onclick="askTutorQuick('mnemonic')">Give me a memory trick for this domain</button>
@@ -5539,6 +5559,7 @@ function renderAll(){
   renderFocusCard();
   renderReadinessExtras(stats);
   renderNextStepCard(stats);
+  renderTodayPlan();
   renderWeekRecap();
   renderStudyPlan();
   renderProgressChart();
@@ -6215,6 +6236,168 @@ function computeNextStep(stats){
   return step;
 }
 
+/* ===========================================================
+   TODAY'S PLAN: a time-boxed, ordered list of what to do today,
+   built from where the student actually is (days left, what is
+   due, what is weak, what has already been done today).
+   The tutor reads and runs the same plan.
+=========================================================== */
+const PLAN_MINUTE_CHOICES = [20, 45, 90];
+function planMinutes(){ const m = DATA && DATA.planMinutes; return (m >= 10 && m <= 240) ? Math.round(m) : 45; }
+function planPhaseFor(days){
+  if(days === null) return { key:'build', label:'Build phase' };
+  if(days <= 1) return { key:'rest', label:'Light day' };
+  if(days <= 3) return { key:'taper', label:'Taper' };
+  if(days <= 14) return { key:'sharpen', label:'Sharpen' };
+  if(days <= 42) return { key:'build', label:'Build phase' };
+  return { key:'foundation', label:'Foundation phase' };
+}
+function planTodayActivity(){
+  const today = localDayKey();
+  const sess = (DATA.sessions || []).filter(x => { try{ return localDayKey(new Date(x.date)) === today; }catch(e){ return false; } });
+  const start = new Date(); start.setHours(0,0,0,0);
+  const t0 = start.getTime();
+  let cards = 0; const fs = DATA.flashcardStats || {};
+  Object.keys(fs).forEach(id => { if((fs[id].lastSeenAt || 0) >= t0) cards++; });
+  const sameDay = ts => !!ts && localDayKey(new Date(ts)) === today;
+  return { modes: sess.map(x => x.mode), cards, tvm: sameDay(DATA.tvmToolLastAt), formula: sameDay(DATA.formulaDrillLastAt) };
+}
+function buildStudyPlan(minutes){
+  minutes = minutes || planMinutes();
+  const stats = computeStats();
+  const days = getDaysUntilExam();
+  const phase = planPhaseFor(days);
+  const act = planTodayActivity();
+  const answered = stats.totalAnswered;
+  const dueQs = allQuestions().filter(q => { const st = getSpacedStat(DATA.questionStats, q.id); return st.seen > 0 && isDue(st); }).length;
+  const dueCards = allFlashcards().filter(f => { const st = getSpacedStat(DATA.flashcardStats, f.id); return st.seen > 0 && isDue(st); }).length;
+  const missedN = (DATA.missed || []).length;
+  const drilled = DATA.subtopicDrillAt || {};
+  const dayStart = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+  let wk = null;
+  try{ wk = weakSubtopics(8)[0] || null; }catch(e){}
+  const wkDoneToday = wk && (drilled[wk.key + '-' + wk.idx] || 0) >= dayStart;
+  const weakDom = domainMasteryList().map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100)))})).sort((a, b) => b.pr - a.pr)[0];
+
+  const mk = {
+    cards: () => {
+      if(!(dueCards >= 5 || act.cards >= 8)) return null;
+      const n = Math.min(Math.max(dueCards, act.cards), 25);
+      return { id:'cards', title: act.cards >= 8 && dueCards < 5 ? 'Flashcards reviewed' : `Review ${n} due flashcards`, minutes: Math.min(12, Math.max(4, Math.ceil(n * 0.4))),
+        why:'Cards come back just as they start to fade. Pulling an answer from memory strengthens it more than rereading does.',
+        done: act.cards >= 8 || (act.cards > 0 && dueCards < 5), run: () => showTab('flashcards') };
+    },
+    adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : 'Adaptive session (15 mixed questions)', minutes:22,
+      why: dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.',
+      done: act.modes.includes('adaptive'), run: () => { showTab('study'); startAdaptive(); } }),
+    weak: () => {
+      if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18,
+        why:`You are at ${Math.round(wk.st.acc * 100)}% on this topic over ${wk.st.attempts} attempts. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
+        done: !!wkDoneToday, run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
+      if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)) return { id:'weak', title:`Drill: ${weakDom.name}`, minutes:18,
+        why:`${weakDom.name} is ${weakDom.weight}% of the exam and ${weakDom.mastery === null ? 'not yet started' : 'at ' + weakDom.mastery + '%'}. It is where the most points are waiting.`,
+        done: act.modes.includes('drill'), run: () => { showTab('study'); startDrill(weakDom.key); } };
+      return null;
+    },
+    missed: () => {
+      if(missedN < 3) return null;
+      const n = Math.min(missedN, phase.key === 'taper' ? 10 : 15);
+      return { id:'missed', title:`Review ${n} missed question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.4)),
+        why:'Going back over what you got wrong, with the explanation in front of you, is one of the best uses of time. Mistakes you made confidently are the ones most worth correcting.',
+        done: act.modes.includes('review'), run: () => { showTab('study'); startMissedReview(); } };
+    },
+    calc: () => {
+      const tq = DATA.tvmQuizStats;
+      if(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6) return { id:'calc', title:'Calculator practice (HP 10bII+)', minutes:8,
+        why:`You have ${tq.correct} of ${tq.asked} calculation questions right. Key-press habits come from doing a few problems by hand.`, done: act.tvm, run: () => { showTab('study'); openTvmTool(); } };
+      const wf = (typeof fdWeakest === 'function') ? fdWeakest() : null;
+      if(wf) return { id:'calc', title:`Formula practice: ${wf}`, minutes:8,
+        why:'A handful of fresh problems on a formula you keep missing usually settles it.', done: act.formula, run: () => { showTab('study'); openFormulaDrill(wf); } };
+      return null;
+    },
+    case: () => {
+      if(answered < 80) return null;
+      const cs = DATA.caseStats || {};
+      const last = Math.max(0, ...Object.values(cs).map(c => c.lastAt || 0));
+      if((Date.now() - last) < 7 * 86400000 && !act.modes.includes('case')) return null;
+      const pick = nextCaseToTry();
+      if(!pick) return null;
+      return { id:'case', title:`Case study: ${pick.title}`, minutes:25,
+        why:'The real exam wraps most questions in a client case. Practising in that format builds the habit of pulling the right facts out of a story.',
+        done: act.modes.includes('case'), run: () => { showTab('study'); startCase(pick.id); } };
+    },
+    teach: () => {
+      const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
+      if(!topic) return null;
+      return { id:'teach', title:`Explain it back: ${topic}`, minutes:8,
+        why:'Saying a concept in your own words shows what you only think you know. The tutor will ask one question at a time and tell you what is missing.',
+        done:false, manual:true, run: () => askTutorAbout(`Quiz me on ${topic}. Ask one question at a time, wait for my answer, then tell me exactly what I got right and what is missing.`) };
+    },
+    keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
+      why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
+      done:false, manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
+  };
+  const order = {
+    foundation: ['cards','weak','adaptive','missed','calc','case','teach'],
+    build:      ['cards','adaptive','weak','missed','calc','case','teach'],
+    sharpen:    ['cards','missed','weak','adaptive','calc','teach'],
+    taper:      ['cards','missed','keys'],
+    rest:       ['keys','cards']
+  }[phase.key];
+  const steps = [];
+  let used = 0;
+  order.forEach(k => {
+    const st = mk[k] ? mk[k]() : null;
+    if(!st) return;
+    if(steps.length && used + st.minutes > minutes) return;
+    steps.push(st); used += st.minutes;
+  });
+  const blocks = [];
+  if(phase.key === 'sharpen' && days !== null && days >= 5){
+    const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
+    const since = lastFull ? (Date.now() - new Date(lastFull.date).getTime()) / ONE_DAY_MS : Infinity;
+    if(since > 5) blocks.push({ id:'fullexam', title:'Full 170-question simulation', minutes:360,
+      why:'Sitting the whole exam once shows where stamina and pacing slip. Pick a day with six free hours, then spend the next day on what it exposed.',
+      run: () => { showTab('study'); startFullExam(); } });
+  }
+  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN };
+}
+
+function setPlanMinutes(m){
+  DATA.planMinutes = m; persist();
+  renderTodayPlan();
+}
+function runPlanStep(id){
+  const plan = buildStudyPlan();
+  const st = plan.steps.concat(plan.blocks).find(x => x.id === id);
+  if(st && typeof st.run === 'function') st.run();
+}
+function renderTodayPlan(){
+  const el = document.getElementById('todayPlanCard');
+  if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
+  let plan;
+  try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; return; } // never let the plan break the Study tab
+  const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
+  const doneN = plan.steps.filter(x => x.done).length;
+  const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
+    : plan.phase.key === 'taper' ? 'Consolidate what you know. No big new pushes now.'
+    : plan.phase.key === 'sharpen' ? 'Repair weak spots and rehearse the real exam conditions.'
+    : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
+    : 'Mix topics, fix weak ones, and keep reviewing on a schedule.';
+  const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${m} min</button>`).join('');
+  const rows = plan.steps.map((st, i) => `<div class="pt-step${st.done ? ' done' : ''}">
+      <div class="pt-num">${st.done ? '✓' : i + 1}</div>
+      <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why">${escapeHtml(st.why)}</div><div class="pt-time">about ${st.minutes} min</div></div>
+      ${st.done ? '' : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${st.manual ? 'Open' : 'Start'}</button>`}
+    </div>`).join('');
+  const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
+  el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done` : ''}</div></div>
+    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.</p>
+    <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
+    ${rows || '<p class="hint">Nothing queued right now. Take an adaptive session to get started.</p>'}${blocks}`;
+  el.style.display = 'block';
+}
+
 function renderNextStepCard(stats, refreshed){
   const el = document.getElementById('nextStepCard');
   if(!el) return;
@@ -6258,6 +6441,7 @@ function refreshCoachSurfaces(){
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
   renderReadinessExtras(stats);
   renderNextStepCard(stats);
+  renderTodayPlan();
   renderWeekRecap();
 }
 
@@ -14471,6 +14655,9 @@ Guidelines:
 - When you do explain something, prefer asking "why do you think that's the rule" or "what would happen if..." over stating the reasoning outright, and prefer connecting it to something concrete over stating it in the abstract -- a brief example, a scenario, or (when one exists above) the student's own actual missed question or recurring mistake on this exact topic. Explaining a concept in a vacuum is weaker than anchoring it to something the student already has some contact with, right or wrong.
 - Before moving from one topic to a clearly different one in the same explanation, a brief check that it landed ("does that distinction make sense?" or a quick one-question check) is worth the sentence it costs -- better to catch a gap immediately than assume it and build the next explanation on top of it.
 - You have tools to actually take actions in the app on the student's behalf: switching tabs, starting a real practice session (adaptive, a specific domain drill, or a review session covering everything currently missed), opening the TVM calculator, opening one of the six interactive decision trees directly, opening their personalized study guide, setting their exam date, looking up a term in the glossary, showing their detailed progress breakdown, opening the panel that explains how their readiness score is built, generating fresh practice material on a specific domain, generating a spoken podcast episode -- either on a specific domain or personalized to their own progress, and short or in-depth if they ask for that -- and marking a specific subtopic as reviewed in their own syllabus checklist once you've actually taught it and they've agreed. If a student asks something like "which trust should I use," "help me tell these plans apart," or "when should I claim Social Security," open that specific decision tool directly rather than just explaining it in text or sending them to the tab generically, since walking through it themselves is the more effective way to actually learn it. Use these when they clearly ask for one of these things -- "quiz me on tax planning," "let's do a full session," "let's review what I got wrong," "open the calculator," "my exam is March 15," "what's a GRAT," "show me my weak spots," "make me a study guide," "make me more questions on estate planning," "make me a podcast about how I'm doing," "give me a quick podcast on tax" -- rather than just describing what they could do. If they ask you to quiz them verbally right here in the chat instead, that's different from starting a real session -- just ask questions directly as described above. Never set an exam date unless the student has stated one explicitly; don't guess or infer it. For a term lookup, still give a real, direct answer in your own words too -- the tool shows them where to find it again, it doesn't replace actually answering. After a genuinely substantive explanation of a specific named subtopic, it's fine to offer to check it off their list -- but only mark it once they've actually agreed, never on your own initiative.
+- When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
+- Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
+- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -14522,6 +14709,7 @@ function renderTutorActionIndicator(text){
 const TUTOR_POINT_TARGETS = {
   next_step:      { tab:'study',      sel:'#nextStepCard',    label:'Your next best step' },
   start_session:  { tab:'study',      sel:'#modePanel',       label:'Start a session here' },
+  todays_plan:    { tab:'study',      sel:'#todayPlanCard',   label:"Today's plan" },
   your_coach:     { tab:'study',      sel:'#focusCard',       label:'Your coach and focus areas' },
   blueprint:      { tab:'study',      sel:'#blueprintCard',   label:'Exam weight vs your mastery' },
   exam_date:      { tab:'study',      sel:'#examCountdownCard', label:'Set your exam date' },
@@ -14651,6 +14839,16 @@ const TUTOR_TOOLS = [
     },
   },
   {
+    name: 'plan_my_study',
+    description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (10 to 240); otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
+    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 10 to 240. Optional.' } } },
+  },
+  {
+    name: 'start_plan_step',
+    description: "Start one step of today's plan for the student, using the step id returned by plan_my_study (for example cards, adaptive, weak, missed, calc, case, keys, fullexam). Only do this once they have said yes, or asked you to start it.",
+    input_schema: { type: 'object', properties: { step_id: { type: 'string', description: 'The id of the step to start.' } }, required: ['step_id'] },
+  },
+  {
     name: 'point_to',
     description: "Take the student to a specific spot in the app and highlight it with a pulsing outline and a short note, so they can see exactly where to look or what to do next. Use it when they ask to be shown something, or when you recommend a concrete next step and want to direct their eye to it. It navigates away from the chat, so use it when they have asked to be shown, or after you have finished explaining.",
     input_schema: {
@@ -14745,6 +14943,23 @@ async function executeTutorTool(toolName, toolInput){
       const numMatch = KEY_NUMBERS.find(n => n.label.toLowerCase().includes(q) || q.includes(n.label.toLowerCase()));
       if(numMatch) return `That's not a glossary term, but here's the figure: ${numMatch.label} is ${numMatch.value}. ${numMatch.hook || ''}`;
       return `Opened the glossary and searched for "${toolInput.term}," but nothing matched.`;
+    }
+    if(toolName === 'plan_my_study'){
+      const m = Math.round(Number(toolInput && toolInput.minutes));
+      if(m >= 10 && m <= 240){ DATA.planMinutes = m; persist(); }
+      const plan = buildStudyPlan();
+      renderTodayPlan();
+      const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : ''}. Why: ${st.why}`);
+      const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
+      return `Phase: ${plan.phase.label}. ${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+    }
+    if(toolName === 'start_plan_step'){
+      const plan = buildStudyPlan(240); // any step that applies today, even if it did not fit the time budget
+      const st = plan.steps.concat(plan.blocks).find(x => x.id === (toolInput && toolInput.step_id));
+      if(!st) return `Error: "${toolInput && toolInput.step_id}" is not a step in today's plan. Valid ids: ${plan.steps.concat(plan.blocks).map(x => x.id).join(', ') || 'none'}.`;
+      if(st.id === 'teach') return `Do this one right here in the chat: ask the first question now, one question at a time, and wait for their answer.`;
+      st.run();
+      return `Started: ${st.title}.`;
     }
     if(toolName === 'point_to'){
       const t = TUTOR_POINT_TARGETS[toolInput && toolInput.target];
@@ -14913,6 +15128,8 @@ async function askTutorQuick(kind){
   const stats = computeStats();
   if(kind==='readiness'){
     return sendTutorMessage(`My readiness score is ${stats.readiness}/100. Why is it that, and what would raise it fastest?`);
+  } else if(kind==='plan'){
+    return sendTutorMessage(`What is the best use of my time today? Build me a plan based on where I am and how many days I have left, and walk me through it one step at a time.`);
   } else if(kind==='nextStep'){
     const ns = computeNextStep(stats);
     return sendTutorMessage(`The Study tab is recommending "${ns.title}". Why is that the right thing for me to do next, and how should I approach it?`);
