@@ -1175,7 +1175,7 @@
   .fc-card .fc-back{font-size:14.5px;color:var(--paper);line-height:1.6;display:none;}
   .fc-card .fc-hint{margin-top:18px;font-size:11px;color:var(--muted-dim);font-family:'IBM Plex Mono',monospace;}
   .fc-actions{display:flex;justify-content:center;gap:10px;margin-top:16px;}
-  .fc-mnemonic-row{display:flex;justify-content:center;margin-top:10px;}
+  .fc-mnemonic-row{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:10px;}
   .fc-mnemonic-row .btn.ghost{font-size:12.5px;padding:9px 16px;min-height:44px;}
   .fc-mnemonic-box{font-size:13px;line-height:1.55;color:var(--paper);margin-top:10px;padding:14px 16px;border-radius:10px;background:var(--teal-tint);border:1px solid var(--teal);}
   .fc-mnemonic-box.loading{opacity:.6;}
@@ -2124,6 +2124,7 @@
         <div class="science-item"><b>Taking buttons away that the app should press for you</b>The "Expand weak areas now" button was not doing its job, and it was also the wrong idea: the app already watches how many fresh questions are left and writes more, ahead of running low, so asking a person to trigger it by hand put the work on the wrong side. It is gone, along with the manual "Generate more flashcards" card and the tutor shortcut for generating practice. A failed generation now retries by itself within a few answers rather than telling you to try again. The two quality checks in Settings (content and syllabus coverage) used to wait for a click; they now run every time Settings opens. Podcast episodes are written automatically when you pick one that does not exist yet, after a short pause so flicking through the menus does not spend a generation on every stop; the button only remains to rewrite an episode. What was kept on purpose are things that are genuinely your choice, such as shuffling cards, picking a session, or asking the tutor a question.</div>
         <div class="science-item"><b>Going back through the shared study folder for what was still missing</b>Read every remaining file in the AdviseWise folder and checked each against the app instead of assuming the earlier passes had caught it all. Most of it was already here: the twenty-two behavioral finance biases, the tax topics and the conflict-of-interest steps. What was genuinely absent was the exam-day logistics list (practice drive, calculator memory and preferences reset, clothing, food), so it is now a tick-off checklist on the Exam Day tab that saves with your progress and backups. Eight flashcards were added for the Social Security survivor, disability and divorced-spouse eligibility rules, the claiming-timing exception, the 90-day and 30-day self-reporting windows, the three duty groups, the three conflict steps and what counts as financial advice. A follow-up pass then compared the app against CFP Board's official list of seventy exam topics: all seventy are present. Counting questions per topic showed General Principles running a little light against its fifteen percent exam weight and a handful of topics thin, so thirty-six new questions went to education needs analysis (the growth-adjusted rate and three-step method from the folder), gift basis and the kiddie tax, the planning process, financial ratios, insurance principles and company ratings, money scripts and grief, retirement needs, Medicare and Medicaid rules, the investment policy statement, charitable limits, installment payment of estate tax, disclaimers and special needs trusts. Honest limit: the provider comparison and the error-log template are study-planning material rather than exam content, so they were noted but not copied in; the app already logs every miss with its category automatically.</div>
         <div class="science-item"><b>Making the readiness number a real estimate</b>Asked to make sure the readiness meter is accurate, live and tied into everything else. Looking at how it was built showed several problems: it only counted how many times in a row you had answered a question correctly, so someone getting nearly everything right still scored low for weeks; it ignored how long it had been since you last saw something, so a score would stay high while you forgot things; it counted 40 percent of a subject as full coverage; and it ignored flashcards, formula practice and mock exams entirely. It now estimates your chance of getting a typical exam question right in each subject, and shows the score as how far above guessing that puts you, weighted by each subject's share of the exam. The estimate uses how you did the first time you met each question (the best guide to questions you have not seen), how well answered questions have stuck in review, a gradual fade for anything overdue, your flashcards, your formula drills, and your recent timed mock exams, which pull the estimate toward what actually happened under time pressure. It starts at zero with no data, never claims more than the evidence supports, and shows a likely range that narrows as you answer more. The gauge itself also shows the estimated exam accuracy under the score (marked as an early estimate until enough questions are tried), and the ring, number and estimate refresh when you come back to the app, so a score that has faded while you were away is never shown stale. The breakdown now states the implied exam accuracy, each subject shows its own expected accuracy, the tutor and the Exam Day tab quote the same numbers, and scores saved under the old method are left out of the weekly trend so the two are never compared. It is still an estimate, not a prediction of passing, because the real passing score is not published.</div>
+        <div class="science-item"><b>Tutor help on more screens</b>Asked to keep the tutor useful everywhere. Flashcards now have an "Explain it with an example" button next to the memory trick: it gives a short worked example and says how the exam tends to test the idea. The Exam Day tab has a "Talk it through with your tutor" row whose buttons change with how many days you have left (a plan for the days remaining, an eve-of-exam walkthrough, pacing for the 170 questions), and the Tools tab has buttons for choosing a tool and practising a TVM problem. These open the Tutor tab and send the question for you, so the tutor already knows where you were. The tutor still only knows what the app tells it, and it can be wrong, so check figures against the official sources.</div>
       </div>
     </div>
 
@@ -2137,6 +2138,10 @@
   <div class="tab-panel" id="tab-tools">
     <div class="card">
       <div class="card-head"><h2>Decision tools</h2><div class="note">tap through, or see the whole map at once</div></div>
+      <div class="tutor-chips" id="toolsTutorChips" style="margin:0 0 12px;">
+        <button type="button" class="chip" onclick="askTutorAbout('I am not sure which decision tool fits my situation. Ask me a couple of quick questions and point me to the right one.')">Not sure which tool? Ask the tutor</button>
+        <button type="button" class="chip" onclick="askTutorAbout('Walk me through a time value of money problem on my HP 10bII+, one step at a time, and check my setup as we go.')">Practice a TVM problem</button>
+      </div>
       <p class="hint">Six tools built from the study guide's own knowledge — four walk you through one question at a time to a recommendation, two are built for exploring rather than following a single path.</p>
     </div>
 
@@ -2320,6 +2325,7 @@
           </div>
           <div class="fc-mnemonic-row" id="fcMnemonicRow" style="display:none;">
             <button class="btn ghost" id="fcMnemonicBtn" onclick="event.stopPropagation(); requestFlashcardMnemonic();">Give me a memory trick for this</button>
+            <button class="btn ghost" id="fcExplainBtn" onclick="event.stopPropagation(); requestFlashcardExplain();">Explain it with an example</button>
           </div>
           <div class="fc-mnemonic-box" id="fcMnemonicBox" style="display:none;"></div>
         </div>
@@ -2345,6 +2351,10 @@
       <div class="ed-readiness" id="edReadiness" style="display:none;"></div>
       <p class="hint" id="edStandingText">Start answering practice questions in the Study tab and this panel will track how your prep compares heading into exam day.</p>
       <div id="edPacing" style="display:none;"></div>
+      <div class="ed-tutor" id="edTutor">
+        <div class="note" style="margin-top:14px;font-size:12px;">Talk it through with your tutor</div>
+        <div class="tutor-chips" id="edTutorChips" style="margin:8px 0 0;"></div>
+      </div>
     </div>
     <div class="card">
       <div class="card-head"><h2>Pacing</h2><div class="note">about two minutes a question</div></div>
@@ -6593,7 +6603,36 @@ function toggleExamChecklist(id, on){
   persist();
   renderExamChecklist();
 }
+// Hands a question to the Tutor tab and sends it, so a button anywhere in the
+// app can start a conversation already in context.
+function askTutorAbout(text){
+  showTab('tutor');
+  setTimeout(() => { try{ sendTutorMessage(text); }catch(e){} }, 60);
+  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){}
+}
+
+function renderEdTutorChips(){
+  const box = document.getElementById('edTutorChips'); if(!box) return;
+  const d = getDaysUntilExam();
+  const items = [];
+  if(d === null) items.push(['Help me build a study plan', 'I have not set an exam date yet. Ask me when I plan to sit and how many hours a week I have, then help me build a realistic study plan.']);
+  else if(d <= 0) items.push(['Calm my nerves', 'My exam is today or very close. Give me a short calming routine and the three things most worth remembering when I sit down.']);
+  else if(d <= 2) items.push(['Walk me through exam-day eve', 'My exam is in ' + d + ' day' + (d===1?'':'s') + '. What should I do, and not do, between now and when I walk into the test center?']);
+  else if(d <= 10) items.push(['Plan my last ' + d + ' days', 'My exam is in ' + d + ' days. Using my weak areas, build a day-by-day plan for the time I have left.']);
+  else items.push(['Plan my ' + d + ' days', 'My exam is in ' + d + ' days. Using my weak areas and progress, build a realistic plan for the time I have left.']);
+  items.push(['How should I pace 170 questions?', 'How should I pace the 170 questions across the two 3-hour sections, and how do I handle a question I am stuck on?']);
+  if(d !== null && d > 0 && d <= 14) items.push(['What to review the day before', 'What is worth reviewing the day before the exam, and what is a waste of time?']);
+  box.innerHTML = '';
+  items.forEach(([label, text]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.onclick = () => askTutorAbout(text);
+    box.appendChild(b);
+  });
+}
+
 function renderExamDayCallout(){
+  renderEdTutorChips();
   renderPaceCard();
   renderExamChecklist();
   const el = document.getElementById('edStandingText');
@@ -8503,6 +8542,8 @@ function renderFlashcard(){
   if(mnemonicBox){ mnemonicBox.style.display = 'none'; mnemonicBox.innerHTML = ''; }
   const mnemonicBtn = document.getElementById('fcMnemonicBtn');
   if(mnemonicBtn){ mnemonicBtn.textContent = 'Give me a memory trick for this'; mnemonicBtn.disabled = false; }
+  const explainBtn = document.getElementById('fcExplainBtn');
+  if(explainBtn){ explainBtn.textContent = 'Explain it with an example'; explainBtn.disabled = false; }
   fcFlipped = false;
 }
 
@@ -8635,6 +8676,51 @@ The trick should help them connect the term to its meaning — wordplay, a vivid
     btn.textContent = 'Give me a memory trick for this';
     btn.disabled = false;
   }
+}
+
+// Explain the card on screen with a short worked example. Kept for the session
+// only (not saved), so a second tap on the same card is instant and free.
+const fcExplainCache = {};
+async function requestFlashcardExplain(){
+  if(!fcQueue.length || fcIndex >= fcQueue.length) return;
+  const card = fcQueue[fcIndex];
+  const box = document.getElementById('fcMnemonicBox');
+  const btn = document.getElementById('fcExplainBtn');
+  if(!box || !btn || btn.disabled) return;
+  function paint(text, label){
+    box.className = 'fc-mnemonic-box';
+    box.innerHTML = '';
+    const l = document.createElement('span'); l.className = 'simplify-label'; l.textContent = label;
+    box.appendChild(l);
+    const t = document.createElement('span'); t.textContent = text; box.appendChild(t);
+    box.style.display = 'block';
+  }
+  if(fcExplainCache[card.id]){ paint(fcExplainCache[card.id], 'Worked example'); return; }
+  if(!aiFeaturesAvailable){
+    paint('Add an API key in Settings and I will walk through this card with a worked example.', 'Worked example');
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Working one out…';
+  box.className = 'fc-mnemonic-box loading';
+  box.innerHTML = '<span class="simplify-label">Worked example</span>Putting an example together…';
+  box.style.display = 'block';
+  const idAt = card.id, indexAt = fcIndex;
+  const same = () => fcQueue[indexAt] && fcQueue[indexAt].id === idAt && fcIndex === indexAt;
+  let weak = '';
+  try{ const st = computeStats(); if(st && st.weakestMeta && st.weakestMeta.name) weak = ' The student\'s weakest area right now is ' + st.weakestMeta.name + '.'; }catch(e){}
+  const prompt = 'Explain this CFP exam flashcard with one short, concrete worked example a candidate could picture, then say in one sentence how the exam is likely to test it or what trap to avoid.\n\n' +
+    'Term: ' + card.term + '\nDefinition: ' + card.def + '\n\n' +
+    'Use plain text only, no markdown, under 110 words. Do not invent rules or figures beyond the definition unless you are certain of them; if you are unsure, say so.' + weak;
+  try{
+    const reply = String(await anthropicMessagesRequest({ messages:[{role:'user', content:prompt}], maxTokens:300 })).trim();
+    if(reply) fcExplainCache[idAt] = reply;
+    if(!same()) return;
+    paint(reply || "Sorry, I couldn't put one together just now. Try again in a moment.", 'Worked example');
+  }catch(e){
+    if(!same()) return;
+    paint("Couldn't get one: " + ((e && e.message) || 'Unknown error') + ' — ' + describeAiError(e), 'Worked example');
+  }
+  btn.textContent = 'Explain it with an example'; btn.disabled = false;
 }
 
 async function speakFlashcard(){
