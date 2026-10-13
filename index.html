@@ -2125,6 +2125,7 @@
         <div class="science-item"><b>Going back through the shared study folder for what was still missing</b>Read every remaining file in the AdviseWise folder and checked each against the app instead of assuming the earlier passes had caught it all. Most of it was already here: the twenty-two behavioral finance biases, the tax topics and the conflict-of-interest steps. What was genuinely absent was the exam-day logistics list (practice drive, calculator memory and preferences reset, clothing, food), so it is now a tick-off checklist on the Exam Day tab that saves with your progress and backups. Eight flashcards were added for the Social Security survivor, disability and divorced-spouse eligibility rules, the claiming-timing exception, the 90-day and 30-day self-reporting windows, the three duty groups, the three conflict steps and what counts as financial advice. A follow-up pass then compared the app against CFP Board's official list of seventy exam topics: all seventy are present. Counting questions per topic showed General Principles running a little light against its fifteen percent exam weight and a handful of topics thin, so thirty-six new questions went to education needs analysis (the growth-adjusted rate and three-step method from the folder), gift basis and the kiddie tax, the planning process, financial ratios, insurance principles and company ratings, money scripts and grief, retirement needs, Medicare and Medicaid rules, the investment policy statement, charitable limits, installment payment of estate tax, disclaimers and special needs trusts. Honest limit: the provider comparison and the error-log template are study-planning material rather than exam content, so they were noted but not copied in; the app already logs every miss with its category automatically.</div>
         <div class="science-item"><b>Making the readiness number a real estimate</b>Asked to make sure the readiness meter is accurate, live and tied into everything else. Looking at how it was built showed several problems: it only counted how many times in a row you had answered a question correctly, so someone getting nearly everything right still scored low for weeks; it ignored how long it had been since you last saw something, so a score would stay high while you forgot things; it counted 40 percent of a subject as full coverage; and it ignored flashcards, formula practice and mock exams entirely. It now estimates your chance of getting a typical exam question right in each subject, and shows the score as how far above guessing that puts you, weighted by each subject's share of the exam. The estimate uses how you did the first time you met each question (the best guide to questions you have not seen), how well answered questions have stuck in review, a gradual fade for anything overdue, your flashcards, your formula drills, and your recent timed mock exams, which pull the estimate toward what actually happened under time pressure. It starts at zero with no data, never claims more than the evidence supports, and shows a likely range that narrows as you answer more. The gauge itself also shows the estimated exam accuracy under the score (marked as an early estimate until enough questions are tried), and the ring, number and estimate refresh when you come back to the app, so a score that has faded while you were away is never shown stale. The breakdown now states the implied exam accuracy, each subject shows its own expected accuracy, the tutor and the Exam Day tab quote the same numbers, and scores saved under the old method are left out of the weekly trend so the two are never compared. It is still an estimate, not a prediction of passing, because the real passing score is not published.</div>
         <div class="science-item"><b>Tutor help on more screens</b>Asked to keep the tutor useful everywhere. Flashcards now have an "Explain it with an example" button next to the memory trick: it gives a short worked example and says how the exam tends to test the idea. The Exam Day tab has a "Talk it through with your tutor" row whose buttons change with how many days you have left (a plan for the days remaining, an eve-of-exam walkthrough, pacing for the 170 questions), and the Tools tab has buttons for choosing a tool and practising a TVM problem. These open the Tutor tab and send the question for you, so the tutor already knows where you were. The tutor still only knows what the app tells it, and it can be wrong, so check figures against the official sources.</div>
+        <div class="science-item"><b>Fewer repeated questions</b>Reported that questions you have already seen kept showing up with a "repeat" tag. That tag means the app tried to reword the question and the attempt failed. Three changes: the app now tries the newest AI model first and falls back to the older one if the service does not recognise it, a fourth and final try accepts a reworded question that is slightly uneven in answer length rather than showing the identical one, and a failed reword is retried after an hour instead of three days. Tapping the tag now shows what went wrong. I could not see your phone's real error, so I cannot be sure which of these was the cause; if the tag keeps appearing, tap it and tell me what it says.</div>
       </div>
     </div>
 
@@ -4030,7 +4031,10 @@ let userApiKey = null;
 
 const API_KEY_STORAGE = 'cfp-blueprint-api-key';
 const ARTIFACT_MODEL = 'claude-sonnet-4-6'; // used only via the in-artifact proxy
-const DIRECT_MODEL = 'claude-sonnet-5';     // used for direct calls with a real API key
+// Used for direct calls with a real API key. The newest ID goes first; if the
+// API says it does not know a model, the next one is tried and remembered.
+const DIRECT_MODELS = ['claude-sonnet-5-5', 'claude-sonnet-5'];
+let directModelIdx = 0;
 
 async function loadApiKey(){
   try{
@@ -9246,7 +9250,7 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
     headers["x-api-key"] = userApiKey;
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";
-    body.model = DIRECT_MODEL;
+    body.model = DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)];
   } else {
     body.model = ARTIFACT_MODEL;
   }
@@ -9289,6 +9293,12 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
   if(!response.ok){
     let detail = '';
     try{ const errJson = await response.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
+    // An unknown or retired model ID shows up as a 404 (or a 400 that names the model).
+    // Try the next ID instead of failing every AI feature in the app.
+    if(aiMode === 'direct' && (response.status === 404 || (response.status === 400 && /model/i.test(detail))) && directModelIdx < DIRECT_MODELS.length - 1){
+      directModelIdx++;
+      return anthropicMessagesRequestOnce({system, messages, maxTokens, tools});
+    }
     const err = new Error('AI request failed ('+response.status+')'+(detail?': '+detail:''));
     err.status = response.status;
     throw err;
@@ -9557,8 +9567,17 @@ function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
     // choices stacked with absolute words ("always", "never", "only") --
     // the same distractor-quality bar manually applied throughout this
     // project's static question bank, now enforced automatically here too.
-    if(!passesDistractorQualityCheck({choices:item.choices, correct:item.correct}, opts.lenient)) return;
-    if(!passesGeneratedQualityBar(item, opts.lenient)) return;
+    // The final try for a reworded repeat skips the polish checks (answer-length balance and
+    // rationale wording) but keeps every structural check, so a slightly uneven but valid
+    // question is shown instead of the identical one again.
+    if(!opts.final){
+      if(!passesDistractorQualityCheck({choices:item.choices, correct:item.correct}, opts.lenient)) return;
+      if(!passesGeneratedQualityBar(item, opts.lenient)) return;
+    } else {
+      // Still refuse an answer that is plainly longer than every wrong choice.
+      const fl = item.choices.map(c => c.trim().length);
+      if(lengthTellsAnswer(fl[item.correct], Math.max(...fl.filter((_, i) => i !== item.correct)), 2.5)) return;
+    }
     if(!opts.variant && generatedDuplicatesBank(item, domainKey)) return;
 
     const q = {
@@ -12497,14 +12516,16 @@ Begin the rationale for the correct choice with "Correct — " and each wrong ch
   // partially succeeding -- so either condition alone, or both together
   // on the rare question that's both, genuinely needs more room.
   let variantMaxTokens = (q.calcSteps && q.scenario) ? 1500 : (q.calcSteps || q.scenario) ? 1100 : 700;
+  let lastVariantRaw = '';
   let lastVariantError = null; // null means "a response came through but failed validation", not a thrown error
   let retryFeedback = '';
-  for(let attempt=0; attempt<3 && !variant; attempt++){
+  for(let attempt=0; attempt<4 && !variant; attempt++){
     try{
       // The last attempt accepts a somewhat less polished answer-length balance
       // rather than showing the same wording again; earlier attempts keep the full bar.
       const raw = await anthropicMessagesRequest({ messages: [{role:'user', content: basePrompt + retryFeedback}], maxTokens: variantMaxTokens });
-      const parsed = safeParseQuestions(raw, q.domain, null, { variant:true, lenient: attempt >= 2 });
+      const parsed = safeParseQuestions(raw, q.domain, null, { variant:true, lenient: attempt >= 2, final: attempt >= 3 });
+      lastVariantRaw = raw;
       if(parsed.length) variant = parsed[0];
       else{
         lastVariantError = null;
@@ -12565,10 +12586,13 @@ Begin the rationale for the correct choice with "Correct — " and each wrong ch
     noteGenSuccess();
   } else {
     if(!DATA.variantFailedAt || typeof DATA.variantFailedAt !== 'object') DATA.variantFailedAt = {};
-    DATA.variantFailedAt[questionIdAtRequestTime] = Date.now() + (lastVariantError ? 10*60000 : 3*86400000);
+    DATA.variantFailedAt[questionIdAtRequestTime] = Date.now() + (lastVariantError ? 10*60000 : 3600000);
     const keys = Object.keys(DATA.variantFailedAt);
     if(keys.length > 200) keys.sort((a,b)=>DATA.variantFailedAt[a]-DATA.variantFailedAt[b]).slice(0, keys.length-200).forEach(k => delete DATA.variantFailedAt[k]);
     if(lastVariantError) noteGenFailure();
+    // Kept so the "repeat" tag can say what actually went wrong when tapped.
+    DATA.lastVariantFailure = { at: Date.now(), kind: lastVariantError ? 'api' : 'validation',
+      text: lastVariantError ? ((lastVariantError.message || 'Unknown error') + ' — ' + describeAiError(lastVariantError)) : diagnoseRejectedQuestion(lastVariantRaw) };
     persist();
   }
 
@@ -12593,7 +12617,20 @@ Begin the rationale for the correct choice with "Correct — " and each wrong ch
       const note = document.createElement('span');
       note.className = 'gen-flag variant-failed-note';
       note.title = 'A fresh version of this repeat was attempted but did not come through this time: ' + reason;
-      note.textContent = '· repeat'; // the detail lives in the tooltip; nothing here for the student to act on
+      note.textContent = '· repeat — tap for why';
+      note.setAttribute('role', 'button'); note.tabIndex = 0;
+      note.style.cursor = 'pointer';
+      const lf = DATA.lastVariantFailure;
+      const why = (lf && lf.text) ? lf.text : reason;
+      note.onclick = () => {
+        let box = domainEl.parentElement && domainEl.parentElement.querySelector('.variant-why');
+        if(box){ box.remove(); return; }
+        box = document.createElement('div');
+        box.className = 'variant-why';
+        box.style.cssText = 'font-size:12px;line-height:1.5;color:var(--muted);margin:6px 0 10px;font-family:\'IBM Plex Sans\',sans-serif;text-transform:none;letter-spacing:0;';
+        box.textContent = 'The app tried to reword this question and it did not work: ' + why + ' It will try again later.';
+        domainEl.insertAdjacentElement('afterend', box);
+      };
       domainEl.appendChild(note);
     }
   }
