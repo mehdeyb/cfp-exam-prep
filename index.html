@@ -2230,6 +2230,7 @@
         <div class="science-item"><b>Wiring case reading into the rest of the app</b>Missing a case question after you circled the wrong facts is now sorted as "missed a deciding fact" instead of a generic knowledge gap, so your miss pattern and the tutor can tell reading problems from knowledge problems. The tutor knows which facts decide a question and which sentences you circled, and offers a "Which facts mattered?" button after you answer. Each case now shows how many of its deciding facts you caught, and the plan shown before a case explains the circle-then-check routine.</div>
         <div class="science-item"><b>A calculator reminder that fits the problem in front of you</b>The pre-answer calculator check used to be the same paragraph on every time-value-of-money question. It now reads the question itself and says what matters for that one: which key you are solving for, whether it is a monthly or annual problem, whether payments start at the beginning or end of the period (or there are none), and which numbers need the negative sign. Your personal slip reminder only appears when it applies to this problem, so a monthly-conversion tip no longer shows on an annual question.</div>
         <div class="science-item"><b>Waiting for an AI answer should look like waiting</b>When the tutor is writing an explanation, a memory trick, a glossary example or a podcast episode, the box used to just go a bit dim, which looks the same as "broken". Each one now shows a slim moving bar, and if the wait runs past ten seconds a line appears saying it is still working and can take up to a minute. Screen readers are told when something is loading and when the answer lands, and the tutor's typing dots now say "Tutor is typing". Along the way, a plain fact question about a dollar limit was being labelled a calculator slip; those misses are now labelled by what they were, and the calculator tip only mentions BEGIN/END when the question actually has payments.</div>
+        <div class="science-item"><b>Plans for real study days, not 20-minute scraps</b>With the exam about two weeks out, the 20, 45 and 90 minute choices on Today's plan no longer matched how you actually study. The choices are now 2 hours, 2.5 hours and 3 hours, and a longer day gets a longer plan: a second adaptive round, extra drills on your next-weakest topics, and a reminder to take a break halfway. A shorter number saved from before is treated as 2.5 hours.</div>
       </div>
     </div>
 
@@ -6363,8 +6364,10 @@ function computeNextStep(stats){
    due, what is weak, what has already been done today).
    The tutor reads and runs the same plan.
 =========================================================== */
-const PLAN_MINUTE_CHOICES = [20, 45, 90];
-function planMinutes(){ const m = DATA && DATA.planMinutes; return (m >= 10 && m <= 240) ? Math.round(m) : 45; }
+// With the exam days away, short days no longer make sense: the plan is built for a real study block.
+const PLAN_MINUTE_CHOICES = [120, 150, 180];
+function planMinuteLabel(m){ return m === 120 ? '2 hrs' : m === 150 ? '2.5 hrs' : m === 180 ? '3 hrs' : (m % 60 === 0 ? (m/60) + ' hrs' : m + ' min'); }
+function planMinutes(){ const m = DATA && DATA.planMinutes; return (m >= 120 && m <= 240) ? Math.round(m) : 150; } // an older, shorter saved choice falls back to 2.5 hours
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
   if(days <= 1) return { key:'rest', label:'Light day' };
@@ -6463,6 +6466,16 @@ function buildStudyPlan(minutes){
         why:'Saying a concept in your own words shows what you only think you know. The tutor will ask one question at a time and tell you what is missing.',
         done:false, manual:true, run: () => askTutorAbout(`Quiz me on ${topic}. Ask one question at a time, wait for my answer, then tell me exactly what I got right and what is missing.`) };
     },
+    // Longer days have room for a second round. These only appear once the first pass leaves time.
+    weak2: () => { let l = []; try{ l = weakSubtopics(8); }catch(e){} const t = l[1]; if(!t) return null;
+      return { id:'weak2', title:`Drill: ${t.name}`, minutes:18, why:`Your next weakest topic (${Math.round(t.st.acc * 100)}% over ${t.st.attempts} attempts). With the time you have today, it is worth a second repair.`,
+        done: (drilled[t.key + '-' + t.idx] || 0) >= dayStart, run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+    adaptive2: () => { if(answered === 0) return null; const n = act.modes.filter(m => m === 'adaptive').length;
+      return { id:'adaptive2', title:'Second adaptive session (15 mixed questions)', minutes:22,
+        why:'A second mixed round later in the day, after a break, helps more than one long push. Spacing the practice makes it stick.', done: n >= 2, run: () => { showTab('study'); startAdaptive(); } }; },
+    weak3: () => { let l = []; try{ l = weakSubtopics(8); }catch(e){} const t = l[2]; if(!t) return null;
+      return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, why:`Third on your list of weak topics (${Math.round(t.st.acc * 100)}% over ${t.st.attempts} attempts).`,
+        done: (drilled[t.key + '-' + t.idx] || 0) >= dayStart, run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
       why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
       done:false, manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
@@ -6482,6 +6495,13 @@ function buildStudyPlan(minutes){
     if(steps.length && used + st.minutes > minutes) return;
     steps.push(st); used += st.minutes;
   });
+  if(phase.key !== 'taper' && phase.key !== 'rest'){
+    ['weak2','adaptive2','weak3'].forEach(k => {
+      const st = mk[k](); if(!st) return;
+      if(used + st.minutes > minutes) return;
+      steps.push(st); used += st.minutes;
+    });
+  }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -6514,7 +6534,7 @@ function renderTodayPlan(){
     : plan.phase.key === 'sharpen' ? 'Repair weak spots and rehearse the real exam conditions.'
     : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
     : 'Mix topics, fix weak ones, and keep reviewing on a schedule.';
-  const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${m} min</button>`).join('');
+  const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${planMinuteLabel(m)}</button>`).join('');
   const rows = plan.steps.map((st, i) => `<div class="pt-step${st.done ? ' done' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why">${escapeHtml(st.why)}</div><div class="pt-time">about ${st.minutes} min</div></div>
@@ -6522,7 +6542,7 @@ function renderTodayPlan(){
     </div>`).join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done` : ''}</div></div>
-    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.</p>
+    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${rows || '<p class="hint">Nothing queued right now. Take an adaptive session to get started.</p>'}${blocks}`;
   el.style.display = 'block';
@@ -15284,7 +15304,7 @@ const TUTOR_TOOLS = [
   {
     name: 'plan_my_study',
     description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (10 to 240); otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
-    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 10 to 240. Optional.' } } },
+    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 120 to 240 (the plan offers 2, 2.5 or 3 hours). Optional.' } } },
   },
   {
     name: 'start_plan_step',
@@ -15393,7 +15413,7 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'plan_my_study'){
       const m = Math.round(Number(toolInput && toolInput.minutes));
-      if(m >= 10 && m <= 240){ DATA.planMinutes = m; persist(); }
+      if(m >= 120 && m <= 240){ DATA.planMinutes = m; persist(); }
       const plan = buildStudyPlan();
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : ''}. Why: ${st.why}`);
