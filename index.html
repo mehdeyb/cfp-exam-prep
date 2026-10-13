@@ -2223,6 +2223,7 @@
         <div class="science-item"><b>Connecting every question to its syllabus topic</b>About three in ten questions were not linked to any official topic, so they never counted toward your per-topic accuracy or showed up in a topic drill. Widened the matching (options, Medicare, home and auto insurance, behavioral finance, consumer-credit laws, savings bonds, the new 2025 tax-law items and more) so all but one are now linked. Your weak-topic suggestions and the Study plan now draw on the whole question bank.</div>
         <div class="science-item"><b>Making each study mode earn its place</b>The 24-question mock was timed at 35 minutes, which is about 1.5 times faster than the real exam's pace, so it overstated how rushed the real exam is. It is now a timed checkpoint at the real pace (about 51 minutes) and its score still counts toward your readiness. Every mode now says when to use it and shows when you last did it and how you scored. The checkpoint also appears in Today's plan about once a week, and the tutor can start it for you.</div>
         <div class="science-item"><b>Training how to read a case, not just answer it</b>Most of a case-study question is a reading task: find the two or three facts that decide it, ignore the ones that only look relevant, and notice what is really being asked. Case text now color-codes figures, goals, red flags and accounts; you can tap the sentences you would circle before answering; and afterward the app shows which facts decided the answer, which only looked relevant, and how many you caught. A short line under each question also decodes words like "most", "if", "first" and "not". The same aids show on other scenario questions, and switch off in the timed exam modes so those stay realistic. Every case question has its deciding facts written out, and AI-written cases include them too.</div>
+        <div class="science-item"><b>Wiring case reading into the rest of the app</b>Missing a case question after you circled the wrong facts is now sorted as "missed a deciding fact" instead of a generic knowledge gap, so your miss pattern and the tutor can tell reading problems from knowledge problems. The tutor knows which facts decide a question and which sentences you circled, and offers a "Which facts mattered?" button after you answer. Each case now shows how many of its deciding facts you caught, and the plan shown before a case explains the circle-then-check routine.</div>
       </div>
     </div>
 
@@ -6901,6 +6902,7 @@ function renderMixupCallout(){
 // feedback, the pattern builds up in the background, and it surfaces in the
 // coach and diagnosis once there is enough to say something real.
 const MISS_TYPES = {
+  fact:   { label:'Missed a deciding fact', tip:'The case held the fact that decided this one. Before choosing, find the two or three facts that would change the answer if they were different.' },
   trap:   { label:'Misread the question', tip:'This one hinged on a qualifier such as NOT, EXCEPT or LEAST. Circle it before reading the choices.' },
   calc:   { label:'Calculation or setup slip', tip:'Redo the setup: check the sign, BEGIN or END mode, and whether the period was converted.' },
   over:   { label:'Overconfident', tip:'You marked this confident and missed it. Slow down on questions that feel easy.' },
@@ -6914,6 +6916,7 @@ function highlightQualifiers(text){
 }
 function classifyMiss(q, wasPrev, elapsedMs){
   if(TRAP_RE.test(q.q || '')) return 'trap';
+  try{ const cl = session && session.cueLog && session.cueLog[session.index]; if(cl && cl.flagged > 0 && cl.found < cl.decisive && cueFor(q)) return 'fact'; }catch(e){}
   const numeric = (q.choices||[]).filter(c => /\d/.test(c) && c.length < 26 && /^[\s$€£\-−]*[\d.,]+\s*(%|x|years?|months?)?\s*$/i.test(c)).length;
   if(q.tvmGen || numeric >= 3) return 'calc';
   if(session && session.selectedConfidence === 'confident') return 'over';
@@ -10620,7 +10623,7 @@ function openCasePicker(){
     const pill = st ? `<span class="dp-row-pct ${st.best>=75?'strong':st.best>=50?'mid':'weak'}">${st.best}%</span>` : `<span class="dp-row-pct none">New</span>`;
     const nameEl = document.createElement('div');
     const t = document.createElement('div'); t.className = 'dp-row-name'; t.textContent = c.title;
-    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '');
+    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '') + (st && st.cue && st.cue.decisive >= 3 ? ` · facts caught ${Math.round(100 * st.cue.found / st.cue.decisive)}%` : '');
     const b = document.createElement('div'); b.className = 'dp-row-meta'; b.style.marginTop = '2px'; b.textContent = c.blurb;
     nameEl.appendChild(t); nameEl.appendChild(m); nameEl.appendChild(b);
     row.appendChild(nameEl);
@@ -12616,7 +12619,8 @@ function sessionBriefHtml(){
     const def = caseById(session.caseId); const cs = def && DATA.caseStats && DATA.caseStats[def.id];
     let t = `${session.queue.length} questions share one client situation.`;
     if(cs && cs.attempts) t += ` Last time you scored ${cs.lastCorrect} of ${cs.lastTotal}, with a best of ${cs.best}%.`;
-    t += ' Skim the scenario once for numbers, dates and who owns what, then return to the part each question needs.';
+    t += ' Skim the scenario once for numbers, dates and who owns what. For each question, tap the sentences that would change the answer before you choose; afterward you will see which facts really decided it.';
+    try{ const ca = cueAccuracyText(); if(ca) t += ' So far: ' + ca + '.'; }catch(e){}
     return `<span class="tb-label">Your tutor's plan</span>${t}`;
   }
   if(!session || !['adaptive','drill','review'].includes(session.mode) || session.queue.length < 5) return '';
@@ -13678,6 +13682,7 @@ function qChatSuggestions(q, wasCorrect){
   if(!wasCorrect) out.push(['Why is my pick wrong?', 'Why is my answer wrong? What was the trap?']);
   out.push([wasCorrect ? 'Why are the others wrong?' : 'Why is the right one right?', wasCorrect ? 'Why are each of the other three choices wrong?' : 'Walk me through why the correct answer is right.']);
   if(q.calcSteps) out.push(['Walk me through the keys', 'Walk me through the calculator key presses for this one, step by step, and tell me what to watch for.']);
+  if(cueFor(q) && q.scenario) out.push(['Which facts mattered?', 'Which facts in the case decide this question, and which ones are distractors? Ask me what I noticed first, then check me.']);
   out.push(['Give me an example', 'Give me a short, concrete real-world example of this concept.']);
   out.push(['Quiz me on this', 'Ask me one quick follow-up question on this concept to check I really get it. Wait for my answer.']);
   out.push(['Let me explain it back', '__TEACHBACK__']);
@@ -13737,6 +13742,18 @@ function buildQuestionChatSystem(q){
     'Stay on this question and the concept behind it; if the student drifts, gently bring it back. If they ask you to quiz them, ask one question and wait. ' +
     'If they write their own explanation, say specifically what they got right and what is missing or wrong. Never invent rules; if unsure, say so.\n\n';
   if(q.scenario) ctx += 'Client scenario: ' + q.scenario + '\n';
+  try{
+    const cu = cueFor(q);
+    if(cu && q.scenario){
+      ctx += 'Facts in the case that decide this question: ' + cu.ev.join('; ') + '. ';
+      if(cu.noise && cu.noise.length) ctx += 'Details that look relevant but are not needed: ' + cu.noise.join('; ') + '. ';
+      ctx += 'Why: ' + cu.note + ' ';
+      const fl = (session && session.cueFlags && session.cueFlags[session.index]) || [];
+      const sents = cueSplitSentences(q.scenario);
+      ctx += fl.length ? 'The student circled these sentences before answering: ' + fl.map(i => sents[i] ? '"' + q.scenario.slice(sents[i].s, sents[i].e) + '"' : '').filter(Boolean).join(' ') + '\n' : 'The student did not circle any facts before answering.\n';
+      ctx += 'If they ask about the facts, help them practise reading for the deciding fact: ask what they noticed first, then confirm or correct.\n';
+    }
+  }catch(e){}
   ctx += 'Question: ' + q.q + '\n';
   q.choices.forEach((c,i) => { ctx += L[i] + '. ' + c + (i === q.correct ? '  [CORRECT]' : '') + '\n'; });
   ctx += 'The student chose ' + (chosen >= 0 && chosen != null ? L[chosen] : 'nothing yet') + ' (' + (wasCorrect ? 'correct' : 'incorrect') + ').\n';
@@ -13990,6 +14007,7 @@ function finishSession(){
     session.casePrev = { attempts: cs.attempts || 0, best: cs.best || 0 };
     cs.attempts += 1; cs.lastCorrect = session.correct; cs.lastTotal = session.queue.length;
     cs.best = Math.max(cs.best || 0, Math.round((session.correct/session.queue.length)*100)); cs.lastAt = Date.now();
+    try{ const cl = Object.values(session.cueLog || {}).filter(x => x.flagged > 0); if(cl.length){ const o = cs.cue || (cs.cue = { found:0, decisive:0 }); o.found += cl.reduce((a, x) => a + x.found, 0); o.decisive += cl.reduce((a, x) => a + x.decisive, 0); } }catch(e){}
     DATA.caseStats[caseDef.id] = cs; persist();
   }
   const modeLabel = caseDef ? ('Case study — ' + caseDef.title)
@@ -14953,7 +14971,7 @@ function buildTutorSystemPrompt(){
     const mp = missProfile();
     if(mp.total >= 6){
       const parts = Object.keys(mp.counts).sort((a,b)=>mp.counts[b]-mp.counts[a]).slice(0,3).map(k => `${MISS_TYPES[k].label.toLowerCase()} ${Math.round(mp.counts[k]/mp.total*100)}%`);
-      missContext += ` The app sorts each of their misses by cause; over their last ${mp.total} misses: ${parts.join(', ')}. Technique-type causes (misreading, rushing, overconfidence, calculation slips) call for a different fix than a knowledge gap.`;
+      missContext += ` The app sorts each of their misses by cause; over their last ${mp.total} misses: ${parts.join(', ')}. Technique-type causes (misreading, missing a deciding fact in a case, rushing, overconfidence, calculation slips) call for a different fix than a knowledge gap.`;
     }
     const mixNow = activeMixupPairs(2);
     if(mixNow.length) missContext += ` They keep mixing up ${mixNow.map(pr => pr.a + ' and ' + pr.b).join('; and ')} — a contrast between the two is more useful than re-teaching either one.`;
