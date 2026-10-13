@@ -1002,6 +1002,41 @@
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--muted);display:block;margin-bottom:6px;
   }
+  .cue-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px;}
+  .cue-chip{font-size:10.5px;padding:2px 8px;border-radius:10px;line-height:1.5;}
+  .cue{border-radius:3px;padding:0 2px;}
+  .cue-fig{background:rgba(201,162,39,.26);}
+  .cue-goal{background:rgba(46,125,98,.24);}
+  .cue-flag{background:rgba(196,74,60,.22);}
+  .cue-acct{background:rgba(63,111,176,.22);}
+  .cue-toggle{margin-left:auto;font:600 11px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 12px;border-radius:22px;border:1px solid var(--hair);background:var(--surface);color:var(--paper);cursor:pointer;transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);}
+  .cue-toggle:hover{border-color:var(--gold);}
+  .cue-toggle:active{transform:scale(.96);}
+  .cue-toggle[aria-pressed="true"]{color:var(--gold);border-color:var(--gold);}
+  .cs-sent{border-radius:4px;padding:1px 2px;cursor:pointer;transition:background var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+  .cs-sent:hover{background:rgba(128,128,128,.12);}
+  .cs-sent.flagged{box-shadow:inset 0 -2px 0 var(--gold);background:rgba(201,162,39,.12);}
+  .cs-revealed .cs-sent{cursor:default;}
+  .cs-revealed .cs-sent:hover{background:none;}
+  .cs-revealed .cue{background:transparent;}
+  .cs-sent.key{box-shadow:inset 3px 0 0 var(--gold);background:rgba(201,162,39,.12);padding-left:6px;}
+  .cs-sent.key.hit{box-shadow:inset 3px 0 0 var(--correct);}
+  .cs-sent.key.miss{box-shadow:inset 3px 0 0 var(--incorrect);}
+  .cs-sent.extra{opacity:.75;}
+  .cs-ev{font-weight:700;text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:3px;}
+  .cs-noise{text-decoration:line-through;text-decoration-style:dotted;opacity:.7;}
+  .cs-badge{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:8px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap;}
+  .cs-sent.hit .cs-badge{color:var(--correct);border-color:var(--correct);}
+  .cs-sent.miss .cs-badge{color:var(--incorrect);border-color:var(--incorrect);}
+  .cue-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45;}
+  .cs-reveal{margin-top:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);font-size:13px;line-height:1.5;animation:fadeUp var(--t-med) var(--ease);}
+  .cs-rev-head{font-weight:600;margin-bottom:6px;}
+  .cs-rev-row{margin:4px 0;color:var(--paper);}
+  .cs-rev-note{margin-top:8px;color:var(--muted);}
+  .ask-chips{display:flex;flex-wrap:wrap;gap:6px;margin:-8px 0 16px;align-items:center;}
+  .ask-label{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);width:100%;}
+  .ask-chip{font-size:12px;line-height:1.4;padding:5px 10px;border-radius:10px;background:var(--surface2);border:1px solid var(--hair);color:var(--paper);}
+  .ask-chip b{color:var(--gold);font-weight:600;}
   .q-text{font-family:'Fraunces',serif;font-size:19px;font-weight:500;line-height:1.42;margin:0 0 20px;}
   @keyframes variantLoadingPulse{0%,100%{opacity:1;}50%{opacity:.55;}}
   .q-text.variant-loading{font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:400;font-style:italic;color:var(--muted);animation:variantLoadingPulse 1.6s ease-in-out infinite;}
@@ -1820,6 +1855,7 @@
             <div class="q-domain" id="qDomain">Domain</div>
             <div class="q-scenario" id="qScenario" style="display:none;"></div>
             <div class="q-text" id="qText" tabindex="-1">Question text</div>
+            <div class="ask-chips" id="qAsk" style="display:none;"></div>
             <div class="confidence-row" id="confidenceRow">
               <span class="confidence-label">How sure are you?</span>
               <div class="confidence-pills">
@@ -1832,6 +1868,7 @@
             <div class="calc-cue" id="calcCue" style="display:none;" role="note"></div>
             <div class="choices" id="qChoices"></div>
             <div class="quiz-feedback" id="qFeedback"></div>
+            <div id="csRevealHost"></div>
             <div class="session-insight" id="sessionInsight" style="display:none;"></div>
             <div class="calc-steps-row" id="calcStepsRow" style="display:none;">
               <button class="btn ghost" id="calcStepsBtn" onclick="toggleCalcSteps()">Show calculator steps</button>
@@ -2185,6 +2222,7 @@
         <div class="science-item"><b>Fact-checking the numbers against the government sources</b>Rechecked the 2026 limits against the IRS notices (retirement plan limits, the inflation adjustments), the Social Security Administration (taxable maximum, earnings test, credit amount) and Medicare. Everything matched. Filled in numbers that were missing: the 2026 tax brackets, kiddie tax, AMT exemption, charitable IRA gift limit and adoption credit, and spelled out the SALT cap by year.</div>
         <div class="science-item"><b>Connecting every question to its syllabus topic</b>About three in ten questions were not linked to any official topic, so they never counted toward your per-topic accuracy or showed up in a topic drill. Widened the matching (options, Medicare, home and auto insurance, behavioral finance, consumer-credit laws, savings bonds, the new 2025 tax-law items and more) so all but one are now linked. Your weak-topic suggestions and the Study plan now draw on the whole question bank.</div>
         <div class="science-item"><b>Making each study mode earn its place</b>The 24-question mock was timed at 35 minutes, which is about 1.5 times faster than the real exam's pace, so it overstated how rushed the real exam is. It is now a timed checkpoint at the real pace (about 51 minutes) and its score still counts toward your readiness. Every mode now says when to use it and shows when you last did it and how you scored. The checkpoint also appears in Today's plan about once a week, and the tutor can start it for you.</div>
+        <div class="science-item"><b>Training how to read a case, not just answer it</b>Most of a case-study question is a reading task: find the two or three facts that decide it, ignore the ones that only look relevant, and notice what is really being asked. Case text now color-codes figures, goals, red flags and accounts; you can tap the sentences you would circle before answering; and afterward the app shows which facts decided the answer, which only looked relevant, and how many you caught. A short line under each question also decodes words like "most", "if", "first" and "not". The same aids show on other scenario questions, and switch off in the timed exam modes so those stay realistic. Every case question has its deciding facts written out, and AI-written cases include them too.</div>
       </div>
     </div>
 
@@ -6399,7 +6437,7 @@ function buildStudyPlan(minutes){
       const pick = nextCaseToTry();
       if(!pick) return null;
       return { id:'case', title:`Case study: ${pick.title}`, minutes:25,
-        why:'The real exam wraps most questions in a client case. Practising in that format builds the habit of pulling the right facts out of a story.',
+        why:'The real exam wraps most questions in a client case. Flag the facts that would change the answer, then check which ones actually decided it. That reading habit is what this trains.',
         done: act.modes.includes('case'), run: () => { showTab('study'); startCase(pick.id); } };
     },
     checkpoint: () => {
@@ -6538,7 +6576,7 @@ function renderModeMeta(){
     put('drill', line('drill'));
     put('mock', line('mock'));
     put('fullexam', line('fullexam'));
-    put('case', line('case'));
+    put('case', line('case') + (cueAccuracyText() ? ' · ' + cueAccuracyText() : ''));
     put('review', line('review'));
     put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : 'Not tried yet');
     put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : 'Not tried yet');
@@ -10425,8 +10463,9 @@ Rules for every question:
 - No "all of the above", "none of the above", or "both A and B" choices.
 - "rationale" is an array of 4 strings in the same order as the choices; the right one begins with "Correct — " and each wrong one begins with "Wrong — " followed by a one-sentence reason.
 - Use current 2026 U.S. tax and retirement law, and avoid quoting dollar limits or thresholds you are not certain of.
+- "cue" teaches how to read the case: "ev" is 1 to 3 short phrases copied EXACTLY, character for character, from the case text, naming the facts that decide that question's answer; "noise" is 0 to 2 short phrases copied exactly from the case text that look relevant to that question but are not needed; "note" is one sentence (under 30 words) saying why the deciding facts decide it.
 Return ONLY a raw JSON object, no markdown fences, in exactly this shape:
-{"title":"Client names — short descriptor","scenario":"the case text","questions":[{"domain":"key","q":"question text","choices":["","","",""],"correct":0,"rationale":["","","",""]}]}`;
+{"title":"Client names — short descriptor","scenario":"the case text","questions":[{"domain":"key","q":"question text","choices":["","","",""],"correct":0,"rationale":["","","",""],"cue":{"ev":["exact phrase"],"noise":["exact phrase"],"note":"one sentence"}}]}`;
 }
 function parseGeneratedCase(raw, wantedDomains, lenient){
   let t = String(raw).trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
@@ -10442,7 +10481,7 @@ function parseGeneratedCase(raw, wantedDomains, lenient){
   obj.questions.forEach(item => {
     if(!item || !DOMAINS.some(d => d.key === item.domain)) return;
     const parsed = safeParseQuestions(JSON.stringify([Object.assign({}, item, { scenario })]), item.domain, null, { lenient: !!lenient });
-    if(parsed.length) good.push(parsed[0]);
+    if(parsed.length){ const cu = sanitizeCue(item.cue, scenario); if(cu) parsed[0].cue = cu; good.push(parsed[0]); }
   });
   if(good.length < 4 || new Set(good.map(q => q.domain)).size < 3) return null;
   return { title, scenario, questions: good.slice(0, 6) };
@@ -12637,6 +12676,201 @@ function renderCalcCue(q){
   if(html){ el.innerHTML = html; el.style.display = 'block'; } else { el.style.display = 'none'; el.innerHTML = ''; }
 }
 
+const CASE_CUES = {"cs1-1":{"ev":["retire in 6 years","$850,000 in a 401(k) split 70/30 between growth stock funds and bonds"],"noise":["$2.1M in retained earnings"],"note":"A short time horizon plus a growth-heavy 70/30 mix points to reviewing the allocation. The business facts belong to other questions."},"cs1-2":{"ev":["considering selling the business to a group of long-time employees","no formal buy-sell agreement in place"],"noise":["federal marginal tax bracket is 35%"],"note":"\"No formal buy-sell agreement\" is the planted gap: nothing sets the price or how the purchase is paid for."},"cs1-3":{"ev":["$1.2M of company stock with a low cost basis of $80,000"],"noise":["Diane (age 57)"],"note":"Value minus basis is the gain. Nothing says the stock was held under a year, so the gain is long term."},"cs1-4":{"ev":["low cost basis of $80,000"],"noise":[],"note":"A low basis is a built-in gain. Death resets the basis, which is why \"if he keeps it until death\" changes the answer."},"cs1-5":{"ev":["considering selling the business to a group of long-time employees","no formal buy-sell agreement in place"],"noise":[],"note":"The case names the tool (a buy-sell agreement). The question asks what pays for it."},"cs1-6":{"ev":["$1.2M of company stock","$850,000 in a 401(k)"],"noise":["successful manufacturing business"],"note":"Set the size of the single holding against total investable assets. That comparison is the concentration cue."},"cs1-7":{"ev":["Diane (age 57), who has a modest IRA of $120,000"],"noise":[],"note":"A modest account for the spouse with the smaller assets points to whether she is covered if she outlives him."},"cs1-8":{"ev":["current federal marginal tax bracket is 35%","retire in 6 years"],"noise":[],"note":"Conversion size is a bracket comparison: the 35% rate today against the rate expected in retirement."},"cs2-1":{"ev":["self-employed contractor","no employer benefits","two young children (ages 3 and 6)","no life insurance"],"noise":["$40,000 in student loan debt at 6%"],"note":"A sole earner with no employer benefits and young children puts income protection first."},"cs2-2":{"ev":["$15,000 in emergency savings","two young children (ages 3 and 6)","no life insurance"],"noise":["$40,000 in student loan debt at 6%"],"note":"The 6% loan looks urgent, but missing protection with young children outranks paying debt faster."},"cs2-3":{"ev":["'just knows' the market will rebound quickly"],"noise":["$95,000/year"],"note":"Certainty about predicting the market is the overconfidence cue. Nothing mentions past losses or following a crowd."},"cs2-4":{"ev":["$15,000 in emergency savings","no life insurance","aggressive all-stock investment approach"],"noise":[],"note":"Capacity is what the family can afford to lose. Their thin cushion limits it, however confident James feels."},"cs2-5":{"ev":["two young children (ages 3 and 6)"],"noise":["Maria works part-time"],"note":"Young children and a long runway point to the education-specific, tax-advantaged account."},"cs2-6":{"ev":["self-employed contractor","no employer benefits"],"noise":["small employer 401(k) match"],"note":"\"Self-employed\" narrows the list to plans built for the self-employed. Maria's 401(k) is a different person's plan."},"cs3-1":{"ev":["still names her ex-husband as primary beneficiary on several accounts"],"noise":["22 years of marriage"],"note":"Beneficiary forms override a will, so the fix has to be made at the account, not just in her will."},"cs3-2":{"ev":["small consulting business (an S-corporation)"],"noise":[],"note":"The entity named in the case is the clue: S-corporation income passes through to her personal return."},"cs3-3":{"ev":["Patricia, age 55","$340,000 in a traditional IRA received as part of the divorce settlement"],"noise":[],"note":"Age 55 is under 59½, and once the money sits in her own IRA the ordinary rules apply: taxable, with a possible 10% penalty."},"cs3-4":{"ev":["needs to update her estate plan"],"noise":["22 years of marriage"],"note":"Two needs, two tools: where the assets go (will and beneficiaries) and who acts if she cannot (durable power of attorney)."},"cs3-5":{"ev":["small consulting business (an S-corporation)","$180,000 in annual net income"],"noise":[],"note":"A $30,000 salary against $180,000 of profit is the red flag: owner-employees must be paid reasonable compensation."},"cs3-6":{"ev":["small consulting business","$180,000 in annual net income"],"noise":["22 years of marriage"],"note":"High income and a one-person business make a solo 401(k) a better fit than an IRA with its low limit."},"cs4-1":{"ev":["only disability coverage is an employer-paid group long-term disability policy"],"noise":["$380,000 taxable brokerage account"],"note":"\"Employer-paid\" decides the tax treatment: when the employer pays the premium, the benefit is taxable."},"cs4-2":{"ev":["$650,000 mortgage","$500,000 term life policy on Daniel only","fund college for both children"],"noise":["$380,000 taxable brokerage account"],"note":"A needs analysis adds up the obligations (mortgage, income, college) and subtracts what already exists."},"cs4-3":{"ev":["$190,000 is a single technology stock","cost basis $40,000","keep their tax bill under control"],"noise":[],"note":"A large position with a low basis means selling has a tax cost, so the best answer manages the gain."},"cs4-4":{"ev":["$380,000 taxable brokerage account","$520,000 in employer retirement plans"],"noise":[],"note":"Two kinds of accounts means asset location: put the most heavily taxed income where the tax is deferred."},"cs4-5":{"ev":["two children, ages 12 and 9","fund college for both children"],"noise":[],"note":"Children aged 12 and 9 with a college goal point to the education account with tax-free qualified withdrawals."},"cs4-6":{"ev":["combined $420,000"],"noise":[],"note":"Income well over the phase-out rules out a direct Roth contribution. The workaround is the backdoor Roth, with the pro rata rule as the catch."},"cs5-1":{"ev":["Helen claimed Social Security at 62 and receives $1,400 per month","Walter, whose full retirement age is 67, has not yet claimed and is considering waiting until 70"],"noise":["$250,000 Roth IRA in Walter's name"],"note":"Her benefit is small and his is large. Delay raises the benefit that the survivor keeps."},"cs5-2":{"ev":["$900,000 in Walter's traditional IRA","has not yet claimed"],"noise":["$300,000 in a taxable account"],"note":"A big pre-tax IRA plus a low-income window before Social Security starts is the moment for partial Roth conversions."},"cs5-3":{"ev":["three adult children"],"noise":["Roth IRA in Walter's name"],"note":"Adult children are non-spouse designated beneficiaries, which brings in the 10-year rule."},"cs5-4":{"ev":["a favorite charity","$900,000 in Walter's traditional IRA"],"noise":[],"note":"Pre-tax IRA money carries income tax for heirs but none for a charity, so it is the best asset to leave to charity."},"cs5-5":{"ev":["Both are healthy","Helen's family tends to live into the nineties"],"noise":["a paid-off $600,000 home"],"note":"Good health and long family lifespans raise the chance of needing long-term care. Medicaid pays only after assets are spent down."},"cs5-6":{"ev":["after-tax spending need is $9,000 per month"],"noise":["$300,000 in a taxable account"],"note":"Annualize the need ($108,000), subtract the guaranteed income, then divide only the gap by the portfolio."},"cs6-1":{"ev":["plans to sell the practice to her associate dentist, Dr. Kim, in eight to ten years","protect the practice's value if something happens to her sooner"],"noise":[],"note":"A known buyer, a future sale and a wish to protect value if she dies sooner all point to a funded buy-sell agreement."},"cs6-2":{"ev":["owns 100% of a dental practice","if something happens to her sooner"],"noise":["a rental property"],"note":"She is the sole owner who produces the revenue, so the practice needs key-person coverage it owns."},"cs6-3":{"ev":["owns 100% of a dental practice"],"noise":["$1.2 million term life policy"],"note":"Only one fact matters: she owns a dental practice, so the exposure is professional. The rest is knowing that a personal umbrella policy excludes professional services."},"cs6-4":{"ev":["dental practice organized as an S-corporation"],"noise":[],"note":"A dental practice is a specified service business, so the QBI deduction phases out at higher income."},"cs6-5":{"ev":["total net worth is roughly $4.5 million"],"noise":["$1.2 million term life policy"],"note":"Compare net worth with the 2026 exclusion amount of $15 million. The state-tax caveat is why the answer says \"could still apply\"."},"cs6-6":{"ev":["asked by Dr. Kim to advise him on the eventual purchase as well"],"noise":["19-year-old daughter in college"],"note":"One planner advising both sides of one deal is a conflict of interest: disclose, get informed consent and manage it, or decline one engagement."}};
+
+/* ===========================================================
+   CASE READING TRAINING
+   A case question is mostly a reading task: find the few facts that decide the answer, ignore the
+   ones that only look relevant, and notice what the question is really asking. Three aids, all
+   switched off in the timed exam modes:
+   1. Cue highlighting: figures, goals, red flags and accounts/entities are colored in the case text.
+   2. Fact flagging: tap the sentences you would circle before answering.
+   3. A reveal after answering: which facts decided it, which only looked relevant, and what you caught.
+=========================================================== */
+const CUE_RULES = [
+  { k:'fig',  re:/\$\d[\d,.]*(?:\s?(?:million|M|K|k)\b)?(?:\/\w+)?|\b\d+(?:\.\d+)?%|\bage[sd]?\s\d{2}\b|\(\d{2}\)|\b\d+-year\b|\b\d+ years?\b|\b\d+\/\d+\b|\b(?:one|two|three|four|five|six|eight|ten)\s+(?:young\s+)?(?:children|years)\b/gi },
+  { k:'flag', re:/\b(?:no|not|without|never|only|none|still|but|although|however|unaware|recently|modest|thin|low|single|concentrated)\b(?:\s+[A-Za-z'-]+){0,2}/gi },
+  { k:'goal', re:/\b(?:wants?|plans?|hopes?|goals?|intends?|considering|worr(?:ies|ied)|asked|expects?|would like|needs?|wish(?:es)?)\b/gi },
+  { k:'acct', re:/\b(?:S-corporation|C-corporation|LLC|partnership|401\(k\)|403\(b\)|IRAs?|Roth|529|QDRO|buy-sell agreement|term life policy|life insurance|disability|long-term care|Social Security|Medicare|Medicaid|trust|brokerage account|mortgage|pension|annuity|stock|rental property)\b/gi }
+];
+const CUE_LABELS = { fig:'Figures', goal:'Goals', flag:'Red flags and gaps', acct:'Accounts and entities' };
+function cueFor(q){ return (q && (q.cue || CASE_CUES[q.id])) || null; }
+function sanitizeCue(c, scenario){
+  if(!c || typeof c !== 'object') return null;
+  const hay = String(scenario || '').toLowerCase();
+  const keep = a => (Array.isArray(a) ? a : []).map(x => String(x || '').trim()).filter(x => x.length >= 4 && x.length <= 160 && hay.includes(x.toLowerCase())).slice(0, 4);
+  const ev = keep(c.ev), noise = keep(c.noise).filter(n => !ev.some(e => e.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(e.toLowerCase())));
+  const note = String(c.note || '').trim().slice(0, 260);
+  if(!ev.length || !note) return null;
+  return { ev, noise, note };
+}
+function cueFindRanges(text, phrases, kind){
+  const out = [], low = text.toLowerCase();
+  (phrases || []).forEach(ph => { const i = low.indexOf(String(ph).toLowerCase()); if(i >= 0) out.push({ s:i, e:i + ph.length, k:kind }); });
+  return out;
+}
+function cueAutoRanges(text, reserved){
+  const all = [];
+  CUE_RULES.forEach((r, pr) => { r.re.lastIndex = 0; let m; while((m = r.re.exec(text))){ if(!m[0]){ r.re.lastIndex++; continue; } all.push({ s:m.index, e:m.index + m[0].length, k:r.k, pr }); } });
+  all.sort((a, b) => a.s - b.s || a.pr - b.pr || (b.e - b.s) - (a.e - a.s));
+  const res = []; let end = -1;
+  all.forEach(x => { if(x.s >= end && !reserved.some(r => x.s < r.e && x.e > r.s)){ res.push(x); end = x.e; } });
+  return res;
+}
+function cueSplitSentences(text){
+  const res = []; let start = 0; const re = /[.!?]+["')\]]*\s+(?=[A-Z("'])/g; let m;
+  while((m = re.exec(text))){
+    const before = text.slice(start, m.index + 1);
+    if(/\b(?:Dr|Mr|Mrs|Ms|Prof|St|Jr|Sr|vs|No)\.$/.test(before) || /\bU\.S\.$/.test(before)) continue;
+    const punct = m[0].match(/^[.!?]+["')\]]*/)[0].length;
+    res.push({ s:start, e:m.index + punct });
+    start = m.index + m[0].length;
+  }
+  res.push({ s:start, e:text.length });
+  return res;
+}
+function cueSegmentHtml(text, s, e, ranges){
+  let html = '', pos = s;
+  ranges.forEach(r => {
+    const rs = Math.max(r.s, s), re2 = Math.min(r.e, e);
+    if(re2 <= rs) return;
+    if(rs > pos) html += escapeHtml(text.slice(pos, rs));
+    const cls = r.k === 'ev' ? 'cs-ev' : r.k === 'noise' ? 'cs-noise' : 'cue cue-' + r.k;
+    html += `<span class="${cls}">${escapeHtml(text.slice(rs, re2))}</span>`;
+    pos = re2;
+  });
+  if(pos < e) html += escapeHtml(text.slice(pos, e));
+  return html;
+}
+function cuesOn(){ return isStudyMode() && !(DATA && DATA.cueOn === false); }
+function toggleCues(){ DATA.cueOn = DATA.cueOn === false ? true : false; persist(); if(session) paintScenario(session.queue[session.index], !!session.cueRevealed); }
+function toggleCueSentence(i){
+  if(!session || session.locked) return;
+  const k = session.index; session.cueFlags = session.cueFlags || {};
+  const arr = session.cueFlags[k] || (session.cueFlags[k] = []);
+  const at = arr.indexOf(i); if(at >= 0) arr.splice(at, 1); else arr.push(i);
+  paintScenario(session.queue[session.index], false);
+  const el = document.querySelector('#qScenario .cs-sent[data-i="' + i + '"]'); if(el) el.focus({preventScroll:true});
+}
+function paintScenario(q, revealed){
+  const box = document.getElementById('qScenario'); if(!box) return;
+  if(!q || !q.scenario){ box.style.display = 'none'; box.innerHTML = ''; const h0 = document.getElementById('csRevealHost'); if(h0) h0.innerHTML = ''; return; }
+  const text = q.scenario, study = isStudyMode(), cue = study ? cueFor(q) : null, on = cuesOn();
+  box.innerHTML = '';
+  const label = document.createElement('span'); label.className = 'scenario-label';
+  const cdef = session && session.mode === 'case' ? caseById(session.caseId) : null;
+  label.textContent = cdef ? ('Case study · ' + cdef.title) : 'Client scenario';
+  box.appendChild(label);
+  box.classList.toggle('cs-revealed', !!revealed);
+  if(study){
+    const bar = document.createElement('div'); bar.className = 'cue-bar';
+    if(on) bar.innerHTML = Object.keys(CUE_LABELS).map(k => `<span class="cue-chip cue-${k}">${CUE_LABELS[k]}</span>`).join('');
+    const tg = document.createElement('button'); tg.type = 'button'; tg.className = 'cue-toggle'; tg.setAttribute('aria-pressed', String(on));
+    tg.textContent = on ? 'Cues on' : 'Cues off'; tg.onclick = toggleCues; bar.appendChild(tg);
+    box.appendChild(bar);
+  }
+  const reserved = [];
+  if(revealed && cue){ cueFindRanges(text, cue.ev, 'ev').forEach(r => reserved.push(r)); cueFindRanges(text, cue.noise, 'noise').forEach(r => reserved.push(r)); }
+  const auto = on ? cueAutoRanges(text, reserved) : [];
+  const ranges = reserved.concat(auto).sort((a, b) => a.s - b.s);
+  const body = document.createElement('div'); body.className = 'cs-body';
+  if(cue){
+    const sents = cueSplitSentences(text);
+    const flags = ((session && session.cueFlags && session.cueFlags[session.index]) || []);
+    const evR = cueFindRanges(text, cue.ev, 'ev'), noR = cueFindRanges(text, cue.noise, 'noise');
+    sents.forEach((st, i) => {
+      const decisive = evR.some(r => r.s < st.e && r.e > st.s);
+      const flagged = flags.includes(i);
+      const sp = document.createElement('span');
+      let cls = 'cs-sent' + (flagged ? ' flagged' : '');
+      if(revealed){ if(decisive) cls += flagged ? ' key hit' : ' key miss'; else if(flagged) cls += ' extra'; }
+      sp.className = cls; sp.dataset.i = i;
+      sp.innerHTML = cueSegmentHtml(text, st.s, st.e, ranges) + ' ';
+      if(revealed){
+        const badge = decisive ? (flagged ? '✓ caught' : 'missed') : (flagged ? 'not needed' : '');
+        if(badge){ const b = document.createElement('span'); b.className = 'cs-badge'; b.textContent = badge; sp.appendChild(b); sp.appendChild(document.createTextNode(' ')); }
+      } else {
+        sp.tabIndex = 0; sp.setAttribute('role', 'button'); sp.setAttribute('aria-pressed', String(flagged));
+        sp.onclick = () => toggleCueSentence(i);
+        sp.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleCueSentence(i); } };
+      }
+      body.appendChild(sp);
+    });
+  } else {
+    body.innerHTML = ranges.length ? cueSegmentHtml(text, 0, text.length, ranges) : escapeHtml(text);
+  }
+  box.appendChild(body);
+  if(cue && !revealed && study){
+    const hint = document.createElement('div'); hint.className = 'cue-hint';
+    hint.textContent = 'Tap the sentences you would circle to answer this question. After you answer, you will see which facts decided it.';
+    box.appendChild(hint);
+  }
+  const host = document.getElementById('csRevealHost');
+  if(host){ host.innerHTML = ''; if(revealed && cue) host.appendChild(cueRevealPanel(q, cue)); }
+  box.style.display = 'block';
+}
+function cueRevealPanel(q, cue){
+  const text = q.scenario, sents = cueSplitSentences(text);
+  const evR = cueFindRanges(text, cue.ev, 'ev');
+  const decisive = sents.map((st, i) => evR.some(r => r.s < st.e && r.e > st.s) ? i : -1).filter(i => i >= 0);
+  const flags = (session.cueFlags && session.cueFlags[session.index]) || [];
+  const found = decisive.filter(i => flags.includes(i)).length, extras = flags.filter(i => !decisive.includes(i)).length;
+  const wrap = document.createElement('div'); wrap.className = 'cs-reveal'; wrap.setAttribute('role', 'status');
+  let head;
+  if(!flags.length) head = 'You did not flag any facts this time. Before choosing, circle the two or three that would change the answer if they were different.';
+  else head = `You caught ${found} of ${decisive.length} deciding fact${decisive.length === 1 ? '' : 's'}` + (extras ? ` and flagged ${extras} that ${extras === 1 ? 'was' : 'were'} not needed.` : '.');
+  let h = `<div class="cs-rev-head">${escapeHtml(head)}</div>`;
+  h += `<div class="cs-rev-row"><b>What decided it:</b> ${cue.ev.map(e => '“' + escapeHtml(e) + '”').join(' · ')}</div>`;
+  if(cue.noise && cue.noise.length) h += `<div class="cs-rev-row"><b>Looked relevant, was not:</b> ${cue.noise.map(e => '“' + escapeHtml(e) + '”').join(' · ')}</div>`;
+  h += `<div class="cs-rev-note">${escapeHtml(cue.note)}</div>`;
+  wrap.innerHTML = h;
+  return wrap;
+}
+function revealCaseCues(q){
+  if(!isStudyMode()) return;
+  const cue = cueFor(q); if(!cue) return;
+  const text = q.scenario || ''; if(!text) return;
+  const sents = cueSplitSentences(text), evR = cueFindRanges(text, cue.ev, 'ev');
+  const decisive = sents.map((st, i) => evR.some(r => r.s < st.e && r.e > st.s) ? i : -1).filter(i => i >= 0);
+  const flags = (session.cueFlags && session.cueFlags[session.index]) || [];
+  const found = decisive.filter(i => flags.includes(i)).length, extras = flags.filter(i => !decisive.includes(i)).length;
+  session.cueLog = session.cueLog || {};
+  session.cueLog[session.index] = { found, decisive: decisive.length, extras, flagged: flags.length };
+  if(flags.length){
+    const cs = DATA.cueStats || (DATA.cueStats = { n:0, decisive:0, found:0, extras:0 });
+    cs.n++; cs.decisive += decisive.length; cs.found += found; cs.extras += extras;
+  }
+  session.cueRevealed = true;
+  paintScenario(q, true);
+  persist();
+}
+function cueAccuracyText(){
+  const cs = DATA && DATA.cueStats;
+  if(!cs || cs.decisive < 6) return '';
+  return Math.round(100 * cs.found / cs.decisive) + '% of deciding facts caught';
+}
+
+/* What is this question really asking? A few plain-language chips built from the wording of the stem. */
+function renderAskChips(q){
+  const el = document.getElementById('qAsk'); if(!el) return;
+  el.innerHTML = '';
+  if(!isStudyMode() || !q || !(q.scenario || (session && session.mode === 'case')) || !cuesOn()){ el.style.display = 'none'; return; }
+  const stem = String(q.q || ''), chips = [];
+  const add = (term, msg) => chips.push(`<span class="ask-chip"><b>${escapeHtml(term)}</b> ${escapeHtml(msg)}</span>`);
+  let m;
+  if(/\b(EXCEPT|NOT|LEAST)\b|\b(?:is|are|was|does|do|would|will|can|should)\s+not\b/.test(stem)) add('Reverse question.', 'Find the choice that is false or does not fit.');
+  else if((m = stem.match(/\b(most|best|primary|first|key|main|major|significant|greatest)\b/i))) add('“' + m[1] + '”.', 'Several choices may be true. Pick the one that fits this client best.');
+  if((m = stem.match(/\b(if|suppose|assuming|assume|instead)\b/i))) add('“' + m[1] + '”.', 'The question adds or changes a fact. Use the new fact, not the original one.');
+  if((m = stem.match(/\b(immediate|immediately|currently|now|this year|at death|during (?:his|her|their) lifetime|in retirement)\b/i))) add('Timing: ' + m[1] + '.', 'Answer for that moment, not for a later one.');
+  if(/\b(approximately|how much|what rate|what withdrawal|closest|calculate)\b/i.test(stem) || (q.choices || []).filter(c => /^[\s$]*[\d.,]+\s*%?\s*$|^about\b/i.test(c)).length >= 3) add('Calculation.', 'Pull the numbers from the case, then work it step by step.');
+  const sc = String(q.scenario || '').toLowerCase();
+  const names = (stem.match(/\b[A-Z][a-z]{2,}\b/g) || []).filter((n, i, a) => a.indexOf(n) === i && sc.includes(n.toLowerCase()) && !/^(Which|Given|What|How|Under|Because|Robert's|Social|Roth|Medicaid|Medicare)$/.test(n)).slice(0, 2);
+  if(names.length) add('Focus: ' + names.join(' and ') + '.', 'The question is about this person. Check their facts, not their spouse’s.');
+  if(!chips.length){ el.style.display = 'none'; return; }
+  el.innerHTML = '<span class="ask-label">How to read this question</span>' + chips.slice(0, 3).join('');
+  el.style.display = 'flex';
+}
+
 function renderQuestion(){
   paceTouch(); paceBegin(); updatePaceChip();
   const q = session.queue[session.index];
@@ -12716,25 +12950,12 @@ function renderQuestion(){
   const reasonCode = session.mode === 'adaptive' && session.selectionReasons ? session.selectionReasons[q.id] : null;
   const reasonFlag = reasonCode && reasonLabels[reasonCode] ? ` <span class="gen-flag" title="Why this question, right now">· ${reasonLabels[reasonCode]}</span>` : '';
   document.getElementById('qDomain').innerHTML = domainMeta.code + ' — ' + domainMeta.name + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + reasonFlag;
-  const scenarioBox = document.getElementById('qScenario');
-  if(q.scenario){
-    scenarioBox.innerHTML = '';
-    const label = document.createElement('span');
-    label.className = 'scenario-label';
-    const cdef = session.mode==='case' ? caseById(session.caseId) : null;
-    label.textContent = cdef ? ('Case study · ' + cdef.title) : 'Client scenario';
-    const body = document.createElement('span');
-    body.textContent = q.scenario;
-    scenarioBox.appendChild(label);
-    scenarioBox.appendChild(body);
-    scenarioBox.style.display = 'block';
-  } else {
-    scenarioBox.style.display = 'none';
-    scenarioBox.innerHTML = '';
-  }
+  session.cueRevealed = false;
+  paintScenario(q, false);
   const qTextDisplay = document.getElementById('qText');
   qTextDisplay.classList.remove('variant-loading');
   if(isStudyMode()) qTextDisplay.innerHTML = highlightQualifiers(q.q); else qTextDisplay.textContent = q.q;
+  renderAskChips(q);
 
   const choicesBox = document.getElementById('qChoices');
   choicesBox.innerHTML = '';
@@ -13243,6 +13464,7 @@ function selectAnswer(i){
   session.lastSelectedIndex = i;
   const q = session.queue[session.index];
   const isCorrect = (i === q.correct);
+  try{ revealCaseCues(q); }catch(e){}
   document.querySelectorAll('.confidence-pill').forEach(p => p.disabled = true);
   const mismatchEl = document.getElementById('confidenceMismatch');
   if(mismatchEl){
@@ -13853,6 +14075,13 @@ function renderResultCase(){
   }
   note.innerHTML = line;
   el.appendChild(note);
+  const cl = Object.values(session.cueLog || {}).filter(x => x.flagged > 0);
+  if(cl.length){
+    const dec = cl.reduce((a, x) => a + x.decisive, 0), fnd = cl.reduce((a, x) => a + x.found, 0), ex = cl.reduce((a, x) => a + x.extras, 0);
+    const fs = document.createElement('div'); fs.className = 'rr-note'; fs.style.margin = '0 0 10px';
+    fs.innerHTML = `<b>Fact-spotting:</b> you caught ${fnd} of ${dec} deciding facts` + (ex ? ` and flagged ${ex} that were not needed` : '') + `. ` + (fnd / Math.max(1, dec) >= 0.75 ? 'That is the habit that carries over to the real exam.' : 'Next time, circle the facts that would change the answer if they were different.');
+    el.appendChild(fs);
+  }
   const list = document.createElement('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:0 0 12px;';
   session.queue.forEach((q,i) => {
     const entry = (session.answerLog || []).find(e => e.index === i);
@@ -14670,6 +14899,8 @@ function buildTutorSystemPrompt(){
     const wt = weakSubtopics(3);
     if(wt.length) weakTopicText = ' Shakiest official topics (approximate, matched by keywords): ' + wt.map(w => `"${w.name}" ${Math.round(w.st.acc*100)}% over ${w.st.attempts} attempts`).join('; ') + '.';
   }catch(e){}
+  let cueText = '';
+  try{ const ca = cueAccuracyText(); if(ca) cueText = ' In case studies, where they flag the facts that decide each question, they have caught ' + ca + '; the app highlights figures, goals, red flags and accounts in the case text and reveals the deciding facts after each answer, so you can coach the habit of reading for the deciding fact before looking at the choices.'; }catch(e){}
   let calcContext = '';
   const tq = DATA.tvmQuizStats;
   if(tq && tq.asked >= 3){
@@ -14772,7 +15003,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app: overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app: overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
