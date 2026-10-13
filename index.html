@@ -1342,6 +1342,18 @@
     padding-left:max(24px, env(safe-area-inset-left));
     padding-right:max(24px, env(safe-area-inset-right));
   }
+  /* Installed on a phone the status bar is translucent, so the page scrolls
+     underneath the clock and battery. Start content below it, and put a solid
+     strip behind it so scrolled cards don't collide with the clock. Dark theme
+     only: the status text colour in light mode is set by the phone. */
+  body{padding-top:max(44px, calc(env(safe-area-inset-top, 0px) + 20px));}
+  html::before{
+    content:"";position:fixed;top:0;left:0;right:0;
+    height:calc(env(safe-area-inset-top, 0px) * 1.25);
+    background:linear-gradient(to bottom, var(--ink) 80%, transparent);
+    z-index:150;pointer-events:none;
+  }
+  html:has(body.light-mode)::before{display:none;}
   .calc-steps-row .btn.ghost{display:inline-flex;align-items:center;justify-content:center;}
   @media (max-height:520px) and (orientation:landscape){
     body{padding-top:max(12px, env(safe-area-inset-top));padding-bottom:20px;}
