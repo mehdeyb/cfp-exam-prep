@@ -2224,6 +2224,7 @@
         <div class="science-item"><b>Making each study mode earn its place</b>The 24-question mock was timed at 35 minutes, which is about 1.5 times faster than the real exam's pace, so it overstated how rushed the real exam is. It is now a timed checkpoint at the real pace (about 51 minutes) and its score still counts toward your readiness. Every mode now says when to use it and shows when you last did it and how you scored. The checkpoint also appears in Today's plan about once a week, and the tutor can start it for you.</div>
         <div class="science-item"><b>Training how to read a case, not just answer it</b>Most of a case-study question is a reading task: find the two or three facts that decide it, ignore the ones that only look relevant, and notice what is really being asked. Case text now color-codes figures, goals, red flags and accounts; you can tap the sentences you would circle before answering; and afterward the app shows which facts decided the answer, which only looked relevant, and how many you caught. A short line under each question also decodes words like "most", "if", "first" and "not". The same aids show on other scenario questions, and switch off in the timed exam modes so those stay realistic. Every case question has its deciding facts written out, and AI-written cases include them too.</div>
         <div class="science-item"><b>Wiring case reading into the rest of the app</b>Missing a case question after you circled the wrong facts is now sorted as "missed a deciding fact" instead of a generic knowledge gap, so your miss pattern and the tutor can tell reading problems from knowledge problems. The tutor knows which facts decide a question and which sentences you circled, and offers a "Which facts mattered?" button after you answer. Each case now shows how many of its deciding facts you caught, and the plan shown before a case explains the circle-then-check routine.</div>
+        <div class="science-item"><b>A calculator reminder that fits the problem in front of you</b>The pre-answer calculator check used to be the same paragraph on every time-value-of-money question. It now reads the question itself and says what matters for that one: which key you are solving for, whether it is a monthly or annual problem, whether payments start at the beginning or end of the period (or there are none), and which numbers need the negative sign. Your personal slip reminder only appears when it applies to this problem, so a monthly-conversion tip no longer shows on an annual question.</div>
       </div>
     </div>
 
@@ -12663,14 +12664,40 @@ function hideTutorBrief(){
   el.classList.add('tb-out');
   setTimeout(() => { if(el.classList.contains('tb-out')){ el.style.display = 'none'; } }, 280);
 }
+/* Calculator setup profile read from the question's own worked steps, so the reminder fits this problem. */
+function calcSetupProfile(q){
+  const txt = (q && Array.isArray(q.calcSteps)) ? q.calcSteps.join(' ') : '';
+  const keys = [...new Set([...txt.matchAll(/\[(N|I\/YR|PV|PMT|FV)\]/g)].map(m => m[1]))];
+  if(keys.length < 2) return null;
+  const sm = txt.match(/press \[(N|I\/YR|PV|PMT|FV)\] to solve/i);
+  const solve = sm ? sm[1] : null;
+  const neg = [...txt.matchAll(/\[\+\/-\],? then \[(N|I\/YR|PV|PMT|FV)\]/g)].map(m => m[1]);
+  const pmtZero = /Enter 0, press \[PMT\]/.test(txt);
+  const hasPmt = solve === 'PMT' || (keys.includes('PMT') && !pmtZero);
+  const begin = /turn on BEGIN/i.test(txt) || /payments? (?:at|on) the (?:start|beginning)|annuity due/i.test(txt);
+  const monthly = /monthly|\bmonths\b|× 12|÷ 12/i.test(txt);
+  const p12 = /set P\/YR to 12|P\/YR (?:to|=) 12(?! from)/i.test(txt) && !/defaults to 12/i.test(txt.replace(/set P\/YR to 12/gi, ''));
+  return { solve, neg, hasPmt, begin, monthly, p12 };
+}
 function calcCueHtml(q){
   if(!q || !q.calcSteps || !isStudyMode()) return '';
-  if(!/\b(I\/YR|PMT|PV|FV)\b|\bN\b/.test(q.calcSteps.join(' '))) return ''; // only time-value-of-money setups need the key-setup reminder
-  let t = '<b>Calculator check:</b> clear with orange Shift then C (C ALL), set P/YR for this problem (1 for annual), and stay in END mode unless payments start each period.';
+  const f = calcSetupProfile(q); if(!f) return '';
+  const bits = [];
+  bits.push('Clear first (orange Shift, then C ALL).');
+  if(f.monthly) bits.push(f.p12 ? 'Monthly problem: set P/YR to 12 to match.' : 'Monthly problem: put N in months and I/YR as the monthly rate, and leave P/YR at 1.');
+  else bits.push('Annual problem: P/YR must be 1.');
+  if(f.hasPmt) bits.push(f.begin ? 'Payments come at the start of each period, so turn BEGIN on.' : 'Payments come at the end of each period, so BEGIN must be off.');
+  else bits.push('One lump sum: PMT is 0 and BEGIN/END does not matter.');
+  if(f.neg.length) bits.push('Money going out is negative: enter ' + f.neg.join(' and ') + ' with the +/- key.');
+  let t = '<b>Calculator check for this one' + (f.solve ? ' (solving for ' + f.solve + ')' : '') + ':</b> ' + bits.join(' ');
   try{
     const cats = DATA.tvmMistakeCategories || {};
-    const top = Object.keys(CALC_SLIP_CUES).sort((a,b) => (cats[b]||0)-(cats[a]||0))[0];
-    if(top && (cats[top]||0) >= 2) t += ' Your usual slip: ' + CALC_SLIP_CUES[top];
+    const relevant = {
+      signConvention: f.neg.length > 0 || f.hasPmt, decimalForm: true, negativeN: true,
+      monthlyConversion: f.monthly, beginEndMismatch: f.hasPmt
+    };
+    const top = Object.keys(CALC_SLIP_CUES).filter(k => relevant[k] && (cats[k] || 0) >= 2).sort((a,b) => (cats[b]||0)-(cats[a]||0))[0];
+    if(top) t += ' <b>Your usual slip:</b> ' + CALC_SLIP_CUES[top];
   }catch(e){}
   return t;
 }
