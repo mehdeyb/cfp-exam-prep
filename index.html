@@ -1099,6 +1099,12 @@
   .syllabus-head .sd-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
   .syllabus-item{display:flex;align-items:center;gap:9px;padding:6px 0;min-height:44px;font-size:12.5px;color:var(--muted);cursor:pointer;}
   .syllabus-item.done{color:var(--paper);}
+  .syllabus-item .syl-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .syl-meta{flex:none;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);white-space:nowrap;}
+  .syl-meta.low{color:var(--incorrect);}
+  .syl-meta.good{color:var(--correct);}
+  .syl-drill{flex:none;font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:600;padding:6px 10px;min-height:32px;border-radius:14px;border:1px solid var(--hair);background:var(--surface2);color:var(--gold);cursor:pointer;}
+  .syl-drill:hover{border-color:var(--gold);}
   .syllabus-item input{accent-color:var(--gold);width:14px;height:14px;flex:none;}
   .focus-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);background:var(--gold);border-radius:10px;padding:2px 8px;margin-left:8px;vertical-align:middle;}
   .focus-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:7px;}
@@ -2127,6 +2133,7 @@
         <div class="science-item"><b>Tutor help on more screens</b>Asked to keep the tutor useful everywhere. Flashcards now have an "Explain it with an example" button next to the memory trick: it gives a short worked example and says how the exam tends to test the idea. The Exam Day tab has a "Talk it through with your tutor" row whose buttons change with how many days you have left (a plan for the days remaining, an eve-of-exam walkthrough, pacing for the 170 questions), and the Tools tab has buttons for choosing a tool and practising a TVM problem. These open the Tutor tab and send the question for you, so the tutor already knows where you were. The tutor still only knows what the app tells it, and it can be wrong, so check figures against the official sources.</div>
         <div class="science-item"><b>Fewer repeated questions</b>Reported that questions you have already seen kept showing up with a "repeat" tag. That tag means the app tried to reword the question and the attempt failed. Three changes: the app now tries the newest AI model first and falls back to the older one if the service does not recognise it, a fourth and final try accepts a reworded question that is slightly uneven in answer length rather than showing the identical one, and a failed reword is retried after an hour instead of three days. Tapping the tag now shows what went wrong. I could not see your phone's real error, so I cannot be sure which of these was the cause; if the tag keeps appearing, tap it and tell me what it says.</div>
         <div class="science-item"><b>Checking the app against the official exam handbook</b>Asked to make sure everything needed to pass is covered. The October 2026 CFP Board candidate handbook confirms the eight domains and their weights, the 170-question format, the approved calculators (the HP 10bII+ is on the list), and that exams through the October 2026 window test 2026 tax law, so those parts already matched. What was missing were 2026 figures the exam commonly uses. Added to Key Numbers, and to questions and flashcards, were the SIMPLE IRA limit, the defined contribution and defined benefit limits, the pay thresholds for highly compensated and key employees, the Roth and traditional IRA phase-out ranges, the Social Security taxable maximum, earnings test and credit amount, the Medicare Part A and Part B figures, the FSA limits and the QLAC limit. The retirement-plan figures come from the IRS notice and release, and the Social Security taxable maximum from ssa.gov. The Medicare and FSA figures come from summaries of the official announcements, and the credit amount and earnings test limits from one secondary source, so check those against ssa.gov and cms.gov. The results line on the Exam Day tab was also corrected.</div>
+        <div class="science-item"><b>Drilling one topic at a time</b>Asked to keep making the app powerful enough to pass. The Syllabus checklist now shows, under each of the 70 official topics, how many matching questions you have seen and how you are doing on them, with a Drill button that starts 12 questions on that topic, missed ones first. The match between questions and topics is by keywords, so it is approximate. The coach now suggests drilling a topic where you are under 65% across at least six attempts, the tutor is told your three shakiest topics, and on the day before and the day of the exam the coach tells you to keep it light instead of starting another session.</div>
       </div>
     </div>
 
@@ -2278,7 +2285,7 @@
     </div>
     <div class="card">
       <div class="card-head"><h2>Syllabus checklist</h2><div class="note">all 70 official subtopics — reordered weakest-first</div></div>
-      <p class="hint">Straight from CFP Board's Principal Knowledge Topics, sorted by your current quiz performance — your weakest domain(s) always float to the top, tagged "Focus first." Checkboxes track your own review, separately from quiz mastery. The <a href="#" onclick="openStudyGuide(); return false;">study guide</a> has a fixed, printable snapshot of the same syllabus.</p>
+      <p class="hint">Straight from CFP Board's Principal Knowledge Topics, sorted by your current quiz performance — your weakest domain(s) always float to the top, tagged "Focus first." Checkboxes track your own review, separately from quiz mastery. Under each topic is your accuracy on its matching questions (matched by keywords, so approximate) and a Drill button. The <a href="#" onclick="openStudyGuide(); return false;">study guide</a> has a fixed, printable snapshot of the same syllabus.</p>
       <button class="btn ghost" onclick="openRecallTool()" style="margin-bottom:16px;">Test your recall first</button>
       <div class="ref-scroll"><div id="syllabusList"></div></div>
     </div>
@@ -6054,6 +6061,16 @@ function computeNextStep(stats){
       cta:'Start session', meta:'15 questions', run: () => startAdaptive() };
   }
 
+  // The day before and the day of: no new material, just a light skim and rest.
+  if(!step && daysLeft !== null && daysLeft >= 0 && daysLeft <= 1){
+    step = { kicker: daysLeft === 0 ? 'Exam day' : 'Tomorrow', title: daysLeft === 0 ? 'Keep it calm and light' : 'Keep it light today',
+      why: daysLeft === 0
+        ? "Today is for performing, not studying. Read the key numbers once if it settles you, then go. Bring your photo ID and an approved calculator, and clear its memory before each section."
+        : "No new material now. Skim the key numbers and the cards you still miss for about 15 minutes, pack your photo ID and an approved calculator, and go to bed on time.",
+      cta:'Open key numbers', meta:'about 15 minutes', launchesSession:false,
+      run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } };
+  }
+
   // Final stretch: stamina and pacing, then clearing misses
   if(!step && daysLeft !== null && daysLeft >= 0 && daysLeft <= 10){
     const lastFull = (DATA.sessions || []).filter(s=>s.mode==='fullexam').pop();
@@ -6156,6 +6173,18 @@ function computeNextStep(stats){
       step = { kicker:'Exam-style practice', title:'Work a full case study',
         why:`The real exam wraps most questions in a client case. Reading the facts once and answering several questions on them builds the stamina and the habit of pulling details out of a story. Try "${pick.title}".`,
         cta:'Start case', meta:`${caseQuestions(pick.id).length} questions`, run: () => startCase(pick.id) };
+    }
+  }
+
+  // A single topic that keeps going wrong: a focused drill beats more mixed practice.
+  if(!step && stats.totalAnswered >= 60){
+    const drilled = DATA.subtopicDrillAt || {};
+    const wk = weakSubtopics(6).find(w => (Date.now() - (drilled[w.key + '-' + w.idx] || 0)) > 2*86400000);
+    if(wk){
+      const dm = DOMAINS.find(d => d.key === wk.key);
+      step = { kicker:'Weak topic', title:`Drill ${wk.name}`,
+        why:`You have got ${Math.round(wk.st.acc*100)}% right on this topic across ${wk.st.attempts} attempts (${dm ? dm.name : 'this domain'}). Concentrated practice on one topic is the quickest way to lift it.`,
+        cta:'Start drill', meta:`${Math.min(12, wk.st.size)} questions`, run: () => startSubtopicDrill(wk.key, wk.idx) };
     }
   }
 
@@ -7639,14 +7668,72 @@ function renderReference(){
       const checked = DATA.checkedSubtopics.includes(id);
       const row = document.createElement('label');
       row.className = 'syllabus-item' + (checked?' done':'');
-      row.innerHTML = `<input type="checkbox" ${checked?'checked':''} data-id="${id}"><span>${t}</span>`;
+      const ss = subtopicStats(d.key, idx);
+      const metaTxt = ss.size < 3 ? '' : (ss.acc === null ? `${ss.size} questions` : `${Math.round(ss.acc*100)}% · ${ss.seen}/${ss.size} seen`);
+      const metaCls = ss.acc === null || ss.attempts < 4 ? '' : (ss.acc < 0.6 ? ' low' : (ss.acc >= 0.8 ? ' good' : ''));
+      row.innerHTML = `<input type="checkbox" ${checked?'checked':''} data-id="${id}"><span class="syl-text"><span class="syl-name">${t}</span>${metaTxt ? `<span class="syl-meta${metaCls}">${metaTxt}</span>` : ''}</span>` +
+        (metaTxt ? `<button type="button" class="syl-drill" aria-label="Drill ${t.replace(/"/g,'&quot;')}">Drill</button>` : '');
       row.querySelector('input').onchange = (e)=>toggleSubtopic(id, e.target.checked, row);
+      const drillBtn = row.querySelector('.syl-drill');
+      if(drillBtn) drillBtn.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); startSubtopicDrill(d.key, idx); };
       block.appendChild(row);
     });
     syl.appendChild(block);
   });
 
   renderEveningModeControl();
+}
+
+// ---------- Topic-level view of the 70 official subtopics ----------
+// Each subtopic is matched to questions by the same keyword patterns the
+// coverage check uses, so the match is approximate; it is good enough to show
+// which topics are shaky and to drill them.
+const _sylTextCache = {};
+function sylQuestionText(q){
+  return _sylTextCache[q.id] || (_sylTextCache[q.id] = (q.q + ' ' + (q.scenario || '') + ' ' + q.choices.join(' ') + ' ' + q.rationale.join(' ')).toLowerCase());
+}
+let _subPoolKey = '', _subPools = {};
+function subtopicPool(domainKey, idx){
+  let all; try{ all = allQuestions(); }catch(e){ return []; }
+  if(_subPoolKey !== String(all.length)){ _subPools = {}; _subPoolKey = String(all.length); }
+  const id = domainKey + '-' + idx;
+  if(_subPools[id]) return _subPools[id];
+  let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[domainKey][idx]; }catch(e){ return []; }
+  return (_subPools[id] = pat ? all.filter(q => q.domain === domainKey && pat.test(sylQuestionText(q))) : []);
+}
+function subtopicStats(domainKey, idx){
+  const pool = subtopicPool(domainKey, idx);
+  let seen = 0, attempts = 0, correct = 0;
+  pool.forEach(q => {
+    const st = getSpacedStat(DATA.questionStats, q.id);
+    if(st.seen > 0){ seen++; attempts += st.seen; correct += Math.min(st.correct, st.seen); }
+  });
+  return { size: pool.length, seen, attempts, acc: attempts ? correct / attempts : null };
+}
+function weakSubtopics(limit){
+  const rows = [];
+  Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((name, i) => {
+    const st = subtopicStats(k, i);
+    if(st.attempts >= 6 && st.acc < 0.65 && st.size >= 3) rows.push({ key:k, idx:i, name, st });
+  }));
+  rows.sort((a, b) => a.st.acc - b.st.acc || b.st.attempts - a.st.attempts);
+  return rows.slice(0, limit || 3);
+}
+function startSubtopicDrill(domainKey, idx){
+  const pool = subtopicPool(domainKey, idx);
+  if(pool.length < 3) return;
+  const missed = new Set(DATA.missed || []);
+  const ranked = pool.map(q => ({ q, st: getSpacedStat(DATA.questionStats, q.id), r: Math.random() })).sort((a, b) => {
+    const am = missed.has(a.q.id) ? 0 : (a.st.seen === 0 ? 1 : 2), bm = missed.has(b.q.id) ? 0 : (b.st.seen === 0 ? 1 : 2);
+    if(am !== bm) return am - bm;
+    return am === 2 ? a.st.lastSeenAt - b.st.lastSeenAt : a.r - b.r;
+  });
+  const queue = shuffle(ranked.slice(0, Math.min(12, ranked.length)).map(x => x.q));
+  if(!DATA.subtopicDrillAt) DATA.subtopicDrillAt = {};
+  DATA.subtopicDrillAt[domainKey + '-' + idx] = Date.now();
+  if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
+  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
+  beginSession(queue, 'drill', null);
 }
 
 function toggleSubtopic(id, checked, rowEl){
@@ -14267,6 +14354,11 @@ function buildTutorSystemPrompt(){
     .map(d => `${d.name}: ${d.mastery===null ? 'untested so far' : d.mastery+'% ('+d.total+' answered)'}`)
     .join(', ');
 
+  let weakTopicText = '';
+  try{
+    const wt = weakSubtopics(3);
+    if(wt.length) weakTopicText = ' Shakiest official topics (approximate, matched by keywords): ' + wt.map(w => `"${w.name}" ${Math.round(w.st.acc*100)}% over ${w.st.attempts} attempts`).join('; ') + '.';
+  }catch(e){}
   let calcContext = '';
   const tq = DATA.tvmQuizStats;
   if(tq && tq.asked >= 3){
@@ -14369,7 +14461,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app: overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app: overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
