@@ -908,6 +908,9 @@
   .mode-card .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;}
   .mode-card h3{font-family:'Fraunces',serif;font-size:15.5px;margin:5px 0 4px;font-weight:600;}
   .mode-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.45;}
+  .mode-when{font-size:11.5px;color:var(--paper);opacity:.85;margin-top:7px;line-height:1.4;}
+  .mode-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--gold);margin-top:8px;letter-spacing:.2px;}
+  .mode-meta:empty{display:none;}
 
   .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:15px 12px;border-radius:20px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);cursor:pointer;transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);}
   .confidence-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 0 18px;padding-bottom:14px;border-bottom:1px solid var(--hair);}
@@ -1584,6 +1587,7 @@
           <h3>Adaptive Session</h3>
           <p>15 questions selected live: mixed across domains (interleaving), weighted toward your weakest areas, and pulled only from what's new or due — you won't see a repeat until the full bank's been covered. "Due" works the same way as the flashcards: answer one right and it steps further away before it's due again; miss it and it comes right back.</p>
         </div>
+        <div class="mode-meta" data-mm="adaptive" style="margin:8px 0 0;"></div>
         <button class="fm-cta">Start adaptive session</button>
       </div>
 
@@ -1592,41 +1596,57 @@
           <div class="tag">Blocked practice</div>
           <h3>Domain drill</h3>
           <p>Untimed, single-domain practice — best for a first pass through material that still feels unfamiliar, before switching to interleaved review.</p>
+          <div class="mode-when">Use it: when one domain is new or clearly weak.</div>
+          <div class="mode-meta" data-mm="drill"></div>
         </div>
         <div class="mode-card" onclick="startMock()" tabindex="0" role="button">
-          <div class="tag">Mock exam</div>
-          <h3>Full weighted exam</h3>
-          <p>24 questions in the exact proportion of the real exam blueprint, timed at 35 minutes — retrieval practice under realistic conditions.</p>
+          <div class="tag">Timed checkpoint</div>
+          <h3>Timed checkpoint (24 questions)</h3>
+          <p>The real exam's domain mix at the real exam's pace (about 51 minutes). Short enough to fit in an hour, and it counts toward your readiness score.</p>
+          <div class="mode-when">Use it: about once a week, to check where you stand.</div>
+          <div class="mode-meta" data-mm="mock"></div>
         </div>
         <div class="mode-card" onclick="startFullExam()" tabindex="0" role="button">
           <div class="tag">Full simulation</div>
           <h3>Full 170-question exam</h3>
           <p>The actual exam's format: 170 questions in two 3-hour sections with a break between them, in the real weight-proportional mix — for practicing stamina and pacing, not just knowledge.</p>
+          <div class="mode-when">Use it: once or twice in the last three weeks, on a rested day.</div>
+          <div class="mode-meta" data-mm="fullexam"></div>
         </div>
         <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
           <div class="tag">Exam-style · multi-domain</div>
           <h3>Case studies</h3>
           <p id="caseCardText">Work one client's full situation across several questions, with the facts in view throughout — the way the real exam presents case-based questions.</p>
+          <div class="mode-when">Use it: to practice pulling the right facts out of a long scenario.</div>
+          <div class="mode-meta" data-mm="case"></div>
         </div>
         <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
           <div class="tag">Review</div>
           <h3>Missed questions</h3>
           <p id="missedCardText">Revisit only what you've gotten wrong so far.</p>
+          <div class="mode-when">Use it: after any session where you missed several.</div>
+          <div class="mode-meta" data-mm="review"></div>
         </div>
         <div class="mode-card" onclick="openFormulaDrill()" tabindex="0" role="button" id="fdModeCard">
           <div class="tag">Interactive · exam formulas</div>
           <h3>Formula drills</h3>
           <p id="fdCardText">Formulas with fresh numbers every time.</p>
+          <div class="mode-when">Use it: in short bursts, to make the math automatic.</div>
+          <div class="mode-meta" data-mm="formula"></div>
         </div>
         <div class="mode-card" onclick="openTvmTool()" tabindex="0" role="button">
           <div class="tag">Interactive · financial calculator</div>
           <h3>TVM walkthrough</h3>
           <p id="tvmCardText">Work a real time-value-of-money problem step by step, the way you'll do it on exam day — set up the variables, solve, and see exactly how the math gets there.</p>
+          <div class="mode-when">Use it: until the HP 10bII+ keystrokes feel automatic.</div>
+          <div class="mode-meta" data-mm="tvm"></div>
         </div>
         <div class="mode-card" onclick="openPodcastFromStudy()" tabindex="0" role="button">
           <div class="tag">Listen · one domain at a time</div>
           <h3>Subject Podcast</h3>
           <p>A spoken-style episode on one domain — or personalized to your own progress — with a length you choose, read aloud by your device's own voice.</p>
+          <div class="mode-when">Use it: away from a screen, such as a commute or a walk.</div>
+          <div class="mode-meta" data-mm="podcast"></div>
         </div>
       </div>
     </div>
@@ -2164,6 +2184,7 @@
         <div class="science-item"><b>Checking us against the test-prep providers' public topic lists</b>Compared our coverage with CFP Board's published topic list and what the major prep companies and recent candidates publicly say matters. The big structure matched, and the real gap was the 2025 tax law changes (no tax on tips, overtime and new-car loan interest, Trump accounts, the new small-business-stock tiers, HSA and SALT changes), plus a few small items (Forms 2848 and 8821, the tax-preparer disclosure rule, and §1244 stock). Added 15 original practice questions, 10 flashcards and 6 key numbers for them. No provider's paid or leaked material was used; everything is written from public sources and checked against them.</div>
         <div class="science-item"><b>Fact-checking the numbers against the government sources</b>Rechecked the 2026 limits against the IRS notices (retirement plan limits, the inflation adjustments), the Social Security Administration (taxable maximum, earnings test, credit amount) and Medicare. Everything matched. Filled in numbers that were missing: the 2026 tax brackets, kiddie tax, AMT exemption, charitable IRA gift limit and adoption credit, and spelled out the SALT cap by year.</div>
         <div class="science-item"><b>Connecting every question to its syllabus topic</b>About three in ten questions were not linked to any official topic, so they never counted toward your per-topic accuracy or showed up in a topic drill. Widened the matching (options, Medicare, home and auto insurance, behavioral finance, consumer-credit laws, savings bonds, the new 2025 tax-law items and more) so all but one are now linked. Your weak-topic suggestions and the Study plan now draw on the whole question bank.</div>
+        <div class="science-item"><b>Making each study mode earn its place</b>The 24-question mock was timed at 35 minutes, which is about 1.5 times faster than the real exam's pace, so it overstated how rushed the real exam is. It is now a timed checkpoint at the real pace (about 51 minutes) and its score still counts toward your readiness. Every mode now says when to use it and shows when you last did it and how you scored. The checkpoint also appears in Today's plan about once a week, and the tutor can start it for you.</div>
       </div>
     </div>
 
@@ -2697,7 +2718,8 @@ const DOMAINS = [
   { key:'estate',     code:'EST', name:'Estate Planning',                       weight:10, mockCount:2, fullExamCount:17 },
   { key:'psych',      code:'PSY', name:'Psychology of Financial Planning',       weight:7,  mockCount:2, fullExamCount:12 },
 ];
-const MOCK_MINUTES = 35;
+// 24 questions at the real exam's pace: 180 minutes per 85-question section is about 2.12 minutes each.
+const MOCK_MINUTES = 51;
 const FULL_EXAM_SECTION_MINUTES = 180;
 const FULL_EXAM_SECTION_SIZE = 85;
 const ADAPTIVE_LENGTH = 15;
@@ -5592,6 +5614,7 @@ function renderExamCountdownCard(){
 function renderAll(){
   const stats = computeStats();
   renderResumeSessionBanner();
+  renderModeMeta();
 
   renderReadinessGauge(stats);
   document.getElementById('missedCardText').textContent = DATA.missed.length
@@ -6280,9 +6303,9 @@ function computeNextStep(stats){
           cta:'Start drill', meta:'15 questions', run: () => startDrill(top.key) };
       }
     } else {
-      step = { kicker:'Looking strong', title:'Stress-test with a mock exam',
+      step = { kicker:'Looking strong', title:'Take a timed checkpoint',
         why:'Your coverage and recall are solid across the blueprint. A timed mock shows how that holds under pressure.',
-        cta:'Start mock', meta:'24 questions · 35 min', run: () => startMock() };
+        cta:'Start mock', meta:'24 questions · 51 min', run: () => startMock() };
     }
   }
   step.streakNote = streakNote;
@@ -6379,6 +6402,15 @@ function buildStudyPlan(minutes){
         why:'The real exam wraps most questions in a client case. Practising in that format builds the habit of pulling the right facts out of a story.',
         done: act.modes.includes('case'), run: () => { showTab('study'); startCase(pick.id); } };
     },
+    checkpoint: () => {
+      if(answered < 100) return null;
+      const lastT = (DATA.sessions || []).filter(x => x.mode === 'mock' || x.mode === 'fullexam').pop();
+      const since = lastT ? (Date.now() - new Date(lastT.date).getTime()) / ONE_DAY_MS : Infinity;
+      if(since < 6 && !act.modes.includes('mock')) return null;
+      return { id:'checkpoint', title:'Timed checkpoint (24 questions)', minutes:51,
+        why:'The real exam mix at the real pace shows where you actually stand and how you handle the clock. Its score feeds your readiness number.',
+        done: act.modes.includes('mock'), run: () => { showTab('study'); startMock(); } };
+    },
     teach: () => {
       const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
       if(!topic) return null;
@@ -6392,8 +6424,8 @@ function buildStudyPlan(minutes){
   };
   const order = {
     foundation: ['cards','weak','adaptive','missed','calc','case','teach'],
-    build:      ['cards','adaptive','weak','missed','calc','case','teach'],
-    sharpen:    ['cards','missed','weak','adaptive','calc','teach'],
+    build:      ['cards','adaptive','weak','missed','calc','case','checkpoint','teach'],
+    sharpen:    ['cards','missed','weak','adaptive','calc','checkpoint','teach'],
     taper:      ['cards','missed','keys'],
     rest:       ['keys','cards']
   }[phase.key];
@@ -6486,6 +6518,35 @@ function runNextStep(){
 // Single entry point for everything on the Study tab that depends on
 // "right now": called on tab switches, exam-date changes, and when the app
 // comes back to the foreground (so a day-old card never lingers).
+function modeAgoText(ts){
+  if(!ts) return '';
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+}
+function renderModeMeta(){
+  try{
+    const sessions = DATA.sessions || [];
+    const lastOf = m => { for(let i = sessions.length - 1; i >= 0; i--) if(sessions[i].mode === m) return sessions[i]; return null; };
+    const line = (m, noun) => {
+      const s2 = lastOf(m);
+      if(!s2) return 'Not tried yet';
+      const when = modeAgoText(new Date(s2.date).getTime());
+      return s2.total ? 'Last: ' + when + ' · ' + s2.correct + '/' + s2.total + ' (' + Math.round(100 * s2.correct / s2.total) + '%)' : 'Last: ' + when;
+    };
+    const put = (key, text) => document.querySelectorAll('[data-mm="' + key + '"]').forEach(el => { el.textContent = text; });
+    put('adaptive', line('adaptive'));
+    put('drill', line('drill'));
+    put('mock', line('mock'));
+    put('fullexam', line('fullexam'));
+    put('case', line('case'));
+    put('review', line('review'));
+    put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : 'Not tried yet');
+    put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : 'Not tried yet');
+    const pg = Object.values(DATA.podcastGeneratedAt || {}).filter(Number).sort((a, b) => b - a)[0];
+    put('podcast', pg ? 'Last episode: ' + modeAgoText(pg) : 'Not tried yet');
+  }catch(e){ /* a status line is never worth breaking the screen */ }
+}
+
 function refreshCoachSurfaces(){
   if(typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   lastCoachRefreshAt = Date.now();
@@ -6495,6 +6556,7 @@ function refreshCoachSurfaces(){
   renderReadinessExtras(stats);
   renderNextStepCard(stats);
   renderTodayPlan();
+  renderModeMeta();
   renderWeekRecap();
 }
 
@@ -13710,7 +13772,7 @@ function finishSession(){
   }
   const modeLabel = caseDef ? ('Case study — ' + caseDef.title)
     : session.mode==='fullexam' ? 'Full 170-question exam'
-    : session.mode==='mock' ? 'Full mock exam'
+    : session.mode==='mock' ? 'Timed checkpoint'
     : session.mode==='review' ? 'Missed-question review'
     : session.mode==='adaptive' ? 'Adaptive session'
     : 'Domain drill';
@@ -14802,7 +14864,7 @@ const TUTOR_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        mode: { type: 'string', enum: ['adaptive','drill','review','case'], description: "'adaptive' for a general mixed session, 'drill' for one specific domain, 'review' for everything currently missed, 'case' for a full exam-style client case study." },
+        mode: { type: 'string', enum: ['adaptive','drill','review','case','checkpoint'], description: "'checkpoint' for the 24-question timed checkpoint at real exam pace (about 51 minutes; it counts toward readiness), 'adaptive' for a general mixed session, 'drill' for one specific domain, 'review' for everything currently missed, 'case' for a full exam-style client case study." },
         case: { type: 'string', enum: CASE_STUDIES.map(c => c.id), description: "Optional when mode is 'case' -- which case to work; omit to let the app pick the one they have tried least. Cases: " + CASE_STUDIES.map(c => c.id + ' = ' + c.title).join('; ') + '.' },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when mode is 'drill' -- which domain to focus the session on." },
       },
@@ -14910,7 +14972,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'start_plan_step',
-    description: "Start one step of today's plan for the student, using the step id returned by plan_my_study (for example cards, adaptive, weak, missed, calc, case, keys, fullexam). Only do this once they have said yes, or asked you to start it.",
+    description: "Start one step of today's plan for the student, using the step id returned by plan_my_study (for example cards, adaptive, weak, missed, calc, case, checkpoint, keys, fullexam). Only do this once they have said yes, or asked you to start it.",
     input_schema: { type: 'object', properties: { step_id: { type: 'string', description: 'The id of the step to start.' } }, required: ['step_id'] },
   },
   {
@@ -14958,6 +15020,10 @@ async function executeTutorTool(toolName, toolInput){
         const missedCount = DATA.missed.length;
         startMissedReview();
         return `Started a review session covering ${missedCount} currently-missed question${missedCount===1?'':'s'}.`;
+      }
+      if(toolInput.mode === 'checkpoint'){
+        startMock();
+        return `Started the timed checkpoint: 24 questions in the real exam's domain mix, timed at the real pace (51 minutes). Its score counts toward their readiness.`;
       }
       startAdaptive();
       return `Started an adaptive practice session.`;
