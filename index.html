@@ -919,6 +919,9 @@
   .confidence-pill{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:15px 14px;border-radius:18px;border:1px solid var(--hair);background:transparent;color:var(--muted);cursor:pointer;transition:all var(--t-fast) var(--ease);}
   .confidence-pill:disabled{cursor:default;opacity:.7;}
   .confidence-pill:disabled.active{opacity:1;}
+  .think-gate{margin:12px 0;padding:14px 16px;border-radius:var(--radius);background:var(--gold-tint);border:1px solid var(--gold);}
+  .think-gate .think-title{font-weight:600;color:var(--paper);margin-bottom:6px;}
+  .think-gate p{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--paper);}
   .confidence-mismatch{font-size:12.5px;line-height:1.5;color:var(--paper);margin:10px 0;padding:10px 14px;border-radius:8px;background:var(--gold-tint);border:1px solid var(--gold);}
   .fc-recap{background:var(--surface);border:1px solid var(--teal);border-left-width:4px;border-radius:var(--radius);padding:22px 24px;margin:0 0 12px;font-size:14px;line-height:1.6;color:var(--paper);animation:tbIn .35s ease both}
   .fc-recap .fr-title{font-family:'Source Serif 4',Georgia,serif;font-size:20px;margin:0 0 6px}
@@ -2235,6 +2238,7 @@
         <div class="science-item"><b>A tutor that teaches the way the research says to, and adapts to the moment</b>The tutor already used retrieval practice and spacing. It now also follows a short list of well-supported teaching moves: ask before explaining something new (pretesting), give small hints before the answer, show one worked example and then fade the help for topics you are new to, skip the basics for topics you are strong in, have you explain why in your own words, compare look-alike ideas side by side, change the numbers to check you can transfer an idea, and end by naming what to retest in a couple of days. In the chat after each question it picks the one move that fits that moment: sure-and-wrong gets a precise correction you restate, wrong-and-unsure gets a hint first, right-but-unsure gets reinforced, right-and-confident gets a harder variation. The evidence behind these is real but varies in strength, and the tutor is told not to overstate it.</div>
         <div class="science-item"><b>Balancing the question bank to the exam's weights</b>Comparing how many questions each exam area has against how much of the exam it is worth showed General Principles of Financial Planning running about twenty questions short, with Retirement and Investments slightly behind. Several narrow topics had only six or seven questions each: insurance needs analysis, postmortem estate planning, special needs planning, annuities, eldercare, nonqualified plans and the income tax of trusts. Ninety-four new questions were added, aimed at exactly those spots (a later duplicate check removed the ones that turned out to repeat an existing question), along with eight flashcards for ideas those questions introduced, with the 2026 figures checked against IRS and CFP Board sources.</div>
         <div class="science-item"><b>Never asking the same thing twice</b>A check of the whole question bank found no identical questions, but about a hundred that tested the same fact as another with different wording, such as two separate questions on the 30-day wash sale window, or on how long a disclaimer can wait. Seeing the same idea twice makes you feel more ready than you are, and it wastes minutes you could spend on something new, so the repeats were removed and whatever you had already answered on them carries over to the one that stays. The app now also checks every practice set before it starts, so two questions that ask the same thing can never land in the same session, and a replacement from the same topic is used instead. New questions the AI writes are compared with everything already in the bank before they are saved, and any that repeat an existing idea are dropped. When you miss a question, the reworded retry that follows it is still shown on purpose, because being able to answer the same idea in new words is a better sign of learning than recognizing one wording.</div>
+        <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
       </div>
     </div>
 
@@ -2773,7 +2777,7 @@ const MOCK_MINUTES = 51;
 const FULL_EXAM_SECTION_MINUTES = 180;
 const FULL_EXAM_SECTION_SIZE = 85;
 const ADAPTIVE_LENGTH = 15;
-const GENERATED_CAP = 100;
+const GENERATED_CAP = 200;
 const FLASHCARD_CAP = 60;
 
 // Official CFP Board Principal Knowledge Topics, verbatim from cfp.net's
@@ -6500,7 +6504,7 @@ function buildStudyPlan(minutes){
       if(missedN < 3) return null;
       const n = Math.min(missedN, phase.key === 'taper' ? 10 : 15);
       return { id:'missed', title:`Review ${n} missed question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.4)),
-        why:'Going back over what you got wrong, with the explanation in front of you, is one of the best uses of time. Mistakes you made confidently are the ones most worth correcting.',
+        why:'Each idea you missed comes back as a new question on the same topic, so you show you understand it rather than remember it. Mistakes you made confidently are the ones most worth correcting.',
         done: act.modes.includes('review'), run: () => { showTab('study'); startMissedReview(); } };
     },
     calc: () => {
@@ -6606,6 +6610,7 @@ function renderTodayPlan(){
   const leftTxt = plan.steps.length && leftMin > 0 ? ` · about ${leftMin >= 90 ? (Math.round(leftMin / 6) / 10) + ' hrs' : leftMin + ' min'} left` : '';
   const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
     ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
+  const runwayTxt = freshRunwayLine();
   const autoNote = planMinutesAuto() ? ' The length follows how long you have been studying lately; tap another to change it.' : '';
   const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
     : plan.phase.key === 'taper' ? 'Consolidate what you know. No big new pushes now.'
@@ -6620,7 +6625,7 @@ function renderTodayPlan(){
     </div>`).join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
-    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
+    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${rows || '<p class="hint">Nothing queued right now. Take an adaptive session to get started.</p>'}${blocks}`;
   el.style.display = 'block';
@@ -10683,7 +10688,7 @@ function caseProgressLine(){
   const bests = CASE_STUDIES.filter(c => stats[c.id]).map(c => stats[c.id].best);
   const avg = Math.round(bests.reduce((a,b)=>a+b,0)/bests.length);
   const next = nextCaseToTry();
-  const nextTxt = tried < total && next ? ` Up next: ${next.title}.` : ' You have worked every case — go back for a higher score.';
+  const nextTxt = tried < total && next ? ` Up next: ${next.title}.` : ' You have worked every case. A new one is written when you run low. If you replay one, answer from the facts and the ideas, not from memory of the story.';
   return `${tried} of ${total} cases tried, averaging ${avg}% at your best.${nextTxt}`;
 }
 function startCase(id){
@@ -12387,6 +12392,7 @@ function saveInProgressSession(){
     domainTally: session.domainTally, answerLog: session.answerLog,
     variantAttempted: session.variantAttempted, startedAt: session.startedAt,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null,
+    siblingOf: session.siblingOf || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
   };
   persist();
@@ -12418,6 +12424,7 @@ function resumeInProgressSession(){
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null,
+    siblingOf: saved.siblingOf || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
@@ -12591,6 +12598,125 @@ function dropLegacyDuplicates(list){
   }catch(e){ return list; }
 }
 
+/* ===========================================================
+   OWN THE IDEA, NOT THE WORDING
+   Answering the same question again mostly proves you remember that question. What the exam asks for is the
+   idea in a new setting, and research on test-enhanced learning points the same way: practice that
+   makes you retrieve an idea helps on questions you have not seen, and mixing in different questions on one
+   idea generalises better than repeating the same ones. So when something comes back on schedule (a miss, a
+   review that is due), the app now picks a question you have not seen on the same topic and gives the old
+   one's schedule credit when you get the new one right. If a topic has no unseen question left, the
+   reworded copy (needs an AI key) is used; failing that, you are asked to answer before the choices show.
+=========================================================== */
+const _conceptCache = {};
+function conceptKeyOf(q){
+  if(!(q.id in _conceptCache)){ let k = null; try{ k = inferQuestionSubtopic(q); }catch(e){} _conceptCache[q.id] = k; }
+  return _conceptCache[q.id];
+}
+function questionIsNew(q){ return getSpacedStat(DATA.questionStats, q.id).seen === 0; }
+
+function unseenSiblingFor(q, takenIds, members){
+  const key = conceptKeyOf(q);
+  if(!key) return null;
+  const pool = allQuestions().filter(c => c.id !== q.id && c.domain === q.domain && !takenIds.has(c.id) && !factExempt(c) && !c.tvmGen && questionIsNew(c) && conceptKeyOf(c) === key);
+  if(!pool.length) return null;
+  const ranked = pool.map(c => ({ c, s: ((c.variantOf === q.id || (q.variantOf && c.variantOf === q.variantOf)) ? 1 : 0) + factSimilarity(q, c) + (c.scenario ? -0.15 : 0) + Math.random() * 0.08 }))
+    .sort((a, b) => b.s - a.s);
+  for(let i = 0; i < ranked.length; i++){
+    const c = ranked[i].c;
+    if(members.some(m => m && m.id !== q.id && !factExempt(m) && questionsSameFact(m, c))) continue;
+    return c;
+  }
+  return null;
+}
+
+/* Swaps each already-seen question in a study set for an unseen one on the same topic. Returns the new set,
+   which swapped question stands in for which (so the old one gets credit), and which seen questions had no
+   unseen stand-in. Timed exams are left alone: they already take unseen questions first, and gating or
+   swapping inside a simulation would make it less like the real thing. */
+function freshenQueue(queue, mode){
+  const out = { queue, siblingOf: {}, gated: [] };
+  if(!['adaptive', 'drill', 'review'].includes(mode)) return out;
+  const taken = new Set(queue.map(q => q.id));
+  const members = queue.slice();
+  members.forEach((q, i) => {
+    if(!q || factExempt(q) || q.tvmGen || questionIsNew(q)) return;
+    const sib = unseenSiblingFor(q, taken, members);
+    if(sib){ taken.add(sib.id); members[i] = sib; out.siblingOf[sib.id] = q.id; }
+    else out.gated.push(q.id);
+  });
+  out.queue = members;
+  return out;
+}
+
+/* A right answer on the new question counts as the old one coming back on schedule; a wrong answer sends the
+   old one back to the start of the schedule. The old question's own attempt counts are not changed, because
+   it was not shown. */
+function creditConceptRetest(origId, ok){
+  const st = getSpacedStat(DATA.questionStats, origId);
+  const box = ok ? Math.min(st.box + 1, LEITNER_INTERVAL_DAYS.length - 1) : 0;
+  DATA.questionStats[origId] = Object.assign({}, DATA.questionStats[origId] || {}, {
+    seen: st.seen, correct: st.correct, box, dueAt: Date.now() + LEITNER_INTERVAL_DAYS[box] * ONE_DAY_MS, lastSeenAt: st.lastSeenAt, known: !!ok, firstOk: st.firstOk
+  });
+  if(ok){
+    DATA.missed = (DATA.missed || []).filter(id => id !== origId);
+    if(Array.isArray(DATA.hypercorrectionQueue)) DATA.hypercorrectionQueue = DATA.hypercorrectionQueue.filter(id => id !== origId);
+  }
+}
+
+/* How much of the bank is still new, and roughly how long that lasts at the pace of the last week. */
+function freshRunwayInfo(){
+  const all = allQuestions().filter(q => !q.tvmGen);
+  const fresh = all.filter(questionIsNew).length;
+  const cutoff = Date.now() - 7 * 86400000;
+  const recent = (DATA.sessions || []).filter(s => new Date(s.date).getTime() >= cutoff);
+  const days = new Set(recent.map(s => new Date(s.date).toDateString())).size;
+  const asked = recent.reduce((a, s) => a + (s.total || 0), 0);
+  const perDay = days ? asked / days : 0;
+  return { fresh, total: all.length, perDay, runway: perDay > 0 ? fresh / perDay : null };
+}
+function freshRunwayLine(){
+  try{
+    const r = freshRunwayInfo();
+    if(computeStats().totalAnswered < 30) return '';
+    let t = `${r.fresh} of ${r.total} questions are still new to you.`;
+    if(r.runway !== null){
+      const d = getDaysUntilExam();
+      if(r.fresh === 0) t = 'You have seen every question at least once.';
+      else if(d !== null && r.runway < d) t += ` At your pace they last about ${Math.max(1, Math.round(r.runway))} more day${Math.round(r.runway) === 1 ? '' : 's'}.`;
+    }
+    return t + ' Ideas come back as a different question, not the same wording.';
+  }catch(e){ return ''; }
+}
+
+function clearThinkGate(){
+  const g = document.getElementById('thinkGate'); if(g) g.remove();
+  const cb = document.getElementById('qChoices');
+  if(cb && cb.dataset && cb.dataset.gated){ cb.style.display = ''; delete cb.dataset.gated; }
+}
+function variantUnavailable(q){
+  if(typeof aiFeaturesAvailable === 'undefined' || !aiFeaturesAvailable) return true;
+  if(session.variantAttempted && session.variantAttempted[q.id]) return true;
+  try{ if(genBackoffActive()) return true; }catch(e){}
+  return !!(DATA.variantFailedAt && DATA.variantFailedAt[q.id] && Date.now() < DATA.variantFailedAt[q.id]);
+}
+/* A question you have seen, with no unseen one left on its topic and no reworded copy available, is shown
+   stem-only first. Producing the answer yourself before choosing from a list is a harder, more useful kind
+   of retrieval than recognising it. */
+function maybeShowThinkGate(q, choicesBox){
+  if(!session.gated || !session.gated.has(q.id) || !isStudyMode() || q.isVariant || !variantUnavailable(q)) return;
+  session.thinkGate = true;
+  choicesBox.style.display = 'none'; choicesBox.dataset.gated = '1';
+  const gate = document.createElement('div');
+  gate.id = 'thinkGate'; gate.className = 'think-gate'; gate.setAttribute('role', 'group'); gate.setAttribute('aria-label', 'Answer before you see the choices');
+  gate.innerHTML = '<div class="think-title">You have seen this question before</div><p>There is no new question left on this idea, so answer it from the idea, not the wording. Say or write your answer first, then open the choices. Pulling an answer out of your head works better than spotting it in a list.</p><button type="button" class="btn" id="thinkGateBtn">I have my answer. Show choices</button>';
+  choicesBox.parentNode.insertBefore(gate, choicesBox);
+  document.getElementById('thinkGateBtn').onclick = () => {
+    session.thinkGate = false; clearThinkGate();
+    const first = choicesBox.querySelector('.choice'); if(first && first.focus) first.focus({ preventScroll: true });
+  };
+}
+
 function beginSession(queue, mode, timerSeconds, selectionReasons){
   // Capture the genuine scroll position before anything else changes --
   // switching which tab panel is active (right below) can itself alter
@@ -12599,7 +12725,13 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   // restored. lockBodyScroll is idempotent, so calling it again later
   // inside enterFullScreenQuiz is a safe no-op.
   lockBodyScroll();
-  queue = dedupeQueue(queue, mode).map(shuffleQuestionChoices);
+  queue = dedupeQueue(queue, mode);
+  const freshened = freshenQueue(queue, mode);
+  queue = freshened.queue.map(shuffleQuestionChoices);
+  if(Object.keys(freshened.siblingOf).length){
+    selectionReasons = Object.assign({}, selectionReasons || {});
+    Object.keys(freshened.siblingOf).forEach(id => { selectionReasons[id] = 'retest'; });
+  }
   if(session && session.timerHandle) clearInterval(session.timerHandle);
   const statsAtStart = computeStats();
   session = {
@@ -12609,7 +12741,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
     onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds, timerHandle:null, locked:false,
-    startedAt: Date.now(), variantAttempted: {}, selectionReasons: selectionReasons || {},
+    startedAt: Date.now(), variantAttempted: {}, selectionReasons: selectionReasons || {}, siblingOf: freshened.siblingOf, gated: new Set(freshened.gated), thinkGate: false,
     readinessAtStart: statsAtStart.readiness, // so the results screen can show what this session moved
     readinessExactAtStart: statsAtStart.readinessExact
   };
@@ -13163,6 +13295,7 @@ function renderQuestion(){
   const q = session.queue[session.index];
   const isExam = session.mode==='fullexam';
   session.locked = false;
+  session.thinkGate = false; clearThinkGate();
   updateLiveReadiness();
   const host = document.getElementById('quizFullscreenHost');
   if(host) host.scrollTop = 0;
@@ -13233,8 +13366,9 @@ function renderQuestion(){
     foundation: 'rebuilding the foundation here first',
     conceptFollowup: 'building on what you just missed',
     tvmCalc: 'calculator practice at your level',
+    retest: 'a new question on an idea that was due back',
   };
-  const reasonCode = session.mode === 'adaptive' && session.selectionReasons ? session.selectionReasons[q.id] : null;
+  const reasonCode = session.selectionReasons ? session.selectionReasons[q.id] : null;
   const reasonFlag = reasonCode && reasonLabels[reasonCode] ? ` <span class="gen-flag" title="Why this question, right now">· ${reasonLabels[reasonCode]}</span>` : '';
   document.getElementById('qDomain').innerHTML = domainMeta.code + ' — ' + domainMeta.name + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + reasonFlag;
   session.cueRevealed = false;
@@ -13278,6 +13412,7 @@ function renderQuestion(){
     wrap.appendChild(note);
     choicesBox.appendChild(wrap);
   });
+  maybeShowThinkGate(q, choicesBox);
 
   const fb = document.getElementById('qFeedback');
   fb.style.display = 'none';
@@ -13743,7 +13878,7 @@ function scoreExamAnswers(fromIndex, toIndex){
 }
 
 function selectAnswer(i){
-  if(session.locked) return;
+  if(session.locked || session.thinkGate) return;
   session.locked = true;
   hideTutorBrief();
   { const cc = document.getElementById('calcCue'); if(cc) cc.style.display = 'none'; }
@@ -13768,7 +13903,11 @@ function selectAnswer(i){
   if(insightEl){
     const wasConceptFollowup = session.selectionReasons && session.selectionReasons[q.id] === 'conceptFollowup';
     const wasHypercorrection = session.selectionReasons && session.selectionReasons[q.id] === 'hypercorrection';
-    if(inStudyScopeForInsight && wasConceptFollowup && isCorrect){
+    const wasRetest = !!(session.siblingOf && session.siblingOf[q.id]);
+    if(inStudyScopeForInsight && wasRetest && isCorrect){
+      insightEl.textContent = "This is a new question on an idea that was due to come back, and you got it. That shows you know the idea, not just one wording of it.";
+      insightEl.style.display = 'block';
+    } else if(inStudyScopeForInsight && wasConceptFollowup && isCorrect){
       insightEl.textContent = "That's the same idea from the question you missed a moment ago, and this time it landed — that's retrieval practice working as intended: getting something wrong, then successfully pulling it back out shortly after, builds a stronger memory trace than reading the correct answer alone ever does.";
       insightEl.style.display = 'block';
     } else if(inStudyScopeForInsight && wasHypercorrection && isCorrect){
@@ -13848,6 +13987,7 @@ function selectAnswer(i){
     tvmRecordQuizOutcome(q, i, isCorrect);
   }
   recordStudyDay();
+  if(!q.tvmGen && session.siblingOf && session.siblingOf[q.id]) creditConceptRetest(session.siblingOf[q.id], isCorrect);
 
   if(!q.tvmGen) recordDomainAnswer(q.domain, isCorrect);
   const foundationChange = q.tvmGen ? null : updateFoundationMode(q.domain);
@@ -14042,6 +14182,7 @@ function buildQuestionChatSystem(q){
   q.choices.forEach((c,i) => { ctx += L[i] + '. ' + c + (i === q.correct ? '  [CORRECT]' : '') + '\n'; });
   ctx += 'The student chose ' + (chosen >= 0 && chosen != null ? L[chosen] : 'nothing yet') + ' (' + (wasCorrect ? 'correct' : 'incorrect') + ').\n';
   ctx += 'How to teach this moment: ' + teachingMoveFor(q, wasCorrect) + ' General rules: one idea and one question per reply; hint before answer; ask them to explain why in their own words; praise what they did, not who they are.\n';
+  if(session.siblingOf && session.siblingOf[q.id]) ctx += 'This is a new question on an idea the student missed or was due to review earlier. It was chosen so they are tested on the idea, not on the old wording.\n';
   if(session.selectionReasons && session.selectionReasons[q.id] === 'conceptFollowup' && wasCorrect) ctx += 'This question was deliberately placed right after a different question on this same narrow topic that the student had just gotten wrong, so if their explanation genuinely shows they closed that specific gap (not just that they picked the right letter), say so plainly.\n';
   if(q.rationale) ctx += 'Explanations shown to the student: ' + q.rationale.map((r,i) => L[i] + ') ' + r).join(' ') + '\n';
   if(q.calcSteps) ctx += 'This is a calculation question. The app\'s verified HP 10bII+ steps (no compute key; orange Shift then C (C ALL) clears; P/YR must be 1 for annual problems): ' + q.calcSteps.join(' | ') + '\n';
@@ -15174,7 +15315,8 @@ const TEACHING_METHOD = [
   'Keep calibration honest. Ask how sure they are before you reveal an answer now and then. If they were sure and wrong, say that this is exactly the kind of mistake worth fixing now, state the correct rule plainly, and have them restate it. If they were right but unsure, point out why they were right so the knowledge becomes firm.',
   'One idea at a time. Short turns, no walls of text, one question per turn. Do not stack three new ideas in a single reply.',
   'Praise the strategy, not the person ("you caught the qualifier" rather than "you are good at this"), and treat mistakes as information. Near the exam, if they sound nervous, tell them plainly that feeling some arousal helps performance and that a calm routine matters more than one more hour of cramming.',
-  'End with the next retrieval. Close a teaching exchange by naming the one thing to retest in a couple of days, so spacing is part of the lesson.'
+  'End with the next retrieval. Close a teaching exchange by naming the one thing to retest in a couple of days, so spacing is part of the lesson.',
+  'Always write new questions. Do not re-ask a question the student already answered in this chat, and do not read a practice-bank question out word for word. When you quiz, make up a fresh one with new details, so they practise the idea and not the wording.'
 ].map((t, i) => (i + 1) + '. ' + t).join('\n');
 function teachingMoveFor(q, wasCorrect){
   // The one move that fits this exact moment: how sure they were, and how well they know this domain.
