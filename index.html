@@ -1235,6 +1235,30 @@
   .fc-filter input[type="checkbox"]{width:18px;height:18px;flex:none;cursor:pointer;}
   .fc-why{font-family:'IBM Plex Sans',sans-serif;font-size:12px;line-height:1.4;color:var(--muted);margin:-8px 0 14px;}
   .fc-deck-line{margin:6px 0 0;}
+  .cd-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(8,14,24,.72);backdrop-filter:blur(3px);overflow-y:auto;}
+  .cd-panel{width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--hair-strong,var(--hair));border-radius:18px;padding:22px 22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.35);color:var(--paper);}
+  .cd-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;}
+  .cd-title{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-size:22px;line-height:1.25;margin:0 0 8px;}
+  .cd-text{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 12px;}
+  .cd-dots{display:flex;gap:6px;margin:0 0 14px;}
+  .cd-dot{flex:1;height:5px;border-radius:3px;background:var(--hair);}
+  .cd-dot.done{background:var(--teal);} .cd-dot.now{background:var(--gold);}
+  .cd-next{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:0 0 14px;}
+  .cd-next b{display:block;font-size:14.5px;margin-bottom:3px;color:var(--paper);}
+  .cd-next span{font-size:13px;line-height:1.45;color:var(--muted);}
+  .cd-parts{margin:0 0 14px;padding:0;list-style:none;counter-reset:cd;}
+  .cd-parts li{counter-increment:cd;display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--hair);font-size:13.5px;line-height:1.4;}
+  .cd-parts li:first-child{border-top:0;}
+  .cd-parts li::before{content:counter(cd);flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .cd-parts small{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
+  .cd-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  .cd-actions .cd-link{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 6px;font-family:inherit;}
+  .cd-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:140;display:none;max-width:calc(100vw - 32px);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;min-height:44px;border-radius:22px;border:1px solid var(--gold);background:var(--surface);color:var(--gold);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28);}
+  body.quiz-active .cd-pill{display:none !important;}
+  body.flashcard-fullscreen .cd-pill{bottom:calc(16px + env(safe-area-inset-bottom,0px));}
+  .cd-resultbox{border:1px solid var(--gold);border-radius:14px;padding:14px 16px;margin:0 0 16px;}
+  .cd-resultbox .cd-title{font-size:18px;}
+  .cd-start{margin:0 0 12px;}
   .fc-progress{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
   body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;}
   .fc-card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:40px 28px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),opacity 150ms var(--ease);}
@@ -1946,6 +1970,7 @@
         </div>
 
         <div id="resultsView">
+          <div id="conductorResultsHost"></div>
           <div class="card">
             <div class="result-hero">
               <div class="big" id="resultScore">0/0</div>
@@ -2244,6 +2269,7 @@
         <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
         <div class="science-item"><b>The tutor decides when you need a question written just for you</b>Another question from the bank is a good retest when it covers the same part of the idea. It is a poor one when you keep choosing the same wrong answer, when you were sure and wrong, or when no unseen question tests the same point. In those cases the app now writes a new question on the same idea, built around the mistake you actually make, and keeps the bank question as a fallback if the writing fails. In the chat after a question, the tutor makes the same call: it can write a new question and put it next, and it is told not to do that for a careless slip, for something you have not been taught yet, or for a 2026 figure it is not sure of. Written questions are not as carefully checked as the built-in ones, so the app uses only the checked ones in the last two days before the exam.</div>
         <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. A "Cards on what I missed" button starts a set of just those cards, today's plan can start the same set, and the tutor can start it for you when you ask. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
+        <div class="science-item"><b>Today's plan can now run as one guided session</b>Before, the plan was a list of separate Start buttons, and each one ended on its own. Now "Start my session" in Today's plan (or asking the tutor to run your study time) opens a short briefing, then takes you through each part in order. Before each part there is one line on how to do it well, for example to answer in your head before you look at the choices. After each part you get a quick debrief (your score, or how many cards you knew) and what is next, and the next part is chosen again from what you just did, so a drill that turns up misses can add a review. You can skip a part, stop early, or come back through the small "Session" button, and the session ends with a short summary and what to start with next time. This part does not use the AI at all, so it works without a key. The coaching lines are based on retrieval practice (trying to answer before seeing options), which is among the best-supported study methods; the exact wording and the "stop when the time is used" rule are my choices, not tested.</div>
       </div>
     </div>
 
@@ -2754,6 +2780,7 @@ function showTab(name){
   document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
   const hero = document.getElementById('heroIntro');
   if(hero) hero.style.display = (name === 'study') ? 'block' : 'none';
+  try{ conductorRefreshPill(); }catch(e){}
   if(DATA){
     renderReference();
     rebuildFlashcardQueue();
@@ -4502,6 +4529,7 @@ function defaultData(){
     flashcardRatingCount: 0,
     lastFlashcardAutoGenAt: 0,
     lastGapCardGenAt: 0,
+    conductor: null,
     simplifiedExplanations: {},
     speechOptimizedText: {},
     glossaryExamples: {},
@@ -4767,6 +4795,7 @@ async function loadData(){
       if(typeof DATA.flashcardRatingCount !== 'number') DATA.flashcardRatingCount = 0;
       if(typeof DATA.lastFlashcardAutoGenAt !== 'number') DATA.lastFlashcardAutoGenAt = 0;
       if(typeof DATA.lastGapCardGenAt !== 'number') DATA.lastGapCardGenAt = 0;
+      { const c = DATA.conductor; if(!c || typeof c !== 'object' || !Array.isArray(c.ran) || !Array.isArray(c.skipped) || !Array.isArray(c.log) || typeof c.day !== 'string') DATA.conductor = null; }
       if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {};
       if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
       if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
@@ -5732,6 +5761,7 @@ function renderExamCountdownCard(){
 }
 
 function renderAll(){
+  try{ conductorRefreshPill(); }catch(e){}
   const stats = computeStats();
   renderResumeSessionBanner();
   renderModeMeta();
@@ -6608,6 +6638,248 @@ function setPlanMinutes(m){
   DATA.planMinutes = m; persist();
   renderTodayPlan();
 }
+/* ===========================================================
+   SESSION CONDUCTOR
+   Runs today's plan as one guided sitting instead of a list of separate buttons: a short briefing, then each
+   part with a one-line coaching cue, a debrief between parts, and a wrap-up. The next part is chosen fresh after
+   every part from what the student has just done (a drill that surfaces misses can add a review; a skipped part
+   stays skipped), and it stops when the time budget is spent. Nothing here calls the AI, so it works offline.
+=========================================================== */
+const CONDUCTOR_CUES = {
+  cards: 'Say the answer out loud or in your head before you flip each card. Pulling it from memory is what makes it stick.',
+  adaptive: 'Commit to an answer in your head before you look at the choices, and tell the app how sure you are.',
+  weak: 'Go a little slower on the first few. This is the topic you have been missing, so each one is worth thinking through.',
+  missed: 'These come back as new questions on the same ideas, so think about the idea itself, not the old question.',
+  case: 'Read the scenario once for the numbers and who owns what, then decide which facts would change the answer.',
+  checkpoint: 'Treat this like the real thing: no looking things up, and keep to the pace.',
+  calc: 'Do the key presses by hand. The habit matters more than the answer.',
+  teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.'
+};
+function conductorState(){
+  const c = (typeof DATA !== 'undefined' && DATA) ? DATA.conductor : null;
+  if(!c) return null;
+  if(c.day !== localDayKey()){ DATA.conductor = null; return null; }
+  return c;
+}
+function conductorCandidates(c, plan){
+  return plan.steps.filter(st => !st.done && !c.ran.includes(st.id) && !c.skipped.includes(st.id));
+}
+function conductorFit(cands, usedMin, budget){
+  const out = []; let used = usedMin;
+  cands.forEach(st => { if(used + st.minutes <= budget * 1.15 || (!out.length && usedMin === 0)){ out.push(st); used += st.minutes; } });
+  return out;
+}
+function conductorUsedMin(c){ return c.log.reduce((a, x) => a + (x.estMin || 0), 0); }
+function conductorPlanPreview(){
+  const plan = buildStudyPlan();
+  const fake = { ran: [], skipped: [], log: [] };
+  return { plan, parts: conductorFit(conductorCandidates(fake, plan), 0, plan.minutes) };
+}
+function conductorStart(){
+  const { plan, parts } = conductorPlanPreview();
+  if(!parts.length) return false;
+  DATA.conductor = { day: localDayKey(), startedAt: Date.now(), minutes: plan.minutes, ran: [], skipped: [], log: [], current: null, total: parts.length };
+  persist();
+  conductorShow('brief');
+  return true;
+}
+function conductorPickNext(){
+  const c = conductorState(); if(!c) return null;
+  const plan = buildStudyPlan();
+  const fit = conductorFit(conductorCandidates(c, plan), conductorUsedMin(c), c.minutes);
+  return fit[0] || null;
+}
+function conductorSnapshot(){
+  return { sess: (DATA.sessions || []).length, rate: DATA.flashcardRatingCount || 0, ans: DATA.answerCounter || 0 };
+}
+function conductorLaunchNext(){
+  const c = conductorState(); if(!c) return;
+  if(c.current) conductorEndPart('manual');
+  const st = conductorPickNext();
+  conductorHide();
+  if(!st){ conductorShow('wrap'); return; }
+  c.ran.push(st.id);
+  c.current = { id: st.id, title: st.title, estMin: st.minutes, startedAt: Date.now(), snap: conductorSnapshot() };
+  persist();
+  conductorRefreshPill();
+  try{ if(typeof st.run === 'function') st.run(); }catch(e){}
+  conductorRefreshPill();
+}
+function conductorDebrief(cur){
+  const snap = cur.snap || { sess: 0, rate: 0 };
+  const sessions = DATA.sessions || [];
+  if(sessions.length > snap.sess){
+    const last = sessions[sessions.length - 1];
+    const pct = last.total ? Math.round(last.correct / last.total * 100) : 0;
+    const wrong = Math.max(0, last.total - last.correct);
+    const tone = pct >= 85 ? 'Strong.' : pct >= 60 ? 'Solid, with a few to tighten.' : 'A hard set, which is useful. The misses show where to work.';
+    return { text: `${last.correct} of ${last.total} right (${pct}%). ${tone}` + (wrong ? ` The ${wrong} you missed will come back as new questions on the same ideas.` : ''), correct: last.correct, total: last.total };
+  }
+  const cards = (DATA.flashcardRatingCount || 0) - snap.rate;
+  if(cards > 0){
+    const k = cur.cardsKnew, t = cur.cardsTotal;
+    return { text: (t ? `You went through ${cards} cards and knew ${k} of the last ${t}. ` : `You went through ${cards} cards. `) + 'The ones you missed come back soonest.', cards };
+  }
+  const answered = (DATA.answerCounter || 0) - (snap.ans || 0);
+  if(answered > 0) return { text: `You answered ${answered} question${answered === 1 ? '' : 's'} in this part. They all count toward your review schedule.` };
+  return { text: 'Done. Hands-on practice counts even when there is no score.' };
+}
+function conductorEndPart(reason){
+  const c = conductorState(); if(!c || !c.current) return null;
+  const cur = c.current;
+  const d = conductorDebrief(cur);
+  const entry = { id: cur.id, title: cur.title, estMin: cur.estMin, actualMin: Math.round((Date.now() - cur.startedAt) / 60000), text: d.text, correct: d.correct || 0, total: d.total || 0, cards: d.cards || 0, reason: reason || 'done' };
+  c.log.push(entry); c.current = null;
+  persist();
+  return entry;
+}
+function conductorHide(){ const o = document.getElementById('conductorOverlay'); if(o) o.style.display = 'none'; }
+function conductorDots(c, nowIdx){
+  const n = Math.max(c.total || 0, c.log.length + (c.current ? 1 : 0));
+  let h = '';
+  for(let i = 0; i < n; i++) h += `<span class="cd-dot${i < c.log.length ? ' done' : (i === nowIdx ? ' now' : '')}"></span>`;
+  return `<div class="cd-dots" aria-hidden="true">${h}</div>`;
+}
+function conductorWrapHtml(c){
+  const done = c.log.filter(x => x.reason !== 'skipped');
+  const qn = done.reduce((a, x) => a + (x.total || 0), 0), qc = done.reduce((a, x) => a + (x.correct || 0), 0);
+  const cards = done.reduce((a, x) => a + (x.cards || 0), 0);
+  const mins = Math.max(1, Math.round((Date.now() - c.startedAt) / 60000));
+  const bits = [];
+  if(qn) bits.push(`${qc} of ${qn} questions right`);
+  if(cards) bits.push(`${cards} flashcards`);
+  const dueQs = allQuestions().filter(q => { const st = getSpacedStat(DATA.questionStats, q.id); return st.seen > 0 && isDue(st); }).length;
+  const dueCards = allFlashcards().filter(f => { const st = getSpacedStat(DATA.flashcardStats, f.id); return st.seen > 0 && isDue(st); }).length;
+  let wk = null; try{ wk = weakSubtopics(1)[0] || null; }catch(e){}
+  const days = getDaysUntilExam();
+  const h = new Date().getHours();
+  let next = wk ? `Next time, I would start with ${wk.name}, where you are at ${Math.round(wk.st.acc * 100)}%.` : 'Next time, the plan will pick what is due and what is weakest.';
+  if(dueQs + dueCards > 0) next += ` About ${dueQs + dueCards} items will be due by then.`;
+  const late = h >= 23 || h < 4 ? ' It is late. Sleep is part of the plan, so stop here.' : '';
+  const examNote = days !== null && days >= 0 && days <= 14 ? ` ${days === 0 ? 'The exam is today.' : days === 1 ? 'The exam is tomorrow.' : days + ' days to the exam.'}` : '';
+  return `<div class="cd-kicker">Session complete</div><h3 class="cd-title" id="cdTitle">Good work. ${done.length} part${done.length === 1 ? '' : 's'} in about ${mins} minute${mins === 1 ? '' : 's'}.</h3>
+    <p class="cd-text">${escapeHtml(bits.length ? 'You did ' + bits.join(' and ') + '. ' : '')}${escapeHtml(next)}${escapeHtml(examNote)}${escapeHtml(late)}</p>
+    <ul class="cd-parts" style="padding:0;">${c.log.map(x => `<li><div>${escapeHtml(x.title)}<small>${escapeHtml(x.reason === 'skipped' ? 'Skipped' : x.text)}</small></div></li>`).join('')}</ul>
+    <div class="cd-actions"><button type="button" class="btn" onclick="conductorClose(true)">Done for today</button></div>`;
+}
+function conductorShow(kind){
+  const c = conductorState(); const o = document.getElementById('conductorOverlay'); const panel = document.getElementById('conductorPanel');
+  if(!c || !o || !panel) return;
+  let html = '';
+  if(kind === 'brief'){
+    const plan = buildStudyPlan(); const fake = { ran: [], skipped: [], log: [] };
+    const parts = conductorFit(conductorCandidates(fake, plan), 0, c.minutes);
+    const tot = parts.reduce((a, x) => a + x.minutes, 0);
+    html = `<div class="cd-kicker">Today's session · ${escapeHtml(plan.phase.label)}</div><h3 class="cd-title" id="cdTitle">${parts.length} part${parts.length === 1 ? '' : 's'}, about ${tot} minutes</h3>
+      <p class="cd-text">I will take you through these in order. After each one I will check how it went and adjust what comes next. You can skip a part or stop whenever you like.</p>
+      <ol class="cd-parts">${parts.map(x => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>`).join('')}</ol>
+      <div class="cd-next"><b>Starting with: ${escapeHtml(parts[0].title)}</b><span>${escapeHtml(CONDUCTOR_CUES[parts[0].id] || 'Take it one question at a time.')}</span></div>
+      <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">Begin</button><button type="button" class="cd-link" onclick="conductorClose(false)">Not now</button></div>`;
+  } else if(kind === 'between' || kind === 'menu'){
+    const last = c.log[c.log.length - 1];
+    const nxt = conductorPickNext();
+    if(kind === 'between' && !nxt){ html = conductorWrapHtml(c); }
+    else if(kind === 'menu'){
+      const cur = c.current;
+      html = `<div class="cd-kicker">Your session · part ${c.log.length + (cur ? 1 : 0)} of ${Math.max(c.total || 0, c.log.length + (cur ? 1 : 0))}</div>${conductorDots(c, c.log.length)}
+        <h3 class="cd-title" id="cdTitle">${cur ? escapeHtml(cur.title) : 'Between parts'}</h3>
+        <p class="cd-text">${cur ? 'Finished with this part? I will wrap it up and move on. Or go back and keep working.' : 'Ready for the next part?'}</p>
+        <div class="cd-actions"><button type="button" class="btn" onclick="conductorNextPart()">${cur ? 'This part is done, next' : 'Next part'}</button>
+        <button type="button" class="cd-link" onclick="conductorHide()">${cur ? 'Back to this part' : 'Close'}</button><button type="button" class="cd-link" onclick="conductorFinishNow()">End session</button></div>`;
+    } else {
+      html = `<div class="cd-kicker">Part ${c.log.length} of ${Math.max(c.total || 0, c.log.length)} done</div>${conductorDots(c, c.log.length)}
+        <h3 class="cd-title" id="cdTitle">${escapeHtml(last ? last.title : 'Part done')}</h3>
+        <p class="cd-text">${escapeHtml(last ? (last.reason === 'skipped' ? 'Skipped.' : last.text) : '')}</p>
+        <div class="cd-next"><b>Next: ${escapeHtml(nxt.title)}</b><span>${escapeHtml(nxt.why)} About ${nxt.minutes} min.</span></div>
+        <div class="cd-actions"><button type="button" class="btn" onclick="conductorStartNext()">Start it</button><button type="button" class="cd-link" onclick="conductorSkipNext()">Skip this part</button><button type="button" class="cd-link" onclick="conductorFinishNow()">Finish for today</button></div>`;
+    }
+  } else if(kind === 'wrap'){
+    html = conductorWrapHtml(c);
+  }
+  if(kind === 'brief' || kind === 'between' || kind === 'menu' || kind === 'wrap'){
+    // a between screen for a part that is about to start also carries the coaching cue
+    panel.innerHTML = html;
+    o.style.display = 'flex';
+    const b = panel.querySelector('button.btn'); if(b) b.focus({ preventScroll: true });
+  }
+  conductorRefreshPill();
+}
+function conductorStartNext(){
+  const nxt = conductorPickNext();
+  if(!nxt){ conductorShow('wrap'); return; }
+  const panel = document.getElementById('conductorPanel');
+  const cue = CONDUCTOR_CUES[nxt.id] || 'Take it one question at a time.';
+  const c = conductorState();
+  panel.innerHTML = `<div class="cd-kicker">Part ${c.log.length + 1} of ${Math.max(c.total || 0, c.log.length + 1)}</div>${conductorDots(c, c.log.length)}
+    <h3 class="cd-title" id="cdTitle">${escapeHtml(nxt.title)}</h3><p class="cd-text">${escapeHtml(nxt.why)}</p>
+    <div class="cd-next"><b>Before you start</b><span>${escapeHtml(cue)}</span></div>
+    <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">Go</button><button type="button" class="cd-link" onclick="conductorSkipNext()">Skip this part</button></div>`;
+  const b = panel.querySelector('button.btn'); if(b) b.focus({ preventScroll: true });
+}
+function conductorSkipNext(){
+  const c = conductorState(); if(!c) return;
+  const nxt = conductorPickNext();
+  if(nxt){ c.skipped.push(nxt.id); c.log.push({ id: nxt.id, title: nxt.title, estMin: 0, actualMin: 0, text: 'Skipped.', correct: 0, total: 0, cards: 0, reason: 'skipped' }); persist(); }
+  conductorShow('between');
+}
+function conductorNextPart(){
+  // used from the menu: close out the current part, then show the debrief and what is next
+  conductorEndPart('manual');
+  conductorShow('between');
+}
+function conductorFinishNow(){
+  const c = conductorState(); if(!c) return;
+  if(c.current) conductorEndPart('manual');
+  conductorShow('wrap');
+}
+function conductorClose(done){
+  conductorHide();
+  if(done || true){ DATA.conductor = null; persist(); }
+  conductorRefreshPill();
+  try{ renderTodayPlan(); }catch(e){}
+}
+function conductorOpenMenu(){
+  const c = conductorState(); if(!c) return;
+  conductorShow(c.current ? 'menu' : (c.log.length ? 'between' : 'brief'));
+}
+function conductorRefreshPill(){
+  const pill = document.getElementById('conductorPill'); if(!pill) return;
+  const c = conductorState();
+  const ov = document.getElementById('conductorOverlay');
+  const overlayOpen = ov && ov.style.display === 'flex';
+  if(!c || overlayOpen || (c.log.length === 0 && !c.current)){ pill.style.display = 'none'; return; }
+  const total = Math.max(c.total || 0, c.log.length + (c.current ? 1 : 0));
+  pill.textContent = c.current ? `Session · part ${c.log.length + 1} of ${total} · tap when done` : `Session · part ${c.log.length} done · tap for next`;
+  pill.style.display = 'block';
+}
+/* Called when a question set ends: closes the part and puts the debrief and the next step on the results screen. */
+function conductorOnQuizEnd(){
+  const c = conductorState(); const host = document.getElementById('conductorResultsHost');
+  if(host) host.innerHTML = '';
+  if(!c || !c.current || !host) return;
+  const entry = conductorEndPart('done');
+  const nxt = conductorPickNext();
+  const total = Math.max(c.total || 0, c.log.length);
+  host.innerHTML = `<div class="cd-resultbox"><div class="cd-kicker">Your session · part ${c.log.length} of ${total} done</div>
+    ${conductorDots(c, c.log.length)}
+    <p class="cd-text" style="margin-bottom:${nxt ? 8 : 12}px;">${escapeHtml(entry ? entry.text : '')}</p>
+    ${nxt ? `<div class="cd-next"><b>Next: ${escapeHtml(nxt.title)}</b><span>${escapeHtml(nxt.why)} About ${nxt.minutes} min.</span></div>
+      <div class="cd-actions"><button type="button" class="btn" onclick="conductorFromResults()">Continue</button><button type="button" class="cd-link" onclick="conductorFinishFromResults()">Finish for today</button></div>`
+      : `<div class="cd-actions"><button type="button" class="btn" onclick="conductorFinishFromResults()">See your session summary</button></div>`}</div>`;
+  conductorRefreshPill();
+}
+function conductorFromResults(){ exitToMenu(); conductorShow('between'); conductorStartNext(); }
+function conductorFinishFromResults(){ exitToMenu(); conductorShow('wrap'); }
+function conductorCardsRecap(round){
+  const c = conductorState(); if(!c || !c.current) return '';
+  c.current.cardsKnew = round.knew; c.current.cardsTotal = round.total; persist();
+  return '<button class="btn" style="margin-left:8px;" onclick="conductorNextPart()">This part is done, next</button>';
+}
+function conductorMaybeStartFromTutor(){
+  if(conductorState()) { conductorOpenMenu(); return 'A session is already running. I opened its menu.'; }
+  return conductorStart() ? 'Opened the session briefing. The student taps Begin to start; parts run in order with a check-in after each.' : 'Nothing is left to do in today\'s plan. Suggest an adaptive session or rest.';
+}
+
 function runPlanStep(id){
   const plan = buildStudyPlan();
   const st = plan.steps.concat(plan.blocks).find(x => x.id === id);
@@ -6641,6 +6913,9 @@ function renderTodayPlan(){
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
+    ${(() => { const left = plan.steps.filter(x => !x.done && !x.manual); const cs = conductorState();
+      if(cs) return `<button type="button" class="btn cd-start" onclick="conductorOpenMenu()">Continue my session</button>`;
+      return left.length ? `<button type="button" class="btn cd-start" onclick="conductorStart()">Start my session · about ${Math.min(plan.minutes, left.reduce((a, x) => a + x.minutes, 0))} min</button>` : ''; })()}
     ${rows || '<p class="hint">Nothing queued right now. Take an adaptive session to get started.</p>'}${blocks}`;
   el.style.display = 'block';
 }
@@ -9559,7 +9834,7 @@ function fcRecapHtml(r){
   const body = r.missed.length
     ? `You knew ${r.knew} of ${r.total}. ${msg} These come back first: ${miss}.`
     : `You knew all ${r.total}. ${msg} They will return later, on a longer gap.`;
-  return `<div class="fr-title">Checkpoint</div>${body}<div class="fr-next"><button class="btn" onclick="continueFlashcards()">Keep going</button></div>`;
+  return `<div class="fr-title">Checkpoint</div>${body}<div class="fr-next"><button class="btn" onclick="continueFlashcards()">Keep going</button>${conductorCardsRecap(r)}</div>`;
 }
 function continueFlashcards(){
   const box = document.getElementById('fcRecap'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
@@ -14821,6 +15096,7 @@ function finishSession(){
   document.getElementById('quizView').style.display = 'none';
   document.getElementById('examReviewView').style.display = 'none';
   document.getElementById('resultsView').style.display = 'block';
+  try{ conductorOnQuizEnd(); }catch(e){}
   const host = document.getElementById('quizFullscreenHost');
   if(host) host.scrollTop = 0;
 
@@ -15893,6 +16169,7 @@ Guidelines:
 - When you do explain something, prefer asking "why do you think that's the rule" or "what would happen if..." over stating the reasoning outright, and prefer connecting it to something concrete over stating it in the abstract -- a brief example, a scenario, or (when one exists above) the student's own actual missed question or recurring mistake on this exact topic. Explaining a concept in a vacuum is weaker than anchoring it to something the student already has some contact with, right or wrong.
 - Before moving from one topic to a clearly different one in the same explanation, a brief check that it landed ("does that distinction make sense?" or a quick one-question check) is worth the sentence it costs -- better to catch a gap immediately than assume it and build the next explanation on top of it.
 - You have tools to actually take actions in the app on the student's behalf: switching tabs, starting a real practice session (adaptive, a specific domain drill, or a review session covering everything currently missed), opening the TVM calculator, opening one of the six interactive decision trees directly, opening their personalized study guide, setting their exam date, looking up a term in the glossary, showing their detailed progress breakdown, opening the panel that explains how their readiness score is built, generating fresh practice material on a specific domain, generating a spoken podcast episode -- either on a specific domain or personalized to their own progress, and short or in-depth if they ask for that -- and marking a specific subtopic as reviewed in their own syllabus checklist once you've actually taught it and they've agreed. If a student asks something like "which trust should I use," "help me tell these plans apart," or "when should I claim Social Security," open that specific decision tool directly rather than just explaining it in text or sending them to the tab generically, since walking through it themselves is the more effective way to actually learn it. Use these when they clearly ask for one of these things -- "quiz me on tax planning," "let's do a full session," "let's review what I got wrong," "open the calculator," "my exam is March 15," "what's a GRAT," "show me my weak spots," "make me a study guide," "make me more questions on estate planning," "make me a podcast about how I'm doing," "give me a quick podcast on tax" -- rather than just describing what they could do. If they ask you to quiz them verbally right here in the chat instead, that's different from starting a real session -- just ask questions directly as described above. Never set an exam date unless the student has stated one explicitly; don't guess or infer it. For a term lookup, still give a real, direct answer in your own words too -- the tool shows them where to find it again, it doesn't replace actually answering. After a genuinely substantive explanation of a specific named subtopic, it's fine to offer to check it off their list -- but only mark it once they've actually agreed, never on your own initiative.
+- When the student says they are ready to study, or wants you to run their study time, call start_my_session: it opens a guided session with a briefing, each part in order and a check-in after each. Say in a sentence what it will cover, and when they come back, ask how it felt before they carry on.
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
@@ -15982,6 +16259,11 @@ const TUTOR_TOOLS = [
       },
       required: ['mode'],
     },
+  },
+  {
+    name: 'start_my_session',
+    description: "Open today's guided study session for the student: a briefing of the parts of today's plan, then each part in order with a check-in after it. Use this when they say they are ready to study, ask you to run or guide their study time, or want the plan done for them. Prefer it over starting one step at a time when they have time for more than one thing.",
+    input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'start_flashcards',
@@ -16120,6 +16402,7 @@ const TUTOR_TOOLS = [
 async function executeTutorTool(toolName, toolInput){
   try{
     if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
+    if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
     if(toolName === 'start_flashcards'){
       if(toolInput.focus === 'gaps'){
         const n = Math.min(20, fcGapCards().length);
@@ -16635,5 +16918,7 @@ loadData();
     <div class="key-term-modal-def" id="keyTermModalDef"></div>
   </div>
 </div>
+<div class="cd-overlay" id="conductorOverlay" role="dialog" aria-modal="true" aria-labelledby="cdTitle"><div class="cd-panel" id="conductorPanel"></div></div>
+    <button type="button" class="cd-pill" id="conductorPill" onclick="conductorOpenMenu()"></button>
 </body>
 </html>
