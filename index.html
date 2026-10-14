@@ -1233,6 +1233,8 @@
   .fc-filter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);min-height:44px;}
   .fc-filter label{display:flex;align-items:center;min-height:44px;cursor:pointer;}
   .fc-filter input[type="checkbox"]{width:18px;height:18px;flex:none;cursor:pointer;}
+  .fc-why{font-family:'IBM Plex Sans',sans-serif;font-size:12px;line-height:1.4;color:var(--muted);margin:-8px 0 14px;}
+  .fc-deck-line{margin:6px 0 0;}
   .fc-progress{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
   body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;}
   .fc-card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:40px 28px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),opacity 150ms var(--ease);}
@@ -2241,6 +2243,7 @@
         <div class="science-item"><b>Never asking the same thing twice</b>A check of the whole question bank found no identical questions, but about a hundred that tested the same fact as another with different wording, such as two separate questions on the 30-day wash sale window, or on how long a disclaimer can wait. Seeing the same idea twice makes you feel more ready than you are, and it wastes minutes you could spend on something new, so the repeats were removed and whatever you had already answered on them carries over to the one that stays. The app now also checks every practice set before it starts, so two questions that ask the same thing can never land in the same session, and a replacement from the same topic is used instead. New questions the AI writes are compared with everything already in the bank before they are saved, and any that repeat an existing idea are dropped. When you miss a question, the reworded retry that follows it is still shown on purpose, because being able to answer the same idea in new words is a better sign of learning than recognizing one wording.</div>
         <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
         <div class="science-item"><b>The tutor decides when you need a question written just for you</b>Another question from the bank is a good retest when it covers the same part of the idea. It is a poor one when you keep choosing the same wrong answer, when you were sure and wrong, or when no unseen question tests the same point. In those cases the app now writes a new question on the same idea, built around the mistake you actually make, and keeps the bank question as a fallback if the writing fails. In the chat after a question, the tutor makes the same call: it can write a new question and put it next, and it is told not to do that for a careless slip, for something you have not been taught yet, or for a 2026 figure it is not sure of. Written questions are not as carefully checked as the built-in ones, so the app uses only the checked ones in the last two days before the exam.</div>
+        <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
       </div>
     </div>
 
@@ -2408,7 +2411,8 @@
             <span class="note" id="fcScienceChevron">how the ordering actually works — tap to expand ▾</span>
           </span>
         </p>
-        <p class="hint" id="fcScienceBody" style="display:none;">Underneath, a Leitner-style spaced-repetition system tracks each card separately. A correct answer pushes the card further out (a day, then three, then a week, up to a month); a miss brings it back right away. Growing gaps between repeats are what make it stick.</p>
+        <p class="hint" id="fcScienceBody" style="display:none;">Underneath, a Leitner-style spaced-repetition system tracks each card separately. A correct answer pushes the card further out (a day, then three, then a week, up to a month); a miss brings it back right away. Growing gaps between repeats are what make it stick. On top of that, cards that match ideas in questions you missed move up, so do cards in your weak subtopics, and a card you keep missing gets an automatic worked example. Close to the exam, new cards wait so review comes first.</p>
+        <p class="hint fc-deck-line" id="fcDeckLine" style="display:none;"></p>
         <div class="fc-controls">
           <div class="fc-filter">
             <input type="checkbox" id="fcFilterToggle" onchange="applyFlashcardFilter()">
@@ -2429,6 +2433,7 @@
           <div class="fc-progress" id="fcProgress">Card 1 of 40</div>
           <div class="fc-card" id="fcCard" onclick="flipFlashcard()" tabindex="0" role="button">
             <div class="fc-domain" id="fcDomain">Domain</div>
+            <div class="fc-why" id="fcWhy" style="display:none;"></div>
             <div class="fc-front" id="fcFront">Term</div>
             <div class="fc-back" id="fcBack">Definition</div>
             <div class="fc-hint" id="fcHint">tap to reveal</div>
@@ -2780,7 +2785,7 @@ const FULL_EXAM_SECTION_MINUTES = 180;
 const FULL_EXAM_SECTION_SIZE = 85;
 const ADAPTIVE_LENGTH = 15;
 const GENERATED_CAP = 200;
-const FLASHCARD_CAP = 60;
+const FLASHCARD_CAP = 100;
 
 // Official CFP Board Principal Knowledge Topics, verbatim from cfp.net's
 // "What You'll Be Tested On" page.
@@ -4495,6 +4500,7 @@ function defaultData(){
     lastHardGenAt: 0,
     flashcardRatingCount: 0,
     lastFlashcardAutoGenAt: 0,
+    lastGapCardGenAt: 0,
     simplifiedExplanations: {},
     speechOptimizedText: {},
     glossaryExamples: {},
@@ -4759,6 +4765,7 @@ async function loadData(){
       if(typeof DATA.lastHardGenAt !== 'number') DATA.lastHardGenAt = 0;
       if(typeof DATA.flashcardRatingCount !== 'number') DATA.flashcardRatingCount = 0;
       if(typeof DATA.lastFlashcardAutoGenAt !== 'number') DATA.lastFlashcardAutoGenAt = 0;
+      if(typeof DATA.lastGapCardGenAt !== 'number') DATA.lastGapCardGenAt = 0;
       if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {};
       if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
       if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
@@ -9001,11 +9008,158 @@ let fcQueue = [];
 let fcIndex = 0;
 let fcFlipped = false;
 
+/* ---- Adaptive flashcards: what to show next, and why ----
+   A card's rank comes from the review schedule (due / overdue / new), how weak its domain is, the domain's
+   exam weight, and three signals tied to this student's own gaps: questions they missed or were sure and wrong
+   about that mention the card's term, weak official subtopics the card belongs to, and the card's own history of
+   being missed. Close to the exam, new cards are held back so review comes first. */
+function fcNorm(t){ return ' ' + String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ') + ' '; }
+let _fcCtx = null;
+function fcContext(){
+  const all = allQuestions();
+  const key = [(DATA.missed||[]).length, (DATA.hypercorrectionQueue||[]).length, DATA.answerCounter||0, all.length, allFlashcards().length, Object.keys(DATA.wrongChoiceHistory||{}).length, DATA.flashcardRatingCount||0].join('|');
+  if(_fcCtx && _fcCtx.key === key) return _fcCtx;
+  const qById = new Map(all.map(q => [q.id, q]));
+  const w = {};
+  const bump = (id, x) => { if(qById.has(id)) w[id] = Math.max(w[id]||0, x); };
+  (DATA.hypercorrectionQueue||[]).forEach(id => bump(id, 1));
+  (DATA.missed||[]).forEach(id => bump(id, 0.8));
+  Object.keys(DATA.wrongChoiceHistory||{}).forEach(id => {
+    const n = Object.values(DATA.wrongChoiceHistory[id]||{}).reduce((a,b)=>a+b,0);
+    if(n) bump(id, n >= 2 ? 0.9 : 0.5);
+  });
+  Object.keys(DATA.questionStats||{}).forEach(id => {
+    const st = getSpacedStat(DATA.questionStats, id);
+    if(st.seen > 0 && st.box <= 1 && st.correct < st.seen) bump(id, 0.4);
+  });
+  const gapItems = Object.keys(w).sort((a,b)=>w[b]-w[a]).slice(0,160).map(id => {
+    const q = qById.get(id);
+    return { id, w:w[id], domain:q.domain, text: fcNorm(q.q+' '+(q.scenario||'')+' '+q.choices[q.correct]+' '+(q.rationale||[]).join(' ')), stem:q.q };
+  });
+  let weak = [];
+  try{ weak = weakSubtopics(40); }catch(e){}
+  const cards = allFlashcards();
+  let backlog = 0;
+  cards.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen > 0 && isDue(st)) backlog++; });
+  _fcCtx = { key, gapItems, weak, backlog, cardMemo:{} };
+  return _fcCtx;
+}
+function fcTermForms(card){
+  const raw = String(card.term||'');
+  const forms = [];
+  const base = raw.replace(/\([^)]*\)/g,' ').trim();
+  const paren = (raw.match(/\(([^)]+)\)/)||[])[1];
+  const acro = x => /^[A-Z0-9&§\-]{3,8}$/.test(x.trim());
+  [base, paren].forEach(x => {
+    if(!x) return;
+    const n = fcNorm(x).trim();
+    if(!n) return;
+    const single = n.indexOf(' ') < 0;
+    if(acro(x)){ forms.push({ n, weight:1 }); return; }
+    if(single && n.length < 6) return;
+    forms.push({ n, weight: single ? 0.5 : 1 });
+    if(n.length > 5 && /s$/.test(n) === false) forms.push({ n: n + 's', weight: single ? 0.5 : 1 });
+    if(/s$/.test(n) && n.length > 6) forms.push({ n: n.slice(0,-1), weight: single ? 0.5 : 1 });
+  });
+  return forms;
+}
+function fcCardSignals(card){
+  const ctx = fcContext();
+  if(ctx.cardMemo[card.id]) return ctx.cardMemo[card.id];
+  let sum = 0, hyper = false;
+  const forms = fcTermForms(card);
+  if(forms.length){
+    ctx.gapItems.forEach(it => {
+      for(const f of forms){
+        if(it.text.indexOf(' ' + f.n.trim() + ' ') >= 0){
+          sum += it.w * f.weight;
+          if(it.w >= 1) hyper = true;
+          break;
+        }
+      }
+    });
+  }
+  const gap = Math.min(1, sum / 1.5);
+  let weakSub = null;
+  const hay = (card.term + ' ' + card.def).toLowerCase();
+  for(const ws of ctx.weak){
+    if(ws.key !== card.domain) continue;
+    let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[ws.key][ws.idx]; }catch(e){}
+    if(pat && pat.test(hay)){ weakSub = ws; break; }
+  }
+  const st = getSpacedStat(DATA.flashcardStats, card.id);
+  const misses = st.seen - st.correct;
+  const leech = st.seen >= 4 && misses >= 3 && st.box <= 1;
+  return (ctx.cardMemo[card.id] = { gap, hyper, weakSub, leech, misses, stat: st });
+}
 function flashcardPriority(card){
+  const sig = fcCardSignals(card);
+  const stat = sig.stat;
+  const days = getDaysUntilExam();
+  const dom = DOMAINS.find(d => d.key === card.domain);
   const weaknessFactor = 1.15 - domainMastery(card.domain);
-  const stat = getSpacedStat(DATA.flashcardStats, card.id);
-  const dueFactor = dueFactorFor(stat);
-  return weaknessFactor * dueFactor;
+  const weightFactor = 0.85 + ((dom && dom.weight) || 10) / 40;
+  let due = dueFactorFor(stat);
+  if(stat.seen === 0){
+    if(days !== null && days <= 7) due = 0.6;
+    else if(fcContext().backlog > 40) due = 0.8;
+  }
+  const boost = 1 + 0.9*sig.gap + 0.4*(sig.weakSub ? 1 : 0) + (sig.leech ? 0.5 : 0);
+  let p = weaknessFactor * weightFactor * due * boost;
+  if(sig.gap >= 0.5 && stat.seen > 0 && !isDue(stat) && stat.box <= 2) p = Math.max(p, weaknessFactor * weightFactor * 1.4 * boost);
+  if(days !== null && days <= 7 && stat.seen > 0 && stat.box >= 4 && !isDue(stat)) p *= 0.6;
+  return p;
+}
+function fcReasonsFor(card){
+  const sig = fcCardSignals(card), stat = sig.stat, out = [];
+  if(sig.leech) out.push('missed ' + sig.misses + ' times — say it in your own words first');
+  if(sig.hyper) out.push('tied to a question you were sure about and got wrong');
+  else if(sig.gap >= 0.4) out.push('tied to a question you missed');
+  if(sig.weakSub) out.push('weak spot: ' + sig.weakSub.name);
+  if(card.gapFor && stat.seen === 0) out.push('written for a gap: ' + card.gapFor);
+  if(!out.length){
+    if(stat.seen === 0) out.push('new card');
+    else if(Date.now() >= stat.dueAt) out.push('due for review');
+  }
+  return out.slice(0,2);
+}
+function fcInterleave(sorted){
+  const rest = sorted.slice(), out = [];
+  while(rest.length){
+    const a = out[out.length-1], b = out[out.length-2];
+    let pick = 0;
+    if(a && b && a.domain === b.domain){
+      const lim = Math.min(rest.length, 120);
+      for(let i = 0; i < lim; i++){ if(rest[i].domain !== a.domain){ pick = i; break; } }
+    }
+    out.push(rest.splice(pick,1)[0]);
+  }
+  return out;
+}
+function fcDeckLine(){
+  const el = document.getElementById('fcDeckLine');
+  if(!el) return;
+  if(!fcQueue.length || fcCustomQueue){ el.style.display = 'none'; return; }
+  const slice = fcQueue.slice(fcIndex, fcIndex + 20);
+  let due = 0, gap = 0, fresh = 0, leech = 0;
+  slice.forEach(c => {
+    const sig = fcCardSignals(c);
+    if(sig.leech) leech++;
+    if(sig.gap >= 0.4) gap++;
+    if(sig.stat.seen === 0) fresh++; else if(isDue(sig.stat)) due++;
+  });
+  const bits = [];
+  if(due) bits.push(due + ' due');
+  if(gap) bits.push(gap + ' tied to questions you missed');
+  if(leech) bits.push(leech + ' you keep missing');
+  if(fresh) bits.push(fresh + ' new');
+  const days = getDaysUntilExam();
+  let line = bits.length ? 'Your next ' + slice.length + ' cards: ' + bits.join(' · ') + '.' : '';
+  const ctx = fcContext();
+  if(ctx.weak.length) line += ' Biggest gap: ' + ctx.weak[0].name + '.';
+  if(days !== null && days >= 0 && days <= 7) line += ' The exam is ' + (days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'in ' + days + ' days') + ', so review comes before new cards.';
+  el.textContent = line.trim();
+  el.style.display = line.trim() ? 'block' : 'none';
 }
 
 function computeFlashcardProgress(){
@@ -9034,6 +9188,7 @@ function renderFlashcardStats(){
   document.getElementById('fcStatUnseen').textContent = unseenCount;
   const note = document.getElementById('fcStatsCardNote');
   if(note) note.textContent = `across all ${total} cards`;
+  fcDeckLine();
 }
 
 function enterFlashcardFullscreen(){
@@ -9075,8 +9230,9 @@ function rebuildFlashcardQueue(){
   if(domainFilter){
     pool = pool.filter(f => f.domain === domainFilter);
   }
-  pool = pool.slice().sort((a,b)=> flashcardPriority(b) - flashcardPriority(a));
-  fcQueue = pool;
+  const prio = new Map(pool.map(c => [c.id, flashcardPriority(c)]));
+  pool = pool.slice().sort((a,b)=> prio.get(b.id) - prio.get(a.id));
+  fcQueue = domainFilter ? pool : fcInterleave(pool);
   fcCustomQueue = false;
   fcIndex = 0;
   renderFlashcard();
@@ -9130,9 +9286,10 @@ function renderFlashcard(){
   document.getElementById('fcDomain').textContent = domainMeta.code + ' — ' + domainMeta.name;
   document.getElementById('fcFront').textContent = card.term;
   document.getElementById('fcFront').style.display = 'block';
+  { const why = document.getElementById('fcWhy'); if(why){ const r = fcReasonsFor(card); why.textContent = r.length ? 'Why now: ' + r.join(' · ') : ''; why.style.display = r.length ? 'block' : 'none'; } }
   document.getElementById('fcBack').textContent = card.def;
   document.getElementById('fcBack').style.display = 'none';
-  document.getElementById('fcHint').textContent = 'tap to reveal';
+  document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
   document.getElementById('fcActions').style.display = 'none';
   const mnemonicRow = document.getElementById('fcMnemonicRow');
   if(mnemonicRow) mnemonicRow.style.display = 'none';
@@ -9174,6 +9331,10 @@ function flipFlashcardContent(){
   }
   const speakBtn = document.getElementById('speakFlashcardBtn');
   if(speakBtn) speakBtn.style.display = (fcFlipped && hasSpeechSupport()) ? 'flex' : 'none';
+  if(fcFlipped && aiFeaturesAvailable && fcQueue[fcIndex] && fcCardSignals(fcQueue[fcIndex]).leech){
+    const eb = document.getElementById('fcExplainBtn');
+    if(eb && !eb.disabled) requestFlashcardExplain();
+  }
 }
 
 function openSettingsFromAnyFullscreen(){
@@ -9398,6 +9559,7 @@ function rateFlashcard(knowsIt){
   refreshHeaderStats();
   refreshCoachSurfaces(); // the next-step recommendation counts due flashcards
   maybeAutoExpandFlashcards();
+  maybeGenerateGapFlashcards();
   if(fcRound.total >= FC_CHECKPOINT){
     const box = document.getElementById('fcRecap');
     if(box){
@@ -10468,6 +10630,70 @@ function flashcardLowestPoolDomains(count){
   // Not enough quiz data yet to know mastery -- fall back to pool size alone.
   return DOMAINS.filter(d => candidateKeys.includes(d.key))
     .sort((a,b) => dueCounts[a.key]-dueCounts[b.key]).slice(0,count).map(d=>d.key);
+}
+
+/* Writes a few new cards aimed at a real gap: the weakest official subtopic that has few cards, or, failing that,
+   the domain where the student keeps missing questions. The missed question stems are given to the AI so the cards
+   cover the ideas behind them. Slow on purpose: at most one batch per twelve answers or ratings. */
+function buildGapFlashcardPrompt(domainMeta, subtopicName, stems, existingTerms){
+  return `You write concise flashcards (term + definition) for CFP® exam candidates studying the "${domainMeta.name}" Principal Knowledge Domain.
+The student keeps missing questions ${subtopicName ? 'on the official subtopic "' + subtopicName + '"' : 'in this domain'}. Here are the stems of some they missed:
+${stems.map(x => '- ' + x).join('\n')}
+Write exactly 4 new flashcards for the terms, rules or distinctions that would have prevented these misses. Do not repeat any term in this list: ${existingTerms || '(none)'}
+Each definition must be one sentence, under 25 words, factually accurate (use 2026 figures only if you are certain of them), and usable as an exam-prep flashcard.
+Return ONLY a raw JSON array, no markdown code fences, no commentary, in exactly this shape:
+[{"term":"short term or concept name","def":"one-sentence definition under 25 words"}]`;
+}
+function fcGapTarget(){
+  const ctx = fcContext();
+  const cards = allFlashcards();
+  for(const ws of ctx.weak){
+    let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[ws.key][ws.idx]; }catch(e){}
+    if(!pat) continue;
+    const have = cards.filter(c => c.domain === ws.key && pat.test((c.term+' '+c.def).toLowerCase())).length;
+    if(have < 6){
+      const stems = ctx.gapItems.filter(it => it.domain === ws.key).slice(0,4).map(it => it.stem.slice(0,140));
+      return { domain: ws.key, subtopic: ws.name, stems };
+    }
+  }
+  const counts = {};
+  ctx.gapItems.forEach(it => { counts[it.domain] = (counts[it.domain]||0) + it.w; });
+  const top = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+  if(top && counts[top] >= 3){
+    const have = cards.filter(c => c.domain === top && c.generated && c.gapFor !== undefined).length;
+    if(have < 8) return { domain: top, subtopic: null, stems: ctx.gapItems.filter(it => it.domain === top).slice(0,4).map(it => it.stem.slice(0,140)) };
+  }
+  return null;
+}
+async function maybeGenerateGapFlashcards(){
+  if(isGenerating || genBackoffActive() || !aiFeaturesAvailable) return null;
+  if(DATA.generatedFlashcards.length >= FLASHCARD_CAP) return null;
+  const clock = (DATA.answerCounter||0) + (DATA.flashcardRatingCount||0);
+  if(clock - (DATA.lastGapCardGenAt||0) < 12) return null;
+  const target = fcGapTarget();
+  if(!target || !target.stems.length) return null;
+  DATA.lastGapCardGenAt = clock;
+  const meta = DOMAINS.find(d => d.key === target.domain);
+  const existing = allFlashcards().filter(f => f.domain === target.domain).map(f => f.term).join(', ');
+  const epoch = dataEpoch;
+  isGenerating = true;
+  try{
+    const raw = await callClaude(buildGapFlashcardPrompt(meta, target.subtopic, target.stems, existing), 1500);
+    if(epoch !== dataEpoch) return null;
+    let fresh = safeParseFlashcards(raw, target.domain);
+    fresh = dedupeGenerated(fresh, allFlashcards(), f => f.term).slice(0, 4);
+    if(!fresh.length){ noteGenFailure(); return null; }
+    fresh.forEach(c => { c.gapFor = target.subtopic || meta.name; });
+    DATA.generatedFlashcards = DATA.generatedFlashcards.concat(fresh.slice(0, Math.max(0, FLASHCARD_CAP - DATA.generatedFlashcards.length)));
+    noteGenSuccess();
+    persist();
+    return fresh;
+  }catch(e){
+    noteGenFailure();
+    return null;
+  }finally{
+    isGenerating = false;
+  }
 }
 
 function maybeAutoExpandFlashcards(){
@@ -14200,6 +14426,7 @@ function selectAnswer(i){
 
   maybeAutoExpand();
   maybeGenerateHarderContent();
+  maybeGenerateGapFlashcards();
   saveInProgressSession();
 }
 
