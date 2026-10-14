@@ -919,6 +919,7 @@
   .confidence-pill{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:15px 14px;border-radius:18px;border:1px solid var(--hair);background:transparent;color:var(--muted);cursor:pointer;transition:all var(--t-fast) var(--ease);}
   .confidence-pill:disabled{cursor:default;opacity:.7;}
   .confidence-pill:disabled.active{opacity:1;}
+  .qchat-action{font-size:12.5px;border:1px dashed var(--gold);background:var(--gold-tint);color:var(--paper);}
   .think-gate{margin:12px 0;padding:14px 16px;border-radius:var(--radius);background:var(--gold-tint);border:1px solid var(--gold);}
   .think-gate .think-title{font-weight:600;color:var(--paper);margin-bottom:6px;}
   .think-gate p{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--paper);}
@@ -2239,6 +2240,7 @@
         <div class="science-item"><b>Balancing the question bank to the exam's weights</b>Comparing how many questions each exam area has against how much of the exam it is worth showed General Principles of Financial Planning running about twenty questions short, with Retirement and Investments slightly behind. Several narrow topics had only six or seven questions each: insurance needs analysis, postmortem estate planning, special needs planning, annuities, eldercare, nonqualified plans and the income tax of trusts. Ninety-four new questions were added, aimed at exactly those spots (a later duplicate check removed the ones that turned out to repeat an existing question), along with eight flashcards for ideas those questions introduced, with the 2026 figures checked against IRS and CFP Board sources.</div>
         <div class="science-item"><b>Never asking the same thing twice</b>A check of the whole question bank found no identical questions, but about a hundred that tested the same fact as another with different wording, such as two separate questions on the 30-day wash sale window, or on how long a disclaimer can wait. Seeing the same idea twice makes you feel more ready than you are, and it wastes minutes you could spend on something new, so the repeats were removed and whatever you had already answered on them carries over to the one that stays. The app now also checks every practice set before it starts, so two questions that ask the same thing can never land in the same session, and a replacement from the same topic is used instead. New questions the AI writes are compared with everything already in the bank before they are saved, and any that repeat an existing idea are dropped. When you miss a question, the reworded retry that follows it is still shown on purpose, because being able to answer the same idea in new words is a better sign of learning than recognizing one wording.</div>
         <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
+        <div class="science-item"><b>The tutor decides when you need a question written just for you</b>Another question from the bank is a good retest when it covers the same part of the idea. It is a poor one when you keep choosing the same wrong answer, when you were sure and wrong, or when no unseen question tests the same point. In those cases the app now writes a new question on the same idea, built around the mistake you actually make, and keeps the bank question as a fallback if the writing fails. In the chat after a question, the tutor makes the same call: it can write a new question and put it next, and it is told not to do that for a careless slip, for something you have not been taught yet, or for a 2026 figure it is not sure of. Written questions are not as carefully checked as the built-in ones, so the app uses only the checked ones in the last two days before the exam.</div>
       </div>
     </div>
 
@@ -12392,7 +12394,7 @@ function saveInProgressSession(){
     domainTally: session.domainTally, answerLog: session.answerLog,
     variantAttempted: session.variantAttempted, startedAt: session.startedAt,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null,
-    siblingOf: session.siblingOf || {}, gated: Array.from(session.gated || []),
+    siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
   };
   persist();
@@ -12424,7 +12426,7 @@ function resumeInProgressSession(){
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null,
-    siblingOf: saved.siblingOf || {}, gated: new Set(saved.gated || []), thinkGate: false,
+    siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
@@ -12620,30 +12622,61 @@ function unseenSiblingFor(q, takenIds, members){
   if(!key) return null;
   const pool = allQuestions().filter(c => c.id !== q.id && c.domain === q.domain && !takenIds.has(c.id) && !factExempt(c) && !c.tvmGen && questionIsNew(c) && conceptKeyOf(c) === key);
   if(!pool.length) return null;
-  const ranked = pool.map(c => ({ c, s: ((c.variantOf === q.id || (q.variantOf && c.variantOf === q.variantOf)) ? 1 : 0) + factSimilarity(q, c) + (c.scenario ? -0.15 : 0) + Math.random() * 0.08 }))
+  const ranked = pool.map(c => { const fit = factSimilarity(q, c); return { c, fit, s: ((c.variantOf === q.id || (q.variantOf && c.variantOf === q.variantOf)) ? 1 : 0) + fit + (c.scenario ? -0.15 : 0) + Math.random() * 0.08 }; })
     .sort((a, b) => b.s - a.s);
   for(let i = 0; i < ranked.length; i++){
     const c = ranked[i].c;
     if(members.some(m => m && m.id !== q.id && !factExempt(m) && questionsSameFact(m, c))) continue;
-    return c;
+    return { c, fit: ranked[i].fit };
   }
   return null;
 }
 
+/* Another bank question, or a new one written for this student? Bank questions are checked and cover the
+   exam's range; a written one can aim at exactly what this student keeps getting wrong. So a new one is
+   chosen when there is a specific reason: the same idea missed more than once, a confident wrong answer,
+   or no unseen bank question that tests the same part of the idea. It is not used close to the exam, when
+   only checked questions are worth the time, or without an AI key. The tutor makes the same call in chat. */
+const NEW_QUESTION_FIT_FLOOR = 0.15;
+function usualWrongChoiceText(q){
+  const h = DATA.wrongChoiceHistory && DATA.wrongChoiceHistory[q.id]; if(!h) return '';
+  let best = -1, n = 0; Object.keys(h).forEach(i => { if(h[i] > n){ n = h[i]; best = +i; } });
+  return best >= 0 && q.choices[best] ? q.choices[best] : '';
+}
+function retestMoveFor(q, fit){
+  const days = getDaysUntilExam();
+  if(days !== null && days <= 2) return { move: 'bank', why: 'close to the exam, so checked questions are used' };
+  const h = (DATA.wrongChoiceHistory && DATA.wrongChoiceHistory[q.id]) || {};
+  const wrongPicks = Object.values(h).reduce((a, n) => a + n, 0);
+  const wrongText = usualWrongChoiceText(q);
+  if(wrongPicks >= 2) return { move: 'new', why: 'the student has missed this idea more than once', wrongText };
+  if((DATA.hypercorrectionQueue || []).includes(q.id)) return { move: 'new', why: 'the student was sure of a wrong answer here', wrongText };
+  if(fit === null || fit < NEW_QUESTION_FIT_FLOOR) return { move: 'new', why: 'the closest unseen question tests a different part of the idea', wrongText };
+  return { move: 'bank', why: 'a checked question on the same idea is available', wrongText };
+}
+
 /* Swaps each already-seen question in a study set for an unseen one on the same topic. Returns the new set,
-   which swapped question stands in for which (so the old one gets credit), and which seen questions had no
-   unseen stand-in. Timed exams are left alone: they already take unseen questions first, and gating or
-   swapping inside a simulation would make it less like the real thing. */
+   which swapped question stands in for which (so the old one gets credit), which seen questions had no
+   unseen stand-in, and which slots should get a freshly written question instead (see retestMoveFor).
+   Timed exams are left alone: they already take unseen questions first, and gating or swapping inside a
+   simulation would make it less like the real thing. */
 function freshenQueue(queue, mode){
-  const out = { queue, siblingOf: {}, gated: [] };
+  const out = { queue, siblingOf: {}, gated: [], wantNew: {} };
   if(!['adaptive', 'drill', 'review'].includes(mode)) return out;
+  let aiOk = false; try{ aiOk = !!aiFeaturesAvailable && !genBackoffActive(); }catch(e){}
   const taken = new Set(queue.map(q => q.id));
   const members = queue.slice();
   members.forEach((q, i) => {
     if(!q || factExempt(q) || q.tvmGen || questionIsNew(q)) return;
     const sib = unseenSiblingFor(q, taken, members);
-    if(sib){ taken.add(sib.id); members[i] = sib; out.siblingOf[sib.id] = q.id; }
-    else out.gated.push(q.id);
+    const call = aiOk ? retestMoveFor(q, sib ? sib.fit : null) : null;
+    if(sib){
+      taken.add(sib.c.id); members[i] = sib.c; out.siblingOf[sib.c.id] = q.id;
+      if(call && call.move === 'new') out.wantNew[sib.c.id] = { orig: q.id, why: call.why, wrongText: call.wrongText };
+    } else {
+      out.gated.push(q.id);
+      if(call && call.move === 'new') out.wantNew[q.id] = { orig: q.id, why: call.why, wrongText: call.wrongText };
+    }
   });
   out.queue = members;
   return out;
@@ -12717,6 +12750,104 @@ function maybeShowThinkGate(q, choicesBox){
   };
 }
 
+/* ---- the tutor can write a new question on the idea at hand ---- */
+const NEW_QUESTION_JUDGMENT = 'You can write a brand-new question for the student with the write_new_question tool. Use judgment. Write one when their wrong answer shows a specific mix-up you can aim at, when they have missed the same idea before or were sure and wrong, when they got it right but by a guess, by elimination or with low confidence and you want to see the idea hold with new facts or numbers, or when the bank is unlikely to have a question on this exact point. Do not write one for a careless slip, for something they have not been taught yet (teach it first), for a 2026 limit or recent-law figure you cannot confirm (use the numbers the app shows), or when they simply need an explanation. Prefer the tool to typing a question into the chat, because a written question is scored, scheduled and credited like any other. Call it at most once per reply and say in one sentence why you chose it.';
+const WRITE_QUESTION_TOOL = {
+  name: 'write_new_question',
+  description: "Write ONE brand-new practice question on the exact idea the student is working on, aimed at what they got wrong or need to prove they understand, and put it in front of them: as the next question during a practice session, or as a one-question practice set otherwise. Choose it by judgment over simply sending another bank question: when their wrong answer shows a specific misconception you can target, when they have missed the same idea more than once or were sure and wrong, when they got it right by luck or low confidence and you want to see it hold in a new setting or with new numbers, or when the bank is unlikely to cover this exact point. Do NOT use it for a careless slip, for something not yet taught, for a 2026 figure or recent-law change you are not certain of, or when an explanation is what they need.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      idea: { type: 'string', description: 'The specific rule, concept or skill the question must test, in one sentence.' },
+      angle: { type: 'string', enum: ['new_setting', 'target_misconception', 'change_numbers', 'contrast_lookalike'], description: "new_setting = same rule, different client and situation; target_misconception = build a believable wrong answer from the mistake they made; change_numbers = same calculation, different figures; contrast_lookalike = a question only one of two look-alike ideas can answer." },
+      misconception: { type: 'string', description: 'Optional: the specific wrong belief or wrong answer to build a believable wrong choice from.' },
+      domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: 'Required when no practice session is open; otherwise the current question\'s domain is used.' },
+    },
+    required: ['idea', 'angle'],
+  },
+};
+const WRITE_ANGLE_TEXT = {
+  new_setting: 'the same rule in a different situation: a different client, different details and, where figures appear, different numbers',
+  target_misconception: 'a question built around the mistake the student made, so that one of the wrong choices is the believable form of that mistake and its rationale says exactly why it fails',
+  change_numbers: 'the same kind of calculation with different figures, so the student cannot reuse the earlier answer',
+  contrast_lookalike: 'a question that only one of two look-alike ideas can answer, so the student has to tell them apart'
+};
+async function executeWriteNewQuestion(input){
+  input = input || {};
+  if(!aiFeaturesAvailable) return 'Error: no AI key is connected, so a new question cannot be written.';
+  const inSession = !!(session && session.queue && session.queue[session.index] && isStudyMode());
+  if(inSession && (session.tutorMadeCount || 0) >= 6) return 'Not written: six tutor-written questions have already been added to this session. Suggest a bank question or a break instead.';
+  const cur = inSession ? session.queue[session.index] : null;
+  const domain = cur ? cur.domain : input.domain;
+  const meta = DOMAINS.find(d => d.key === domain);
+  if(!meta) return 'Error: say which exam domain this question is for.';
+  const idea = String(input.idea || '').trim().slice(0, 300);
+  if(!idea) return 'Error: say which idea the question should test.';
+  const angle = WRITE_ANGLE_TEXT[input.angle] ? input.angle : 'new_setting';
+  const miscon = String(input.misconception || '').trim().slice(0, 300);
+  const ctxCur = cur ? `\nThe student was just working on this question, which must NOT be reused or lightly reworded:\n"${cur.q}"\nCorrect answer: ${cur.choices[cur.correct]}\n` : '';
+  const prompt = `Write ONE new CFP exam practice question in the ${meta.name} domain.${ctxCur}
+The idea it must test: ${idea}
+Shape: ${WRITE_ANGLE_TEXT[angle]}.${miscon ? '\nThe mistake to build a believable wrong choice from: ' + miscon + '.' : ''}
+It must be a real, different question, not a reworded copy: new situation, new details, different names. The correct answer must rest on current U.S. rules (use 2026 figures only if you are certain of them; otherwise avoid dollar limits).
+Four answer choices of similar length, exactly one correct, and no choice that uses an absolute word such as always, never, only or must. Begin the rationale for the correct choice with "Correct — " and each wrong choice's rationale with "Wrong — ", explaining specifically why that choice fails.
+Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "choices":["...","...","...","..."], "correct":0, "rationale":["...","...","...","..."]${cur && cur.scenario ? ', "scenario":"..."' : ''}}]. "correct" is the index (0 to 3) of the right choice.`;
+  let made = null, feedback = '', lastRaw = '';
+  for(let attempt = 0; attempt < 3 && !made; attempt++){
+    try{
+      lastRaw = await anthropicMessagesRequest({ messages: [{ role: 'user', content: prompt + feedback }], maxTokens: 1000 });
+      const parsed = safeParseQuestions(lastRaw, domain, null, { variant: true, lenient: attempt >= 1 });
+      if(parsed.length) made = parsed[0];
+      else feedback = '\n\nYour previous attempt was rejected. ' + diagnoseRejectedQuestion(lastRaw) + ' Write a corrected version and return only the JSON array.';
+    }catch(e){ if(attempt === 2) return 'Error: the question could not be written (' + ((e && e.message) || 'unknown error') + ').'; }
+  }
+  if(!made) return 'Not written: the question that came back did not pass the quality checks after three tries. Offer a bank question instead.';
+  if(allQuestions().some(b => factSimilarity(b, made) >= 0.8)) return 'Not written: the question that came back was nearly identical to one already in the bank. Offer a bank question instead.';
+  made.id = 'tq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  made.tutorMade = true; made.ideaNote = idea;
+  DATA.generatedBank.push(made);
+  const mine = DATA.generatedBank.filter(x => x.tutorMade);
+  if(mine.length > 60){ const drop = new Set(mine.slice(0, mine.length - 60).map(x => x.id)); DATA.generatedBank = DATA.generatedBank.filter(x => !drop.has(x.id)); }
+  persist();
+  if(inSession){
+    const item = shuffleQuestionChoices(made);
+    session.queue.splice(session.index + 1, 0, item);
+    session.tutorMadeCount = (session.tutorMadeCount || 0) + 1;
+    if(!session.selectionReasons) session.selectionReasons = {};
+    session.selectionReasons[made.id] = 'newidea';
+    if(!session.siblingOf) session.siblingOf = {};
+    if(!questionIsNew(cur)) session.siblingOf[made.id] = cur.id;
+    const nb = document.getElementById('nextBtn'); if(nb && nb.style.display !== 'none') nb.textContent = (session.index === session.queue.length - 1) ? 'Finish session' : 'Next question';
+    saveInProgressSession();
+    return 'Wrote a new question on this idea and put it next in the session. The student sees it when they tap Next.';
+  }
+  showTab('study');
+  beginSession([made], 'drill', null);
+  if(session){ session.selectionReasons = Object.assign({}, session.selectionReasons, { [made.id]: 'newidea' }); renderQuestion(); }
+  return 'Wrote a new question on this idea and started a one-question practice set with it.';
+}
+/* One round of the chat on a question, with the option for the tutor to write a new question. */
+async function qChatTurn(history, q){
+  const system = buildQuestionChatSystem(q);
+  if(!aiFeaturesAvailable || (session.tutorMadeCount || 0) >= 6) return { text: String(await anthropicMessagesRequest({ system, messages: history, maxTokens: 450 })), note: '' };
+  const tools = [WRITE_QUESTION_TOOL];
+  const first = await anthropicMessagesRequest({ system, messages: history, maxTokens: 700, tools });
+  const blocks = Array.isArray(first) ? first : [{ type: 'text', text: String(first) }];
+  const uses = blocks.filter(b => b && b.type === 'tool_use');
+  if(!uses.length) return { text: aiReplyText(blocks), note: '' };
+  const msgs = history.concat([{ role: 'assistant', content: blocks }]);
+  const results = []; let note = '';
+  for(let i = 0; i < uses.length; i++){
+    const u = uses[i];
+    const r = (i === 0 && u.name === 'write_new_question') ? await executeWriteNewQuestion(u.input) : 'Skipped: one new question at a time.';
+    if(i === 0 && !/^(Error|Not written)/.test(r)) note = 'New question written. It comes next.';
+    results.push({ type: 'tool_result', tool_use_id: u.id, content: r });
+  }
+  msgs.push({ role: 'user', content: results });
+  const follow = await anthropicMessagesRequest({ system, messages: msgs, maxTokens: 450, tools });
+  return { text: aiReplyText(Array.isArray(follow) ? follow : [{ type: 'text', text: String(follow) }]), note };
+}
+
 function beginSession(queue, mode, timerSeconds, selectionReasons){
   // Capture the genuine scroll position before anything else changes --
   // switching which tab panel is active (right below) can itself alter
@@ -12728,9 +12859,10 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   queue = dedupeQueue(queue, mode);
   const freshened = freshenQueue(queue, mode);
   queue = freshened.queue.map(shuffleQuestionChoices);
-  if(Object.keys(freshened.siblingOf).length){
+  if(Object.keys(freshened.siblingOf).length || Object.keys(freshened.wantNew).length){
     selectionReasons = Object.assign({}, selectionReasons || {});
     Object.keys(freshened.siblingOf).forEach(id => { selectionReasons[id] = 'retest'; });
+    Object.keys(freshened.wantNew).forEach(id => { selectionReasons[id] = 'newidea'; });
   }
   if(session && session.timerHandle) clearInterval(session.timerHandle);
   const statsAtStart = computeStats();
@@ -12741,7 +12873,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
     onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds, timerHandle:null, locked:false,
-    startedAt: Date.now(), variantAttempted: {}, selectionReasons: selectionReasons || {}, siblingOf: freshened.siblingOf, gated: new Set(freshened.gated), thinkGate: false,
+    startedAt: Date.now(), variantAttempted: {}, selectionReasons: selectionReasons || {}, siblingOf: freshened.siblingOf, wantNew: freshened.wantNew, gated: new Set(freshened.gated), thinkGate: false,
     readinessAtStart: statsAtStart.readiness, // so the results screen can show what this session moved
     readinessExactAtStart: statsAtStart.readinessExact
   };
@@ -13367,6 +13499,7 @@ function renderQuestion(){
     conceptFollowup: 'building on what you just missed',
     tvmCalc: 'calculator practice at your level',
     retest: 'a new question on an idea that was due back',
+    newidea: 'a new question written on this idea',
   };
   const reasonCode = session.selectionReasons ? session.selectionReasons[q.id] : null;
   const reasonFlag = reasonCode && reasonLabels[reasonCode] ? ` <span class="gen-flag" title="Why this question, right now">· ${reasonLabels[reasonCode]}</span>` : '';
@@ -13483,7 +13616,8 @@ async function maybeSwapQuestionForVariant(q){
   if(session.variantAttempted[q.id]) return;
 
   const stat = getSpacedStat(DATA.questionStats, q.id);
-  if(stat.seen < 1) return; // never seen before -- nothing to avoid repeating yet
+  const wantNew = (session.wantNew && session.wantNew[q.id]) || null; // the app judged a freshly written question on this idea would help more than a reworded copy
+  if(stat.seen < 1 && !wantNew) return; // never seen before -- nothing to avoid repeating yet
 
   // Same untimed, immediate-feedback scope as every other AI-assist
   // feature in this app -- never during timed practice.
@@ -13527,7 +13661,7 @@ async function maybeSwapQuestionForVariant(q){
   // normal render -- this runs before the browser paints the frame, so
   // the student never actually sees the original question text at all,
   // only this notice and then the variant once it's ready.
-  qTextEl.textContent = "You've seen this one before — refreshing it so you're testing the concept, not recognizing the wording…";
+  qTextEl.textContent = wantNew ? "Writing a new question on this idea, aimed at what you keep missing…" : "You've seen this one before — refreshing it so you're testing the concept, not recognizing the wording…";
   qTextEl.classList.add('variant-loading');
   choicesBox.innerHTML = '';
   choicesBox.classList.add('variant-loading-choices');
@@ -13559,6 +13693,7 @@ async function maybeSwapQuestionForVariant(q){
     ? ` This question normally comes with a step-by-step calculator walkthrough. Since the numbers are changing, write new steps that match the new numbers exactly -- this app is built around an HP 10bII+ (no separate compute/CPT key -- press the answer's own key directly; the interest key is I/YR, never I/Y), following the same style as a real walkthrough: clear the registers, note P/YR and BEG/END where relevant, then each variable in order. Put these in a "calcSteps" array of strings, and include "calcType":"${q.calcType || 'tvm'}".`
     : '';
   const calcStepsSchemaField = q.calcSteps ? `, "calcSteps":["...","..."], "calcType":"${q.calcType || 'tvm'}"` : '';
+  const newStyleNote = wantNew ? `\n\nThis time do not write a reworded copy. Write a NEW question on the same underlying idea: a different situation, different details and, where numbers are involved, different figures. Why a new question: ${wantNew.why}. ${wantNew.wrongText ? 'The student keeps picking this wrong answer on the original: "' + wantNew.wrongText + '". Make one of the three wrong choices the believable form of that same mistake, and have its rationale say exactly why it fails.' : 'Make the wrong choices the mistakes a student actually makes on this idea.'} The correct answer must rest on the same rule as the original.` : '';
   const basePrompt = `A student has seen this exact CFP exam practice question before and is now due to be tested on the same underlying concept again:
 ${scenarioContext}
 "${q.q}"
@@ -13603,7 +13738,7 @@ Begin the rationale for the correct choice with "Correct — " and each wrong ch
     try{
       // The last attempt accepts a somewhat less polished answer-length balance
       // rather than showing the same wording again; earlier attempts keep the full bar.
-      const raw = await anthropicMessagesRequest({ messages: [{role:'user', content: basePrompt + retryFeedback}], maxTokens: variantMaxTokens });
+      const raw = await anthropicMessagesRequest({ messages: [{role:'user', content: (wantNew ? basePrompt.replace('A student has seen this exact CFP exam practice question before and is now due to be tested on the same underlying concept again:', 'A student is due to be tested again on the idea behind this CFP exam practice question:') : basePrompt) + newStyleNote + retryFeedback}], maxTokens: variantMaxTokens });
       const parsed = safeParseQuestions(raw, q.domain, null, { variant:true, lenient: attempt >= 2, final: attempt >= 3 });
       lastVariantRaw = raw;
       if(parsed.length) variant = parsed[0];
@@ -13676,7 +13811,7 @@ Begin the rationale for the correct choice with "Correct — " and each wrong ch
     persist();
   }
 
-  if(!variant){
+  if(!variant && !(wantNew && stat.seen < 1)){
     // An AI key IS connected here (the no-key path above already
     // returned otherwise) -- so this is a genuine attempt that failed:
     // a network error, an API error, or a response that didn't pass
@@ -14108,7 +14243,7 @@ function qChatSuggestions(q, wasCorrect){
   if(q.calcSteps) out.push(['Walk me through the keys', 'Walk me through the calculator key presses for this one, step by step, and tell me what to watch for.']);
   if(cueFor(q) && q.scenario) out.push(['Which facts mattered?', 'Which facts in the case decide this question, and which ones are distractors? Ask me what I noticed first, then check me.']);
   out.push(['Give me an example', 'Give me a short, concrete real-world example of this concept.']);
-  out.push(['Quiz me on this', 'Ask me one follow-up question on this concept with the details changed (new numbers or a flipped fact), to check I really get it rather than just remember this version. Wait for my answer, and give a hint before the answer if I am stuck.']);
+  out.push(['Quiz me on this', 'Test me on this idea again. If a new question written for me would help, write one and put it next. If not, ask me one quick follow-up with the details changed and wait for my answer.']);
   out.push(['Let me explain it back', '__TEACHBACK__']);
   return out;
 }
@@ -14184,6 +14319,15 @@ function buildQuestionChatSystem(q){
   ctx += 'How to teach this moment: ' + teachingMoveFor(q, wasCorrect) + ' General rules: one idea and one question per reply; hint before answer; ask them to explain why in their own words; praise what they did, not who they are.\n';
   if(session.siblingOf && session.siblingOf[q.id]) ctx += 'This is a new question on an idea the student missed or was due to review earlier. It was chosen so they are tested on the idea, not on the old wording.\n';
   if(session.selectionReasons && session.selectionReasons[q.id] === 'conceptFollowup' && wasCorrect) ctx += 'This question was deliberately placed right after a different question on this same narrow topic that the student had just gotten wrong, so if their explanation genuinely shows they closed that specific gap (not just that they picked the right letter), say so plainly.\n';
+  try{
+    const h = (DATA.wrongChoiceHistory && DATA.wrongChoiceHistory[q.id]) || {};
+    const wp = Object.values(h).reduce((a, n) => a + n, 0);
+    const uw = usualWrongChoiceText(q);
+    ctx += 'History on this idea: ' + (wp ? 'the student has picked a wrong answer here ' + wp + ' time' + (wp === 1 ? '' : 's') + ' before' + (uw ? ' and most often chose "' + uw + '"' : '') + '. ' : 'no earlier wrong picks on this question. ') +
+      ((DATA.hypercorrectionQueue || []).includes(q.id) ? 'They were confident and wrong here before. ' : '') +
+      (session.selectedConfidence ? 'Just now they rated themselves ' + session.selectedConfidence + '. ' : '') +
+      (() => { const d = getDaysUntilExam(); return d !== null ? d + ' day' + (d === 1 ? '' : 's') + ' until the exam. ' : ''; })() + '\n' + NEW_QUESTION_JUDGMENT + '\n';
+  }catch(e){}
   if(q.rationale) ctx += 'Explanations shown to the student: ' + q.rationale.map((r,i) => L[i] + ') ' + r).join(' ') + '\n';
   if(q.calcSteps) ctx += 'This is a calculation question. The app\'s verified HP 10bII+ steps (no compute key; orange Shift then C (C ALL) clears; P/YR must be 1 for annual problems): ' + q.calcSteps.join(' | ') + '\n';
   try{
@@ -14225,11 +14369,13 @@ async function sendQuestionChat(presetText){
   bubble.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
   try{
     const history = qChat.messages.slice(-12);
-    const reply = String(await anthropicMessagesRequest({ system: buildQuestionChatSystem(q), messages: history, maxTokens: 450 })).trim();
+    const turn = await qChatTurn(history, q);
+    const reply = String(turn.text || '').trim();
     if(qChat.token !== token || qChat.qid !== qid) return; // moved on to another question
     bubble.classList.remove('typing');
     bubble.textContent = reply || "Sorry, I didn't get a response there. Try asking again?";
     qChat.messages.push({ role:'assistant', content: reply || '(no reply)' });
+    if(turn.note){ const nb = qChatBubble('bot', turn.note); nb.classList.add('qchat-action'); }
   }catch(e){
     if(qChat.token !== token || qChat.qid !== qid) return;
     qChat.messages.pop();
@@ -15305,6 +15451,7 @@ let tutorBusy = false;
 /* How the tutor teaches. Each move is a modest, well-replicated finding from learning science, written as an
    instruction. The claims stay modest on purpose: the tutor should use these, not lecture about them. */
 const TEACHING_METHOD = [
+  NEW_QUESTION_JUDGMENT,
   'If the student plainly asks for the answer or an explanation, give it clearly and briefly; the moves below are for when they are working something out, not a reason to withhold help they asked for.',
   'Start from what the student already thinks. Before explaining a topic they have not touched, ask one short question about it first, even if they are likely to miss it; trying first, then seeing the answer, beats being told first (the pretesting effect).',
   'Give help in small steps (a hint ladder). When they are stuck, give the smallest useful nudge first (point at the relevant fact or rule), then a bigger one, and only then the answer. After two failed tries, stop making them struggle: show a clear worked explanation, then have them do a similar one.',
@@ -15316,7 +15463,7 @@ const TEACHING_METHOD = [
   'One idea at a time. Short turns, no walls of text, one question per turn. Do not stack three new ideas in a single reply.',
   'Praise the strategy, not the person ("you caught the qualifier" rather than "you are good at this"), and treat mistakes as information. Near the exam, if they sound nervous, tell them plainly that feeling some arousal helps performance and that a calm routine matters more than one more hour of cramming.',
   'End with the next retrieval. Close a teaching exchange by naming the one thing to retest in a couple of days, so spacing is part of the lesson.',
-  'Always write new questions. Do not re-ask a question the student already answered in this chat, and do not read a practice-bank question out word for word. When you quiz, make up a fresh one with new details, so they practise the idea and not the wording.'
+  'Never recycle a question. Do not re-ask one the student already answered in this chat, and do not read a practice-bank question out word for word.'
 ].map((t, i) => (i + 1) + '. ' + t).join('\n');
 function teachingMoveFor(q, wasCorrect){
   // The one move that fits this exact moment: how sure they were, and how well they know this domain.
@@ -15555,6 +15702,7 @@ const TUTOR_POINT_TARGETS = {
 };
 
 const TUTOR_TOOLS = [
+  WRITE_QUESTION_TOOL,
   {
     name: 'navigate_to_tab',
     description: "Switch the app to a different tab so the student can see it. Use this when they ask to go somewhere or you want to show them something specific, like their reference sheet, the interactive decision tools, or exam-day info.",
@@ -15703,6 +15851,7 @@ const TUTOR_TOOLS = [
 // (not just what it intended) in its next reply.
 async function executeTutorTool(toolName, toolInput){
   try{
+    if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
     if(toolName === 'navigate_to_tab'){
       const validTabs = ['study','tools','reference','flashcards','examday'];
       if(!validTabs.includes(toolInput.tab)) return `Error: "${toolInput.tab}" isn't a valid tab.`;
