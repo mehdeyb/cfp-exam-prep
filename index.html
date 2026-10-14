@@ -6478,7 +6478,7 @@ function buildStudyPlan(minutes){
       const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
       if(!topic) return null;
       return { id:'teach', title:`Explain it back: ${topic}`, minutes:8,
-        why:'Saying a concept in your own words shows what you only think you know. The tutor will ask one question at a time and tell you what is missing.',
+        why:'Saying a concept in your own words shows what you only think you know. The tutor asks first, gives hints before answers, tells you what is missing and changes the details to check it holds.',
         done:false, manual:true, run: () => askTutorAbout(`Teach me ${topic} by quizzing me. Start with one question before explaining anything. Wait for my answer, tell me exactly what I got right and what is missing, and if I am stuck give me a small hint before the answer. After I get one right, change the details and ask a similar one. Finish by telling me what to retest in two days.`) };
     },
     // Longer days have room for a second round. These only appear once the first pass leaves time.
@@ -7496,7 +7496,7 @@ async function generatePodcastEpisode(forceNew){
   if(episodeType === 'personalized'){
     wasPersonalized = true;
     systemPrompt = buildTutorSystemPrompt();
-    prompt = `Using everything you know about this student's actual progress, weak spots, and recurring mistakes, write a short podcast-style episode in your own voice as their tutor -- as if you're talking directly to them about where they genuinely stand right now. Name specifics: their weakest domain, a mistake pattern you've actually noticed, what to focus on next. Don't be generic or motivational-poster vague -- reference their real situation the way only their tutor would know it. ${monologueStyleInstruction}`;
+    prompt = `Using everything you know about this student's actual progress, weak spots, and recurring mistakes, write a short podcast-style episode in your own voice as their tutor -- as if you're talking directly to them about where they genuinely stand right now. Name specifics: their weakest domain, a mistake pattern you've actually noticed, what to focus on next. Don't be generic or motivational-poster vague -- reference their real situation the way only their tutor would know it. This is a spoken episode, not a live chat: do not wait for answers or run the one-question quiz routine; if you pose a question, ask it aloud, pause a beat, and answer it yourself. ${monologueStyleInstruction}`;
   } else if(episodeType === 'formulas'){
     const personalizationContext = podcastDomainPersonalizationContext(domainKey);
     wasPersonalized = personalizationContext !== '';
@@ -14987,6 +14987,7 @@ let tutorBusy = false;
 /* How the tutor teaches. Each move is a modest, well-replicated finding from learning science, written as an
    instruction. The claims stay modest on purpose: the tutor should use these, not lecture about them. */
 const TEACHING_METHOD = [
+  'If the student plainly asks for the answer or an explanation, give it clearly and briefly; the moves below are for when they are working something out, not a reason to withhold help they asked for.',
   'Start from what the student already thinks. Before explaining a topic they have not touched, ask one short question about it first, even if they are likely to miss it; trying first, then seeing the answer, beats being told first (the pretesting effect).',
   'Give help in small steps (a hint ladder). When they are stuck, give the smallest useful nudge first (point at the relevant fact or rule), then a bigger one, and only then the answer. After two failed tries, stop making them struggle: show a clear worked explanation, then have them do a similar one.',
   'Match the support to their level. For a topic where they are new or weak, show one fully worked example step by step, then give a similar problem with one step left for them, then two, then all of it (worked examples that fade). For a topic where they are already strong, skip the worked example and go straight to problems or tricky variations; too much help slows people who already know the basics.',
@@ -15007,7 +15008,8 @@ function teachingMoveFor(q, wasCorrect){
     let move;
     if(!wasCorrect && conf === 'confident') move = 'They were sure and wrong, which is the best moment for a correction to stick. Name the exact misconception, state the correct rule in one sentence, and ask them to put it in their own words.';
     else if(!wasCorrect) move = 'They missed it. Do not give the whole answer at once: ask which choice they eliminated and why, give the smallest nudge, and let them try again before you explain.';
-    else if(conf !== 'confident') move = 'They got it right but were not sure. Confirm what made it right so it becomes firm, then change one detail and ask again to test transfer.';
+    else if(conf === 'unsure' || conf === 'somewhat') move = 'They got it right but were ' + (conf === 'unsure' ? 'not sure' : 'only somewhat sure') + '. Confirm what made it right so it becomes firm, then change one detail and ask again to test transfer.';
+    else if(!conf) move = 'They got it right (they did not rate their confidence). Confirm briefly why it is right, then change one detail and ask again to test transfer.';
     else move = 'They got it right and were confident. Do not re-teach it; ask a harder variation (change a number or flip one fact) to see whether it holds.';
     const lv = level === 'new' || level === 'weak' ? 'They are new or shaky in this domain, so use one worked example and then a similar one with a step left for them.'
       : level === 'strong' ? 'They are strong in this domain, so skip the basics and go to tricky variations.' : 'They are partway there in this domain, so mix a short explanation with a question.';
@@ -15475,7 +15477,7 @@ async function executeTutorTool(toolName, toolInput){
       const plan = buildStudyPlan(240); // any step that applies today, even if it did not fit the time budget
       const st = plan.steps.concat(plan.blocks).find(x => x.id === (toolInput && toolInput.step_id));
       if(!st) return `Error: "${toolInput && toolInput.step_id}" is not a step in today's plan. Valid ids: ${plan.steps.concat(plan.blocks).map(x => x.id).join(', ') || 'none'}.`;
-      if(st.id === 'teach') return `Do this one right here in the chat: ask the first question now, one question at a time, and wait for their answer.`;
+      if(st.id === 'teach') return `Do this one right here in the chat: ask the first question now (before explaining anything), one question at a time, wait for their answer, and give a small hint before the answer if they are stuck.`;
       st.run();
       return `Started: ${st.title}.`;
     }
