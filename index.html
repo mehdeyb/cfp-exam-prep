@@ -2243,7 +2243,7 @@
         <div class="science-item"><b>Never asking the same thing twice</b>A check of the whole question bank found no identical questions, but about a hundred that tested the same fact as another with different wording, such as two separate questions on the 30-day wash sale window, or on how long a disclaimer can wait. Seeing the same idea twice makes you feel more ready than you are, and it wastes minutes you could spend on something new, so the repeats were removed and whatever you had already answered on them carries over to the one that stays. The app now also checks every practice set before it starts, so two questions that ask the same thing can never land in the same session, and a replacement from the same topic is used instead. New questions the AI writes are compared with everything already in the bank before they are saved, and any that repeat an existing idea are dropped. When you miss a question, the reworded retry that follows it is still shown on purpose, because being able to answer the same idea in new words is a better sign of learning than recognizing one wording.</div>
         <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
         <div class="science-item"><b>The tutor decides when you need a question written just for you</b>Another question from the bank is a good retest when it covers the same part of the idea. It is a poor one when you keep choosing the same wrong answer, when you were sure and wrong, or when no unseen question tests the same point. In those cases the app now writes a new question on the same idea, built around the mistake you actually make, and keeps the bank question as a fallback if the writing fails. In the chat after a question, the tutor makes the same call: it can write a new question and put it next, and it is told not to do that for a careless slip, for something you have not been taught yet, or for a 2026 figure it is not sure of. Written questions are not as carefully checked as the built-in ones, so the app uses only the checked ones in the last two days before the exam.</div>
-        <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
+        <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. A "Cards on what I missed" button starts a set of just those cards, today's plan can start the same set, and the tutor can start it for you when you ask. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
       </div>
     </div>
 
@@ -2421,6 +2421,7 @@
           <select id="fcDomainFilter" class="fc-domain-select" onchange="applyFlashcardFilter()" aria-label="Filter flashcards by domain">
             <option value="">All domains</option>
           </select>
+          <button class="btn ghost" id="fcGapBtn" onclick="startGapFlashcards()" style="display:none;">Cards on what I missed</button>
           <button class="btn ghost" onclick="shuffleFlashcards()">Shuffle</button>
           <button class="btn ghost" onclick="enterFlashcardFullscreen()">Fullscreen mode</button>
         </div>
@@ -6491,8 +6492,12 @@ function buildStudyPlan(minutes){
 
   const mk = {
     cards: () => {
-      if(!(dueCards >= 5 || act.cards >= 8)) return null;
-      const n = Math.min(Math.max(dueCards, act.cards), 25);
+      const gapN = Math.min(20, fcGapCards().length);
+      if(!(dueCards >= 5 || act.cards >= 8 || gapN >= 4)) return null;
+      const n = Math.min(Math.max(dueCards, act.cards, gapN), 25);
+      if(gapN >= 4 && act.cards < 8) return { id:'cards', title: `Review ${n} flashcards, ${gapN} tied to questions you missed`, minutes: Math.min(12, Math.max(4, Math.ceil(n * 0.4))),
+        why:'Cards on the same ideas as questions you missed give a second way in to the same idea, which helps it stick.',
+        done: false, run: () => startGapFlashcards() };
       return { id:'cards', title: act.cards >= 8 && dueCards < 5 ? 'Flashcards reviewed' : `Review ${n} due flashcards`, minutes: Math.min(12, Math.max(4, Math.ceil(n * 0.4))),
         why:'Cards come back just as they start to fade. Pulling an answer from memory strengthens it more than rereading does.',
         done: act.cards >= 8 || (act.cards > 0 && dueCards < 5), run: () => showTab('flashcards') };
@@ -9136,9 +9141,32 @@ function fcInterleave(sorted){
   }
   return out;
 }
+let fcCustomKind = null;
+function fcGapCards(){
+  return allFlashcards().filter(c => {
+    const sig = fcCardSignals(c);
+    return sig.gap >= 0.4 && (sig.stat.seen === 0 || isDue(sig.stat) || sig.stat.box <= 1);
+  }).sort((a,b) => fcCardSignals(b).gap - fcCardSignals(a).gap || flashcardPriority(b) - flashcardPriority(a));
+}
+function startFlashcardSet(cards, kind){
+  if(!cards || !cards.length) return false;
+  showTab('flashcards');
+  const toggle = document.getElementById('fcFilterToggle'); if(toggle) toggle.checked = false;
+  const sel = document.getElementById('fcDomainFilter'); if(sel) sel.value = '';
+  fcQueue = cards.slice(); fcCustomQueue = true; fcCustomKind = kind || null;
+  fcRound = { total:0, knew:0, missed:[], missedIds:[] };
+  fcIndex = 0; renderFlashcard(); renderFlashcardStats();
+  const c = document.getElementById('fcCard'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'});
+  return true;
+}
+function startGapFlashcards(){ return startFlashcardSet(fcGapCards().slice(0,20), 'gap'); }
 function fcDeckLine(){
   const el = document.getElementById('fcDeckLine');
   if(!el) return;
+  const gb = document.getElementById('fcGapBtn');
+  const gn = fcCustomQueue ? 0 : fcGapCards().length;
+  if(gb){ gb.style.display = gn >= 1 ? '' : 'none'; gb.textContent = 'Cards on what I missed (' + Math.min(gn, 20) + ')'; }
+  if(fcCustomQueue && fcCustomKind === 'gap'){ el.textContent = 'Showing cards tied to questions you missed. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
   if(!fcQueue.length || fcCustomQueue){ el.style.display = 'none'; return; }
   const slice = fcQueue.slice(fcIndex, fcIndex + 20);
   let due = 0, gap = 0, fresh = 0, leech = 0;
@@ -9219,6 +9247,7 @@ function exitFlashcardFullscreen(){
 }
 
 function rebuildFlashcardQueue(){
+  _fcCtx = null; fcCustomKind = null;
   const toggle = document.getElementById('fcFilterToggle');
   const onlyLearning = toggle ? toggle.checked : false;
   const domainSelect = document.getElementById('fcDomainFilter');
@@ -9536,7 +9565,7 @@ function continueFlashcards(){
   const box = document.getElementById('fcRecap'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
   const missedIds = fcRound.missedIds.slice();
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
-  if(fcCustomQueue){ fcIndex = 0; renderFlashcard(); renderFlashcardStats(); return; }
+  if(fcCustomQueue && !fcCustomKind){ fcIndex = 0; renderFlashcard(); renderFlashcardStats(); return; }
   rebuildFlashcardQueue();
   // Put the cards just missed at the front, so what the checkpoint promised is what happens.
   if(missedIds.length){
@@ -15955,6 +15984,18 @@ const TUTOR_TOOLS = [
     },
   },
   {
+    name: 'start_flashcards',
+    description: "Start a flashcard set for the student right now. Use 'gaps' for cards tied to questions they missed or were sure and wrong about (best after they struggle with an idea), 'domain' with a domain for a focused set, or 'due' to open the regular deck ordered by what they need most.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        focus: { type: 'string', enum: ['gaps','domain','due'], description: 'Which set to start.' },
+        domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when focus is 'domain'." },
+      },
+      required: ['focus'],
+    },
+  },
+  {
     name: 'open_tvm_calculator',
     description: "Open the app's TVM (time-value-of-money) calculator walkthrough tool. Use this when the student asks to practice a calculator problem or wants to work through a TVM calculation hands-on.",
     input_schema: { type: 'object', properties: {} },
@@ -16079,6 +16120,19 @@ const TUTOR_TOOLS = [
 async function executeTutorTool(toolName, toolInput){
   try{
     if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
+    if(toolName === 'start_flashcards'){
+      if(toolInput.focus === 'gaps'){
+        const n = Math.min(20, fcGapCards().length);
+        return startGapFlashcards() ? `Started ${n} flashcards tied to questions the student missed. They are on the Flashcards tab now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
+      }
+      if(toolInput.focus === 'domain'){
+        if(!DOMAINS.some(d => d.key === toolInput.domain)) return 'Error: say which exam domain.';
+        const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0,20);
+        return startFlashcardSet(set, 'domain') ? `Started ${set.length} ${toolInput.domain} flashcards, ordered by what the student needs most.` : 'No flashcards in that domain.';
+      }
+      showTab('flashcards');
+      return 'Opened the Flashcards tab; the deck is ordered by what the student needs most.';
+    }
     if(toolName === 'navigate_to_tab'){
       const validTabs = ['study','tools','reference','flashcards','examday'];
       if(!validTabs.includes(toolInput.tab)) return `Error: "${toolInput.tab}" isn't a valid tab.`;
