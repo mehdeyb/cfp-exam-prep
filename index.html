@@ -2269,7 +2269,7 @@
         <div class="science-item"><b>Ideas come back as new questions, not the same ones</b>When a question is due to return, or you missed it, the app now picks a question you have not seen on the same topic instead of showing the old one again. Get the new one right and the old one counts as reviewed on schedule; get it wrong and it goes back to the start. This is on purpose: seeing the same question again mostly tests whether you remember that question, and the real exam will not use any of these questions. Research on test-enhanced learning (Butler, 2010) found that practice retrieving an idea carried over to new questions on it, and a recent Carnegie Mellon study (still a preprint) found that people who answered different questions on an idea did better on unseen ones than people who repeated the same questions, even though repeating helped on the repeated ones. New questions are limited, though: at two to three hours a day you would use roughly nine hundred to fourteen hundred before the exam (an estimate), and the bank has about nine hundred. So the plan now shows how many are still new to you, and when a topic has none left the app uses a reworded copy if you have an AI key. Without one it hides the choices until you have answered in your own head, because pulling an answer out of memory beats spotting it in a list (Rowland, 2014).</div>
         <div class="science-item"><b>The tutor decides when you need a question written just for you</b>Another question from the bank is a good retest when it covers the same part of the idea. It is a poor one when you keep choosing the same wrong answer, when you were sure and wrong, or when no unseen question tests the same point. In those cases the app now writes a new question on the same idea, built around the mistake you actually make, and keeps the bank question as a fallback if the writing fails. In the chat after a question, the tutor makes the same call: it can write a new question and put it next, and it is told not to do that for a careless slip, for something you have not been taught yet, or for a 2026 figure it is not sure of. Written questions are not as carefully checked as the built-in ones, so the app uses only the checked ones in the last two days before the exam.</div>
         <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. A "Cards on what I missed" button starts a set of just those cards, today's plan can start the same set, and the tutor can start it for you when you ask. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
-        <div class="science-item"><b>Today's plan can now run as one guided session</b>Before, the plan was a list of separate Start buttons, and each one ended on its own. Now "Start my session" in Today's plan (or asking the tutor to run your study time) opens a short briefing, then takes you through each part in order. Before each part there is one line on how to do it well, for example to answer in your head before you look at the choices. After each part you get a quick debrief (your score, or how many cards you knew) and what is next, and the next part is chosen again from what you just did, so a drill that turns up misses can add a review. You can skip a part, stop early, or come back through the small "Session" button, and the session ends with a short summary and what to start with next time. This part does not use the AI at all, so it works without a key. The coaching lines are based on retrieval practice (trying to answer before seeing options), which is among the best-supported study methods; the exact wording and the "stop when the time is used" rule are my choices, not tested.</div>
+        <div class="science-item"><b>Today's plan can now run as one guided session</b>Before, the plan was a list of separate Start buttons, and each one ended on its own. Now "Start my session" in Today's plan (or asking the tutor to run your study time) opens a short briefing, then takes you through each part in order. Before each part there is one line on how to do it well, for example to answer in your head before you look at the choices. After each part you get a quick debrief (your score, or how many cards you knew) and what is next, and the next part is chosen again from what you just did, so a drill that turns up misses can add a review. You can skip a part, stop early, or come back through the small "Session" button, and the session ends with a short summary and what to start with next time. This part does not use the AI at all, so it works without a key. The coaching lines are based on retrieval practice (trying to answer before seeing options), which is among the best-supported study methods; the exact wording and the "stop when the time is used" rule are my choices, not tested. While a session is running, the tutor (and the chat on each question) knows which part you are on and what is next, the Study tab's next-best-step points back to the session, and changing your time for the day changes the running session.</div>
       </div>
     </div>
 
@@ -6302,6 +6302,14 @@ function computeNextStep(stats){
       cta:'Resume', meta:`${left} question${left===1?'':'s'} left`, run: () => resumeInProgressSession() };
   }
 
+  if(!step && !session && conductorState()){
+    const cs = conductorState();
+    const tot = Math.max(cs.total || 0, cs.log.length + (cs.current ? 1 : 0));
+    step = { kicker:'Your session', title: cs.current ? 'Back to your session' : 'Continue your session',
+      why: cs.current ? `You are on part ${cs.log.length + 1} of ${tot}: ${cs.current.title}. Tap when you are done and I will check in.` : `${cs.log.length} of ${tot} parts are done. The next one is chosen from how those went.`,
+      cta:'Continue', meta:`part ${Math.min(tot, cs.log.length + 1)} of ${tot}`, launchesSession:false, run: () => conductorOpenMenu() };
+  }
+
   if(!step && stats.totalAnswered === 0 && !(DATA.flashcardRatingCount > 0)){
     step = { kicker:'Start here', title:'Take your first adaptive session',
       why:'Fifteen mixed questions across the exam. Every answer sharpens what the coach recommends from here on.',
@@ -6635,7 +6643,9 @@ function buildStudyPlan(minutes){
 }
 
 function setPlanMinutes(m){
-  DATA.planMinutes = m; persist();
+  DATA.planMinutes = m;
+  { const cs = conductorState(); if(cs) cs.minutes = m; }
+  persist();
   renderTodayPlan();
 }
 /* ===========================================================
@@ -6874,6 +6884,13 @@ function conductorCardsRecap(round){
   const c = conductorState(); if(!c || !c.current) return '';
   c.current.cardsKnew = round.knew; c.current.cardsTotal = round.total; persist();
   return '<button class="btn" style="margin-left:8px;" onclick="conductorNextPart()">This part is done, next</button>';
+}
+function conductorContextLine(){
+  const c = conductorState(); if(!c) return '';
+  const total = Math.max(c.total || 0, c.log.length + (c.current ? 1 : 0));
+  const done = c.log.map(x => x.title + (x.reason === 'skipped' ? ' (skipped)' : ' (' + x.text.replace(/\s+/g, ' ').slice(0, 90) + ')')).join('; ');
+  let nxt = null; try{ nxt = conductorPickNext(); }catch(e){}
+  return ' The student is in the middle of a guided study session from today\'s plan (' + (c.current ? 'part ' + (c.log.length + 1) + ' of ' + total + ' in progress: ' + c.current.title : c.log.length + ' of ' + total + ' parts done, between parts') + (done ? '; done so far: ' + done : '') + (nxt && !c.current ? '; next up: ' + nxt.title : '') + '). Keep your help short and aimed at the part they are in, and point them back to the session when you are done.';
 }
 function conductorMaybeStartFromTutor(){
   if(conductorState()) { conductorOpenMenu(); return 'A session is already running. I opened its menu.'; }
@@ -14854,6 +14871,7 @@ function buildQuestionChatSystem(q){
     const h = (DATA.wrongChoiceHistory && DATA.wrongChoiceHistory[q.id]) || {};
     const wp = Object.values(h).reduce((a, n) => a + n, 0);
     const uw = usualWrongChoiceText(q);
+    try{ ctx += 'Context:' + conductorContextLine() + '\n'; }catch(e){}
     ctx += 'History on this idea: ' + (wp ? 'the student has picked a wrong answer here ' + wp + ' time' + (wp === 1 ? '' : 's') + ' before' + (uw ? ' and most often chose "' + uw + '"' : '') + '. ' : 'no earlier wrong picks on this question. ') +
       ((DATA.hypercorrectionQueue || []).includes(q.id) ? 'They were confident and wrong here before. ' : '') +
       (session.selectedConfidence ? 'Just now they rated themselves ' + session.selectedConfidence + '. ' : '') +
@@ -16159,7 +16177,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app: overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
