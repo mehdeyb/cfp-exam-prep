@@ -1753,6 +1753,15 @@
   #fcTopCardContent > #fcDeckLine{margin-bottom:8px;}
   #fcTopCardContent > p.hint:not(#fcDeckLine){margin-bottom:12px;}
   @media (max-width:640px){ .fc-controls .fc-domain-select{flex:1 1 100%;width:100%;} }
+  .fc-mode{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.02em;margin:-6px 0 12px;color:var(--muted);}
+  .fc-mode.strong{color:var(--teal);}
+  .fc-mode.tricky{color:var(--gold);}
+  .fc-card .fc-front.fc-front-def{font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:500;line-height:1.55;}
+  .fc-back-term{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin-bottom:6px;}
+  .fc-hintbtn{align-items:center;justify-content:center;margin-top:12px;min-height:40px;padding:6px 16px;border-radius:20px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .fc-hintline{margin-top:12px;font-size:13.5px;color:var(--paper);line-height:1.5;font-style:italic;}
+  .fc-adapt-row{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--muted);line-height:1.45;margin:0 0 12px;cursor:pointer;}
+  .fc-adapt-row input{margin-top:2px;accent-color:var(--gold);}
 </style>
 </head>
 <body>
@@ -2528,6 +2537,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div>
       </div>
     </div>
 
@@ -2696,6 +2706,7 @@
           </span>
         </p>
         <p class="hint" id="fcScienceBody" style="display:none;">Underneath, a Leitner-style spaced-repetition system tracks each card separately. A correct answer pushes the card further out (a day, then three, then a week, up to a month); a miss brings it back right away. Growing gaps between repeats are what make it stick. On top of that, cards that match ideas in questions you missed move up, so do cards in your weak subtopics, and a card you keep missing gets an automatic worked example. Close to the exam, new cards wait so review comes first.</p>
+        <label class="fc-adapt-row" id="fcAdaptRow" style="display:none;"><input type="checkbox" id="fcAdaptToggle" checked onchange="setFcAdapt(this.checked)"> Adapt each card to my level (hints on cards I keep missing, term-recall on cards I've mastered)</label>
         <p class="hint fc-deck-line" id="fcDeckLine" style="display:none;"></p>
         <div class="fc-controls">
           <div class="fc-filter">
@@ -2719,9 +2730,12 @@
           <div class="fc-card" id="fcCard" onclick="flipFlashcard()" tabindex="0" role="button">
             <div class="fc-domain" id="fcDomain">Domain</div>
             <div class="fc-why" id="fcWhy" style="display:none;"></div>
+            <div class="fc-mode" id="fcMode" style="display:none;"></div>
             <div class="fc-front" id="fcFront">Term</div>
             <div class="fc-back" id="fcBack">Definition</div>
             <div class="fc-hint" id="fcHint">tap to reveal</div>
+            <button type="button" class="fc-hintbtn" id="fcHintBtn" style="display:none;" onclick="event.stopPropagation(); showFlashcardHint();">Need a hint?</button>
+            <div class="fc-hintline" id="fcHintLine" style="display:none;"></div>
           </div>
           <div class="fc-recap" id="fcRecap" style="display:none;" role="status" aria-live="polite"></div>
           <div class="fc-actions" id="fcActions" style="display:none;">
@@ -4312,6 +4326,7 @@ function defaultData(){
     preferredHost1VoiceName: null,
     preferredHost2VoiceName: null,
     flashcardMnemonics: {},
+    fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
     domainFoundationMode: {},
@@ -4519,6 +4534,7 @@ function sanitizeLoadedData(d){
   DOMAINS.forEach(dm => { if(!isObj(d.domainStats[dm.key])) d.domainStats[dm.key] = { correct: 0, total: 0 }; });
   d.answerCounter = Math.max(0, num(d.answerCounter, 0));
   if(typeof d.examDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.examDate)) d.examDate = null;
+  if(typeof d.fcAdapt !== 'boolean') d.fcAdapt = true;
   return d;
 }
 
@@ -9462,6 +9478,67 @@ function shuffleFlashcards(){
   renderFlashcard();
 }
 
+// ---- Adaptive cards: each card is presented to match the student's level on THAT card ----
+// new / building: the usual term -> definition card.
+// struggling (missed repeatedly): a partial-cue hint is offered, a saved memory trick shows on the back, and a recall
+//   that needed the hint is not promoted as far in the review schedule as an unaided one.
+// strong (several clean recalls, high box): flipped around -- the definition is shown and the term must be recalled,
+//   which is a harder retrieval than recognising a definition.
+let fcView = { level:'building', reverse:false, hintUsed:false };
+function fcAdaptOn(){ return !(typeof DATA !== 'undefined' && DATA && DATA.fcAdapt === false); }
+function setFcAdapt(on){ DATA.fcAdapt = !!on; persist(); try{ renderFlashcard(); }catch(e){} }
+function fcCardLevel(card){
+  const st = getSpacedStat(DATA.flashcardStats, card.id);
+  if(st.seen === 0) return 'new';
+  const acc = st.seen ? st.correct / st.seen : 0;
+  const leech = st.seen >= 4 && (st.seen - st.correct) >= 3 && st.box <= 1; // same rule as the leech signal, read live from the stat
+  if(leech || (st.seen >= 2 && acc < 0.5 && st.box <= 1)) return 'struggling';
+  if(st.box >= 4 && st.correct >= 3 && acc >= 0.75) return 'strong';
+  return 'building';
+}
+function fcMaskTerm(def, term){
+  let out = String(def);
+  const words = String(term).split(/[^A-Za-z0-9]+/).filter(w => w.length >= 4 && !/^(the|and|rule|plan|tax|for|with|from)$/i.test(w));
+  words.forEach(w => { out = out.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*', 'ig'), '▢▢▢'); });
+  return out;
+}
+function fcHintText(card){
+  const w = String(card.def).replace(/\s+/g, ' ').trim().split(' ');
+  const n = Math.min(6, Math.max(3, Math.floor(w.length / 4)));
+  return w.slice(0, n).join(' ') + ' …';
+}
+function showFlashcardHint(){
+  const card = fcQueue[fcIndex]; if(!card || fcFlipped) return;
+  fcView.hintUsed = true;
+  const line = document.getElementById('fcHintLine');
+  if(line){ line.textContent = 'It starts: “' + fcHintText(card) + '”'; line.style.display = 'block'; }
+  const hb = document.getElementById('fcHintBtn'); if(hb) hb.style.display = 'none';
+}
+function fcApplyAdaptation(card){
+  const adapt = fcAdaptOn();
+  const level = adapt ? fcCardLevel(card) : 'building';
+  const reverse = adapt && level === 'strong' && String(card.def).length <= 240;
+  fcView = { level, reverse, hintUsed:false };
+  const front = document.getElementById('fcFront'), back = document.getElementById('fcBack');
+  const hint = document.getElementById('fcHint'), mode = document.getElementById('fcMode');
+  front.classList.toggle('fc-front-def', reverse);
+  if(reverse){
+    front.textContent = fcMaskTerm(card.def, card.term);
+    back.innerHTML = '';
+    const t = document.createElement('div'); t.className = 'fc-back-term'; t.textContent = card.term; back.appendChild(t);
+    const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
+    hint.textContent = 'name the term, then tap to reveal';
+  }
+  const msg = reverse ? 'Mastered card — recall the term from its definition'
+    : (adapt && level === 'struggling') ? 'Tricky card — a hint is available'
+    : '';
+  mode.textContent = msg; mode.style.display = msg ? 'block' : 'none';
+  mode.className = 'fc-mode' + (reverse ? ' strong' : (level === 'struggling' ? ' tricky' : ''));
+  const hb = document.getElementById('fcHintBtn'), hl = document.getElementById('fcHintLine');
+  if(hl){ hl.style.display = 'none'; hl.textContent = ''; }
+  if(hb) hb.style.display = (adapt && level === 'struggling') ? 'inline-flex' : 'none';
+}
+
 function renderFlashcard(){
   stopSpeech();
   const progress = document.getElementById('fcProgress');
@@ -9488,6 +9565,7 @@ function renderFlashcard(){
   document.getElementById('fcBack').style.display = 'none';
   document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
   document.getElementById('fcActions').style.display = 'none';
+  fcApplyAdaptation(card);
   const mnemonicRow = document.getElementById('fcMnemonicRow');
   if(mnemonicRow) mnemonicRow.style.display = 'none';
   const mnemonicBox = document.getElementById('fcMnemonicBox');
@@ -9520,6 +9598,15 @@ function flipFlashcardContent(){
   document.getElementById('fcBack').style.display = fcFlipped ? 'block' : 'none';
   document.getElementById('fcHint').style.display = fcFlipped ? 'none' : 'block';
   document.getElementById('fcActions').style.display = fcFlipped ? 'flex' : 'none';
+  { const hb = document.getElementById('fcHintBtn'), hl = document.getElementById('fcHintLine');
+    if(fcFlipped){ if(hb) hb.style.display = 'none'; if(hl) hl.style.display = 'none'; }
+    else if(hb && fcAdaptOn() && fcView.level === 'struggling' && !fcView.hintUsed) hb.style.display = 'inline-flex';
+    else if(hl && fcView.hintUsed) hl.style.display = 'block'; }
+  if(fcFlipped && fcAdaptOn() && fcView.level === 'struggling' && fcQueue[fcIndex]){
+    const saved = DATA.flashcardMnemonics && DATA.flashcardMnemonics[fcQueue[fcIndex].id];
+    const mb = document.getElementById('fcMnemonicBox');
+    if(saved && mb){ renderMnemonicResult(mb, fcQueue[fcIndex], saved, true); mb.style.display = 'block'; }
+  }
   const mnemonicRow = document.getElementById('fcMnemonicRow');
   if(mnemonicRow) mnemonicRow.style.display = fcFlipped ? 'flex' : 'none';
   if(!fcFlipped){
@@ -9754,6 +9841,12 @@ function rateFlashcard(knowsIt){
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
+  if(knowsIt && fcView.hintUsed && fcView.level === 'struggling'){
+    // Recalled with the hint: real progress, but not the same as an unaided recall, so hold the box where it was.
+    const keep = Math.max(prevStat.box, 1), ns = DATA.flashcardStats[card.id];
+    ns.box = Math.min(ns.box, keep);
+    ns.dueAt = Date.now() + LEITNER_INTERVAL_DAYS[ns.box] * ONE_DAY_MS;
+  }
   DATA.flashcardRatingCount = (DATA.flashcardRatingCount || 0) + 1;
   recordStudyDay();
   persist();
@@ -15573,6 +15666,7 @@ function toggleFlashcardScience(){
   const chevron = document.getElementById('fcScienceChevron');
   const expanded = body.style.display === 'block';
   body.style.display = expanded ? 'none' : 'block';
+  { const ar = document.getElementById('fcAdaptRow'); if(ar){ ar.style.display = expanded ? 'none' : 'flex'; const t = document.getElementById('fcAdaptToggle'); if(t) t.checked = fcAdaptOn(); } }
   chevron.textContent = expanded ? 'how the ordering actually works — tap to expand ▾' : 'how the ordering actually works — tap to collapse ▴';
 }
 
