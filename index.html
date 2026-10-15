@@ -226,6 +226,9 @@
     animation:quizIn .32s var(--ease);
   }
   .fc-fullscreen-inner{max-width:520px;width:100%;margin:0 auto;padding-top:clamp(0px,9vh,96px);} /* anchored from the top so the card does not jump when the answer buttons appear */
+  body:not(.flashcard-fullscreen) .fc-fullscreen-inner{padding-top:10px;}
+  #fcTopCardContent > p.hint{margin-bottom:2px;}
+  #fcTopCardContent > p.hint:has(#fcScienceToggle){margin-top:0;}
   #fcFullscreenCloseBtn.fc-fullscreen-close{display:none;position:sticky;top:0;margin-left:auto;margin-bottom:16px;}
   body.flashcard-fullscreen #fcFullscreenCloseBtn.fc-fullscreen-close{display:flex;}
   body.flashcard-fullscreen .fc-card{padding:48px 32px;min-height:280px;}
@@ -872,6 +875,8 @@
 
   /* ---------- Coach / focus card ---------- */
   .focus-grid{display:flex;gap:22px;flex-wrap:wrap;align-items:center;}
+  .focus-grid:has(> .bank-stat-row[style*="none"]){display:none;}
+  .card > p.hint:last-child, .card > .hint:last-child{margin-bottom:0;}
   .focus-pills{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:220px;}
   .focus-pill{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--hair);border-radius:20px;padding:7px 13px 7px 10px;}
   .focus-pill .fp-dot{width:6px;height:6px;border-radius:50%;background:var(--incorrect);}
@@ -897,6 +902,9 @@
   .plan-phase-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:var(--gold-tint);color:var(--gold);margin-bottom:10px;}
   .plan-countdown{font-family:'Fraunces',serif;font-size:19px;margin-bottom:4px;}
   .plan-summary{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px;}
+  .pt-block{display:flex;align-items:center;gap:12px;}
+  .pt-block .pt-block-text{flex:1;min-width:0;}
+  .pt-block .pt-go{flex:none;}
   .plan-weeks{border-top:1px solid var(--hair);padding-top:14px;}
   .plan-week-row{display:flex;gap:12px;padding:9px 0;align-items:baseline;}
   .plan-week-row .wk-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex:none;width:64px;}
@@ -2715,6 +2723,7 @@
         <div class="science-item"><b>The page behind a session screen stays put</b>On the phone you could scroll the page behind the session card. While a session screen or a term pop-up is open, the page behind it is now locked, and it returns to exactly where you were when the card closes.</div>
         <div class="science-item"><b>A cleaner cash-flow timeline in the TVM walkthrough</b>The "0" and "N" labels no longer collide with the PV and FV arrows, the unknown value's label sits right above its question mark, annuity-due problems draw their payments one step earlier than end-of-period ones, and the two-part-problem button matches the width of the cards around it.</div>
         <div class="science-item"><b>The TVM walkthrough now fits the phone</b>On a phone held upright, the calculator used to start below the screen after a tall stack of cards. The header, level chips, problem, timeline and calculator now fit on one screen without scrolling, the "How this works" note folds away after your first key press, and the two-part problem option moved beside the other buttons under the calculator. A gap check then trimmed the empty space under the timeline, reserved a line above the keypad so the keys no longer jump when a message appears, put "Try another problem" first after solving, and scrolls the worked solution into view.</div>
+        <div class="science-item"><b>A space check across the whole app</b>Went through every tab at phone size for wasted space. Removed the empty band above the flashcard deck, the extra space at the bottom of cards ending in a note (Tools), and the blank block in "Your coach" when no AI key is connected, and gave the weekly "Start" button its own place beside the text instead of dangling after the last word.</div>
       </div>
     </div>
 
@@ -7248,7 +7257,7 @@ function renderTodayPlan(){
   const rows = stepRows.length > SHOW_STEPS + 1
     ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open;var m=this.querySelector('.pt-more-label');if(m)m.textContent=this.open?'Hide':'Show'"><summary><span class="pt-more-label">${window._ptMoreOpen ? 'Hide' : 'Show'}</span> the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
     : stepRows.join('');
-  const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
+  const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
@@ -18059,7 +18068,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.36';
+const BUILD_ID = '2026-10-15.37';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
