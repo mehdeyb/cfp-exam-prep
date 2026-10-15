@@ -1593,9 +1593,23 @@
       grid-template-rows:repeat(6,min-content) 1fr;
     }
     #tvmHost .dp-inner > *{grid-column:1;}
-    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 7;margin-bottom:0;position:sticky;top:0;}
-    #tvmHost .dp-inner > .tvm-actions{grid-column:2;grid-row:8;}
+    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 6;margin-bottom:0;position:sticky;top:0;}
+    #tvmHost .dp-inner > .tvm-actions{grid-column:2;grid-row:7;align-self:start;margin:10px 0 0;position:sticky;top:340px;}
+    /* The left column holds the problem and its timeline, kept short enough to see together with the calculator. */
+    #tvmHost .dp-header{margin-bottom:0;}
+    #tvmHost .dp-header h2{font-size:18px;}
+    #tvmHost .dp-close{width:38px;height:38px;}
+    .tvm-howto{margin:0 0 4px;}
+    .tvm-howto summary{padding:3px 0;}
+    .tvm-status{margin-bottom:6px;}
+    .tvm-scenario{padding:9px 13px;margin:0 0 4px;font-size:14px;line-height:1.4;}
+    .tvm-level-badge{margin-bottom:2px;font-size:10.5px;}
+    .tvm-timeline-wrap{margin-bottom:0;}
+    .tvm-timeline-label{display:none;}
+    #tvmTimeline svg{max-height:84px;}
+    .tvm-actions .btn{min-height:38px;padding-top:7px;padding-bottom:7px;}
   }
+  body.tvm-active .tabbar{display:none;}
   /* Very narrow screens (a foldable's cover display is about 280px wide) */
   @media (max-width:340px){
     body{padding-left:max(14px, env(safe-area-inset-left));padding-right:max(14px, env(safe-area-inset-right));}
@@ -2725,6 +2739,7 @@
         <div class="science-item"><b>The TVM walkthrough now fits the phone</b>On a phone held upright, the calculator used to start below the screen after a tall stack of cards. The header, level chips, problem, timeline and calculator now fit on one screen without scrolling, the "How this works" note folds away after your first key press, and the two-part problem option moved beside the other buttons under the calculator. A gap check then trimmed the empty space under the timeline, reserved a line above the keypad so the keys no longer jump when a message appears, put "Try another problem" first after solving, and scrolls the worked solution into view.</div>
         <div class="science-item"><b>A space check across the whole app</b>Went through every tab at phone size for wasted space. Removed the empty band above the flashcard deck, the extra space at the bottom of cards ending in a note (Tools), and the blank block in "Your coach" when no AI key is connected, and gave the weekly "Start" button its own place beside the text instead of dangling after the last word.</div>
         <div class="science-item"><b>The question stays in view beside the answers on a sideways phone</b>In landscape the question sits on the left and the answers on the right. The left side used to scroll away with the answers and leave a blank half screen once you answered. It now stays put while the answers and explanations scroll.</div>
+        <div class="science-item"><b>The TVM walkthrough on a sideways phone</b>Held sideways, the page now keeps the problem, its timeline and the calculator together on one screen, with the two-part option under the calculator. The page rail on the left no longer shows through behind the calculator.</div>
       </div>
     </div>
 
@@ -18069,7 +18084,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.38';
+const BUILD_ID = '2026-10-15.39';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
