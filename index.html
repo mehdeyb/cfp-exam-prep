@@ -2551,7 +2551,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. The switch in "How this works" turns it all off.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div>
       </div>
     </div>
 
@@ -9583,6 +9583,22 @@ function fcApplyChoose(i){
   fcView.applied = true;
   const right = (i === q.correct);
   fcView.applyRight = right;
+  // A real exam-style answer: it counts everywhere a quiz answer counts (question history, missed list, domain readiness, coach).
+  try{
+    if(q.id && q.domain && DATA.domainStats[q.domain]){
+      DATA.domainStats[q.domain].total++; if(right) DATA.domainStats[q.domain].correct++;
+      DATA.questionStats[q.id] = advanceSpacedStat(getSpacedStat(DATA.questionStats, q.id), right);
+      DATA.answerCounter = (DATA.answerCounter || 0) + 1;
+      if(!right){ if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id); }
+      else DATA.missed = DATA.missed.filter(id => id !== q.id);
+      recordDomainAnswer(q.domain, right);
+      updateFoundationMode(q.domain);
+      recordStudyDay();
+      persist();
+      refreshHeaderStats();
+      refreshCoachSurfaces();
+    }
+  }catch(e){}
   const box = document.getElementById('fcApply');
   box.querySelectorAll('button').forEach((b, k) => { b.disabled = true; if(k === q.correct) b.classList.add('right'); else if(k === i) b.classList.add('wrong'); });
   const back = document.getElementById('fcBack');
@@ -9623,7 +9639,9 @@ function fcApplyAdaptation(card){
     hint.textContent = 'name the term, then tap to reveal';
     msg = 'Mastered card — recall the term from its definition'; cls += ' strong';
   } else if(mode === 'apply'){
-    const q0 = fcRelatedQuestions(card).slice().sort(() => Math.random() - 0.5)[0];
+    const seenOf = x => (getSpacedStat(DATA.questionStats, x.id).seen || 0);
+    const rel = fcRelatedQuestions(card).slice().sort(() => Math.random() - 0.5).sort((x, y) => seenOf(x) - seenOf(y)); // fresh questions first, never a repeat while others are unseen
+    const q0 = rel[0];
     const q = shuffleQuestionChoices(q0);
     fcView.applyQ = q;
     front.textContent = q.q;
@@ -9955,6 +9973,8 @@ function fcKeepInView(){
 }
 function rateFlashcard(knowsIt){
   const card = fcQueue[fcIndex];
+  if(fcView && fcView.mode === 'apply' && fcView.applyRight === false) knowsIt = false; // missed the applied question: the card is still learning, whatever the button
+  if(fcView && fcView.mode === 'apply' && !fcView.applied) return;
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
