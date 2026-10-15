@@ -1907,7 +1907,7 @@
 
     <div class="panel card" id="modePanel">
       <h2>Start a session</h2>
-      <p class="hint">Adaptive Session is the recommended default: it <b>interleaves</b> domains and pulls in whatever's due for spaced review, which research finds builds more durable retention than working one topic at a time — even though blocked practice feels easier in the moment. Save Domain Drill for a topic that's still genuinely new to you.</p>
+      <p class="hint">Adaptive Session is the recommended default. Use Domain Drill for a topic that is still new.</p>
 
       <div class="featured-mode" role="button" tabindex="0" onclick="startAdaptive()">
         <div class="fm-copy">
@@ -2552,7 +2552,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div>
       </div>
     </div>
 
@@ -2715,13 +2715,13 @@
     <div class="card" id="fcTopCard">
       <div id="fcTopCardContent">
         <div class="card-head"><h2>Flashcards</h2><div class="note">tap the card to flip</div></div>
-        <p class="hint">Ordered live by what you need most: your weakest domains and anything marked "still learning" surface first.
-          <span class="card-head" id="fcScienceToggle" onclick="toggleFlashcardScience()" role="button" tabindex="0" style="display:inline-flex;margin-top:4px;">
-            <span class="note" id="fcScienceChevron">how the ordering actually works — tap to expand ▾</span>
+        <p class="hint">
+          <span class="card-head" id="fcScienceToggle" onclick="toggleFlashcardScience()" role="button" tabindex="0" style="display:inline-flex;margin-top:0;">
+            <span class="note" id="fcScienceChevron">card options ▾</span>
           </span>
         </p>
-        <p class="hint" id="fcScienceBody" style="display:none;">Underneath, a Leitner-style spaced-repetition system tracks each card separately. A correct answer pushes the card further out (a day, then three, then a week, up to a month); a miss brings it back right away. Growing gaps between repeats are what make it stick. On top of that, cards that match ideas in questions you missed move up, so do cards in your weak subtopics, and a card you keep missing gets an automatic worked example. Close to the exam, new cards wait so review comes first.</p>
-        <label class="fc-adapt-row" id="fcAdaptRow" style="display:none;"><input type="checkbox" id="fcAdaptToggle" checked onchange="setFcAdapt(this.checked)"> Adapt each card to my level (hints on cards I keep missing, term-recall on cards I've mastered)</label>
+        <p class="hint" id="fcScienceBody" style="display:none;">Cards are ordered by what you need most, and spaced out as you get them right.</p>
+        <label class="fc-adapt-row" id="fcAdaptRow" style="display:none;"><input type="checkbox" id="fcAdaptToggle" checked onchange="setFcAdapt(this.checked)"> Adapt each card to my level</label>
         <p class="hint fc-deck-line" id="fcDeckLine" style="display:none;"></p>
         <div class="fc-controls">
           <div class="fc-filter">
@@ -9378,14 +9378,11 @@ function fcDeckLine(){
   });
   const bits = [];
   if(due) bits.push(due + ' due');
-  if(gap) bits.push(gap + ' tied to questions you missed');
-  if(leech) bits.push(leech + ' you keep missing');
+  if(leech) bits.push(leech + ' tricky');
   if(fresh) bits.push(fresh + ' new');
   const days = getDaysUntilExam();
-  let line = bits.length ? 'Your next ' + slice.length + ' cards: ' + bits.join(' · ') + '.' : '';
-  const ctx = fcContext();
-  if(ctx.weak.length) line += ' Biggest gap: ' + ctx.weak[0].name + '.';
-  if(days !== null && days >= 0 && days <= 7) line += ' The exam is ' + (days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'in ' + days + ' days') + ', so review comes before new cards.';
+  let line = bits.length ? 'Up next: ' + bits.join(' \u00b7 ') + '.' : '';
+  if(days !== null && days >= 0 && days <= 7) line += ' Exam week: review comes before new cards.';
   el.textContent = line.trim();
   el.style.display = line.trim() ? 'block' : 'none';
 }
@@ -9649,7 +9646,7 @@ function fcApplyAdaptation(card){
     const t = document.createElement('div'); t.className = 'fc-back-term'; t.textContent = card.term; back.appendChild(t);
     const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     hint.textContent = 'name the term, then tap to reveal';
-    msg = 'Mastered card — recall the term from its definition'; cls += ' strong';
+    msg = 'Name the term'; cls += ' strong';
   } else if(mode === 'apply'){
     const seenOf = x => (getSpacedStat(DATA.questionStats, x.id).seen || 0);
     const rel = fcRelatedQuestions(card).slice().sort(() => Math.random() - 0.5).sort((x, y) => seenOf(x) - seenOf(y)); // fresh questions first, never a repeat while others are unseen
@@ -9662,7 +9659,7 @@ function fcApplyAdaptation(card){
       q.choices.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fc-apply-choice'; b.textContent = c; b.onclick = (e) => { e.stopPropagation(); fcApplyChoose(i); }; ap.appendChild(b); });
       ap.style.display = 'flex';
     }
-    msg = 'Mastered card — apply it to an exam-style question'; cls += ' strong';
+    msg = 'Apply it'; cls += ' strong';
   } else if(mode === 'foundation' || mode === 'foundation-new'){
     back.innerHTML = '';
     const core = fcCoreClause(card.def);
@@ -9706,7 +9703,7 @@ function renderFlashcard(){
   document.getElementById('fcDomain').textContent = domainMeta.code + ' — ' + domainMeta.name;
   document.getElementById('fcFront').textContent = card.term;
   document.getElementById('fcFront').style.display = 'block';
-  { const why = document.getElementById('fcWhy'); if(why){ const r = fcReasonsFor(card); why.textContent = r.length ? 'Why now: ' + r.join(' · ') : ''; why.style.display = r.length ? 'block' : 'none'; } }
+  { const why = document.getElementById('fcWhy'); if(why){ const r = fcReasonsFor(card); { const g = (card.gapFor && getSpacedStat(DATA.flashcardStats, card.id).seen === 0) ? 'Written for a gap: ' + card.gapFor : ''; why.textContent = g; why.style.display = g ? 'block' : 'none'; } } }
   document.getElementById('fcBack').textContent = card.def;
   document.getElementById('fcBack').style.display = 'none';
   document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
@@ -13844,16 +13841,9 @@ function sessionBriefHtml(){
   let first = counts[topKey] === session.queue.length ? `${session.queue.length} questions, all on ${topMeta.name}.` : `${session.queue.length} questions` + (session.mode === 'adaptive' && counts[topKey] >= 4 ? `, led by ${topMeta.name} (${counts[topKey]})` : '') + '.';
   try{
     const st = computeStats();
-    if(session.mode === 'adaptive' && st.weakestMeta && st.weakestMeta.key === topKey && counts[topKey] >= 4 && counts[topKey] < session.queue.length) first += ' That is your weakest area right now.';
+    if(session.mode === 'adaptive' && st.weakestMeta && st.weakestMeta.key === topKey && counts[topKey] >= 4 && counts[topKey] < session.queue.length) first += ' Your weakest area.';
   }catch(e){}
   lines.push(first);
-  const rc = {}; Object.values(session.selectionReasons || {}).forEach(r => { rc[r] = (rc[r]||0) + 1; });
-  const parts = [];
-  if(rc.hypercorrection) parts.push(`${rc.hypercorrection} revisit${rc.hypercorrection===1?'s':''} a confident miss`);
-  if(rc.mixup) parts.push(`${rc.mixup} test${rc.mixup===1?'s':''} a pair you have been mixing up`);
-  if(rc.due) parts.push(`${rc.due} ${rc.due===1?'is a review that is':'are reviews that are'} due`);
-  if(rc.tvmCalc) parts.push(`${rc.tvmCalc} ${rc.tvmCalc===1?'is a':'are'} calculator problem${rc.tvmCalc===1?'':'s'}`);
-  if(parts.length) lines.push(parts.slice(0,3).join(', ').replace(/^./, c => c.toUpperCase()) + '.');
   try{
     const mp = missProfile();
     if(mp.total >= 8){
@@ -15816,7 +15806,7 @@ function toggleFlashcardScience(){
   const expanded = body.style.display === 'block';
   body.style.display = expanded ? 'none' : 'block';
   { const ar = document.getElementById('fcAdaptRow'); if(ar){ ar.style.display = expanded ? 'none' : 'flex'; const t = document.getElementById('fcAdaptToggle'); if(t) t.checked = fcAdaptOn(); } }
-  chevron.textContent = expanded ? 'how the ordering actually works — tap to expand ▾' : 'how the ordering actually works — tap to collapse ▴';
+  chevron.textContent = expanded ? 'card options ▾' : 'card options ▴';
 }
 
 function toggleDiagnosis(){
@@ -16357,6 +16347,7 @@ Their current state in the app:${conductorContextLine()} overall readiness ${sta
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
 - Keep answers focused and well-organized — short paragraphs or a few bullet points, not walls of text.
+- Be brief and direct. Lead with the answer in plain words, usually two to five sentences, and go deeper only when asked. Do not narrate what you are doing, what you looked at, or how the app or its scoring works, and do not explain why you are suggesting something unless asked. No play-by-play, no recapping their numbers back to them, no preamble before the answer and no closing summary. When you use an app action, one short clause is enough.
 - When useful, connect your answer back to one of CFP Board's official Principal Knowledge Topics.
 - If asked to quiz the student, ask ONE question at a time and wait for their answer before revealing it. This isn't just a formatting preference -- it's retrieval practice, genuinely one of the most well-established findings in learning science: a student who attempts to produce an answer themselves, even wrongly, retains it better afterward than one who was simply told it. Default to this shape whenever it's natural, not only when explicitly asked to quiz: if a student asks you to explain something you could instead turn into a short question first ("before I explain -- what do you think happens to the basis here?"), that's usually the stronger choice. Don't force it onto every single reply, especially quick factual lookups, but lean toward it as the default teaching move rather than the exception.
 - When you do explain something, prefer asking "why do you think that's the rule" or "what would happen if..." over stating the reasoning outright, and prefer connecting it to something concrete over stating it in the abstract -- a brief example, a scenario, or (when one exists above) the student's own actual missed question or recurring mistake on this exact topic. Explaining a concept in a vacuum is weaker than anchoring it to something the student already has some contact with, right or wrong.
@@ -17092,17 +17083,15 @@ function tutorOpeningLine(stats){
     const dates = (DATA.studyDates || []).slice().sort();
     const lastKey = dates[dates.length-1];
     const gap = lastKey ? dayKeyToNumber(localDayKey()) - dayKeyToNumber(lastKey) : null;
-    let lead = gap === null ? 'Hi, I am your CFP study tutor.' : gap === 0 ? 'Good to see you again today.' : gap === 1 ? 'Welcome back, you studied yesterday.' : gap >= 3 ? `Welcome back. It has been ${gap} days, so a short warm-up will help.` : 'Welcome back.';
+    let lead = gap === null ? 'Hi, I am your CFP study tutor.' : gap === 0 ? 'Good to see you again today.' : gap === 1 ? 'Welcome back.' : gap >= 3 ? `Welcome back. It has been ${gap} days, so a short warm-up will help.` : 'Welcome back.';
     if(days !== null && days > 0) lead += ` Your exam is ${days} day${days===1?'':'s'} away.`;
     parts.push(lead);
-    parts.push(`You are at ${stats.readiness}/100 readiness, and ${stats.weakestMeta.name} is your weakest area.`);
-    const last = (DATA.sessions || [])[(DATA.sessions || []).length-1];
-    if(last && last.total) parts.push(`Your last session was ${last.correct} of ${last.total}.`);
+    parts.push(`You are at ${stats.readiness}/100 readiness.`);
     const ns = computeNextStep(stats);
-    if(ns && ns.title){ const t = String(ns.title).replace(/[.\s]+$/, ''); const lc = (t.length > 1 && /[A-Z]/.test(t[0]) && !/[A-Z]/.test(t[1])) ? t[0].toLowerCase() + t.slice(1) : t; parts.push(`A good next move: ${lc}.`); }
-  }catch(e){ return `Hi, I am your CFP study tutor. You are at ${stats.readiness}/100 readiness, with ${stats.weakestMeta.name} as your weakest area.`; }
-  try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time you asked me about \u201c${rt.q.length > 90 ? rt.q.slice(0, 87) + '\u2026' : rt.q}\u201d (${modeAgoText(rt.t)}).`); }catch(e){}
-  parts.push('Ask me anything, or tap one of the suggestions below.');
+    if(ns && ns.title){ const t = String(ns.title).replace(/[.\s]+$/, ''); const lc = (t.length > 1 && /[A-Z]/.test(t[0]) && !/[A-Z]/.test(t[1])) ? t[0].toLowerCase() + t.slice(1) : t; parts.push(`Next up: ${lc}.`); }
+    else parts.push(`${stats.weakestMeta.name} is the one to work on.`);
+  }catch(e){ return `Hi, I am your CFP study tutor. Ask me anything.`; }
+  try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time: \u201c${rt.q.length > 70 ? rt.q.slice(0, 67) + '\u2026' : rt.q}\u201d.`); }catch(e){}
   return parts.join(' ');
 }
 function updateTutorContextNote(){
