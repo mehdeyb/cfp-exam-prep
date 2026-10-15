@@ -3120,7 +3120,7 @@
 
         <div class="settings-section">
           <h3>About this version</h3>
-          <p class="hint" style="margin-top:0;" id="buildNote">Build 2026-10-15.13</p>
+          <p class="hint" style="margin-top:0;" id="buildNote">Build 2026-10-15.14</p>
         </div>
 
         <div class="settings-section">
@@ -14549,15 +14549,15 @@ function fitQuizText(){
     const base = parseFloat(getComputedStyle(el).fontSize) || 17;
     const cs = chs[0] ? getComputedStyle(chs[0]) : null;
     const cb = cs ? parseFloat(cs.fontSize) : 15, pb = cs ? parseFloat(cs.paddingTop) : 12;
-    const cap = Math.min(30, Math.round(base * 1.7));
+    const cap = Math.min(23, base + 5);
     const apply = t => {
       el.style.fontSize = (base + Math.min(t, cap - base)) + 'px';
-      chs.forEach(c => { c.style.fontSize = (cb + Math.min(t * 0.5, 5)) + 'px'; c.style.paddingTop = c.style.paddingBottom = (pb + Math.min(t, 10)) + 'px'; });
+      chs.forEach(c => { c.style.fontSize = (cb + Math.min(t * 0.4, 2)) + 'px'; c.style.paddingTop = c.style.paddingBottom = (pb + Math.min(t, 5)) + 'px'; });
     };
     const fits = () => host.scrollHeight <= host.clientHeight;
     if(!fits()) return;
     let t = 0;
-    while(t < 16){
+    while(t < 8){
       apply(t + 1);
       if(!fits()){ apply(t); return; }
       t++;
@@ -17824,7 +17824,7 @@ requestDurableStorage();
       document.documentElement.classList.remove('vp-short');
       window._vpInfo = {inner, lvh: full, vh, vv, scr: screen.height, short};
       const note = document.getElementById('buildNote');
-      if(note) note.textContent = 'Build 2026-10-15.13 · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
+      if(note) note.textContent = 'Build 2026-10-15.14 · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
     }catch(e){}
   }
   window.addEventListener('resize', probe);
