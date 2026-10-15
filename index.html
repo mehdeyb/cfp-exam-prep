@@ -819,10 +819,22 @@
   .bp-seg .weight-tag{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:2;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.02em;color:#fff;background:rgba(20,16,8,0.55);padding:2px 6px;border-radius:8px;white-space:nowrap;pointer-events:none;}
   .bp-bar-compact .weight-tag{font-size:8px;padding:1.5px 3px;letter-spacing:0;}
   .bp-code-row-compact .bp-code-cell{font-size:7.5px;}
+  .bp-focus{margin:14px 0 6px;padding-top:12px;border-top:1px solid var(--hair);}
+  .bp-focus .focus-pills{margin-bottom:8px;}
+  .bp-focus .bp-trend-head{margin-bottom:8px;}
+  .bp-fold #diagnosisSummary{font-size:12.5px;color:var(--muted);line-height:1.5;padding-bottom:10px;}
+  .bp-focus .difficulty-indicator{margin-top:6px;padding-top:0;border-top:none;}
+  .bp-focus .week-recap,.bp-focus .difficulty-indicator{margin-top:10px;}
+  .bp-fold{margin-top:14px;border-top:1px solid var(--hair);padding-top:6px;}
+  .bp-fold .card-head{margin-bottom:6px;min-height:44px;}
+  .bp-fold .card-head h2{font-size:15px;}
+  .bp-guide-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);}
+  .bp-guide-row b{display:block;font-size:14px;}
+  .bp-guide-row .note{display:block;font-size:11.5px;color:var(--muted);}
   .bp-trend{margin:14px 0 4px;padding-top:12px;border-top:1px solid var(--hair);}
   .bp-trend-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
   .bp-trend-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
-  .bp-trend .note{font-size:11px;}
+  .bp-trend .note,.bp-focus .note{font-size:11px;}
   .bp-trend .progress-svg{height:84px;}
   .bp-trend .focus-empty{padding:2px 0;}
   .bp-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin-top:12px;background:var(--hair);border:1px solid var(--hair);border-radius:8px;overflow:hidden;}
@@ -1953,7 +1965,23 @@
           <div class="progress-readout" id="progressReadout" style="display:none;" aria-live="polite"></div>
         </div>
       </div>
+      <div class="bp-focus">
+        <div class="bp-trend-head"><span class="bp-trend-title">Focus next</span><span class="note">your coach learns from every answer</span></div>
+        <div class="focus-pills" id="focusPills"><span class="focus-empty">Answer a few questions in each domain to reveal a focus area.</span></div>
+        <div class="difficulty-indicator" id="difficultyIndicator" style="display:none;"></div>
+        <div class="week-recap" id="weekRecap" style="display:none;"></div>
+      </div>
       <div class="bp-legend" id="bpLegend"></div>
+      <div class="bp-fold" id="diagnosisCard">
+      <div class="card-head" id="diagnosisToggle" onclick="toggleDiagnosis()" role="button" tabindex="0">
+        <h2>Detailed diagnosis</h2>
+        <div class="note" id="diagnosisChevron">tap to expand ▾</div>
+      </div>
+      <div id="diagnosisSummary"></div>
+      <div id="diagnosisBody" style="display:none;"></div>
+    </div>
+
+      <div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div>
       <div class="source-note">Domain weights and the 70 official subtopics beneath them come straight from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a> — tap a segment or a row below to drill that domain. A pulsing gold marker means that domain is currently rebuilding fundamentals after a rough patch; a "due" badge means it has questions ready for spaced review right now.</div>
     </div>
 
@@ -1963,14 +1991,11 @@
         <div class="note">learns from every answer</div>
       </div>
       <div class="focus-grid">
-        <div class="focus-pills" id="focusPills"><span class="focus-empty">Answer a few questions in each domain to reveal a focus area.</span></div>
         <div class="bank-stat-row">
           <div class="bank-stat"><div class="num" id="bankCount">0</div><div class="lbl">AI questions<br>banked</div></div>
           <div class="bank-stat"><div class="num" id="fcBankCount">0</div><div class="lbl">AI flashcards<br>banked</div></div>
         </div>
       </div>
-      <div class="week-recap" id="weekRecap" style="display:none;"></div>
-      <div class="difficulty-indicator" id="difficultyIndicator" style="display:none;"></div>
       <div class="pattern-callout" id="patternCallout" style="display:none;"></div>
       <div class="pattern-callout" id="mixupCallout" style="display:none;"></div>
       <div class="coach-actions">
@@ -2169,20 +2194,6 @@
       <div id="planBody" style="display:none;"></div>
     </div>
 
-    <div class="card" id="diagnosisCard">
-      <div class="card-head" id="diagnosisToggle" onclick="toggleDiagnosis()" role="button" tabindex="0">
-        <h2>Detailed diagnosis</h2>
-        <div class="note" id="diagnosisChevron">tap to expand ▾</div>
-      </div>
-      <div id="diagnosisSummary"></div>
-      <div id="diagnosisBody" style="display:none;"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><h2>Study guide</h2><div class="note">one page, printable, built from your own progress</div></div>
-      <p class="hint">A short, concrete list of what to review next (specific subtopics, numbers and missed questions), built fresh from your history each time. Read it here, or print or save it for offline review. The formulas, key numbers and syllabus checklist have live versions in Reference; this guide keeps a fixed snapshot of each because that holds up on a printed page. The trust, entity and IRA tools are in the Tools tab.</p>
-      <button class="btn ghost" onclick="openStudyGuide()">Open study guide</button>
-    </div>
 
 
     <div id="quizFullscreenHost">
@@ -2609,7 +2620,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div><div class="science-item"><b>No hidden answer choices</b>On a short screen, the last answer can sit behind the Next bar. A small "More answers below" button now appears until that answer is fully on screen, and tapping it scrolls there.</div><div class="science-item"><b>Plan fold says what it will do</b>The control under Today's plan now reads "Show the other steps" when closed and "Hide the other steps" when open.</div><div class="science-item"><b>More on each phone screen</b>On phones the Study screen is shorter: a tighter header, the readiness ring beside its label, a full-width exam-date card, and plan step descriptions held to two lines (tap one to read it all). The quiz tutor note now sits on one line. Text size and tap targets are unchanged.</div><div class="science-item"><b>Trend joins the Blueprint Bar</b>Your progress-over-time chart now sits inside the Blueprint Bar card, right under the bar, so mastery by domain and your trend read together and the Study screen is one card shorter.</div><div class="science-item"><b>Drag across your trend</b>Touch and slide along the trend line to read any session: date, type, score and minutes. Arrow keys work too. A session ended early now shows its score out of the questions you answered.</div><div class="science-item"><b>Question difficulty under the trend</b>Each session now records how hard its questions were (1 = recall, 3 = applied or calculation). Small bars under the trend line show it, and dragging across a session reads it out, so a dip in score can be told apart from a jump to harder questions. Sessions before this change show no bar.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div><div class="science-item"><b>No hidden answer choices</b>On a short screen, the last answer can sit behind the Next bar. A small "More answers below" button now appears until that answer is fully on screen, and tapping it scrolls there.</div><div class="science-item"><b>Plan fold says what it will do</b>The control under Today's plan now reads "Show the other steps" when closed and "Hide the other steps" when open.</div><div class="science-item"><b>More on each phone screen</b>On phones the Study screen is shorter: a tighter header, the readiness ring beside its label, a full-width exam-date card, and plan step descriptions held to two lines (tap one to read it all). The quiz tutor note now sits on one line. Text size and tap targets are unchanged.</div><div class="science-item"><b>Trend joins the Blueprint Bar</b>Your progress-over-time chart now sits inside the Blueprint Bar card, right under the bar, so mastery by domain and your trend read together and the Study screen is one card shorter.</div><div class="science-item"><b>Drag across your trend</b>Touch and slide along the trend line to read any session: date, type, score and minutes. Arrow keys work too. A session ended early now shows its score out of the questions you answered.</div><div class="science-item"><b>Question difficulty under the trend</b>Each session now records how hard its questions were (1 = recall, 3 = applied or calculation). Small bars under the trend line show it, and dragging across a session reads it out, so a dip in score can be told apart from a jump to harder questions. Sessions before this change show no bar.</div><div class="science-item"><b>One progress card</b>The Blueprint Bar card now holds everything about how you are doing: the bar, your trend and question difficulty, your coach's focus areas and weekly recap, the detailed diagnosis, and the study guide. The Study screen has three fewer cards to scroll past.</div>
       </div>
     </div>
 
