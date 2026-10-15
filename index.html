@@ -14716,6 +14716,21 @@ function scoreExamAnswers(fromIndex, toIndex){
   refreshHeaderStats();
 }
 
+function quizRevealFeedback(fb){
+  try{
+    if(!fb || !fb.isConnected || fb.style.display === 'none' || !document.body.classList.contains('quiz-active')) return;
+    const host = document.getElementById('quizFullscreenHost');
+    const bar = document.querySelector('#quizView .quiz-actions');
+    const hr = host.getBoundingClientRect(), fr = fb.getBoundingClientRect();
+    const limit = hr.bottom - (bar ? bar.offsetHeight : 60) - 10;
+    let d = fr.bottom > limit ? fr.bottom - limit : 0;
+    if(fr.top - d < hr.top + 8) d = Math.max(0, fr.top - hr.top - 8);
+    if(d > 1){
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      host.scrollBy({ top: d, behavior: reduce ? 'auto' : 'smooth' });
+    }
+  }catch(e){}
+}
 function selectAnswer(i){
   if(session.locked || session.thinkGate) return;
   session.locked = true;
@@ -14872,7 +14887,9 @@ function selectAnswer(i){
   fb.innerHTML = fbIcon + '<span>' + (isCorrect ? correctLabel : `Not quite — the correct answer is ${letters[q.correct]}. See why below.` + missTip + (mixPair ? mixupContrastHtml(mixPair) : '')) + '</span>' + speakBtnHtml;
   fb.className = 'quiz-feedback ' + (isCorrect ? 'good' : 'bad');
   fb.style.display = 'flex';
-  fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  quizRevealFeedback(fb);
+  // The per-choice explanations finish opening just after this, which moves the feedback; settle once more.
+  setTimeout(() => quizRevealFeedback(fb), 380);
 
   const simplifyRow = document.getElementById('simplifyRow');
   const simplifiedBox = document.getElementById('simplifiedExplanation');
