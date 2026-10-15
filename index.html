@@ -2180,7 +2180,7 @@
         </div>
         <details class="tvm-howto" id="tvmHowto" ontoggle="this.dataset.touched=1"><summary>How this works</summary><p class="hint" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p></details>
         <div class="tvm-status" id="tvmStatus" role="status"></div>
-        <button class="btn ghost" id="tvmMultiStageEntryBtn" onclick="startTvmMultiStage()" style="margin-bottom:16px;">Try a two-part problem (save, then spend it down)</button>
+        <button class="btn ghost" id="tvmMultiStageEntryBtn" onclick="startTvmMultiStage()" style="margin-bottom:16px;width:100%;">Try a two-part problem (save, then spend it down)</button>
 
         <div class="tvm-scenario" id="tvmScenario"></div>
         <div class="tvm-level-badge" id="tvmLevelBadge"></div>
@@ -2683,6 +2683,7 @@
         <div class="science-item"><b>A smoother daily session</b>Walked the guided session from the first card to the last part. The flashcard checkpoint now appears exactly when today's card target is reached, with "Next part" as the main button; cards you just rated no longer come straight back in the next batch; and a part where nothing was done stays on today's plan instead of counting as finished.</div>
         <div class="science-item"><b>Session parts that match what you can actually do</b>A part you stop partway through no longer counts as finished: it stays counted as open and comes back later. The "Explain it back" part is only planned when the tutor is connected, so there is no step that leads to a screen asking for a key.</div>
         <div class="science-item"><b>The page behind a session screen stays put</b>On the phone you could scroll the page behind the session card. While a session screen or a term pop-up is open, the page behind it is now locked, and it returns to exactly where you were when the card closes.</div>
+        <div class="science-item"><b>A cleaner cash-flow timeline in the TVM walkthrough</b>The "0" and "N" labels no longer collide with the PV and FV arrows, the unknown value's label sits right above its question mark, annuity-due problems draw their payments one step earlier than end-of-period ones, and the two-part-problem button matches the width of the cards around it.</div>
       </div>
     </div>
 
@@ -13135,8 +13136,8 @@ function renderTvmTimeline(){
 
   function arrowMarkup(value, x, label, isUnknown){
     if(isUnknown){
-      return `<text x="${x}" y="34" text-anchor="middle" font-size="13" fill="var(--muted)">?</text>
-        <text x="${x}" y="70" text-anchor="middle" font-size="10" fill="var(--muted)">${label}</text>`;
+      return `<text x="${x}" y="36" text-anchor="middle" font-size="14" fill="var(--muted)">?</text>
+        <text x="${x}" y="16" text-anchor="middle" font-size="10" fill="var(--muted)">${label}</text>`;
     }
     if(value === undefined || value === 0) return '';
     const up = value > 0; // positive = money received, drawn above the line; negative = paid out, below
@@ -13153,18 +13154,20 @@ function renderTvmTimeline(){
     <line x1="30" y1="45" x2="370" y2="45" stroke="var(--hair-strong)" stroke-width="1.5"/>
     <circle cx="30" cy="45" r="3" fill="var(--hair-strong)"/>
     <circle cx="370" cy="45" r="3" fill="var(--hair-strong)"/>
-    <text x="30" y="58" text-anchor="middle" font-size="10" fill="var(--muted)">0</text>
-    <text x="370" y="58" text-anchor="middle" font-size="10" fill="var(--muted)">N</text>`;
+    <text x="22" y="49" text-anchor="end" font-size="10" fill="var(--muted)">0</text>
+    <text x="378" y="49" text-anchor="start" font-size="10" fill="var(--muted)">N</text>`;
 
   svg += arrowMarkup(pv, 30, 'PV', solveKey === 'pv');
   svg += arrowMarkup(fv, 370, 'FV', solveKey === 'fv');
 
   if(solveKey === 'pmt'){
-    svg += arrowMarkup(undefined, 200, 'PMT', true);
+    svg += arrowMarkup(undefined, tvmCurrent.isBeginMode ? 165 : 200, 'PMT', true);
   } else if(pmt !== undefined && pmt !== 0){
-    [130, 200, 270].forEach((x, i) => { svg += arrowMarkup(pmt, x, i===1 ? 'PMT' : '', false); });
-    svg += `<text x="165" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>
-      <text x="235" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>`;
+    // Payments at the start of each period (BEGIN mode) sit one step earlier than end-of-period payments.
+    const dx = tvmCurrent.isBeginMode ? -35 : 0;
+    [130, 200, 270].forEach((x, i) => { svg += arrowMarkup(pmt, x + dx, i===1 ? 'PMT' : '', false); });
+    svg += `<text x="${165+dx}" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>
+      <text x="${235+dx}" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>`;
   }
 
   svg += '</svg>';
@@ -18008,7 +18011,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.33';
+const BUILD_ID = '2026-10-15.34';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
