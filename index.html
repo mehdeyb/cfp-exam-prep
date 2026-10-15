@@ -1705,7 +1705,7 @@
   @media (orientation:landscape) and (min-width:520px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
     body.quiz-active .quiz-inner{max-width:1080px;}
     body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:26px;align-items:start;}
-    body.quiz-active .q-left{position:static;max-height:none;overflow:visible;}
+    body.quiz-active .q-left{position:sticky;top:6px;align-self:start;max-height:calc(100vh - 72px);overflow-y:auto;overscroll-behavior:contain;}
     body.quiz-active .confidence-pills{flex-wrap:wrap;}
     body.quiz-active .q-text{margin-bottom:14px;}
     body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
@@ -2724,6 +2724,7 @@
         <div class="science-item"><b>A cleaner cash-flow timeline in the TVM walkthrough</b>The "0" and "N" labels no longer collide with the PV and FV arrows, the unknown value's label sits right above its question mark, annuity-due problems draw their payments one step earlier than end-of-period ones, and the two-part-problem button matches the width of the cards around it.</div>
         <div class="science-item"><b>The TVM walkthrough now fits the phone</b>On a phone held upright, the calculator used to start below the screen after a tall stack of cards. The header, level chips, problem, timeline and calculator now fit on one screen without scrolling, the "How this works" note folds away after your first key press, and the two-part problem option moved beside the other buttons under the calculator. A gap check then trimmed the empty space under the timeline, reserved a line above the keypad so the keys no longer jump when a message appears, put "Try another problem" first after solving, and scrolls the worked solution into view.</div>
         <div class="science-item"><b>A space check across the whole app</b>Went through every tab at phone size for wasted space. Removed the empty band above the flashcard deck, the extra space at the bottom of cards ending in a note (Tools), and the blank block in "Your coach" when no AI key is connected, and gave the weekly "Start" button its own place beside the text instead of dangling after the last word.</div>
+        <div class="science-item"><b>The question stays in view beside the answers on a sideways phone</b>In landscape the question sits on the left and the answers on the right. The left side used to scroll away with the answers and leave a blank half screen once you answered. It now stays put while the answers and explanations scroll.</div>
       </div>
     </div>
 
@@ -18068,7 +18069,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.37';
+const BUILD_ID = '2026-10-15.38';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
