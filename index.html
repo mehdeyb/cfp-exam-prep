@@ -1521,6 +1521,10 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  /* Study tab order: what to do now comes first (next step, today's plan, start a session);
+     the big mastery chart and coach summary follow it. */
+  #tab-study.active{display:flex;flex-direction:column;}
+  #tab-study > #blueprintCard,#tab-study > #focusCard,#tab-study > #modePanel ~ *{order:1;}
   /* Phones: the session picker keeps each option to a title, a "use it when" line and its status;
      the long descriptions stay on larger screens. */
   @media (max-width:640px){
