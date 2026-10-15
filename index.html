@@ -1086,6 +1086,9 @@
   .science-item{font-size:12px;color:var(--muted);line-height:1.55;}
   .science-item b{display:block;color:var(--paper);font-size:13px;font-weight:600;margin-bottom:4px;font-family:'Fraunces',serif;}
   .quiz-actions{display:flex;justify-content:space-between;margin-top:18px;}
+  /* The next-question bar stays at the bottom of the screen while you read the explanation, so it is always one tap away. */
+  #quizView .quiz-actions{position:sticky;bottom:0;z-index:6;gap:10px;padding:12px 0 max(12px, env(safe-area-inset-bottom));margin-top:14px;background:var(--ink);border-top:1px solid var(--hair);box-shadow:0 -10px 18px -12px rgba(0,0,0,.35);}
+  #quizView .quiz-feedback{scroll-margin-bottom:112px;}
 
   button.btn{
     font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13px;padding:14px 19px;border-radius:22px;
@@ -1547,12 +1550,12 @@
   </div>
 
   <div class="tabbar" id="appTabbar">
-    <button class="tab-btn active" data-tab="study" onclick="showTab('study')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Study</span></button>
-    <button class="tab-btn" data-tab="tools" onclick="showTab('tools')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 7.5v9M6 12h10"/></svg><span>Tools</span></button>
-    <button class="tab-btn" data-tab="reference" onclick="showTab('reference')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Reference</span></button>
-    <button class="tab-btn" data-tab="flashcards" onclick="showTab('flashcards')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l8.5 4.6-8.5 4.6-8.5-4.6L12 3.5z"/><path d="M3.5 13.1l8.5 4.6 8.5-4.6"/></svg><span>Flashcards</span></button>
-    <button class="tab-btn" data-tab="examday" onclick="showTab('examday')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
-    <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
+    <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Study</span></button>
+    <button class="tab-btn" data-tab="tools" onclick="showTab('tools',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 7.5v9M6 12h10"/></svg><span>Tools</span></button>
+    <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Reference</span></button>
+    <button class="tab-btn" data-tab="flashcards" onclick="showTab('flashcards',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l8.5 4.6-8.5 4.6-8.5-4.6L12 3.5z"/><path d="M3.5 13.1l8.5 4.6 8.5-4.6"/></svg><span>Flashcards</span></button>
+    <button class="tab-btn" data-tab="examday" onclick="showTab('examday',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
+    <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
   </div>
 
   <div class="storage-warning" id="storageWarning" style="display:none;" role="alert">
@@ -2274,6 +2277,7 @@
         <div class="science-item"><b>Flashcards now follow your gaps</b>The deck used to be ordered by review timing and how weak each whole domain is. Now it also looks at the questions you missed, or were sure about and got wrong, and moves up the cards that cover those same ideas, even if the card was not due yet. Cards in your weak official subtopics move up too. A card you have missed three or more times gets a worked example automatically and asks you to say it in your own words before you flip it. Each card shows a short "why now" line, and the top of the deck says what is coming next. Domains are mixed so you do not get a long run of one topic, and mixed practice has beaten one-topic-at-a-time practice on later tests in studies of interleaving (for example Rohrer and Taylor, 2007, which used math problems, so how far it carries to flashcards is less certain). Within a week of the exam, new cards are held back so review comes first. If you have an AI key, the app also writes a few new cards aimed at your weakest subtopic when it has few cards. A "Cards on what I missed" button starts a set of just those cards, today's plan can start the same set, and the tutor can start it for you when you ask. Which signals count most, and the cutoffs, are my judgment, not tested numbers.</div>
         <div class="science-item"><b>Today's plan can now run as one guided session</b>Before, the plan was a list of separate Start buttons, and each one ended on its own. Now "Start my session" in Today's plan (or asking the tutor to run your study time) opens a short briefing, then takes you through each part in order. Before each part there is one line on how to do it well, for example to answer in your head before you look at the choices. After each part you get a quick debrief (your score, or how many cards you knew) and what is next, and the next part is chosen again from what you just did, so a drill that turns up misses can add a review. You can skip a part, stop early, or come back through the small "Session" button, and the session ends with a short summary and what to start with next time. This part does not use the AI at all, so it works without a key. The coaching lines are based on retrieval practice (trying to answer before seeing options), which is among the best-supported study methods; the exact wording and the "stop when the time is used" rule are my choices, not tested. While a session is running, the tutor (and the chat on each question) knows which part you are on and what is next, the Study tab's next-best-step points back to the session, and changing your time for the day changes the running session.</div>
         <div class="science-item"><b>Sturdier: bad data, offline use, and wrong answers that gave themselves away</b>I tried loading the app from twenty-two kinds of damaged saved data. One broke a screen: a single badly formed AI-written card could stop the Reference tab from opening. Saved data and restored backups now drop malformed written questions and cards, and always have a record for every exam domain. The app can now be opened without a connection from the last copy it saw (the AI features still need one) and can be added to a phone's home screen with an icon; the page is still fetched fresh whenever you are online, so updates show up on the next open. It also asks the browser to keep your progress when space runs low, says in Settings whether the browser agreed, and, if something unexpected goes wrong on a screen, tells you your progress is saved instead of failing silently. In the question bank, 61 wrong answers used words like "always", "never" and "guaranteed", which let a test-wise student rule them out without knowing the material, so I rewrote them to be wrong on substance. Fourteen correct answers were much longer than the other choices, so I lengthened the others. Ninety wrong answers still contain the word "only", which I left because it is often a legitimate part of a wrong statement. Answer positions in the raw bank lean toward A, but every session shuffles the choices, and I checked that in each mode.</div>
+        <div class="science-item"><b>Every screen now lands where you would expect</b>Switching tabs used to carry over the scroll position of the tab you left, so Flashcards could open with its heading cut off and Tutor or Reference could open halfway down. Each tab now remembers where you were: tapping it in the bar returns you to that spot, opening it from a button inside the app starts at the top, and tapping the tab you are already on scrolls it to the top. The tutor opens at its latest message, and Settings and the study guide open at the top every time. In a quiz, each new question already started at the top, but after answering you often had to scroll to find Next question; that bar now stays at the bottom of the screen, and the feedback is scrolled to sit just above it. The flashcard stays on screen as you go through the deck. I measured these by scripting each move on a phone-sized screen, not on a real phone.</div>
       </div>
     </div>
 
@@ -2778,7 +2782,26 @@
 /* ===========================================================
    TAB NAVIGATION
 =========================================================== */
-function showTab(name){
+/* Each tab remembers where you were. Tapping a tab in the bar returns you to where you left it (or the top the first
+   time); moving there from inside the app (a plan step, a button) starts at the top; tapping the tab you are already
+   on scrolls it to the top. */
+const _tabScroll = {};
+function _scrollPageTo(y){
+  if(document.body.style.position === 'fixed'){ savedBodyScrollY = y; document.body.style.top = (-y) + 'px'; return; }
+  try{ window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }catch(e){ window.scrollTo(0, y); }
+}
+function showTab(name, opts){
+  opts = opts || {};
+  const curEl = document.querySelector('.tab-panel.active');
+  const curName = curEl ? curEl.id.replace(/^tab-/, '') : null;
+  const same = curName === name;
+  if(same && opts.fromBar){
+    try{ window.scrollTo({ top: 0, left: 0, behavior: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }catch(e){ window.scrollTo(0, 0); }
+  }
+  if(curName && !same){
+    const locked = document.body.style.position === 'fixed';
+    _tabScroll[curName] = locked ? savedBodyScrollY : (window.scrollY || 0);
+  }
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -2796,6 +2819,10 @@ function showTab(name){
       DATA.lastTab = name;
       persist();
     }
+  }
+  if(!same){
+    _scrollPageTo(opts.fromBar ? (_tabScroll[name] || 0) : 0);
+    if(name === 'tutor'){ const th = document.getElementById('tutorThread'); if(th) th.scrollTop = th.scrollHeight; }
   }
 }
 
@@ -6824,6 +6851,7 @@ function conductorShow(kind){
   if(kind === 'brief' || kind === 'between' || kind === 'menu' || kind === 'wrap'){
     // a between screen for a part that is about to start also carries the coaching cue
     panel.innerHTML = html;
+    panel.scrollTop = 0;
     o.style.display = 'flex';
     const b = panel.querySelector('button.btn'); if(b) b.focus({ preventScroll: true });
   }
@@ -6839,6 +6867,7 @@ function conductorStartNext(){
     <h3 class="cd-title" id="cdTitle">${escapeHtml(nxt.title)}</h3><p class="cd-text">${escapeHtml(nxt.why)}</p>
     <div class="cd-next"><b>Before you start</b><span>${escapeHtml(cue)}</span></div>
     <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">Go</button><button type="button" class="cd-link" onclick="conductorSkipNext()">Skip this part</button></div>`;
+  panel.scrollTop = 0;
   const b = panel.querySelector('button.btn'); if(b) b.focus({ preventScroll: true });
 }
 function conductorSkipNext(){
@@ -8538,6 +8567,7 @@ function openStudyGuide(){
   renderStudyGuide();
   document.body.classList.add('study-guide-active');
   lockBodyScroll();
+  { const h = document.getElementById('studyGuideHost'); if(h) h.scrollTop = 0; }
 }
 
 function closeStudyGuide(){
@@ -9881,6 +9911,13 @@ function continueFlashcards(){
     fcIndex = 0; renderFlashcard();
   }
 }
+function fcKeepInView(){
+  if(document.body.classList.contains('flashcard-fullscreen')) return;
+  const tab = document.getElementById('tab-flashcards'); if(!tab || !tab.classList.contains('active')) return;
+  const c = document.getElementById('fcCard'); if(!c || c.style.display === 'none') return;
+  const r = c.getBoundingClientRect();
+  if(r.top < 70 || r.bottom > window.innerHeight - 90){ try{ c.scrollIntoView({ block: 'center', behavior: 'auto' }); }catch(e){} }
+}
 function rateFlashcard(knowsIt){
   const card = fcQueue[fcIndex];
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
@@ -9892,6 +9929,7 @@ function rateFlashcard(knowsIt){
   fcIndex = (fcIndex+1) % fcQueue.length;
   renderFlashcard();
   renderFlashcardStats();
+  fcKeepInView();
   refreshHeaderStats();
   refreshCoachSurfaces(); // the next-step recommendation counts due flashcards
   maybeAutoExpandFlashcards();
@@ -11338,6 +11376,7 @@ function closeDomainPicker(){
 function openSettings(){
   document.body.classList.add('settings-active');
   lockBodyScroll();
+  { const h = document.getElementById('settingsHost'); if(h) h.scrollTop = 0; }
   renderApiKeyUI();
   renderVoicePrefOptions();
   renderAiTokenUsage();
