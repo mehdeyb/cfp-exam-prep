@@ -1777,6 +1777,11 @@
   .fc-apply-result.right{color:var(--correct);} .fc-apply-result.wrong{color:var(--incorrect);}
   .fc-apply-why{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
   .fc-actions .btn.suggest{box-shadow:0 0 0 2px var(--gold);}
+  .pt-bar{height:3px;border-radius:2px;background:var(--hair);margin-top:6px;overflow:hidden;}
+  .pt-bar i{display:block;height:100%;background:var(--gold);}
+  .pt-mark{background:none;border:0;color:var(--muted);font-family:inherit;font-size:12px;text-decoration:underline;padding:8px 6px;min-height:36px;cursor:pointer;align-self:center;}
+  .pt-step.partial .pt-num{border-color:var(--gold);color:var(--gold);}
+  .pt-actions{display:flex;flex-direction:column;align-items:center;flex:none;}
 </style>
 </head>
 <body>
@@ -2552,7 +2557,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div>
       </div>
     </div>
 
@@ -4332,6 +4337,7 @@ function defaultData(){
     lastFlashcardAutoGenAt: 0,
     lastGapCardGenAt: 0,
     conductor: null,
+    dayLog: null,
     simplifiedExplanations: {},
     speechOptimizedText: {},
     glossaryExamples: {},
@@ -4627,6 +4633,7 @@ async function loadData(){
       if(typeof DATA.flashcardRatingCount !== 'number') DATA.flashcardRatingCount = 0;
       if(typeof DATA.lastFlashcardAutoGenAt !== 'number') DATA.lastFlashcardAutoGenAt = 0;
       if(typeof DATA.lastGapCardGenAt !== 'number') DATA.lastGapCardGenAt = 0;
+      { const L = DATA.dayLog; if(!L || typeof L !== 'object' || typeof L.day !== 'string'){ DATA.dayLog = null; } else { ['modes','drill','meta','manual','targets','snap'].forEach(k => { if(!L[k] || typeof L[k] !== 'object' || Array.isArray(L[k])) L[k] = {}; }); L.tvm = Math.max(0, +L.tvm || 0); L.formula = Math.max(0, +L.formula || 0); } }
       { const c = DATA.conductor; if(!c || typeof c !== 'object' || !Array.isArray(c.ran) || !Array.isArray(c.skipped) || !Array.isArray(c.log) || typeof c.day !== 'string') DATA.conductor = null; }
       if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {};
       if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
@@ -6333,15 +6340,38 @@ function planPhaseFor(days){
   if(days <= 42) return { key:'build', label:'Build phase' };
   return { key:'foundation', label:'Foundation phase' };
 }
+/* What was really done today, counted from answers as they happen (not from opening a mode). */
+function planDayLog(){
+  const d = localDayKey();
+  if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvm:0, formula:0 };
+  return DATA.dayLog;
+}
+function planLogAnswer(mode){
+  try{
+    const L = planDayLog();
+    L.modes[mode] = (L.modes[mode] || 0) + 1;
+    if(mode === 'drill' && session && session.drillTopic) L.drill[session.drillTopic] = (L.drill[session.drillTopic] || 0) + 1;
+  }catch(e){}
+}
+// A target that is set the first time it is needed today, so titles and counts stay put while you work through them.
+function planTarget(id, value){
+  const L = planDayLog();
+  if(L.targets[id] === undefined){ L.targets[id] = value; try{ persist(); }catch(e){} }
+  return L.targets[id];
+}
+function planMarkManualDone(id){
+  const L = planDayLog(); L.manual[id] = true; persist();
+  try{ renderTodayPlan(); }catch(e){}
+  try{ refreshCoachSurfaces(); }catch(e){}
+}
 function planTodayActivity(){
-  const today = localDayKey();
-  const sess = (DATA.sessions || []).filter(x => { try{ return localDayKey(new Date(x.date)) === today; }catch(e){ return false; } });
+  const L = planDayLog();
   const start = new Date(); start.setHours(0,0,0,0);
   const t0 = start.getTime();
   let cards = 0; const fs = DATA.flashcardStats || {};
   Object.keys(fs).forEach(id => { if((fs[id].lastSeenAt || 0) >= t0) cards++; });
-  const sameDay = ts => !!ts && localDayKey(new Date(ts)) === today;
-  return { modes: sess.map(x => x.mode), cards, tvm: sameDay(DATA.tvmToolLastAt), formula: sameDay(DATA.formulaDrillLastAt) };
+  const modes = Object.keys(L.modes).filter(m => L.modes[m] > 0);
+  return { modes, counts: L.modes, cards, tvm: L.tvm, formula: L.formula, L };
 }
 function buildStudyPlan(minutes){
   minutes = minutes || planMinutes();
@@ -6353,63 +6383,73 @@ function buildStudyPlan(minutes){
   const dueQs = allQuestions().filter(q => { const st = getSpacedStat(DATA.questionStats, q.id); return st.seen > 0 && isDue(st); }).length;
   const dueCards = allFlashcards().filter(f => { const st = getSpacedStat(DATA.flashcardStats, f.id); return st.seen > 0 && isDue(st); }).length;
   const missedN = (DATA.missed || []).length;
-  const drilled = DATA.subtopicDrillAt || {};
-  const dayStart = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
-  let wk = null;
-  try{ wk = weakSubtopics(8)[0] || null; }catch(e){}
-  const wkDoneToday = wk && (drilled[wk.key + '-' + wk.idx] || 0) >= dayStart;
+  const L = act.L, cnt = act.counts;
+  // Topics already drilled today keep their place, so progress on them is never lost when your accuracy shifts.
+  let freshWeak = []; try{ freshWeak = weakSubtopics(8); }catch(e){}
+  const workedKeys = Object.keys(L.drill).filter(k => L.drill[k] > 0 && L.meta[k]);
+  const wkList = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
+    .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx)));
+  const wkAt = n => wkList[n] || null;
+  const wk = wkAt(0);
+  const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
+  const needFor = w => { let n = 12; try{ n = Math.min(12, subtopicPool(w.key, w.idx).length) || 12; }catch(e){} return n; };
+  const accTxt = w => (w.st && w.st.acc !== null && w.st.attempts) ? `${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts` : 'a weak spot';
   const weakDom = domainMasteryList().map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100)))})).sort((a, b) => b.pr - a.pr)[0];
 
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
-      if(!(dueCards >= 5 || act.cards >= 8 || gapN >= 4)) return null;
-      const n = Math.min(Math.max(dueCards, act.cards, gapN), 25);
-      if(gapN >= 4 && act.cards < 8) return { id:'cards', title: `Review ${n} flashcards, ${gapN} tied to questions you missed`, minutes: Math.min(12, Math.max(4, Math.ceil(n * 0.4))),
+      if(!(dueCards >= 5 || act.cards >= 8 || gapN >= 4 || L.targets.cards)) return null;
+      const n = planTarget('cards', Math.min(Math.max(dueCards, act.cards, gapN), 25));
+      const gapT = planTarget('cardsGap', gapN >= 4 ? gapN : 0);
+      const mins = Math.min(12, Math.max(4, Math.ceil(n * 0.4)));
+      if(gapT >= 4) return { id:'cards', title: `Review ${n} flashcards, ${gapT} tied to questions you missed`, minutes: mins, need:n, have:act.cards, unit:'cards',
         why:'Cards on the same ideas as questions you missed give a second way in to the same idea, which helps it stick.',
-        done: false, run: () => startGapFlashcards() };
-      return { id:'cards', title: act.cards >= 8 && dueCards < 5 ? 'Flashcards reviewed' : `Review ${n} due flashcards`, minutes: Math.min(12, Math.max(4, Math.ceil(n * 0.4))),
+        run: () => startGapFlashcards() };
+      return { id:'cards', title: `Review ${n} due flashcards`, minutes: mins, need:n, have:act.cards, unit:'cards',
         why:'Cards come back just as they start to fade. Pulling an answer from memory strengthens it more than rereading does.',
-        done: act.cards >= 8 || (act.cards > 0 && dueCards < 5), run: () => showTab('flashcards') };
+        run: () => showTab('flashcards') };
     },
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : 'Adaptive session (15 mixed questions)', minutes:22,
       why: dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.',
-      done: act.modes.includes('adaptive'), run: () => { showTab('study'); startAdaptive(); } }),
+      need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
     weak: () => {
-      if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18,
-        why:`You are at ${Math.round(wk.st.acc * 100)}% on this topic over ${wk.st.attempts} attempts. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
-        done: !!wkDoneToday, run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
-      if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)) return { id:'weak', title:`Drill: ${weakDom.name}`, minutes:18,
+      if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
+        why:`You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
+        run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
+      if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)) return { id:'weak', title:`Drill: ${weakDom.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
         why:`${weakDom.name} is ${weakDom.weight}% of the exam and ${weakDom.mastery === null ? 'not yet started' : 'at ' + weakDom.mastery + '%'}. It is where the most points are waiting.`,
-        done: act.modes.includes('drill'), run: () => { showTab('study'); startDrill(weakDom.key); } };
+        run: () => { showTab('study'); startDrill(weakDom.key); } };
       return null;
     },
     missed: () => {
-      if(missedN < 3) return null;
-      const n = Math.min(missedN, phase.key === 'taper' ? 10 : 15);
-      return { id:'missed', title:`Review ${n} missed question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.4)),
+      if(missedN < 3 && !L.targets.missed) return null;
+      const n = planTarget('missed', Math.min(missedN, phase.key === 'taper' ? 10 : 15));
+      return { id:'missed', title:`Review ${n} missed question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.4)), need:n, have: Math.min(cnt.review || 0, n), unit:'questions',
         why:'Each idea you missed comes back as a new question on the same topic, so you show you understand it rather than remember it. Mistakes you made confidently are the ones most worth correcting.',
-        done: act.modes.includes('review'), run: () => { showTab('study'); startMissedReview(); } };
+        run: () => { showTab('study'); startMissedReview(); } };
     },
     calc: () => {
       const tq = DATA.tvmQuizStats;
       if(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6) return { id:'calc', title:'Calculator practice (HP 10bII+)', minutes:8,
-        why:`You have ${tq.correct} of ${tq.asked} calculation questions right. Key-press habits come from doing a few problems by hand.`, done: act.tvm, run: () => { showTab('study'); openTvmTool(); } };
+        why:`You have ${tq.correct} of ${tq.asked} calculation questions right. Key-press habits come from doing a few problems by hand.`, need:3, have: Math.min(act.tvm, 3), unit:'problems', run: () => { showTab('study'); openTvmTool(); } };
       const wf = (typeof fdWeakest === 'function') ? fdWeakest() : null;
       if(wf) return { id:'calc', title:`Formula practice: ${wf}`, minutes:8,
-        why:'A handful of fresh problems on a formula you keep missing usually settles it.', done: act.formula, run: () => { showTab('study'); openFormulaDrill(wf); } };
+        why:'A handful of fresh problems on a formula you keep missing usually settles it.', need:4, have: Math.min(act.formula, 4), unit:'problems', run: () => { showTab('study'); openFormulaDrill(wf); } };
       return null;
     },
     case: () => {
       if(answered < 80) return null;
       const cs = DATA.caseStats || {};
       const last = Math.max(0, ...Object.values(cs).map(c => c.lastAt || 0));
-      if((Date.now() - last) < 7 * 86400000 && !act.modes.includes('case')) return null;
-      const pick = nextCaseToTry();
+      if((Date.now() - last) < 7 * 86400000 && !act.modes.includes('case') && !L.targets.caseId) return null;
+      const pickId = planTarget('caseId', (nextCaseToTry() || {}).id || null);
+      const pick = pickId ? caseById(pickId) : null;
       if(!pick) return null;
-      return { id:'case', title:`Case study: ${pick.title}`, minutes:25,
+      const caseN = Math.max(1, caseQuestions(pick.id).length);
+      return { id:'case', title:`Case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(cnt.case || 0, caseN), unit:'questions',
         why:'The real exam wraps most questions in a client case. Flag the facts that would change the answer, then check which ones actually decided it. That reading habit is what this trains.',
-        done: act.modes.includes('case'), run: () => { showTab('study'); startCase(pick.id); } };
+        run: () => { showTab('study'); startCase(pick.id); } };
     },
     checkpoint: () => {
       if(answered < 100) return null;
@@ -6418,28 +6458,28 @@ function buildStudyPlan(minutes){
       if(since < 6 && !act.modes.includes('mock')) return null;
       return { id:'checkpoint', title:'Timed checkpoint (24 questions)', minutes:51,
         why:'The real exam mix at the real pace shows where you actually stand and how you handle the clock. Its score feeds your readiness number.',
-        done: act.modes.includes('mock'), run: () => { showTab('study'); startMock(); } };
+        need:24, have: Math.min(cnt.mock || 0, 24), unit:'questions', run: () => { showTab('study'); startMock(); } };
     },
     teach: () => {
       const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
       if(!topic) return null;
       return { id:'teach', title:`Explain it back: ${topic}`, minutes:8,
         why:'Saying a concept in your own words shows what you only think you know. The tutor asks first, gives hints before answers, tells you what is missing and changes the details to check it holds.',
-        done:false, manual:true, run: () => askTutorAbout(`Teach me ${topic} by quizzing me. Start with one question before explaining anything. Wait for my answer, tell me exactly what I got right and what is missing, and if I am stuck give me a small hint before the answer. After I get one right, change the details and ask a similar one. Finish by telling me what to retest in two days.`) };
+        manual:true, run: () => askTutorAbout(`Teach me ${topic} by quizzing me. Start with one question before explaining anything. Wait for my answer, tell me exactly what I got right and what is missing, and if I am stuck give me a small hint before the answer. After I get one right, change the details and ask a similar one. Finish by telling me what to retest in two days.`) };
     },
     // Longer days have room for a second round. These only appear once the first pass leaves time.
-    weak2: () => { let l = []; try{ l = weakSubtopics(8); }catch(e){} const t = l[1]; if(!t) return null;
-      return { id:'weak2', title:`Drill: ${t.name}`, minutes:18, why:`Your next weakest topic (${Math.round(t.st.acc * 100)}% over ${t.st.attempts} attempts). With the time you have today, it is worth a second repair.`,
-        done: (drilled[t.key + '-' + t.idx] || 0) >= dayStart, run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
-    adaptive2: () => { if(answered === 0) return null; const n = act.modes.filter(m => m === 'adaptive').length;
+    weak2: () => { const t = wkAt(1); if(!t) return null;
+      return { id:'weak2', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Your next weakest topic (${accTxt(t)}). With the time you have today, it is worth a second repair.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+    adaptive2: () => { if(answered === 0) return null;
       return { id:'adaptive2', title:'Second adaptive session (15 mixed questions)', minutes:22,
-        why:'A second mixed round later in the day, after a break, helps more than one long push. Spacing the practice makes it stick.', done: n >= 2, run: () => { showTab('study'); startAdaptive(); } }; },
-    weak3: () => { let l = []; try{ l = weakSubtopics(8); }catch(e){} const t = l[2]; if(!t) return null;
-      return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, why:`Third on your list of weak topics (${Math.round(t.st.acc * 100)}% over ${t.st.attempts} attempts).`,
-        done: (drilled[t.key + '-' + t.idx] || 0) >= dayStart, run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+        why:'A second mixed round later in the day, after a break, helps more than one long push. Spacing the practice makes it stick.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
+    weak3: () => { const t = wkAt(2); if(!t) return null;
+      return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
+        run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
       why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
-      done:false, manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
+      manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
   };
   const order = {
     foundation: ['cards','weak','adaptive','missed','calc','case','teach'],
@@ -6450,16 +6490,35 @@ function buildStudyPlan(minutes){
   }[phase.key];
   const steps = [];
   let used = 0;
-  order.forEach(k => {
-    const st = mk[k] ? mk[k]() : null;
+  const finish = (k, st) => {
+    if(!st){
+      // The reason for a step can disappear because the work itself cleared it (due cards reviewed, missed questions fixed).
+      // If you worked on it today, it stays on the list, marked done, instead of vanishing.
+      const sn = L.snap[k];
+      if(sn && (sn.have || 0) > 0) return Object.assign({ id:k, done:true, kept:true, run:null }, sn, { have: sn.need || sn.have });
+      return null;
+    }
+    st.manual = !!st.manual;
+    st.done = st.manual ? !!L.manual[st.id] : (st.need > 0 ? st.have >= st.need : false);
+    if(!st.manual && st.need > 0){
+      const sn = L.snap[k];
+      if(!sn || sn.title !== st.title || sn.have !== st.have || sn.need !== st.need){ L.snap[k] = { title:st.title, minutes:st.minutes, why:st.why, need:st.need, have:st.have, unit:st.unit }; try{ persist(); }catch(e){} }
+    }
+    return st;
+  };
+  const place = (k, forced) => {
+    const st = finish(k, mk[k] ? mk[k]() : null);
     if(!st) return;
-    if(steps.length && used + st.minutes > minutes) return;
+    const worked = st.done || (st.have || 0) > 0;
+    if(!worked && steps.length && used + st.minutes > minutes) return;
     steps.push(st); used += st.minutes;
-  });
+  };
+  order.forEach(k => place(k));
   if(phase.key !== 'taper' && phase.key !== 'rest'){
     ['weak2','adaptive2','weak3'].forEach(k => {
-      const st = mk[k](); if(!st) return;
-      if(used + st.minutes > minutes) return;
+      const st = finish(k, mk[k]()); if(!st) return;
+      const worked = st.done || (st.have || 0) > 0;
+      if(!worked && used + st.minutes > minutes) return;
       steps.push(st); used += st.minutes;
     });
   }
@@ -6504,7 +6563,8 @@ function conductorState(){
   return c;
 }
 function conductorCandidates(c, plan){
-  return plan.steps.filter(st => !st.done && !c.ran.includes(st.id) && !c.skipped.includes(st.id));
+  const open = plan.steps.filter(st => !st.done && !c.skipped.includes(st.id) && (!c.ran.includes(st.id) || ((st.have || 0) > 0 && st.have < st.need)));
+  return open.filter(st => !c.ran.includes(st.id)).concat(open.filter(st => c.ran.includes(st.id))); // started-but-unfinished parts come back after the untouched ones
 }
 function conductorFit(cands, usedMin, budget){
   const out = []; let used = usedMin;
@@ -6552,10 +6612,13 @@ function conductorDebrief(cur){
   const sessions = DATA.sessions || [];
   if(sessions.length > snap.sess){
     const last = sessions[sessions.length - 1];
-    const pct = last.total ? Math.round(last.correct / last.total * 100) : 0;
-    const wrong = Math.max(0, last.total - last.correct);
+    const ansN = typeof last.answered === 'number' ? last.answered : last.total;
+    if(ansN === 0) return { text: 'No questions were answered in this part, so it is still open.', correct: 0, total: 0 };
+    const pct = ansN ? Math.round(last.correct / ansN * 100) : 0;
+    const wrong = Math.max(0, ansN - last.correct);
+    const cut = ansN < last.total ? ` You stopped after ${ansN} of ${last.total}, so the rest of this part is still open.` : '';
     const tone = pct >= 85 ? 'Strong.' : pct >= 60 ? 'Solid, with a few to tighten.' : 'A hard set, which is useful. The misses show where to work.';
-    return { text: `${last.correct} of ${last.total} right (${pct}%). ${tone}` + (wrong ? ` The ${wrong} you missed will come back as new questions on the same ideas.` : ''), correct: last.correct, total: last.total };
+    return { text: `${last.correct} of ${ansN} right (${pct}%). ${tone}` + (wrong ? ` The ${wrong} you missed will come back as new questions on the same ideas.` : '') + cut, correct: last.correct, total: ansN };
   }
   const cards = (DATA.flashcardRatingCount || 0) - snap.rate;
   if(cards > 0){
@@ -6564,7 +6627,7 @@ function conductorDebrief(cur){
   }
   const answered = (DATA.answerCounter || 0) - (snap.ans || 0);
   if(answered > 0) return { text: `You answered ${answered} question${answered === 1 ? '' : 's'} in this part. They all count toward your review schedule.` };
-  return { text: 'Done. Hands-on practice counts even when there is no score.' };
+  return { text: 'Nothing was answered in this part, so it is still open.' };
 }
 function conductorEndPart(reason){
   const c = conductorState(); if(!c || !c.current) return null;
@@ -6743,7 +6806,7 @@ function renderTodayPlan(){
   try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; return; } // never let the plan break the Study tab
   const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
   const doneN = plan.steps.filter(x => x.done).length;
-  const leftMin = plan.steps.filter(x => !x.done).reduce((a, x) => a + x.minutes, 0);
+  const leftMin = Math.round(plan.steps.filter(x => !x.done).reduce((a, x) => a + x.minutes * (x.need > 0 ? Math.max(0, 1 - (x.have || 0) / x.need) : 1), 0));
   const leftTxt = plan.steps.length && leftMin > 0 ? ` · about ${leftMin >= 90 ? (Math.round(leftMin / 6) / 10) + ' hrs' : leftMin + ' min'} left` : '';
   const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
     ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
@@ -6755,11 +6818,20 @@ function renderTodayPlan(){
     : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
     : 'Mix topics, fix weak ones, and keep reviewing on a schedule.';
   const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${planMinuteLabel(m)}</button>`).join('');
-  const stepRows = plan.steps.map((st, i) => `<div class="pt-step${st.done ? ' done' : ''}">
+  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : 'questions';
+  const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
+  const stepRows = plan.steps.map((st, i) => {
+    const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
+    const pct = st.need > 0 ? Math.round(100 * Math.min(1, (st.have || 0) / st.need)) : 0;
+    const pr = progTxt(st);
+    const btn = st.done ? '' : (st.manual
+      ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button><button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button></span>`
+      : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
+    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why">${escapeHtml(st.why)}</div><div class="pt-time">about ${st.minutes} min</div></div>
-      ${st.done ? '' : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${st.manual ? 'Open' : 'Start'}</button>`}
-    </div>`);
+      <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why">${escapeHtml(st.why)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      ${btn}
+    </div>`; });
   const SHOW_STEPS = 4;
   const rows = stepRows.length > SHOW_STEPS + 1
     ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open"><summary>Show the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
@@ -6823,7 +6895,7 @@ function renderModeMeta(){
       const s2 = lastOf(m);
       if(!s2) return 'Not tried yet';
       const when = modeAgoText(new Date(s2.date).getTime());
-      return s2.total ? 'Last: ' + when + ' · ' + s2.correct + '/' + s2.total + ' (' + Math.round(100 * s2.correct / s2.total) + '%)' : 'Last: ' + when;
+      const tot2 = typeof s2.answered === 'number' ? s2.answered : s2.total; return tot2 ? 'Last: ' + when + ' · ' + s2.correct + '/' + tot2 + ' (' + Math.round(100 * s2.correct / tot2) + '%)' : 'Last: ' + when;
     };
     const put = (key, text) => document.querySelectorAll('[data-mm="' + key + '"]').forEach(el => { el.textContent = text; });
     put('adaptive', line('adaptive'));
@@ -8413,6 +8485,7 @@ function startSubtopicDrill(domainKey, idx){
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
   DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
   beginSession(queue, 'drill', null);
+  try{ const nm = (SUBTOPICS[domainKey] || [])[idx]; const tk = domainKey + '-' + idx; session.drillTopic = tk; planDayLog().meta[tk] = { key:domainKey, idx, name: nm || tk }; }catch(e){}
 }
 
 function toggleSubtopic(id, checked, rowEl){
@@ -12364,6 +12437,7 @@ function fdCheck(){
   s.attempts++; if(ok){ s.correct++; s.streak = (s.streak||0) + 1; s.missRun = 0; } else { s.streak = 0; s.missRun = (s.missRun||0) + 1; } s.lastAt = Date.now();
   DATA.formulaStats[fd.name] = s;
   DATA.formulaDrillCount = (DATA.formulaDrillCount || 0) + 1; DATA.formulaDrillLastAt = Date.now();
+  try{ planDayLog().formula++; }catch(e){}
   fd.tally.n++; if(ok) fd.tally.ok++;
   if(!fd.tally.by) fd.tally.by = {};
   { const b = fd.tally.by[fd.name] || (fd.tally.by[fd.name] = {n:0, ok:0}); b.n++; if(ok) b.ok++; }
@@ -12509,6 +12583,7 @@ function tvmRecordOutcome(cleanSolve){
   const prog = DATA.tvmProgress;
   DATA.tvmSolvedCount = (DATA.tvmSolvedCount || 0) + 1;
   DATA.tvmToolLastAt = Date.now();
+  try{ planDayLog().tvm++; }catch(e){}
   if(cleanSolve){
     prog.correctStreak = (prog.correctStreak||0) + 1;
     if(prog.correctStreak >= 2 && prog.currentTier < 3){
@@ -14680,6 +14755,7 @@ function scoreExamAnswers(fromIndex, toIndex){
     const prevStat = getSpacedStat(DATA.questionStats, q.id);
     DATA.questionStats[q.id] = advanceSpacedStat(prevStat, isCorrect);
     DATA.answerCounter++;
+    planLogAnswer(session.mode);
 
     if(!isCorrect){
       if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
@@ -14802,6 +14878,7 @@ function selectAnswer(i){
   if(isCorrect) DATA.domainStats[q.domain].correct++;
 
   DATA.answerCounter++;
+  planLogAnswer(session.mode);
   DATA.recentAccuracyLog.push({correct: isCorrect, difficulty: questionDifficulty(q)});
   if(DATA.recentAccuracyLog.length > 20) DATA.recentAccuracyLog.shift();
 
@@ -15259,7 +15336,7 @@ function finishSession(){
   const creditedMin = Math.max(0, Math.min(rawElapsedMin, capMin));
   DATA.totalStudyMinutes = (DATA.totalStudyMinutes || 0) + creditedMin;
 
-  DATA.sessions.push({date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, minutes: Math.round(creditedMin)});
+  DATA.sessions.push({date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, minutes: Math.round(creditedMin)});
   if(DATA.sessions.length > 300) DATA.sessions = DATA.sessions.slice(-300);
   persist();
   // Auto-backup (a silent file download after every so many questions)
@@ -16685,7 +16762,7 @@ async function executeTutorTool(toolName, toolInput){
       if(m >= 120 && m <= 240){ DATA.planMinutes = m; persist(); }
       const plan = buildStudyPlan();
       renderTodayPlan();
-      const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : ''}. Why: ${st.why}`);
+      const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
       return `Phase: ${plan.phase.label}. ${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
