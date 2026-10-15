@@ -1521,6 +1521,15 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  /* Phones: the session picker keeps each option to a title, a "use it when" line and its status;
+     the long descriptions stay on larger screens. */
+  @media (max-width:640px){
+    #modePanel > p.hint{display:none;}
+    #modePanel .mode-grid .mode-card > p{display:none;}
+    #modePanel .mode-grid .mode-card{padding-top:12px;padding-bottom:12px;}
+    #modePanel .mode-grid .mode-card h3{margin-bottom:4px;}
+    #modePanel .featured-mode .fm-copy > p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  }
   /* Results: the buttons stay reachable at the bottom instead of after the whole table. */
   #resultsView .quiz-actions{position:sticky;bottom:0;z-index:6;gap:10px;padding:12px 0 max(12px, env(safe-area-inset-bottom));margin-top:14px;background:var(--surface);border-top:1px solid var(--hair);}
   @media (orientation:landscape) and (max-height:520px){
