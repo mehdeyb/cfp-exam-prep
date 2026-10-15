@@ -1521,6 +1521,10 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  .tutor-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;white-space:normal;}
+  .tutor-act{font:inherit;font-size:13px;font-weight:600;padding:9px 14px;min-height:40px;border-radius:20px;border:1px solid var(--hair-strong,var(--hair));background:var(--surface);color:var(--paper);cursor:pointer;}
+  .tutor-act.primary{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  .tutor-act:active{transform:scale(.97);}
   /* Session-conductor buttons stay visible while a long list of parts scrolls. */
   .cd-panel .cd-actions{position:sticky;bottom:-20px;z-index:2;background:var(--surface);padding:12px 0 20px;margin-bottom:-20px;}
   /* The "Continue my session" pill sits above the phone tab bar; with no bottom bar it drops lower,
@@ -2430,6 +2434,7 @@
         <div class="science-item"><b>Less scrolling, tuned separately for sideways and upright</b>I measured how far you had to scroll on phones and tablets held both ways, then fixed the worst spots. Held sideways (and on wide screens), a practice question now sits on the left and its answers on the right, so the question stays in view while you read the explanations, and a new question fits on one screen without any scrolling. Held upright, spacing is tighter, the "how sure are you" row shrinks once you have answered, and the page title no longer wastes space on a long tagline. Flashcards now open on the card itself, with the explanation and filters underneath instead of above. The tutor puts the conversation and the message box at the top, and once you start talking the intro and idea buttons fold away. On a sideways phone the tab bar becomes a slim strip down the left edge so you keep the full height of the screen. On the Study tab, the session picker now comes right after today's plan, and on phones each option is trimmed to a title and a "use it when" line. The results screen keeps its buttons pinned at the bottom. I measured all of this in a desktop browser at phone and tablet sizes, not on a real phone.</div>
         <div class="science-item"><b>The right answer is no longer usually "A"</b>A check of the question bank found the correct answer sat in position A for about 35% of questions and in C or D for only about 19% each. On a real exam the answer is spread evenly, so practicing on a lopsided bank could quietly teach you to lean toward A when unsure. The correct answers are now spread evenly across A, B, C and D (about 22% each). Questions whose wording points at other choices by letter, such as "both A and B", or whose choices are ordered numbers were left exactly as they were. Your saved record of which wrong answers you tend to pick was moved to the new positions automatically, so nothing you built up is lost; a practice session that was half finished before this change will start fresh.</div>
         <div class="science-item"><b>Less to scroll past: long cards now fold up</b>The Tools tab stacked six decision tools, each over 500 pixels tall, though you only use one at a time. Each now shows its title and a one-line summary and opens when tapped. The same goes for the exam format, calculator policy and what-to-bring cards on the Exam Day tab, and for the podcast card on the Reference tab. Nothing was removed. Anything in the app that points you to one of them opens it for you. Today's plan shows its first four steps with the rest one tap away. Together this cuts the Tools tab by about 60% and the Exam Day tab by about 45%.</div>
+        <div class="science-item"><b>The tutor can tell you what to do next, even without an AI key</b>Asking the tutor "what should I do next?" used to need an API key, even though the app already knows your next step, today's plan, your weak topics and what you have missed. Now the tutor answers those questions straight from your own progress, in the chat, with buttons that do the thing: start the step, run your whole session, drill your weakest domain, review what you missed, open the calculator or the study guide, or show you where something is on screen. With a key connected, the full AI tutor still handles explanations and follow-up questions. Explaining a concept or writing a new question still needs the key, and the tutor says so.</div>
       </div>
     </div>
 
@@ -4011,9 +4016,10 @@ function renderApiKeyUI(){
   const apiKeyConnected = document.getElementById('apiKeyConnected');
 
   const chipsDisabled = aiMode === 'none';
-  if(tutorInput){ tutorInput.disabled = chipsDisabled; tutorInput.placeholder = chipsDisabled ? 'Connect an API key below to chat' : 'Ask about any CFP topic…'; }
-  if(tutorSendBtn){ tutorSendBtn.disabled = chipsDisabled; }
-  if(tutorChips){ Array.from(tutorChips.children).forEach(b=>{ if(b.tagName==='BUTTON') b.disabled = chipsDisabled; }); }
+  // Without a key the tutor still answers "what should I do next" from the app's own data, so the box stays usable.
+  if(tutorInput){ tutorInput.disabled = false; tutorInput.placeholder = chipsDisabled ? 'Ask what to do next… (a key unlocks explanations)' : 'Ask about any CFP topic…'; }
+  if(tutorSendBtn){ tutorSendBtn.disabled = false; }
+  if(tutorChips){ Array.from(tutorChips.children).forEach(b=>{ if(b.tagName==='BUTTON') b.disabled = false; }); }
 
   if(apiKeyBox) apiKeyBox.style.display = (aiMode === 'none') ? 'block' : 'none';
   if(apiKeyConnected) apiKeyConnected.style.display = (aiMode === 'direct') ? 'flex' : 'none';
@@ -16347,6 +16353,108 @@ async function executeTutorTool(toolName, toolInput){
   }
 }
 
+// ---- Local guide ------------------------------------------------------------
+// "What should I do next" is answered from the same data the Study tab uses, so it works with or
+// without an API key, and every answer comes with buttons that actually do the thing.
+function tutorGuideBubble(text, actions){
+  const bubble = renderTutorMessage('assistant', text);
+  const acts = (actions || []).filter(Boolean);
+  if(acts.length){
+    const row = document.createElement('div'); row.className = 'tutor-actions';
+    acts.forEach(a => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'tutor-act' + (a.primary ? ' primary' : ''); b.textContent = a.label;
+      b.onclick = () => { try{ a.run(); }catch(e){} };
+      row.appendChild(b);
+    });
+    bubble.appendChild(row);
+  }
+  {
+    // Show the start of a long answer, not its tail.
+    const th = document.getElementById('tutorThread'), r = bubble.closest('.tutor-msg');
+    if(th && r) th.scrollTop = Math.max(0, Math.min(th.scrollHeight - th.clientHeight, r.offsetTop - th.offsetTop - 4));
+  }
+  return bubble;
+}
+function tutorGuessIntent(t){
+  t = String(t || '').toLowerCase();
+  if(/podcast/.test(t)) return null;
+  if(/readiness|\bscore\b/.test(t)) return 'readiness';
+  if(/tvm|calculator|time value/.test(t)) return 'tvm';
+  if(/study guide/.test(t)) return 'guide';
+  if(/decision tool|\btrust\b|entity/.test(t)) return 'tools';
+  if(/progress|diagnos|breakdown|how am i doing/.test(t)) return 'progress';
+  if(/exam date|when is my exam/.test(t)) return 'date';
+  if(/\bnext\b|what (should|do|can) i|best (use|move|step)|today|\bplan\b|where (do|should) i (start|begin)|what now|help me study|ready to study/.test(t)) return 'next';
+  if(/weak|worst|struggl|\bgaps?\b|focus/.test(t)) return 'weak';
+  if(/missed|got this question wrong|my mistakes/.test(t)) return 'missed';
+  if(/quiz|practice|session/.test(t)) return 'quiz';
+  return null;
+}
+function tutorLocalGuide(text){
+  const kind = tutorGuessIntent(text);
+  if(!kind) return false;
+  try{
+    const stats = computeStats();
+    const dom = stats.weakestMeta;
+    if(kind === 'next'){
+      const ns = computeNextStep(stats);
+      let plan = null; try{ plan = buildStudyPlan(); }catch(e){}
+      const open = plan ? plan.steps.filter(x => !x.done && !x.manual) : [];
+      const mins = open.reduce((a, x) => a + x.minutes, 0);
+      let t = `Best next move: ${ns.title}.\n${ns.why}`;
+      const after = open.filter(x => x.title !== ns.title).slice(0, 3);
+      const dayTxt = plan && plan.days !== null && plan.days >= 0 ? (plan.days === 0 ? ' Your exam is today.' : ' ' + plan.days + ' day' + (plan.days === 1 ? '' : 's') + ' to your exam.') : '';
+      if(open.length > 1) t += `\n\nToday's plan: ${open.length} parts, about ${mins >= 90 ? (Math.round(mins / 6) / 10) + ' hours' : mins + ' minutes'}${after.length ? '. Then: ' + after.map(x => x.title).join('; ') : ''}.${dayTxt}`;
+      else if(dayTxt) t += '\n\n' + dayTxt.trim();
+      tutorGuideBubble(t, [
+        { label: ns.cta || 'Do it', primary: true, run: () => runNextStep() },
+        open.length > 1 ? { label: 'Run my whole session', run: () => conductorStart() } : null,
+        { label: 'Show me where', run: () => tutorPoint('next_step') },
+      ]);
+    } else if(kind === 'readiness'){
+      const gaps = stats.parts.slice().sort((a, b) => b.lost - a.lost).slice(0, 2)
+        .map(p => `${p.name} (${p.attempted === 0 ? 'not started' : p.attempted + ' of about ' + p.coverageTarget + ' questions tried'})`).join(' and ');
+      tutorGuideBubble(`Your readiness is ${stats.readiness}/100. It rewards accuracy on questions you have not seen before and how well they stay learned, weighted by each domain's share of the exam. The biggest room to grow is in ${gaps || 'every domain'}; working there raises it fastest.`, [
+        { label: 'See where it comes from', primary: true, run: () => openReadinessBreakdown() },
+        dom ? { label: 'Drill ' + dom.name, run: () => startDrill(dom.key) } : null,
+      ]);
+    } else if(kind === 'weak'){
+      let topics = ''; try{ const wt = weakSubtopics(3); if(wt.length) topics = ' Shakiest topics: ' + wt.map(w => `${w.name} (${Math.round(w.st.acc * 100)}%)`).join('; ') + '.'; }catch(e){}
+      const gapCards = (()=>{ try{ return fcGapCards().length; }catch(e){ return 0; } })();
+      tutorGuideBubble(`Your weakest domain right now is ${dom.name}${stats.weakestMastery === null ? ', which you have not tried yet' : ' at ' + stats.weakestMastery + '% correct'}.${topics}`, [
+        { label: 'Drill ' + dom.name, primary: true, run: () => startDrill(dom.key) },
+        gapCards ? { label: 'Cards on what I missed', run: () => startGapFlashcards() } : null,
+        { label: 'Show my coach', run: () => tutorPoint('your_coach') },
+      ]);
+    } else if(kind === 'missed'){
+      const n = (DATA.missed || []).length;
+      tutorGuideBubble(n ? `You have ${n} missed question${n === 1 ? '' : 's'} banked. Each comes back as a fresh question on the same idea, which tests the idea rather than the wording.` : 'Nothing is banked as missed yet. Do a session first and the ones you miss will collect here.', [
+        n ? { label: 'Review my missed questions', primary: true, run: () => startMissedReview() } : { label: 'Start an adaptive session', primary: true, run: () => startAdaptive() },
+      ]);
+    } else if(kind === 'quiz'){
+      tutorGuideBubble('A mixed adaptive session is the best default: it blends domains, leans on your weak areas and brings back what is due.', [
+        { label: 'Start adaptive session', primary: true, run: () => startAdaptive() },
+        { label: 'See other ways to practice', run: () => tutorPoint('start_session') },
+      ]);
+    } else if(kind === 'tvm'){
+      tutorGuideBubble('The TVM walkthrough is built around the HP 10bII+ and checks your setup step by step.', [{ label: 'Open the TVM calculator', primary: true, run: () => { showTab('study'); openTvmTool(); } }]);
+    } else if(kind === 'progress'){
+      tutorGuideBubble(`You have answered ${stats.totalAnswered} question${stats.totalAnswered === 1 ? '' : 's'}${stats.accuracy === null ? '' : ' at ' + stats.accuracy + '% accuracy'}, with readiness ${stats.readiness}/100.`, [
+        { label: 'Open my detailed breakdown', primary: true, run: () => executeTutorTool('show_progress', {}) },
+        { label: 'Progress over time', run: () => tutorPoint('progress') },
+      ]);
+    } else if(kind === 'guide'){
+      tutorGuideBubble('Your study guide follows the official topic list and tracks what you have reviewed.', [{ label: 'Open my study guide', primary: true, run: () => openStudyGuide() }]);
+    } else if(kind === 'tools'){
+      tutorGuideBubble('The Tools tab has six decision tools: trusts, business entities, IRA deductibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open the Tools tab', primary: true, run: () => showTab('tools') }]);
+    } else if(kind === 'date'){
+      tutorGuideBubble('Your exam date drives the countdown, the daily plan and how the session is paced.', [{ label: 'Show me where to set it', primary: true, run: () => tutorPoint('exam_date') }]);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
 async function sendTutorMessage(presetText){
   const input = document.getElementById('tutorInput');
   const text = (presetText!==undefined ? presetText : input.value).trim();
@@ -16354,8 +16462,10 @@ async function sendTutorMessage(presetText){
   input.blur();
   if(!aiFeaturesAvailable){
     renderTutorMessage('user', text);
-    renderTutorMessage('assistant', "I need an API key to chat — add one in Settings (it only takes a minute) and I'll be ready. The Study, Tools, Reference, Flashcards, and Exam Day tabs all work without it.");
     input.value = '';
+    if(!tutorLocalGuide(text)){
+      renderTutorMessage('assistant', "Explaining concepts and writing new questions need an API key — add one in Settings (it only takes a minute). Without one I can still tell you what to do next, where your weak spots are, and take you straight to anything in the app. Try asking \"what should I do next?\"");
+    }
     return;
   }
   input.value = '';
