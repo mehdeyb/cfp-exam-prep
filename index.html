@@ -1583,16 +1583,19 @@
   .confidence-row.done .confidence-label{display:none;}
   .confidence-row.done:not(:has(.confidence-pill.active)){display:none !important;}
   .confidence-row.done .confidence-pill{padding:6px 12px;}
-  @media (orientation:landscape) and (min-width:600px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
+  @media (orientation:landscape) and (min-width:520px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
     body.quiz-active .quiz-inner{max-width:1080px;}
     body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:26px;align-items:start;}
     body.quiz-active .q-left{position:sticky;top:0;max-height:calc(100vh - 120px);overflow-y:auto;overscroll-behavior:contain;}
+    body.quiz-active .confidence-pills{flex-wrap:wrap;}
     body.quiz-active .q-text{margin-bottom:14px;}
     body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
     body.quiz-active .quiz-top{margin-bottom:12px;}
     body.quiz-active .q-domain{margin-bottom:8px;}
   }
-  @media (orientation:landscape) and (max-height:520px) and (min-width:600px){
+  @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
+    .tutor-brief{margin:0 0 8px;padding:7px 12px;font-size:12px;line-height:1.4;}
+    .tutor-brief .tb-label{display:inline;margin:0 6px 0 0;}
     body.quiz-active .quiz-top{margin-bottom:8px;}
     body.quiz-active .q-card{padding:12px 18px;}
     body.quiz-active .q-text{font-size:16px;line-height:1.38;}
@@ -1606,7 +1609,7 @@
   }
   /* Landscape phones: the tab bar becomes a slim rail down the left edge, so the
      page keeps every pixel of its short height for content instead of losing a row. */
-  @media (orientation:landscape) and (max-height:520px) and (min-width:600px){
+  @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     .tabbar{position:fixed;left:0;top:0;bottom:0;right:auto;width:calc(66px + env(safe-area-inset-left, 0px));flex-direction:column;flex-wrap:nowrap;justify-content:center;gap:4px;margin:0;border-radius:0;border:none;border-right:1px solid var(--hair);padding:6px 4px 6px max(4px, env(safe-area-inset-left, 0px));overflow-y:auto;z-index:50;box-shadow:none;}
     .tab-btn{flex:0 0 auto;flex-direction:column;gap:2px;min-width:0;font-size:9.5px;padding:7px 2px;border-radius:10px;}
     .tab-btn svg{width:18px;height:18px;}
