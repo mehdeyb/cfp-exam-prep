@@ -3120,7 +3120,7 @@
 
         <div class="settings-section">
           <h3>About this version</h3>
-          <p class="hint" style="margin-top:0;" id="buildNote">Build 2026-10-15.12</p>
+          <p class="hint" style="margin-top:0;" id="buildNote">Build 2026-10-15.13</p>
         </div>
 
         <div class="settings-section">
@@ -17819,12 +17819,12 @@ requestDurableStorage();
       const standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
       const best = Math.max(full, vh, vv, standalone ? screen.height : 0);
       const portrait = window.matchMedia && window.matchMedia('(orientation:portrait)').matches;
-      const short = !!(portrait && best - inner > 8 && best - inner < 160);
-      document.documentElement.classList.toggle('vp-short', short);
-      document.documentElement.style.setProperty('--full-h', best + 'px');
+      // Anything taller than the page's own viewport is clipped by iOS, so the quiz always uses the real layout height (the bar is never pushed past the edge).
+      const short = false;
+      document.documentElement.classList.remove('vp-short');
       window._vpInfo = {inner, lvh: full, vh, vv, scr: screen.height, short};
       const note = document.getElementById('buildNote');
-      if(note) note.textContent = 'Build 2026-10-15.12 · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
+      if(note) note.textContent = 'Build 2026-10-15.13 · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
     }catch(e){}
   }
   window.addEventListener('resize', probe);
