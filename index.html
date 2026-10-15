@@ -2521,6 +2521,7 @@
         <div class="science-item"><b>Cleaner folded cards, glossary rows and reference tables</b>Folded cards on the Tools and Exam Day tabs had their titles sitting low; they are now balanced. The Flashcards "how the ordering works" line no longer leaves a hole beneath it, glossary terms no longer crowd their tag and arrow, and reference tables give their labels a bit more room on phones.</div>
         <div class="science-item"><b>A syllabus checklist that tells you what to do</b>The 70-topic checklist was a long list of boxes. It now opens with how many topics you have reviewed, a one-tap "Next up" topic to drill (your shakiest, or the first one you have not seen), and filters for shaky, not-seen and not-reviewed topics. Domains fold shut and show their share of the exam, with your two weakest open first, and each topic has an "i" button that shows what you actually need to know about it. Your own folded or open choices are remembered while you use the app.</div>
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
+        <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
       </div>
     </div>
 
@@ -4507,7 +4508,8 @@ function sanitizeLoadedData(d){
     d.generatedBank = (d.generatedBank || []).filter(q => isObj(q) && str(q.id) && str(q.q) && okDom(q.domain)
       && Array.isArray(q.choices) && q.choices.length === 4 && q.choices.every(str)
       && Number.isInteger(q.correct) && q.correct >= 0 && q.correct <= 3
-      && Array.isArray(q.rationale) && q.rationale.length === 4 && q.rationale.every(str)); }
+      && Array.isArray(q.rationale) && q.rationale.length === 4 && q.rationale.every(str)
+      && !questionAsksTwoThings(q)); }
   DOMAINS.forEach(dm => { if(!isObj(d.domainStats[dm.key])) d.domainStats[dm.key] = { correct: 0, total: 0 }; });
   d.answerCounter = Math.max(0, num(d.answerCounter, 0));
   if(typeof d.examDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.examDate)) d.examDate = null;
@@ -10403,6 +10405,7 @@ Spread across DIFFERENT subtopics from that official list, and testing DIFFERENT
 Every question must be meaningfully different from every stem listed above — do not restate, lightly reword, or reuse the same scenario as any of them.
 Use accurate, current 2026 U.S. figures (IRS/retirement/estate/tax limits, etc.) only where the concept requires a number; otherwise keep questions timeless and conceptual.
 If, and only if, a question genuinely requires the student to perform a numeric calculation to arrive at the answer (present/future value, a tax bracket calculation, a ratio, a yield, and similar -- not just a question that happens to mention a dollar figure), also include a "calcSteps" array: clear, sequential steps showing exactly how to work the problem by hand or on a calculator, written the way you'd walk someone through it out loud. For a genuine time-value-of-money problem (solving for N, I/YR, PV, PMT, or FV with compounding involved), set "calcType" to "tvm" and write the steps specifically for an HP 10bII+ (the calculator this app is built around): clear the TVM registers first (orange Shift key, then [C]), verify P/YR is set to 1 for an annual-rate problem since the calculator defaults to 12 from the factory and would otherwise silently give a wrong answer, enter each known value into its key (N, I/YR, PV, PMT, FV -- always "I/YR", never "I/Y"), and solve by pressing the unknown variable's own key directly -- the HP 10bII+ has no separate compute/CPT key at all, unlike a TI BA II Plus. If the problem involves a nonzero PMT (a genuine annuity, not a pure lump-sum FV/PV calculation), also include a step confirming the calculator is in End mode -- note there's no "END" indicator to look for, only the absence of "BEGIN" on the display -- since an ordinary annuity (payments at the end of each period, the standard assumption unless the problem explicitly says otherwise) requires End mode, and getting this wrong produces a different answer even with every other value entered correctly. Skip any BEG/END mention entirely for a pure lump-sum problem (PMT of zero), where that setting has no effect at all. For any other calculation, set "calcType" to "arithmetic" and write the steps as plain arithmetic. Omit both fields entirely for every question that isn't genuinely computational -- most questions won't have them.
+${ONE_ASK_RULE}
 Design the three wrong choices as plausible misconceptions (not throwaway options). For EVERY choice — the correct one and all three wrong ones — write a short one-sentence rationale explaining specifically why that choice is right or wrong. Begin the rationale for the correct choice with "Correct — " and the rationale for each wrong choice with "Wrong — ". This lets a student see why each wrong answer fails, not just which answer is correct.
 Return ONLY a raw JSON array, no markdown code fences, no commentary, in exactly this shape:
 [{"q":"question text","choices":["A text","B text","C text","D text"],"correct":0,"rationale":["why choice A is right/wrong","why choice B is right/wrong","why choice C is right/wrong","why choice D is right/wrong"],"calcSteps":["step one","step two"],"calcType":"tvm"}]
@@ -10445,6 +10448,19 @@ function salvageJsonObjects(text){
 function parseJsonArrayResilient(cleaned){
   try{ const arr = JSON.parse(cleaned); return Array.isArray(arr) ? arr : []; }
   catch(e){ return salvageJsonObjects(cleaned); }
+}
+
+// One question, one ask. A stem like "Which federal law created X, and what is its primary focus?" asks two
+// things, but four answer choices can only answer one of them, so the keyed answer is always incomplete.
+const ONE_ASK_RULE = 'Ask exactly ONE thing in the question. Never join two asks in one stem (for example "which law ..., and what is its focus?" or "which option ..., and why?"). The correct choice must fully and directly answer everything the stem asks, and every wrong choice must be a wrong answer to that same single ask.';
+const COMPOUND_ASK_RE = /(?:,|;|\s)\s*and\s+(?:what|which|how|why|when|who|where|whether)\b/i;
+function questionAsksTwoThings(q){
+  try{
+    const stem = String((q && q.q) || '');
+    const sents = stem.split(/(?<=[.?!])\s+/);
+    const ask = sents.filter(x => /\?\s*$/.test(x)).pop() || stem;
+    return COMPOUND_ASK_RE.test(ask);
+  }catch(e){ return false; }
 }
 
 // Stricter bar for AI-written questions than the static bank's quick check:
@@ -10500,6 +10516,7 @@ function diagnoseRejectedQuestion(rawText){
     if(item.choices.filter((c,i)=>i!==item.correct && DISTRACTOR_ABSOLUTE_WORDS.test(c)).length >= 2) return 'Several wrong choices used absolute words such as always, never, only or must. Remove them.';
     const lead = item.rationale.map(r => /^\s*correct\b/i.test(r) ? 'c' : (/^\s*wrong\b/i.test(r) ? 'w' : '?'));
     if(lead[item.correct] !== 'c' || lead.filter((x,i)=>i!==item.correct && x!=='w').length) return 'The rationales must start with "Correct — " for the right choice and "Wrong — " for each wrong choice, in the same order as the choices.';
+    if(questionAsksTwoThings(item)) return 'The question asked two things at once (for example "which law ..., and what is its focus?"). Ask exactly one thing, so the correct choice fully answers it.';
     return 'It did not pass the answer-quality checks (for example, choices like "all of the above").';
   }catch(e){ return 'It could not be parsed.'; }
 }
@@ -10543,6 +10560,7 @@ function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
       const fl = item.choices.map(c => c.trim().length);
       if(lengthTellsAnswer(fl[item.correct], Math.max(...fl.filter((_, i) => i !== item.correct)), 2.5)) return;
     }
+    if(questionAsksTwoThings(item)) return;
     if(!opts.variant && generatedDuplicatesBank(item, domainKey)) return;
 
     const q = {
@@ -11014,6 +11032,7 @@ Then write exactly 5 multiple-choice questions, each of which depends on facts i
 ${domLines}
 Rules for every question:
 - Exactly 4 choices and one correct answer; "correct" is the 0-based index of the right choice.
+- ${ONE_ASK_RULE}
 - The correct choice must NOT be the longest choice, and wrong choices must be plausible, similar in length and grammatical form, and must not use words like always, never, only, none, or must.
 - No "all of the above", "none of the above", or "both A and B" choices.
 - "rationale" is an array of 4 strings in the same order as the choices; the right one begins with "Correct — " and each wrong one begins with "Wrong — " followed by a one-sentence reason.
@@ -13214,6 +13233,7 @@ async function executeWriteNewQuestion(input){
 The idea it must test: ${idea}
 Shape: ${WRITE_ANGLE_TEXT[angle]}.${miscon ? '\nThe mistake to build a believable wrong choice from: ' + miscon + '.' : ''}
 It must be a real, different question, not a reworded copy: new situation, new details, different names. The correct answer must rest on current U.S. rules (use 2026 figures only if you are certain of them; otherwise avoid dollar limits).
+${ONE_ASK_RULE}
 Four answer choices of similar length, exactly one correct, and no choice that uses an absolute word such as always, never, only or must. Begin the rationale for the correct choice with "Correct — " and each wrong choice's rationale with "Wrong — ", explaining specifically why that choice fails.
 Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "choices":["...","...","...","..."], "correct":0, "rationale":["...","...","...","..."]${cur && cur.scenario ? ', "scenario":"..."' : ''}}]. "correct" is the index (0 to 3) of the right choice.`;
   let made = null, feedback = '', lastRaw = '';
@@ -14129,6 +14149,8 @@ D. ${q.choices[3]}
 Correct: ${letters[q.correct]}
 
 Write a genuinely different version of this question, in the ${domainMeta.name} domain, that tests the exact same underlying concept and skill — different specific numbers, names, or scenario framing, so it doesn't look or read like the same question, but still requires the same understanding to answer correctly. ${scenarioInstruction} ${skillContext}${calcStepsInstruction}
+
+${ONE_ASK_RULE}
 
 Keep the four answer choices roughly similar in length to each other -- a correct answer that's noticeably longer or shorter than the three wrong ones is a giveaway a student could guess from. Don't repeat the same absolute word (like "always," "never," "only," or "guaranteed") across more than one of the wrong choices -- rewriting a question's surface details tends to carry over that kind of pattern from the original even without meaning to, and it makes the wrong answers easier to spot without genuinely knowing the material.
 
