@@ -1690,6 +1690,12 @@
   .score-est{max-width:100%;text-wrap:balance;overflow-wrap:anywhere;}
   .score-trend{white-space:normal;max-width:100%;}
   .score-band{max-width:100%;text-wrap:balance;}
+  /* Sticky Next/Exit bar: no hard border/shadow (they showed as a stray line under the card when
+     content was short); instead a soft fade lifts it off scrolling content only when it overlaps. */
+  #quizView .quiz-actions, #resultsView .quiz-actions{border-top:none;box-shadow:none;}
+  #quizView .quiz-actions::before, #resultsView .quiz-actions::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:16px;pointer-events:none;}
+  #quizView .quiz-actions::before{background:linear-gradient(to top,var(--ink),transparent);}
+  #resultsView .quiz-actions::before{background:linear-gradient(to top,var(--surface),transparent);}
 </style>
 </head>
 <body>
@@ -2456,6 +2462,7 @@
         <div class="science-item"><b>The Next button bar no longer lets questions show underneath</b>During a quiz, a thin strip below the Exit and Next buttons let answer text scroll through behind it. The bar now sits flush with the bottom of the screen in both portrait and landscape, so there is a little more room for the question and nothing peeking out beneath the buttons.</div>
         <div class="science-item"><b>Tutor tab and buttons tidied on phones</b>The bottom tab bar now always fits all six tabs, so the highlighted Tutor tab no longer pokes past the right edge. The "what you can ask me to do" buttons now match the dark theme instead of showing as light grey, and the tutor's greeting now points to the suggestions below it and phrases the next step more naturally.</div>
         <div class="science-item"><b>Readiness text stays inside its column</b>On a sideways phone, the line under the readiness ring ("about 66% on exam-style questions") and the trend pill could spill past the column and touch the tab rail. They now wrap within the column and the column sizes to fit its text.</div>
+        <div class="science-item"><b>A softer Next button bar</b>The Exit and Next bar under each question used to carry a hard line and a shadow, which showed up as a stray smudge under the card on short questions. It now blends in, and only fades slightly over the answers when they scroll beneath it.</div>
       </div>
     </div>
 
