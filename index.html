@@ -1289,7 +1289,6 @@
   .fc-filter input[type="checkbox"]{width:18px;height:18px;flex:none;cursor:pointer;}
   .fc-why{font-family:'IBM Plex Sans',sans-serif;font-size:12px;line-height:1.4;color:var(--muted);margin:-8px 0 14px;}
   .fc-deck-line{margin:6px 0 0;}
-  body.cd-open{position:fixed;left:0;right:0;width:100%;overflow:hidden;}
   .cd-overlay{overscroll-behavior:contain;touch-action:pan-y;}
   .cd-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(8,14,24,.72);backdrop-filter:blur(3px);overflow-y:auto;}
   .cd-panel{width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--hair-strong,var(--hair));border-radius:18px;padding:22px 22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.35);color:var(--paper);}
@@ -18037,21 +18036,19 @@ document.addEventListener('keydown', e => {
 });
 
 // While a session screen is open, the page behind it must not scroll (iOS scrolls it through a plain overlay).
+// Uses the app's shared body lock, and only releases it if this screen was the one that took it.
 (function(){
   const init = function(){
-  const o = document.getElementById('conductorOverlay'); if(!o || !window.MutationObserver) return;
-  let y = 0, locked = false;
-  const sync = () => {
-    const kt = document.getElementById('keyTermModalHost');
-    const open = o.style.display === 'flex' || !!(kt && kt.classList.contains('active'));
-    if(open && !locked){ y = window.scrollY || 0; document.body.style.top = (-y) + 'px'; document.body.classList.add('cd-open'); locked = true; }
-    else if(!open && locked){ document.body.classList.remove('cd-open'); document.body.style.top = ''; window.scrollTo(0, y); locked = false; }
-  };
-  new MutationObserver(sync).observe(o, { attributes:true, attributeFilter:['style'] });
-  const ktHost = document.getElementById('keyTermModalHost');
-  if(ktHost) new MutationObserver(sync).observe(ktHost, { attributes:true, attributeFilter:['class'] });
-  o.addEventListener('touchmove', e => { const p = document.getElementById('conductorPanel'); if(p && !p.contains(e.target)) e.preventDefault(); else if(p && p.scrollHeight <= p.clientHeight + 1) e.preventDefault(); }, { passive:false });
-  sync();
+    const o = document.getElementById('conductorOverlay'); if(!o || !window.MutationObserver) return;
+    let mine = false;
+    const sync = () => {
+      const open = o.style.display === 'flex';
+      if(open && !mine && document.body.style.position !== 'fixed'){ lockBodyScroll(); mine = true; }
+      else if(!open && mine){ mine = false; unlockBodyScroll(); }
+    };
+    new MutationObserver(sync).observe(o, { attributes:true, attributeFilter:['style'] });
+    o.addEventListener('touchmove', e => { const p = document.getElementById('conductorPanel'); if(!p || !p.contains(e.target) || p.scrollHeight <= p.clientHeight + 1) e.preventDefault(); }, { passive:false });
+    sync();
   };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
