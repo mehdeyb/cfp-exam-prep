@@ -538,6 +538,7 @@
   .tvm-key-spacer{min-height:52px;}
   .tvm-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
   .tvm-actions .btn{flex:1 1 150px;}
+  .tvm-actions #tvmContinueStageBtn, .tvm-actions #tvmNextBtn{order:-1;}
   .tvm-solution{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:16px 18px;font-size:13.5px;line-height:1.6;color:var(--paper);}
   .tvm-solution-step{padding:8px 0;border-bottom:1px solid var(--hair);}
   .tvm-solution-step:last-child{border-bottom:none;}
@@ -1497,14 +1498,14 @@
     .tvm-scenario{padding:10px 13px;margin:0 0 4px;font-size:14px;line-height:1.42;}
     .tvm-screen{font-size:20px;padding:6px 14px;}
     .tvm-screen-wrap{margin-bottom:8px;}
-    .tvm-feedback{margin-bottom:8px;}
-    .tvm-feedback:empty{margin-bottom:0;}
+    .tvm-feedback{margin-bottom:8px;min-height:22px;}
+    .tvm-feedback:empty::before{content:'Enter the known values, then press the ? key.';color:rgba(255,255,255,0.4);font-size:12px;}
     .tvm-level-badge{margin-top:6px;}
     .tvm-actions .btn{min-height:40px;padding-top:8px;padding-bottom:8px;}
     .tvm-level-badge{margin-bottom:4px;font-size:10.5px;}
     .tvm-timeline-wrap{margin-bottom:8px;}
     .tvm-timeline-label{display:none;}
-    #tvmTimeline svg{max-height:74px;}
+    #tvmTimeline svg{max-height:96px;}
     .tvm-device{padding:10px 10px 12px;margin-bottom:10px;}
     .tvm-keypad{gap:6px;margin-bottom:0;}
     .tvm-key{min-height:42px;}
@@ -2713,7 +2714,7 @@
         <div class="science-item"><b>Session parts that match what you can actually do</b>A part you stop partway through no longer counts as finished: it stays counted as open and comes back later. The "Explain it back" part is only planned when the tutor is connected, so there is no step that leads to a screen asking for a key.</div>
         <div class="science-item"><b>The page behind a session screen stays put</b>On the phone you could scroll the page behind the session card. While a session screen or a term pop-up is open, the page behind it is now locked, and it returns to exactly where you were when the card closes.</div>
         <div class="science-item"><b>A cleaner cash-flow timeline in the TVM walkthrough</b>The "0" and "N" labels no longer collide with the PV and FV arrows, the unknown value's label sits right above its question mark, annuity-due problems draw their payments one step earlier than end-of-period ones, and the two-part-problem button matches the width of the cards around it.</div>
-        <div class="science-item"><b>The TVM walkthrough now fits the phone</b>On a phone held upright, the calculator used to start below the screen after a tall stack of cards. The header, level chips, problem, timeline and calculator now fit on one screen without scrolling, the "How this works" note folds away after your first key press, and the two-part problem option moved beside the other buttons under the calculator.</div>
+        <div class="science-item"><b>The TVM walkthrough now fits the phone</b>On a phone held upright, the calculator used to start below the screen after a tall stack of cards. The header, level chips, problem, timeline and calculator now fit on one screen without scrolling, the "How this works" note folds away after your first key press, and the two-part problem option moved beside the other buttons under the calculator. A gap check then trimmed the empty space under the timeline, reserved a line above the keypad so the keys no longer jump when a message appears, put "Try another problem" first after solving, and scrolls the worked solution into view.</div>
       </div>
     </div>
 
@@ -13180,7 +13181,10 @@ function renderTvmTimeline(){
       <text x="${x}" y="${up ? 12 : 88}" text-anchor="middle" font-size="10" fill="${arrowColor}">${label}</text>`;
   }
 
-  let svg = `<svg class="tvm-timeline-svg" viewBox="0 6 400 86" style="width:100%;height:auto;">
+  // Trim empty space: only leave room below the axis when an arrow actually points down.
+  const hasDown = [pv, fv, pmt].some(v => typeof v === 'number' && v < 0);
+  const vbH = hasDown ? 94 : 64;
+  let svg = `<svg class="tvm-timeline-svg" viewBox="0 0 400 ${vbH}" style="width:100%;height:auto;">
     <line x1="30" y1="45" x2="370" y2="45" stroke="var(--hair-strong)" stroke-width="1.5"/>
     <circle cx="30" cy="45" r="3" fill="var(--hair-strong)"/>
     <circle cx="370" cy="45" r="3" fill="var(--hair-strong)"/>
@@ -13580,8 +13584,16 @@ function tvmCalculateAndShow(){
   const solEl = document.getElementById('tvmSolution');
   solEl.innerHTML = solutionHtml;
   solEl.style.display = 'block';
+  // Bring the worked solution into view so the answer and its explanation are never hidden below the keypad.
+  try{
+    const host = document.getElementById('tvmHost');
+    if(host && document.body.classList.contains('tvm-active') && window.matchMedia && matchMedia('(max-width:640px) and (orientation:portrait)').matches){
+      const top = solEl.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+      host.scrollTo({ top: Math.max(0, top - Math.round(window.innerHeight*0.42)), behavior: 'smooth' });
+    }
+  }catch(e){}
   const feedback = document.getElementById('tvmFeedback');
-  feedback.textContent = '';
+  feedback.textContent = 'Solved. The worked solution is below.';
   feedback.className = 'tvm-feedback';
 
   if(tvmMultiStageActive && tvmMultiStageIndex === 0){
@@ -18047,7 +18059,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.35';
+const BUILD_ID = '2026-10-15.36';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
