@@ -1089,6 +1089,9 @@
   /* The next-question bar stays at the bottom of the screen while you read the explanation, so it is always one tap away. */
   #quizView .quiz-actions{position:sticky;bottom:0;z-index:6;gap:10px;padding:12px 0 max(12px, env(safe-area-inset-bottom));margin-top:14px;background:var(--ink);border-top:1px solid var(--hair);box-shadow:0 -10px 18px -12px rgba(0,0,0,.35);}
   #quizView .quiz-feedback{scroll-margin-bottom:112px;}
+  /* Cue that more answer choices are below the sticky bar */
+  #moreChoicesCue{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom, 0px));z-index:7;display:none;padding:6px 14px;border-radius:16px;background:var(--gold);color:var(--ink);font:600 12px 'IBM Plex Sans',sans-serif;border:none;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;}
+  #moreChoicesCue.show{display:block;}
 
   button.btn{
     font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13px;padding:14px 19px;border-radius:22px;
@@ -2557,7 +2560,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div><div class="science-item"><b>No hidden answer choices</b>On a short screen, the last answer can sit behind the Next bar. A small "More answers below" button now appears until that answer is fully on screen, and tapping it scrolls there.</div>
       </div>
     </div>
 
@@ -17413,6 +17416,31 @@ requestDurableStorage();
   byTitle('tab-examday', ['Exam format', 'Calculator policy', 'What to bring']).forEach(ccMake);
   byTitle('tab-reference', ['Subject Podcast']).forEach(ccMake);
   window.ccSet = ccSet;
+})();
+
+// Shows a small "more answers below" cue while the last answer choice is hidden behind the sticky bar.
+(function(){
+  let cue=null;
+  function update(){
+    try{
+      if(!cue){cue=document.createElement('button');cue.id='moreChoicesCue';cue.type='button';cue.textContent='More answers below \u2193';
+        cue.addEventListener('click',()=>{const cs=document.querySelectorAll('#qChoices > *');const last=cs[cs.length-1];if(last)last.scrollIntoView({behavior:'smooth',block:'center'});});
+        document.body.appendChild(cue);}
+      const qv=document.getElementById('quizView');
+      const cs=document.querySelectorAll('#qChoices > *');
+      let show=false;
+      if(qv && qv.offsetParent!==null && cs.length){
+        const last=cs[cs.length-1].getBoundingClientRect();
+        const bar=document.querySelector('#quizView .quiz-actions');
+        const limit=bar?bar.getBoundingClientRect().top:window.innerHeight;
+        show = last.bottom > limit+2 && !document.querySelector('#qChoices .answered, #qChoices [disabled]');
+      }
+      cue.classList.toggle('show',show);
+    }catch(e){}
+  }
+  document.addEventListener('scroll',update,{passive:true,capture:true});
+  window.addEventListener('resize',update);
+  setInterval(update,400);
 })();
 </script>
 <div id="keyTermModalHost" class="key-term-modal-host" onclick="if(event.target===this) closeKeyTermModal();">
