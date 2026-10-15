@@ -6425,7 +6425,7 @@ function renderReadinessExtras(stats){
   panel.innerHTML = `
     <div class="rb-head">
       <h3>Where your ${stats.readiness} comes from</h3>
-      <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions, how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and any timed mock exams. Sorted by what's holding you back most.</p>
+      <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
     ${estimateBlock}
     <div class="rb-rows">${rows}</div>
@@ -17024,7 +17024,7 @@ function buildTutorSystemPrompt(){
       .map(p=>`${p.name} (${p.earned.toFixed(1)} of ${p.weight} possible points; ${p.attempted===0 ? 'not started' : p.attempted+' of about '+p.coverageTarget+' questions tried'})`).join('; ');
     const ns = computeNextStep(stats);
     const ps = paceSummary(stats);
-    readinessContext = ` The readiness score measures how far above guessing the student is likely to score, weighted by each domain's exam share. It combines first-attempt accuracy on questions, how well tried questions have stuck in spaced review (fading when overdue), flashcards, formula drills and timed mock sittings${stats.accuracyMargin !== null && stats.totalAnswered >= 10 ? `; it implies roughly ${stats.expectedAccuracy}% accuracy on exam-style questions, give or take ${stats.accuracyMargin} points` : ''}. It is an estimate, not a pass prediction. The biggest gaps are ${topGaps}.${stats.calibration.penalty >= 0.5 ? ` About ${stats.calibration.penalty.toFixed(1)} points are being lost to overconfidence.` : ''} ${ps ? ' Pace toward exam day: ' + ps.text : ''} The Study tab is currently recommending: "${ns.title}" (${ns.why})`;
+    readinessContext = ` The readiness score measures how far above guessing the student is likely to score, weighted by each domain's exam share. It combines first-attempt accuracy on questions (balanced by difficulty against the untried material, with thin evidence pulled toward guessing), how well tried questions have stuck in spaced review (fading when overdue), flashcards, formula drills and timed mock sittings (recent ones weigh more)${stats.accuracyMargin !== null && stats.totalAnswered >= 10 ? `; it implies roughly ${stats.expectedAccuracy}% accuracy on exam-style questions, give or take ${stats.accuracyMargin} points` : ''}. It is an estimate, not a pass prediction. The biggest gaps are ${topGaps}.${stats.calibration.penalty >= 0.5 ? ` About ${stats.calibration.penalty.toFixed(1)} points are being lost to overconfidence.` : ''} ${ps ? ' Pace toward exam day: ' + ps.text : ''} The Study tab is currently recommending: "${ns.title}" (${ns.why})`;
   }catch(e){ readinessContext = ''; }
   let calibrationContext = '';
   const cs = DATA.confidenceStats || {};
@@ -17996,7 +17996,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.29';
+const BUILD_ID = '2026-10-15.30';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
