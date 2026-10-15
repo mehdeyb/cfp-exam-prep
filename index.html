@@ -17728,7 +17728,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.15';
+const BUILD_ID = '2026-10-15.16';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -17842,6 +17842,14 @@ requestDurableStorage();
       const short = false;
       document.documentElement.classList.remove('vp-short');
       window._vpInfo = {inner, lvh: full, vh, vv, scr: screen.height, short};
+      // Some iPhones open an installed app with a window shorter than the screen. Re-applying the viewport settings once asks iOS to lay the page out again.
+      if(standalone && portrait && screen.height - inner > 40 && screen.height - inner < 120 && !window._vpKicked){
+        window._vpKicked = true;
+        try{
+          const mv = document.querySelector('meta[name="viewport"]');
+          if(mv){ const c = mv.getAttribute('content'); mv.setAttribute('content', 'width=device-width, initial-scale=1.0'); setTimeout(() => { mv.setAttribute('content', c); setTimeout(probe, 300); }, 120); }
+        }catch(e){}
+      }
       const note = document.getElementById('buildNote');
       if(note) note.textContent = 'Build ' + BUILD_ID + ' · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
     }catch(e){}
