@@ -9551,19 +9551,30 @@ function fcRelatedQuestions(card){
   out.sort((a, b) => b.sc - a.sc);
   return (_fcRel.map[card.id] = out.slice(0, 6).map(x => x.q));
 }
+function fcWordSet(t){ return new Set(fcNorm(t).split(' ').filter(w => w.length > 3)); }
+function fcOverlap(a, b){ // share of a's words that already appear in b
+  const A = fcWordSet(a), B = fcWordSet(b); if(!A.size) return 1;
+  let n = 0; A.forEach(w => { if(B.has(w)) n++; }); return n / A.size;
+}
 function fcCoreClause(def){
   const d = String(def).trim(), words = d.split(/\s+/);
   if(words.length <= 14) return '';
   const m = d.match(/^(.{20,}?)(?:[;:—–]|, (?:which|and|but|so that|while|because)\b|\. )/);
-  const first = m ? m[1] : words.slice(0, 14).join(' ');
-  return first.replace(/[,;:\s]+$/, '') + '.';
+  const first = (m ? m[1] : words.slice(0, 14).join(' ')).replace(/[,;:\s]+$/, '') + '.';
+  return first.length >= d.length * 0.8 ? '' : first; // only worth showing when it is genuinely shorter
 }
 function fcExampleFor(card){
-  const q = fcRelatedQuestions(card)[0];
-  if(!q) return null;
-  const rat = String((q.rationale || [])[q.correct] || '').replace(/^\s*correct\s*[—–-]\s*/i, '');
+  const sorted = fcRelatedQuestions(card).map(q => {
+    const ans = q.choices[q.correct];
+    return { q, ans, ov: fcOverlap(ans, card.def) };
+  }).filter(x => x.ov < 0.55).sort((a, b) => a.ov - b.ov); // an example that merely restates the definition teaches nothing
+  const pick = sorted[0]; if(!pick) return null;
+  const q = pick.q;
+  let rat = String((q.rationale || [])[q.correct] || '').replace(/^\s*correct\s*[—–-]\s*/i, '').trim();
+  if(rat && (fcOverlap(rat, pick.ans + " " + card.def) > 0.6)) rat = ''; // skip a repeat of what's already on the card
+  if(rat) rat = rat.charAt(0).toUpperCase() + rat.slice(1);
   const stem = q.q.length > 170 ? q.q.slice(0, 167).trim() + '…' : q.q;
-  return { stem, answer: q.choices[q.correct], why: rat.length > 220 ? rat.slice(0, 217).trim() + '…' : rat };
+  return { stem, answer: pick.ans.replace(/[.\s]+$/, ''), why: rat.length > 220 ? rat.slice(0, 217).trim() + '…' : rat };
 }
 function fcCardMode(card){
   const lvl = fcCardLevel(card), st = getSpacedStat(DATA.flashcardStats, card.id);
