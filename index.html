@@ -1676,6 +1676,15 @@
   /* Sticky Next/Exit bar: the quiz host's own bottom padding left a strip under the bar
      where scrolling content showed through. The bar now owns the bottom edge. */
   body.quiz-active #quizFullscreenHost{padding-bottom:0 !important;}
+  /* Tutor "what you can ask me to do" buttons: match the dark chip style instead of default light buttons */
+  .tutor-cap-item{font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--paper);background:var(--surface2);border:1px solid var(--hair);border-radius:999px;padding:9px 12px;cursor:pointer;transition:border-color var(--t-fast) var(--ease),background var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);}
+  .tutor-cap-item:hover{border-color:var(--gold);}
+  .tutor-cap-item:active{transform:scale(.97);}
+  /* Bottom tab bar: six tabs must always fit; the active pill used to overflow the right edge */
+  @media (max-width:640px){
+    .tabbar{flex-wrap:nowrap;gap:0;padding-left:2px;padding-right:2px;}
+    .tab-btn{flex:1 1 0;min-width:0;padding:7px 1px;font-size:10px;letter-spacing:-.01em;overflow:hidden;}
+  }
 </style>
 </head>
 <body>
@@ -2440,6 +2449,7 @@
         <div class="science-item"><b>The tutor can tell you what to do next, even without an AI key</b>Asking the tutor "what should I do next?" used to need an API key, even though the app already knows your next step, today's plan, your weak topics and what you have missed. Now the tutor answers those questions straight from your own progress, in the chat, with buttons that do the thing: start the step, run your whole session, drill your weakest domain, review what you missed, open the calculator or the study guide, or show you where something is on screen. With a key connected, the full AI tutor still handles explanations and follow-up questions. Explaining a concept or writing a new question still needs the key, and the tutor says so.</div>
         <div class="science-item"><b>The tutor remembers what you asked it</b>The tutor now keeps a short list of the questions you have typed to it, for about two weeks. When you come back it mentions your latest one and offers a "Pick that up" button, and with an AI key it also uses that history so it can build on earlier answers instead of starting cold. Your list lives only in this browser.</div>
         <div class="science-item"><b>The Next button bar no longer lets questions show underneath</b>During a quiz, a thin strip below the Exit and Next buttons let answer text scroll through behind it. The bar now sits flush with the bottom of the screen in both portrait and landscape, so there is a little more room for the question and nothing peeking out beneath the buttons.</div>
+        <div class="science-item"><b>Tutor tab and buttons tidied on phones</b>The bottom tab bar now always fits all six tabs, so the highlighted Tutor tab no longer pokes past the right edge. The "what you can ask me to do" buttons now match the dark theme instead of showing as light grey, and the tutor's greeting now points to the suggestions below it and phrases the next step more naturally.</div>
       </div>
     </div>
 
@@ -16675,10 +16685,10 @@ function tutorOpeningLine(stats){
     const last = (DATA.sessions || [])[(DATA.sessions || []).length-1];
     if(last && last.total) parts.push(`Your last session was ${last.correct} of ${last.total}.`);
     const ns = computeNextStep(stats);
-    if(ns && ns.title) parts.push(`What I would do next: ${ns.title}.`);
+    if(ns && ns.title){ const t = String(ns.title).replace(/[.\s]+$/, ''); const lc = (t.length > 1 && /[A-Z]/.test(t[0]) && !/[A-Z]/.test(t[1])) ? t[0].toLowerCase() + t.slice(1) : t; parts.push(`A good next move: ${lc}.`); }
   }catch(e){ return `Hi, I am your CFP study tutor. You are at ${stats.readiness}/100 readiness, with ${stats.weakestMeta.name} as your weakest area.`; }
   try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time you asked me about \u201c${rt.q.length > 90 ? rt.q.slice(0, 87) + '\u2026' : rt.q}\u201d (${modeAgoText(rt.t)}).`); }catch(e){}
-  parts.push('Ask me anything, or tap one of the suggestions above.');
+  parts.push('Ask me anything, or tap one of the suggestions below.');
   return parts.join(' ');
 }
 function updateTutorContextNote(){
