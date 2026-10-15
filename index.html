@@ -2435,6 +2435,7 @@
         <div class="science-item"><b>The right answer is no longer usually "A"</b>A check of the question bank found the correct answer sat in position A for about 35% of questions and in C or D for only about 19% each. On a real exam the answer is spread evenly, so practicing on a lopsided bank could quietly teach you to lean toward A when unsure. The correct answers are now spread evenly across A, B, C and D (about 22% each). Questions whose wording points at other choices by letter, such as "both A and B", or whose choices are ordered numbers were left exactly as they were. Your saved record of which wrong answers you tend to pick was moved to the new positions automatically, so nothing you built up is lost; a practice session that was half finished before this change will start fresh.</div>
         <div class="science-item"><b>Less to scroll past: long cards now fold up</b>The Tools tab stacked six decision tools, each over 500 pixels tall, though you only use one at a time. Each now shows its title and a one-line summary and opens when tapped. The same goes for the exam format, calculator policy and what-to-bring cards on the Exam Day tab, and for the podcast card on the Reference tab. Nothing was removed. Anything in the app that points you to one of them opens it for you. Today's plan shows its first four steps with the rest one tap away. Together this cuts the Tools tab by about 60% and the Exam Day tab by about 45%.</div>
         <div class="science-item"><b>The tutor can tell you what to do next, even without an AI key</b>Asking the tutor "what should I do next?" used to need an API key, even though the app already knows your next step, today's plan, your weak topics and what you have missed. Now the tutor answers those questions straight from your own progress, in the chat, with buttons that do the thing: start the step, run your whole session, drill your weakest domain, review what you missed, open the calculator or the study guide, or show you where something is on screen. With a key connected, the full AI tutor still handles explanations and follow-up questions. Explaining a concept or writing a new question still needs the key, and the tutor says so.</div>
+        <div class="science-item"><b>The tutor remembers what you asked it</b>The tutor now keeps a short list of the questions you have typed to it, for about two weeks. When you come back it mentions your latest one and offers a "Pick that up" button, and with an AI key it also uses that history so it can build on earlier answers instead of starting cold. Your list lives only in this browser.</div>
       </div>
     </div>
 
@@ -4252,6 +4253,7 @@ function defaultData(){
     qChatStats: { messages: 0, questions: 0, lastAt: 0, byDomain: {} },
     tvmSolvedCount: 0,
     recentAdaptiveIds: [],
+    tutorTopics: [],
     announcedMilestones: []
   };
 }
@@ -4399,6 +4401,7 @@ function sanitizeLoadedData(d){
     d[k] = Array.isArray(d[k]) ? d[k].filter(x => x !== null && x !== undefined) : [];
   });
   d.sessions = d.sessions.filter(isObj);
+  d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
@@ -14662,6 +14665,7 @@ async function sendQuestionChat(presetText){
     if(qChat.token !== token || qChat.qid !== qid) return; // moved on to another question
     bubble.classList.remove('typing');
     bubble.textContent = reply || "Sorry, I didn't get a response there. Try asking again?";
+    if(presetText === undefined && reply) tutorRemember(text, 'question');
     qChat.messages.push({ role:'assistant', content: reply || '(no reply)' });
     if(turn.note){ const nb = qChatBubble('bot', turn.note); nb.classList.add('qchat-action'); }
   }catch(e){
@@ -15834,6 +15838,10 @@ function buildTutorSystemPrompt(){
     const daysLeft = daysLeftForTutor;
     timeContext += daysLeft >= 0 ? ` Their exam is in ${daysLeft} day${daysLeft===1?'':'s'}.` : ` Their previously-set exam date has passed.`;
   }
+  try{
+    const mem = tutorRecentTopics(14);
+    if(mem.length) timeContext += ' Things they have brought to you in earlier conversations, oldest first: ' + mem.map(m => `"${m.q}" (${modeAgoText(m.t)})`).join('; ') + '. Use this for continuity, the way a tutor who remembers last week would: connect to an earlier topic when it genuinely helps, check whether it stuck, but never recite the list.';
+  }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
@@ -16520,6 +16528,7 @@ async function sendTutorMessage(presetText){
     typingBubble.classList.remove('typing');
     typingBubble.textContent = reply;
     status.textContent = '';
+    if(presetText === undefined) tutorRemember(text, 'tutor');
   }catch(e){
     if(tutorConversationId !== conversationIdAtRequestTime) return;
     tutorMessages.pop(); // don't leave an unanswered user turn in the API history
@@ -16630,6 +16639,22 @@ function tutorPoint(key, note){
   setTimeout(() => { document.addEventListener('pointerdown', clearTutorPoint, true); document.addEventListener('keydown', clearTutorPoint, true); }, 0);
   return true;
 }
+function tutorRemember(text, where){
+  try{
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    if(t.length < 12) return;
+    if(!Array.isArray(DATA.tutorTopics)) DATA.tutorTopics = [];
+    const last = DATA.tutorTopics[DATA.tutorTopics.length - 1];
+    if(last && last.q === t.slice(0, 160)) return;
+    DATA.tutorTopics.push({ t: Date.now(), q: t.slice(0, 160), w: where || 'tutor' });
+    if(DATA.tutorTopics.length > 12) DATA.tutorTopics = DATA.tutorTopics.slice(-12);
+    persist();
+  }catch(e){}
+}
+function tutorRecentTopics(days){
+  const cut = Date.now() - (days || 14) * 86400000;
+  return (DATA.tutorTopics || []).filter(x => x && x.t >= cut).slice(-5);
+}
 // The tutor's opening message when the conversation is empty: where you stand,
 // what changed since you were last here, and the one thing worth doing next.
 function tutorOpeningLine(stats){
@@ -16648,6 +16673,7 @@ function tutorOpeningLine(stats){
     const ns = computeNextStep(stats);
     if(ns && ns.title) parts.push(`What I would do next: ${ns.title}.`);
   }catch(e){ return `Hi, I am your CFP study tutor. You are at ${stats.readiness}/100 readiness, with ${stats.weakestMeta.name} as your weakest area.`; }
+  try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time you asked me about \u201c${rt.q.length > 90 ? rt.q.slice(0, 87) + '\u2026' : rt.q}\u201d (${modeAgoText(rt.t)}).`); }catch(e){}
   parts.push('Ask me anything, or tap one of the suggestions above.');
   return parts.join(' ');
 }
@@ -16701,6 +16727,12 @@ function updateTutorContextNote(){
         const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-show'; b.textContent = 'Show me';
         b.onclick = () => tutorPoint('next_step', 'Start here');
         bubble.appendChild(b);
+        const rt = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null;
+        if(rt){
+          const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'tutor-show'; b2.textContent = 'Pick that up';
+          b2.onclick = () => sendTutorMessage(`Let's pick up where we left off. Last time I asked: "${rt.q}". Check whether I really have it by asking me one question about it, then fill in anything I am missing.`);
+          bubble.appendChild(b2);
+        }
       }
     }
   }
