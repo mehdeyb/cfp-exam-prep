@@ -1747,6 +1747,7 @@
   .syl-note{margin:0 0 8px 23px;padding:10px 12px;border-radius:10px;background:var(--teal-tint);border:1px solid var(--teal);font-size:12.5px;line-height:1.55;color:var(--paper);}
   .syl-note[hidden]{display:none;}
   @media (max-width:640px){ .sd-of{display:none;} }
+  .syl-pace{font-size:12px;color:var(--muted);line-height:1.45;margin-top:-4px;}
 </style>
 </head>
 <body>
@@ -2519,6 +2520,7 @@
         <div class="science-item"><b>Readiness ring and countdown sit side by side again</b>On an upright phone, the longer readiness lines pushed the exam countdown card below the ring and left a blank area beside it. The readiness block is now a fixed narrow width so the countdown sits next to it, and the page tagline fits on one line instead of three.</div>
         <div class="science-item"><b>Cleaner folded cards, glossary rows and reference tables</b>Folded cards on the Tools and Exam Day tabs had their titles sitting low; they are now balanced. The Flashcards "how the ordering works" line no longer leaves a hole beneath it, glossary terms no longer crowd their tag and arrow, and reference tables give their labels a bit more room on phones.</div>
         <div class="science-item"><b>A syllabus checklist that tells you what to do</b>The 70-topic checklist was a long list of boxes. It now opens with how many topics you have reviewed, a one-tap "Next up" topic to drill (your shakiest, or the first one you have not seen), and filters for shaky, not-seen and not-reviewed topics. Domains fold shut and show their share of the exam, with your two weakest open first, and each topic has an "i" button that shows what you actually need to know about it. Your own folded or open choices are remembered while you use the app.</div>
+        <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
       </div>
     </div>
 
@@ -8228,12 +8230,14 @@ function renderReference(){
   const sylFilter = window._sylFilter;
   // One pass over all 70 topics so the summary, chips and rows agree.
   const sylInfo = {};
-  let nChecked = 0, nShaky = 0, nUnseen = 0, nTotal = 0, nUnchecked = 0;
+  let nChecked = 0, nShaky = 0, nUnseen = 0, nTotal = 0, nUnchecked = 0, nSolid = 0;
   weakOrder.forEach(key => (SUBTOPICS[key] || []).forEach((t, idx) => {
     const id = key + '-' + idx, ss = subtopicStats(key, idx), checked = DATA.checkedSubtopics.includes(id);
     const shaky = ss.attempts >= 4 && ss.acc !== null && ss.acc < 0.6;
     const unseen = ss.size >= 3 && ss.seen === 0;
-    sylInfo[id] = { ss, checked, shaky, unseen };
+    const solid = ss.attempts >= 6 && ss.acc !== null && ss.acc >= 0.8;
+    sylInfo[id] = { ss, checked, shaky, unseen, solid };
+    if(solid) nSolid++;
     nTotal++; if(checked) nChecked++; else nUnchecked++; if(shaky) nShaky++; if(unseen) nUnseen++;
   }));
   const passes = id => { const i = sylInfo[id]; return sylFilter === 'all' || (sylFilter === 'shaky' && i.shaky) || (sylFilter === 'unseen' && i.unseen) || (sylFilter === 'todo' && !i.checked); };
@@ -8246,10 +8250,22 @@ function renderReference(){
       for(const key of weakOrder){ const i = (SUBTOPICS[key] || []).findIndex((t, ix) => sylInfo[key + '-' + ix].unseen); if(i >= 0){ sugg = { key, idx: i, name: SUBTOPICS[key][i], why: 'not seen yet' }; break; } }
     }
   }catch(e){}
+  // Pace line: only when an exam date is set, so it reflects this person's actual runway.
+  let pace = '';
+  try{
+    const dl = getDaysUntilExam();
+    if(dl !== null && dl > 0 && nUnchecked > 0){
+      const days = Math.max(1, dl - 1);
+      const per = Math.ceil(nUnchecked / days);
+      pace = per <= 1 ? `${nUnchecked} topic${nUnchecked === 1 ? '' : 's'} left to review and ${dl} day${dl === 1 ? '' : 's'} to go — about one a day finishes them.`
+        : `${nUnchecked} topics left to review and ${dl} days to go — about ${per} a day finishes them.`;
+    } else if(dl !== null && dl > 0 && nUnchecked === 0){ pace = 'Every topic reviewed — spend the remaining days on practice and your shaky spots.'; }
+  }catch(e){}
   const chip = (k, label, n) => `<button type="button" class="syl-chip${sylFilter === k ? ' on' : ''}" data-f="${k}" aria-pressed="${sylFilter === k}">${label}${n !== null ? ` <b>${n}</b>` : ''}</button>`;
   const sum = document.createElement('div');
   sum.className = 'syl-summary';
-  sum.innerHTML = `<div class="syl-bar-row"><span><b>${nChecked}</b> of ${nTotal} reviewed</span><span class="syl-bar"><i style="width:${Math.round(nChecked / nTotal * 100)}%"></i></span></div>` +
+  sum.innerHTML = `<div class="syl-bar-row"><span><b>${nChecked}</b> of ${nTotal} reviewed${nSolid ? ` · <b>${nSolid}</b> solid in practice` : ''}</span><span class="syl-bar"><i style="width:${Math.round(nChecked / nTotal * 100)}%"></i></span></div>` +
+    (pace ? `<div class="syl-pace">${pace}</div>` : '') +
     `<div class="syl-chips">${chip('all', 'All', null)}${chip('shaky', 'Shaky', nShaky)}${chip('unseen', 'Not seen', nUnseen)}${chip('todo', 'Not reviewed', nUnchecked)}</div>` +
     (sugg ? `<div class="syl-next"><span>Next up: <b>${sugg.name}</b> <em>${sugg.why}</em></span><button type="button" class="syl-drill" aria-label="Drill ${sugg.name.replace(/"/g,'&quot;')}">Drill</button></div>` : '');
   sum.querySelectorAll('.syl-chip').forEach(c => c.onclick = () => { window._sylFilter = c.dataset.f; renderReference(); });
@@ -15953,6 +15969,9 @@ function buildTutorSystemPrompt(){
   try{
     const wt = weakSubtopics(3);
     if(wt.length) weakTopicText = ' Shakiest official topics (approximate, matched by keywords): ' + wt.map(w => `"${w.name}" ${Math.round(w.st.acc*100)}% over ${w.st.attempts} attempts`).join('; ') + '.';
+    const nTot = Object.keys(SUBTOPICS).reduce((n, k) => n + SUBTOPICS[k].length, 0);
+    const nDone = (DATA.checkedSubtopics || []).length;
+    weakTopicText += ` Syllabus checklist: they have ticked ${nDone} of ${nTot} official topics as reviewed (their own review, separate from quiz results).`;
   }catch(e){}
   let cueText = '';
   try{ const ca = cueAccuracyText(); if(ca) cueText = ' In case studies, where they flag the facts that decide each question, they have caught ' + ca + '; the app highlights figures, goals, red flags and accounts in the case text and reveals the deciding facts after each answer, so you can coach the habit of reading for the deciding fact before looking at the choices.'; }catch(e){}
