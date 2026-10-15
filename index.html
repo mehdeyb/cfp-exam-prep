@@ -1521,6 +1521,19 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  /* Results: the buttons stay reachable at the bottom instead of after the whole table. */
+  #resultsView .quiz-actions{position:sticky;bottom:0;z-index:6;gap:10px;padding:12px 0 max(12px, env(safe-area-inset-bottom));margin-top:14px;background:var(--surface);border-top:1px solid var(--hair);}
+  @media (orientation:landscape) and (max-height:520px){
+    .result-hero{padding:6px 0 4px;}
+    .result-hero .big{font-size:38px;line-height:1.1;}
+    table.breakdown td{padding:6px 6px;}
+    #resultsView .quiz-actions{padding:6px 0 max(6px, env(safe-area-inset-bottom));margin-top:8px;}
+    #resultsView .quiz-actions .btn{padding:8px 16px;font-size:13px;}
+  }
+  @media (orientation:portrait) and (max-width:640px){
+    .result-hero{padding:14px 0 6px;}
+    table.breakdown td{padding:8px 6px;}
+  }
   /* Tutor: chat first. The thread and the message box sit right under the title;
      the intro, stats and idea buttons move beneath, and fold away once you are talking. */
   #tutorCard{display:flex;flex-direction:column;}
@@ -15291,7 +15304,7 @@ function finishSession(){
   document.getElementById('resultsView').style.display = 'block';
   try{ conductorOnQuizEnd(); }catch(e){}
   const host = document.getElementById('quizFullscreenHost');
-  if(host) host.scrollTop = 0;
+  if(host){ try{ host.scrollTo({top:0,left:0,behavior:'instant'}); }catch(e){ host.scrollTop = 0; } }
 
   document.getElementById('resultScore').textContent = `${session.correct}/${session.queue.length}`;
   const pct = Math.round((session.correct/session.queue.length)*100);
