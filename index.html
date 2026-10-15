@@ -1521,6 +1521,19 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  /* Folded cards: long, read-once or one-at-a-time material opens on a tap. */
+  .cc-card > .card-head{cursor:pointer;margin-bottom:0;}
+  .cc-card > .card-head h2::after{content:"▾";display:inline-block;margin-left:8px;font-size:.8em;color:var(--muted);transition:transform var(--t-fast) var(--ease);}
+  .cc-card.cc-open > .card-head h2::after{transform:rotate(180deg);}
+  .cc-card:not(.cc-open) > .cc-body{display:none;}
+  .cc-card > .card-head h2{margin-top:0;}
+  .cc-sum{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .cc-card.cc-open > .cc-sum{display:none;}
+  .cc-card > .card-head:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:6px;}
+  .pt-more > summary{cursor:pointer;color:var(--muted);font-size:13px;padding:10px 0 4px;list-style:none;}
+  .pt-more > summary::-webkit-details-marker{display:none;}
+  .pt-more > summary::after{content:" ▾";}
+  .pt-more[open] > summary::after{content:" ▴";}
   /* Study tab order: what to do now comes first (next step, today's plan, start a session);
      the big mastery chart and coach summary follow it. */
   #tab-study.active{display:flex;flex-direction:column;}
@@ -2410,6 +2423,7 @@
         <div class="science-item"><b>Every screen now lands where you would expect</b>Switching tabs used to carry over the scroll position of the tab you left, so Flashcards could open with its heading cut off and Tutor or Reference could open halfway down. Each tab now remembers where you were: tapping it in the bar returns you to that spot, opening it from a button inside the app starts at the top, and tapping the tab you are already on scrolls it to the top. The tutor opens at its latest message, and Settings and the study guide open at the top every time. In a quiz, each new question already started at the top, but after answering you often had to scroll to find Next question; that bar now stays at the bottom of the screen, and the feedback is scrolled to sit just above it. The flashcard stays on screen as you go through the deck. I measured these by scripting each move on a phone-sized screen, not on a real phone.</div>
         <div class="science-item"><b>Less scrolling, tuned separately for sideways and upright</b>I measured how far you had to scroll on phones and tablets held both ways, then fixed the worst spots. Held sideways (and on wide screens), a practice question now sits on the left and its answers on the right, so the question stays in view while you read the explanations, and a new question fits on one screen without any scrolling. Held upright, spacing is tighter, the "how sure are you" row shrinks once you have answered, and the page title no longer wastes space on a long tagline. Flashcards now open on the card itself, with the explanation and filters underneath instead of above. The tutor puts the conversation and the message box at the top, and once you start talking the intro and idea buttons fold away. On a sideways phone the tab bar becomes a slim strip down the left edge so you keep the full height of the screen. On the Study tab, the session picker now comes right after today's plan, and on phones each option is trimmed to a title and a "use it when" line. The results screen keeps its buttons pinned at the bottom. I measured all of this in a desktop browser at phone and tablet sizes, not on a real phone.</div>
         <div class="science-item"><b>The right answer is no longer usually "A"</b>A check of the question bank found the correct answer sat in position A for about 35% of questions and in C or D for only about 19% each. On a real exam the answer is spread evenly, so practicing on a lopsided bank could quietly teach you to lean toward A when unsure. The correct answers are now spread evenly across A, B, C and D (about 22% each). Questions whose wording points at other choices by letter, such as "both A and B", or whose choices are ordered numbers were left exactly as they were. Your saved record of which wrong answers you tend to pick was moved to the new positions automatically, so nothing you built up is lost; a practice session that was half finished before this change will start fresh.</div>
+        <div class="science-item"><b>Less to scroll past: long cards now fold up</b>The Tools tab stacked six decision tools, each over 500 pixels tall, though you only use one at a time. Each now shows its title and a one-line summary and opens when tapped. The same goes for the exam format, calculator policy and what-to-bring cards on the Exam Day tab, and for the podcast card on the Reference tab. Nothing was removed. Anything in the app that points you to one of them opens it for you. Today's plan shows its first four steps with the rest one tap away. Together this cuts the Tools tab by about 60% and the Exam Day tab by about 45%.</div>
       </div>
     </div>
 
@@ -6601,11 +6615,15 @@ function renderTodayPlan(){
     : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
     : 'Mix topics, fix weak ones, and keep reviewing on a schedule.';
   const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${planMinuteLabel(m)}</button>`).join('');
-  const rows = plan.steps.map((st, i) => `<div class="pt-step${st.done ? ' done' : ''}">
+  const stepRows = plan.steps.map((st, i) => `<div class="pt-step${st.done ? ' done' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why">${escapeHtml(st.why)}</div><div class="pt-time">about ${st.minutes} min</div></div>
       ${st.done ? '' : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${st.manual ? 'Open' : 'Start'}</button>`}
-    </div>`).join('');
+    </div>`);
+  const SHOW_STEPS = 4;
+  const rows = stepRows.length > SHOW_STEPS + 1
+    ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"><summary>Show the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
+    : stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
@@ -16680,6 +16698,39 @@ requestDurableStorage();
   const sync = () => c.classList.toggle('has-convo', th.querySelectorAll('.tutor-msg').length > 1);
   new MutationObserver(sync).observe(th, {childList:true});
   sync();
+})();
+(function(){
+  const nativeSIV = Element.prototype.scrollIntoView;
+  function ccSet(card, open){
+    card.classList.toggle('cc-open', !!open);
+    const h = card.querySelector(':scope > .card-head'); if(h) h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  // Anything that scrolls to something inside a folded card opens the card first.
+  Element.prototype.scrollIntoView = function(){
+    try{ const c = this.closest && this.closest('.cc-card:not(.cc-open)'); if(c) ccSet(c, true); }catch(e){}
+    return nativeSIV.apply(this, arguments);
+  };
+  function ccMake(card){
+    if(!card || card.classList.contains('cc-card')) return;
+    const head = card.querySelector(':scope > .card-head'); if(!head) return;
+    const body = document.createElement('div'); body.className = 'cc-body';
+    Array.from(card.childNodes).forEach(n => { if(n !== head) body.appendChild(n); });
+    const hint = body.querySelector('p.hint');
+    const sum = document.createElement('div'); sum.className = 'cc-sum';
+    sum.textContent = hint ? hint.textContent.trim() : '';
+    card.appendChild(sum); card.appendChild(body);
+    card.classList.add('cc-card');
+    head.setAttribute('role', 'button'); head.setAttribute('tabindex', '0');
+    const toggle = () => ccSet(card, !card.classList.contains('cc-open'));
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
+    ccSet(card, false);
+  }
+  const byTitle = (tab, titles) => Array.from(document.querySelectorAll('#' + tab + ' > .card')).filter(c => { const h = c.querySelector(':scope > .card-head h2'); return h && titles.indexOf(h.textContent.trim()) >= 0; });
+  Array.from(document.querySelectorAll('#tab-tools > .card')).slice(1).forEach(ccMake);
+  byTitle('tab-examday', ['Exam format', 'Calculator policy', 'What to bring']).forEach(ccMake);
+  byTitle('tab-reference', ['Subject Podcast']).forEach(ccMake);
+  window.ccSet = ccSet;
 })();
 </script>
 <div id="keyTermModalHost" class="key-term-modal-host" onclick="if(event.target===this) closeKeyTermModal();">
