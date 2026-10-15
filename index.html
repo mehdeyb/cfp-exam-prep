@@ -1521,6 +1521,12 @@
      so the question stays in view while you read choices and feedback.
      Narrow portrait screens tighten spacing instead. */
   .q-left,.q-right{min-width:0;}
+  /* Session-conductor buttons stay visible while a long list of parts scrolls. */
+  .cd-panel .cd-actions{position:sticky;bottom:-20px;z-index:2;background:var(--surface);padding:12px 0 20px;margin-bottom:-20px;}
+  /* The "Continue my session" pill sits above the phone tab bar; with no bottom bar it drops lower,
+     and beside the sideways rail it centres on the content instead of the whole screen. */
+  @media (min-width:641px){ .cd-pill{bottom:calc(20px + env(safe-area-inset-bottom,0px));} }
+  @media (orientation:landscape) and (max-height:520px) and (min-width:520px){ .cd-pill{bottom:calc(10px + env(safe-area-inset-bottom,0px));left:calc(50% + 33px);max-width:calc(100vw - 120px);} }
   /* Folded cards: long, read-once or one-at-a-time material opens on a tap. */
   .cc-card > .card-head{cursor:pointer;margin-bottom:0;}
   .cc-card > .card-head h2::after{content:"▾";display:inline-block;margin-left:8px;font-size:.8em;color:var(--muted);transition:transform var(--t-fast) var(--ease);}
@@ -6622,7 +6628,7 @@ function renderTodayPlan(){
     </div>`);
   const SHOW_STEPS = 4;
   const rows = stepRows.length > SHOW_STEPS + 1
-    ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"><summary>Show the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
+    ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open"><summary>Show the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
     : stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)} <button type="button" class="pt-go" style="margin-left:6px;" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
