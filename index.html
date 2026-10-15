@@ -1515,6 +1515,102 @@
     .mode-grid{grid-template-columns:minmax(0,1fr);}
     .focus-grid > *{min-width:0;}
   }
+
+  /* ---------- Fit the screen: less scrolling in quizzes ----------
+     Wide screens put the question on the left and the answers on the right,
+     so the question stays in view while you read choices and feedback.
+     Narrow portrait screens tighten spacing instead. */
+  .q-left,.q-right{min-width:0;}
+  /* Tutor: chat first. The thread and the message box sit right under the title;
+     the intro, stats and idea buttons move beneath, and fold away once you are talking. */
+  #tutorCard{display:flex;flex-direction:column;}
+  #tutorCard > *{order:9;}
+  #tutorCard > .card-head{order:0;}
+  #tutorCard > #tutorApiKeyHint{order:1;}
+  #tutorCard > #tutorThread{order:2;max-height:max(200px, calc(100dvh - 440px));}
+  #tutorCard > #tutorChips{order:3;flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  #tutorCard > #tutorChips::-webkit-scrollbar{display:none;}
+  #tutorCard > #tutorChips .chip{flex:none;white-space:nowrap;}
+  #tutorCard > .tutor-input-row{order:4;flex-wrap:nowrap;margin-bottom:6px;}
+  #tutorCard > .tutor-input-row .btn{width:auto;flex:none;}
+  #tutorCard > .tutor-input-row .tutor-input{width:auto;min-width:0;}
+  #tutorCard > #tutorStatus{order:5;}
+  #tutorCard > #tutorCapabilities{order:6;}
+  #tutorCard > #tutorSnapshot{order:7;}
+  #tutorCard > p.hint{order:8;}
+  #tutorCard.has-convo > p.hint,#tutorCard.has-convo > #tutorSnapshot,#tutorCard.has-convo > #tutorCapabilities{display:none;}
+  @media (min-width:641px){ #tutorCard > #tutorThread{max-height:max(260px, calc(100dvh - 400px));} }
+  @media (orientation:landscape) and (max-height:520px){
+    #tutorCard > #tutorThread{max-height:max(120px, calc(100dvh - 245px));}
+    #tutorCard.has-convo > .card-head{display:none;}
+  }
+  /* Flashcards: the card comes first, the explanations and filters sit beneath it,
+     so you land on the card instead of scrolling past three paragraphs to reach it. */
+  #fcTopCard{display:flex;flex-direction:column;}
+  #fcTopCardContent{display:contents;}
+  #fcTopCardContent > *{order:3;}
+  #fcTopCardContent > .card-head{order:0;}
+  #fcTopCard > #flashcardFullscreenHost{order:1;}
+  #fcTopCardContent > #fcDeckLine{order:2;margin-top:12px;}
+  .confidence-row.done{margin:0 0 10px;padding-bottom:0;border-bottom:0;}
+  .confidence-row.done .confidence-label{display:none;}
+  .confidence-row.done:not(:has(.confidence-pill.active)){display:none !important;}
+  .confidence-row.done .confidence-pill{padding:6px 12px;}
+  @media (orientation:landscape) and (min-width:600px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
+    body.quiz-active .quiz-inner{max-width:1080px;}
+    body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:26px;align-items:start;}
+    body.quiz-active .q-left{position:sticky;top:0;max-height:calc(100vh - 120px);overflow-y:auto;overscroll-behavior:contain;}
+    body.quiz-active .q-text{margin-bottom:14px;}
+    body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
+    body.quiz-active .quiz-top{margin-bottom:12px;}
+    body.quiz-active .q-domain{margin-bottom:8px;}
+  }
+  @media (orientation:landscape) and (max-height:520px) and (min-width:600px){
+    body.quiz-active .quiz-top{margin-bottom:8px;}
+    body.quiz-active .q-card{padding:12px 18px;}
+    body.quiz-active .q-text{font-size:16px;line-height:1.38;}
+    body.quiz-active .choices{gap:6px;}
+    body.quiz-active .choice{padding:8px 12px;font-size:13.5px;}
+    body.quiz-active .choice-note{padding:5px 12px 2px 36px;font-size:12px;line-height:1.42;}
+    body.quiz-active .confidence-pill{padding:7px 11px;}
+    #quizView .quiz-actions{padding:6px 0 max(6px, env(safe-area-inset-bottom));margin-top:8px;}
+    #quizView .quiz-actions .btn{padding:8px 16px;font-size:13px;}
+    #quizView .quiz-feedback{scroll-margin-bottom:64px;}
+  }
+  /* Landscape phones: the tab bar becomes a slim rail down the left edge, so the
+     page keeps every pixel of its short height for content instead of losing a row. */
+  @media (orientation:landscape) and (max-height:520px) and (min-width:600px){
+    .tabbar{position:fixed;left:0;top:0;bottom:0;right:auto;width:calc(66px + env(safe-area-inset-left, 0px));flex-direction:column;flex-wrap:nowrap;justify-content:center;gap:4px;margin:0;border-radius:0;border:none;border-right:1px solid var(--hair);padding:6px 4px 6px max(4px, env(safe-area-inset-left, 0px));overflow-y:auto;z-index:50;box-shadow:none;}
+    .tab-btn{flex:0 0 auto;flex-direction:column;gap:2px;min-width:0;font-size:9.5px;padding:7px 2px;border-radius:10px;}
+    .tab-btn svg{width:18px;height:18px;}
+    body{padding-left:calc(66px + max(18px, env(safe-area-inset-left, 0px)));padding-bottom:16px;}
+    .header-top-row{min-height:0;}
+    .settings-toggle,.theme-toggle{width:34px;height:34px;}
+    #fcTopCard,#fcTopCard.card{padding-top:12px;padding-bottom:12px;}
+    #fcTopCard .card-head{margin-bottom:6px;}
+    .fc-card{padding:16px 24px;min-height:120px;}
+    .fc-actions{margin-top:10px;}
+    .fc-progress{margin-bottom:6px;}
+  }
+  @media (orientation:portrait) and (max-width:640px){
+    h1{font-size:27px;line-height:1.12;}
+    #heroIntro .sub{display:none;}
+  }
+  @media (orientation:portrait) and (max-width:640px){
+    body:not(.flashcard-fullscreen) .fc-card{padding:26px 18px;min-height:170px;}
+  }
+  @media (orientation:portrait) and (max-width:640px){
+    body.quiz-active #quizFullscreenHost{padding:max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));}
+    body.quiz-active .quiz-top{margin-bottom:12px;}
+    body.quiz-active .q-card{padding:18px 16px;}
+    body.quiz-active .q-domain{margin-bottom:8px;}
+    body.quiz-active .q-text{margin-bottom:14px;}
+    .confidence-row{margin:0 0 12px;padding-bottom:10px;}
+    .confidence-pill{padding:9px 12px;}
+    body.quiz-active .choices{gap:7px;}
+    body.quiz-active .choice{padding:10px 13px;}
+    #quizView .quiz-actions{padding:8px 0 max(8px, env(safe-area-inset-bottom));margin-top:10px;}
+  }
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
       animation-duration:0.001ms !important;
@@ -1892,6 +1988,7 @@
           </div>
           <div class="tutor-brief" id="tutorBrief" style="display:none;" role="note"></div>
           <div class="q-card">
+            <div class="q-left">
             <div class="q-domain" id="qDomain">Domain</div>
             <div class="q-scenario" id="qScenario" style="display:none;"></div>
             <div class="q-text" id="qText" tabindex="-1">Question text</div>
@@ -1906,6 +2003,8 @@
             </div>
             <div class="confidence-mismatch" id="confidenceMismatch" style="display:none;"></div>
             <div class="calc-cue" id="calcCue" style="display:none;" role="note"></div>
+            </div>
+            <div class="q-right">
             <div class="choices" id="qChoices"></div>
             <div class="quiz-feedback" id="qFeedback"></div>
             <div id="csRevealHost"></div>
@@ -1937,6 +2036,7 @@
               <button class="exam-nav-toggle" onclick="toggleExamNav()">Question grid</button>
             </div>
             <div class="exam-nav-grid" id="examNavGrid" style="display:none;"></div>
+            </div>
           </div>
           <div class="quiz-actions">
             <button class="btn ghost" onclick="exitToMenu()">Exit session</button>
@@ -2278,6 +2378,7 @@
         <div class="science-item"><b>Today's plan can now run as one guided session</b>Before, the plan was a list of separate Start buttons, and each one ended on its own. Now "Start my session" in Today's plan (or asking the tutor to run your study time) opens a short briefing, then takes you through each part in order. Before each part there is one line on how to do it well, for example to answer in your head before you look at the choices. After each part you get a quick debrief (your score, or how many cards you knew) and what is next, and the next part is chosen again from what you just did, so a drill that turns up misses can add a review. You can skip a part, stop early, or come back through the small "Session" button, and the session ends with a short summary and what to start with next time. This part does not use the AI at all, so it works without a key. The coaching lines are based on retrieval practice (trying to answer before seeing options), which is among the best-supported study methods; the exact wording and the "stop when the time is used" rule are my choices, not tested. While a session is running, the tutor (and the chat on each question) knows which part you are on and what is next, the Study tab's next-best-step points back to the session, and changing your time for the day changes the running session.</div>
         <div class="science-item"><b>Sturdier: bad data, offline use, and wrong answers that gave themselves away</b>I tried loading the app from twenty-two kinds of damaged saved data. One broke a screen: a single badly formed AI-written card could stop the Reference tab from opening. Saved data and restored backups now drop malformed written questions and cards, and always have a record for every exam domain. The app can now be opened without a connection from the last copy it saw (the AI features still need one) and can be added to a phone's home screen with an icon; the page is still fetched fresh whenever you are online, so updates show up on the next open. It also asks the browser to keep your progress when space runs low, says in Settings whether the browser agreed, and, if something unexpected goes wrong on a screen, tells you your progress is saved instead of failing silently. In the question bank, 61 wrong answers used words like "always", "never" and "guaranteed", which let a test-wise student rule them out without knowing the material, so I rewrote them to be wrong on substance. Fourteen correct answers were much longer than the other choices, so I lengthened the others. Ninety wrong answers still contain the word "only", which I left because it is often a legitimate part of a wrong statement. Answer positions in the raw bank lean toward A, but every session shuffles the choices, and I checked that in each mode.</div>
         <div class="science-item"><b>Every screen now lands where you would expect</b>Switching tabs used to carry over the scroll position of the tab you left, so Flashcards could open with its heading cut off and Tutor or Reference could open halfway down. Each tab now remembers where you were: tapping it in the bar returns you to that spot, opening it from a button inside the app starts at the top, and tapping the tab you are already on scrolls it to the top. The tutor opens at its latest message, and Settings and the study guide open at the top every time. In a quiz, each new question already started at the top, but after answering you often had to scroll to find Next question; that bar now stays at the bottom of the screen, and the feedback is scrolled to sit just above it. The flashcard stays on screen as you go through the deck. I measured these by scripting each move on a phone-sized screen, not on a real phone.</div>
+        <div class="science-item"><b>Less scrolling, tuned separately for sideways and upright</b>I measured how far you had to scroll on phones and tablets held both ways, then fixed the worst spots. Held sideways (and on wide screens), a practice question now sits on the left and its answers on the right, so the question stays in view while you read the explanations, and a new question fits on one screen without any scrolling. Held upright, spacing is tighter, the "how sure are you" row shrinks once you have answered, and the page title no longer wastes space on a long tagline. Flashcards now open on the card itself, with the explanation and filters underneath instead of above. The tutor puts the conversation and the message box at the top, and once you start talking the intro and idea buttons fold away. On a sideways phone the tab bar becomes a slim strip down the left edge so you keep the full height of the screen. I measured all of this in a desktop browser at phone and tablet sizes, not on a real phone.</div>
       </div>
     </div>
 
@@ -14043,6 +14144,7 @@ function renderQuestion(){
   if(confRow) confRow.style.display = showConfidence ? 'flex' : 'none';
   session.selectedConfidence = null; // reset for every new question — no default; only counts if the user actually picks one
   document.querySelectorAll('.confidence-pill').forEach(p => { p.classList.remove('active'); p.disabled = false; });
+  if(confRow) confRow.classList.remove('done');
   const mismatchEl = document.getElementById('confidenceMismatch');
   if(mismatchEl) mismatchEl.style.display = 'none';
   const insightElReset = document.getElementById('sessionInsight');
@@ -14624,6 +14726,7 @@ function selectAnswer(i){
   const isCorrect = (i === q.correct);
   try{ revealCaseCues(q); }catch(e){}
   document.querySelectorAll('.confidence-pill').forEach(p => p.disabled = true);
+  { const cr = document.getElementById('confidenceRow'); if(cr) cr.classList.add('done'); }
   const mismatchEl = document.getElementById('confidenceMismatch');
   if(mismatchEl){
     if(session.selectedConfidence === 'confident' && !isCorrect){
@@ -17019,6 +17122,13 @@ document.addEventListener('keydown', e => {
 
 loadData();
 requestDurableStorage();
+(function(){
+  const th = document.getElementById('tutorThread'), c = document.getElementById('tutorCard');
+  if(!th || !c || !window.MutationObserver) return;
+  const sync = () => c.classList.toggle('has-convo', th.querySelectorAll('.tutor-msg').length > 1);
+  new MutationObserver(sync).observe(th, {childList:true});
+  sync();
+})();
 </script>
 <div id="keyTermModalHost" class="key-term-modal-host" onclick="if(event.target===this) closeKeyTermModal();">
   <div class="key-term-modal-card" role="dialog" aria-modal="true" aria-labelledby="keyTermModalTerm">
