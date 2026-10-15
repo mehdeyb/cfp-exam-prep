@@ -884,6 +884,13 @@
   .progress-trend .down{color:var(--incorrect);}
   .progress-trend .flat{color:var(--muted);}
   .progress-svg{width:100%;height:120px;display:block;overflow:visible;}
+  .progress-scrub{position:relative;touch-action:pan-y;cursor:crosshair;-webkit-tap-highlight-color:transparent;border-radius:6px;outline-offset:3px;}
+  .progress-guide{position:absolute;top:0;bottom:0;width:1px;background:var(--muted);opacity:0;pointer-events:none;transform:translateX(-.5px);}
+  .progress-dot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--gold);border:2px solid var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.3);opacity:0;pointer-events:none;}
+  .progress-scrub.scrubbing .progress-guide{opacity:.5;}
+  .progress-scrub.scrubbing .progress-dot{opacity:1;}
+  .progress-hint{font-size:10px;color:var(--muted-dim);letter-spacing:.04em;}
+  .progress-readout{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--paper);margin-top:6px;line-height:1.4;min-height:15px;}
   .progress-chart-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:6px;}
   .gen-status{font-size:12px;color:var(--muted);}
   .gen-status.loading{animation:variantLoadingPulse 1.6s ease-in-out infinite;}
@@ -1923,11 +1930,17 @@
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
         <div id="progressChartWrap" style="display:none;">
           <div class="progress-trend" id="progressTrend"></div>
-          <svg aria-hidden="true" id="progressChart" viewBox="0 0 340 120" preserveAspectRatio="none" class="progress-svg"></svg>
-          <div class="progress-chart-labels">
+          <div class="progress-scrub" id="progressScrub" tabindex="0" role="img" aria-label="Trend line. Drag across it, or use the left and right arrow keys, to read each session.">
+            <svg aria-hidden="true" id="progressChart" viewBox="0 0 340 120" preserveAspectRatio="none" class="progress-svg"></svg>
+            <div class="progress-guide" id="progressGuide"></div>
+            <div class="progress-dot" id="progressDot"></div>
+          </div>
+          <div class="progress-chart-labels" id="progressLabels">
             <span id="progressLabelStart"></span>
+            <span class="progress-hint">drag across the line</span>
             <span id="progressLabelEnd"></span>
           </div>
+          <div class="progress-readout" id="progressReadout" style="display:none;" aria-live="polite"></div>
         </div>
       </div>
       <div class="bp-legend" id="bpLegend"></div>
@@ -2586,7 +2599,7 @@
         <div class="science-item"><b>The syllabus checklist now paces itself to your exam date</b>Once your exam date is set, the checklist works out how many unreviewed topics you can cover per day and says so, and it counts topics you are already solid on in practice (80% or better over six or more tries) separately from the ones you have ticked. The tutor also now knows how many topics you have ticked off, so its advice can take it into account.</div>
         <div class="science-item"><b>One question, one ask</b>A question the app wrote asked for a federal law and also for that law's focus, but its four answer choices could only cover the focus, so the correct answer looked incomplete. Questions the app writes must now ask exactly one thing, the instructions given to the writer say so, a check rejects any question that joins two asks, and any such question already saved on your device is removed the next time the app opens. The built-in bank was checked for the same flaw and is clean.</div>
         <div class="science-item"><b>Flashcards tab: clearer lines and a full-width picker</b>The deck line ("Your next 20 cards" or "Showing cards tied to questions you missed") ran straight into the sentence beneath it, and the domain picker stopped short of the buttons below it. The lines now have a small gap between them, the space before the controls is tighter, and the picker spans the full row on phones.</div>
-        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div><div class="science-item"><b>No hidden answer choices</b>On a short screen, the last answer can sit behind the Next bar. A small "More answers below" button now appears until that answer is fully on screen, and tapping it scrolls there.</div><div class="science-item"><b>Plan fold says what it will do</b>The control under Today's plan now reads "Show the other steps" when closed and "Hide the other steps" when open.</div><div class="science-item"><b>More on each phone screen</b>On phones the Study screen is shorter: a tighter header, the readiness ring beside its label, a full-width exam-date card, and plan step descriptions held to two lines (tap one to read it all). The quiz tutor note now sits on one line. Text size and tap targets are unchanged.</div><div class="science-item"><b>Trend joins the Blueprint Bar</b>Your progress-over-time chart now sits inside the Blueprint Bar card, right under the bar, so mastery by domain and your trend read together and the Study screen is one card shorter.</div>
+        <div class="science-item"><b>Flashcards that adapt to your level</b>Each card is now shown to match how you are doing on that particular card. A card you keep missing offers a "Need a hint?" button that reveals only the start of the definition, shows your saved memory trick when you flip it, and a recall that needed the hint is not promoted as far in the review schedule as an unaided one. A card you have recalled cleanly several times is turned around: you see the definition, with the term's own words blanked out, and have to name the term, which is a harder kind of recall than recognising a definition. New and in-between cards are unchanged. It works without an AI key, and a switch in the "how the ordering actually works" panel turns it off.</div><div class="science-item"><b>Card depth that matches your level</b>Each card now changes what it teaches, not just how it's shown. Struggling cards (and new cards in a weak domain) open up with an "In short" core line, the full definition, and a real exam question that uses the term. Mastered cards test you harder: they alternate between recalling the term from its definition and answering an exam-style question that applies it. Everything else stays as it was. Apply-it answers count like any quiz answer: they update your domain readiness, missed list and question history, favor questions you haven't seen, and a miss keeps the card in "still learning". The switch in "How this works" turns it all off.</div><div class="science-item"><b>Plainer, shorter explanations</b>The app now says less about its own workings. The tutor answers directly instead of narrating what it is doing, its opening message is two short sentences, the session note is one line, and the flashcard deck dropped the long ordering explanations in favor of a short "Up next" line.</div><div class="science-item"><b>Today's plan counts only what you did</b>A step is now done only when you have actually done the work: questions answered, cards rated, calculator problems solved. Opening a step or starting a session does nothing by itself. Partly finished steps show how far you got ("7 of 15 questions done") with a Continue button, a session you end early is recorded as the number of questions you really answered, and the steps that are just reading (explain it back, skim key numbers) have a Mark done button. A step you worked on stays on the list even when the work clears the reason for it.</div><div class="science-item"><b>Gaps in the question bank filled</b>Added 17 questions and 30 flashcards on topics that had thin coverage: education funding, insurance needs analysis, market cycles, trust and estate income tax, postmortem planning, crisis events, business plan selection, and the 2025–2026 law changes (OBBBA, SECURE 2.0).</div><div class="science-item"><b>No hidden answer choices</b>On a short screen, the last answer can sit behind the Next bar. A small "More answers below" button now appears until that answer is fully on screen, and tapping it scrolls there.</div><div class="science-item"><b>Plan fold says what it will do</b>The control under Today's plan now reads "Show the other steps" when closed and "Hide the other steps" when open.</div><div class="science-item"><b>More on each phone screen</b>On phones the Study screen is shorter: a tighter header, the readiness ring beside its label, a full-width exam-date card, and plan step descriptions held to two lines (tap one to read it all). The quiz tutor note now sits on one line. Text size and tap targets are unchanged.</div><div class="science-item"><b>Trend joins the Blueprint Bar</b>Your progress-over-time chart now sits inside the Blueprint Bar card, right under the bar, so mastery by domain and your trend read together and the Study screen is one card shorter.</div><div class="science-item"><b>Drag across your trend</b>Touch and slide along the trend line to read any session: date, type, score and minutes. Arrow keys work too. A session ended early now shows its score out of the questions you answered.</div>
       </div>
     </div>
 
@@ -5842,10 +5855,11 @@ function renderProgressChart(){
   emptyEl.style.display = 'none';
   wrapEl.style.display = 'block';
 
-  const points = sessions.map(s => ({
-    pct: s.total ? Math.round((s.correct/s.total)*100) : 0,
-    date: s.date
-  }));
+  const points = sessions.map(s => {
+    const denom = (s.answered > 0 && s.answered < s.total) ? s.answered : s.total;
+    return { pct: denom ? Math.min(100, Math.round((s.correct/denom)*100)) : 0, date: s.date, mode: s.mode, correct: s.correct, denom, minutes: s.minutes };
+  });
+  window._progressPoints = points;
 
   // Trend: compare the average of the first third against the last third.
   // With very few sessions this naturally has less to compare, so the
@@ -5898,6 +5912,52 @@ function renderProgressChart(){
   const fmtDate = iso => { const d = new Date(iso); return (d.getMonth()+1)+'/'+d.getDate(); };
   document.getElementById('progressLabelStart').textContent = fmtDate(points[0].date);
   document.getElementById('progressLabelEnd').textContent = fmtDate(points[points.length-1].date);
+  setupProgressScrub();
+}
+
+// Drag (or tap) across the trend line to read each session: date, type, score.
+function setupProgressScrub(){
+  const wrap = document.getElementById('progressScrub');
+  if(!wrap) return;
+  const pts = window._progressPoints || [];
+  const guide = document.getElementById('progressGuide');
+  const dot = document.getElementById('progressDot');
+  const read = document.getElementById('progressReadout');
+  const labels = document.getElementById('progressLabels');
+  const names = {adaptive:'Adaptive', drill:'Drill', review:'Missed review', case:'Case study', fullexam:'Full exam', mock:'Mock exam', checkpoint:'Checkpoint'};
+  const H = 120, padY = 10;
+  const show = clientX => {
+    if(!pts.length) return;
+    const r = wrap.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+    const i = pts.length > 1 ? Math.round(f * (pts.length - 1)) : 0;
+    const p = pts[i];
+    const x = pts.length > 1 ? i / (pts.length - 1) : .5;
+    const y = (padY + (1 - p.pct/100) * (H - padY*2)) / H;
+    guide.style.left = (x*100) + '%'; dot.style.left = (x*100) + '%'; dot.style.top = (y*100) + '%';
+    wrap.classList.add('scrubbing');
+    const d = new Date(p.date);
+    const when = d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) ;
+    read.textContent = when + ' · ' + (names[p.mode] || 'Session') + ' · ' + p.pct + '% (' + p.correct + ' of ' + p.denom + ')' + (p.minutes ? ' · ' + p.minutes + ' min' : '');
+    read.style.display = 'block'; labels.style.display = 'none';
+  };
+  const hide = () => { wrap.classList.remove('scrubbing'); read.style.display = 'none'; labels.style.display = ''; };
+  if(!wrap._scrubBound){
+    wrap._scrubBound = true;
+    wrap.addEventListener('pointerdown', e => { try{ wrap.setPointerCapture(e.pointerId); }catch(_){} show(e.clientX); });
+    wrap.addEventListener('pointermove', e => { if(e.buttons || e.pointerType === 'touch' || wrap.classList.contains('scrubbing')) show(e.clientX); });
+    wrap.addEventListener('pointerleave', e => { if(e.pointerType === 'mouse') hide(); });
+    wrap.addEventListener('pointerup', e => { if(e.pointerType !== 'mouse') setTimeout(hide, 1800); });
+    wrap.addEventListener('pointercancel', hide);
+    wrap.addEventListener('keydown', e => {
+      if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const r = wrap.getBoundingClientRect(); const n = pts.length; if(n < 2) return;
+      const cur = wrap._i == null ? n - 1 : wrap._i;
+      const next = Math.min(n-1, Math.max(0, cur + (e.key === 'ArrowRight' ? 1 : -1)));
+      wrap._i = next; show(r.left + (next/(n-1)) * r.width); e.preventDefault();
+    });
+    wrap.addEventListener('blur', hide);
+  }
 }
 
 // Works out, from what has actually been studied in the last two weeks,
