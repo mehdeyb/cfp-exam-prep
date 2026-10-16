@@ -1026,6 +1026,17 @@
   .featured-mode .fm-cta{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13.5px;color:var(--ink);background:var(--gold);border:none;border-radius:24px;padding:12px 22px;min-height:44px;white-space:nowrap;transition:transform var(--t-fast) var(--ease);}
   .featured-mode:hover .fm-cta{transform:scale(1.04);}
 
+  .plan-more > summary{list-style:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--gold);padding:10px 0;min-height:40px;display:flex;align-items:center;}
+  .plan-more > summary::-webkit-details-marker{display:none;}
+  .plan-more > summary::after{content:'▾';margin-left:8px;color:var(--muted);transition:transform .2s var(--ease);}
+  .plan-more[open] > summary::after{transform:rotate(180deg);}
+  .more-modes{margin-top:12px;border-top:1px solid var(--hair);}
+  .more-modes > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 0;min-height:44px;font-size:14.5px;font-weight:500;color:var(--paper);}
+  .more-modes > summary::-webkit-details-marker{display:none;}
+  .more-modes .mm-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair-strong);border-radius:999px;padding:1px 8px;}
+  .more-modes .mm-chev{margin-left:auto;color:var(--muted);transition:transform .2s var(--ease);}
+  .more-modes[open] .mm-chev{transform:rotate(180deg);}
+  .more-modes[open] .mode-grid{animation:riseIn .24s var(--ease-out);}
   .mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;}
   .mode-card{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:15px 16px;cursor:pointer;transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);}
   .mode-card:hover{border-color:var(--hair-strong);transform:translateY(-2px);box-shadow:var(--shadow-md);}
@@ -1316,7 +1327,7 @@
   .glossary-chevron{margin-left:auto;color:var(--muted);font-size:11px;transition:transform var(--t-fast) var(--ease);}
   .glossary-item.expanded .glossary-chevron{color:var(--gold);}
   .glossary-domain-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-left:6px;}
-  .tech-today{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--hair);border-radius:12px;background:var(--surface);}
+  .tech-today{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:8px 8px 8px 14px;border:1px solid var(--hair);border-radius:12px;background:var(--surface);}
   .tech-today .tt-text{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
   .tech-today .tt-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
   .tech-today b{font-size:14px;color:var(--paper);font-weight:600;}
@@ -2292,6 +2303,7 @@
         <button class="fm-cta">Start adaptive session</button>
       </div>
 
+      <details class="more-modes" id="moreModes"><summary><span>More ways to practice</span><span class="mm-count">8</span><span class="mm-chev" aria-hidden="true">▾</span></summary>
       <div class="mode-grid">
         <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
           <div class="tag">Blocked practice</div>
@@ -2350,6 +2362,7 @@
           <div class="mode-meta" data-mm="podcast"></div>
         </div>
       </div>
+      </details>
     </div>
 
     <div id="domainPickerHost">
@@ -2912,7 +2925,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress. To keep the Study tab calm, the eight extra practice modes now sit under "More ways to practice", the week-by-week plan folds away until you want it, and the technique reminder is a single line.</div>
       </div>
     </div>
 
@@ -6679,9 +6692,11 @@ function renderStudyPlan(){
   body.innerHTML = `
     <div class="plan-phase-badge">${phaseLabel}</div>
     <div class="plan-countdown">${daysLeft} day${daysLeft===1?'':'s'} until exam day</div>
-    <p class="plan-summary">${phaseNote}</p>
-    ${paceForecastHtml(daysLeft)}
-    <div class="plan-weeks">${weekRows}</div>
+    <details class="plan-more"${window._planMoreOpen ? ' open' : ''} ontoggle="window._planMoreOpen = this.open"><summary>See the week-by-week plan</summary>
+      <p class="plan-summary">${phaseNote}</p>
+      ${paceForecastHtml(daysLeft)}
+      <div class="plan-weeks">${weekRows}</div>
+    </details>
   `;
 }
 
@@ -7649,7 +7664,7 @@ function renderTodayPlan(){
       <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why" onclick="this.classList.toggle('open')">${escapeHtml(st.why)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>`; });
-  const SHOW_STEPS = 4;
+  const SHOW_STEPS = 2;
   const rows = stepRows.length > SHOW_STEPS + 1
     ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open;var m=this.querySelector('.pt-more-label');if(m)m.textContent=this.open?'Hide':'Show'"><summary><span class="pt-more-label">${window._ptMoreOpen ? 'Hide' : 'Show'}</span> the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
     : stepRows.join('');
@@ -9290,7 +9305,7 @@ function renderTechToday(){
   const el = document.getElementById('techToday'); if(!el) return;
   const p = studyTechniquePick();
   el.style.display = 'flex';
-  el.innerHTML = '<div class="tt-text"><span class="tt-label">Technique for today</span><b>' + p.t.name + '</b><span class="tt-why">' + p.why + '</span></div><button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + p.t.id + '\')">' + (p.t.cta ? 'Try it' : 'See how') + '</button>';
+  el.innerHTML = '<div class="tt-text" title="' + p.why.replace(/"/g,'&quot;') + '"><span class="tt-label">Technique for today</span><b>' + p.t.name + '</b></div><button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + p.t.id + '\')">' + (p.t.cta ? 'Try it' : 'See how') + '</button>';
   const btn = el.querySelector('button'); if(!p.t.cta) btn.onclick = () => { showTab('reference'); setTimeout(() => { try{ document.getElementById('techCard').scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }, 80); };
 }
 function studyTechniqueRun(id){
@@ -18694,7 +18709,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.73';
+const BUILD_ID = '2026-10-16.75';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
