@@ -18299,7 +18299,7 @@ window.addEventListener('load', () => setTimeout(checkForNewBuild, 1500));
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForNewBuild(); });
 setInterval(() => { if(window._updPending && !document.body.classList.contains('quiz-active')){ window._updPending = false; checkForNewBuild(); } }, 5000);
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => try{window._vpMark&&window._vpMark('sw-registered')}catch(_){}).catch(() => {}); });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => { try{window._vpMark&&window._vpMark('sw-registered')}catch(_){} }).catch(() => {}); });
 }
 document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
