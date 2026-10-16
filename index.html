@@ -423,6 +423,10 @@
       max(20px, env(safe-area-inset-left));
     animation:quizIn .32s var(--ease);
   }
+  .choice-skel{height:58px;border-radius:12px;border:1px solid var(--hair);background:var(--surface2);margin-bottom:10px;animation:skelPulse 1.4s ease-in-out infinite;}
+  .choice-skel:nth-child(2){animation-delay:.12s;} .choice-skel:nth-child(3){animation-delay:.24s;} .choice-skel:nth-child(4){animation-delay:.36s;}
+  @keyframes skelPulse{0%,100%{opacity:.45;}50%{opacity:1;}}
+  @media (prefers-reduced-motion:reduce){.choice-skel{animation:none;}}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -3212,6 +3216,18 @@
         <div class="settings-section">
           <h3>About this version</h3>
           <p class="hint" style="margin-top:0;" id="buildNote">Build</p>
+          <details class="win-exp" style="margin-top:10px;">
+            <summary class="hint" style="cursor:pointer;">Window size tests (for the blank band under the app)</summary>
+            <p class="hint">Each button changes how the page asks iOS for its window, then re-measures. Tap one, wait a second, and read the result. If the layout number reaches the screen number, that one works.</p>
+            <div class="backup-actions" style="flex-wrap:wrap;">
+              <button class="btn ghost" onclick="winExp('meta')">Re-apply viewport</button>
+              <button class="btn ghost" onclick="winExp('fixed')">Lock zoom</button>
+              <button class="btn ghost" onclick="winExp('height')">Ask for device height</button>
+              <button class="btn ghost" onclick="winExp('nudge')">Nudge scroll</button>
+              <button class="btn ghost" onclick="winExp('plain')">Drop full-screen mode</button>
+            </div>
+            <p class="hint" id="winExpOut" style="margin-top:8px;"></p>
+          </details>
         </div>
 
         <div class="settings-section">
@@ -4702,6 +4718,34 @@ try{
   if(mq.addEventListener) mq.addEventListener('change', onSystemChange); else if(mq.addListener) mq.addListener(onSystemChange);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) onSystemChange(); });
 }catch(_){}
+
+// Window-size tests: try different ways of asking iOS for a full-height window and report what it gives back.
+function winExp(kind){
+  const out = document.getElementById('winExpOut');
+  const mv = document.querySelector('meta[name="viewport"]');
+  const base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+  const contents = {
+    meta: base,
+    fixed: base + ', maximum-scale=1, user-scalable=no',
+    height: base + ', height=device-height',
+    plain: 'width=device-width, initial-scale=1.0'
+  };
+  const before = window.innerHeight;
+  try{
+    if(kind === 'nudge'){
+      window.scrollTo(0,1); setTimeout(()=>window.scrollTo(0,0), 60);
+      window.dispatchEvent(new Event('resize'));
+    } else if(mv){
+      const n = document.createElement('meta'); n.name = 'viewport'; n.content = contents[kind];
+      mv.parentNode.replaceChild(n, mv);
+    }
+  }catch(e){}
+  setTimeout(()=>{
+    try{ window._vpProbe && window._vpProbe(); }catch(e){}
+    const i = window._vpInfo || {};
+    if(out) out.textContent = kind + ': before ' + before + ', now ' + window.innerHeight + ' (visible ' + i.vv + ', lvh ' + i.lvh + ', vh ' + i.vh + ', screen ' + i.scr + ')';
+  }, 700);
+}
 
 function applyTheme(){
   const isLight = effectiveTheme() === 'light';
@@ -15375,6 +15419,7 @@ async function maybeSwapQuestionForVariant(q){
   qTextEl.classList.add('variant-loading');
   choicesBox.innerHTML = '';
   choicesBox.classList.add('variant-loading-choices');
+  choicesBox.innerHTML = '<div class="choice-skel"></div><div class="choice-skel"></div><div class="choice-skel"></div><div class="choice-skel"></div>';
   choicesBox.style.opacity = '.4';
   const confRowEl = document.getElementById('confidenceRow');
   if(confRowEl) confRowEl.style.display = 'none';
@@ -18214,7 +18259,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.49';
+const BUILD_ID = '2026-10-15.50';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -18359,6 +18404,7 @@ requestDurableStorage();
       if(note) note.textContent = 'Build ' + BUILD_ID + ' · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', first ' + window._vpFirst + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
     }catch(e){}
   }
+  window._vpProbe = probe;
   window.addEventListener('resize', probe);
   if(window.visualViewport) window.visualViewport.addEventListener('resize', probe);
   window.addEventListener('orientationchange', () => setTimeout(probe, 250));
