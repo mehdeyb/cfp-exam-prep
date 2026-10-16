@@ -1323,7 +1323,7 @@
   .cd-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
   .cd-actions .cd-link{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 6px;font-family:inherit;}
   .cd-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:140;display:none;max-width:calc(100vw - 32px);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;min-height:44px;border-radius:22px;border:1px solid var(--gold);background:var(--surface);color:var(--gold);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28);}
-  body.quiz-active .cd-pill{display:none !important;}
+  body.quiz-active .cd-pill, body.settings-active .cd-pill{display:none !important;}
   .cd-pill{display:none;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;}
   body.cd-pill-on .wrap::after{content:"";display:block;height:68px;}
   .cd-next .cd-cue{display:block;margin-top:6px;}
@@ -2742,6 +2742,7 @@
         <div class="science-item"><b>The TVM walkthrough on a sideways phone</b>Held sideways, the page now keeps the problem, its timeline and the calculator together on one screen, with the two-part option under the calculator. The page rail on the left no longer shows through behind the calculator.</div>
         <div class="science-item"><b>Thin topics now have cards and scenario questions</b>A coverage check against the CFP topic list found areas with one mention or none: engagement letters and compensation disclosure, the 1933 Act, Sarbanes-Oxley, Dodd-Frank, flood and uninsured-motorist cover, Section 79, incontestability and grace periods, asset location, glide paths, pro rata conversions, 20% withholding, Social Security provisional income, IRMAA, codicils, Sections 2038 and 2042, and elder financial exploitation. The gaps got 67 new flashcards and 31 applied questions, including spousal lifetime access trusts, trust protectors, captive versus independent agents and bond premium amortization. Anything the bank already covered was left alone rather than repeated. The check matches keywords, so it flags thin spots rather than proving full coverage.</div>
         <div class="science-item"><b>Light and dark follow your phone</b>The app now matches your phone's appearance setting and switches by itself when the phone does, for example at sunset if you use that. The sun and moon button still overrides it, and Settings has Auto, Light and Dark choices to hand control back.</div>
+        <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
       </div>
     </div>
 
@@ -18203,7 +18204,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.42';
+const BUILD_ID = '2026-10-15.43';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
