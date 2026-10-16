@@ -3221,6 +3221,7 @@
         <div class="settings-section">
           <h3>About this version</h3>
           <p class="hint" style="margin-top:0;" id="buildNote">Build</p>
+          <p class="hint" id="vpHistory" style="margin-top:6px;"></p>
           <details class="win-exp" style="margin-top:10px;">
             <summary class="hint" style="cursor:pointer;">Window size tests (for the blank band under the app)</summary>
             <p class="hint">Each button changes how the page asks iOS for its window, then re-measures. Tap one, wait a second, and read the result. If the layout number reaches the screen number, that one works.</p>
@@ -12296,6 +12297,7 @@ function closeDomainPicker(){
 
 function openSettings(){
   document.body.classList.add('settings-active');
+  try{ window._vpNote && window._vpNote('settings'); const vh = document.getElementById('vpHistory'); if(vh && window._vpHist) vh.textContent = 'Height history: ' + window._vpHist.join(' → '); }catch(e){}
   lockBodyScroll();
   { const h = document.getElementById('settingsHost'); if(h) h.scrollTop = 0; }
   renderApiKeyUI();
@@ -18272,7 +18274,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.51';
+const BUILD_ID = '2026-10-15.52';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -18418,6 +18420,29 @@ requestDurableStorage();
     }catch(e){}
   }
   window._vpProbe = probe;
+  // Height history: when does the window change size, and what was happening? Shown in Settings > About this version.
+  window._vpHist = [];
+  const t0 = Date.now();
+  let lastH = null;
+  function note(why){
+    const h = window.innerHeight;
+    if(h === lastH && why !== 'start') return;
+    lastH = h;
+    window._vpHist.push(h + ' ' + why + ' @' + ((Date.now()-t0)/1000).toFixed(1) + 's');
+    if(window._vpHist.length > 12) window._vpHist.shift();
+    const el = document.getElementById('vpHistory');
+    if(el) el.textContent = 'Height history: ' + window._vpHist.join(' → ');
+  }
+  window._vpNote = note;
+  note('start');
+  window.addEventListener('resize', () => note('resize'));
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', () => note('vv-resize'));
+  document.addEventListener('visibilitychange', () => note(document.hidden ? 'hidden' : 'shown'));
+  window.addEventListener('pageshow', () => note('pageshow'));
+  window.addEventListener('focus', () => note('focus'));
+  document.addEventListener('DOMContentLoaded', () => note('dom'));
+  window.addEventListener('load', () => note('load'));
+  for(const ms of [150, 400, 800, 1500, 3000, 6000]) setTimeout(() => note('t+' + ms), ms);
   window.addEventListener('resize', probe);
   if(window.visualViewport) window.visualViewport.addEventListener('resize', probe);
   window.addEventListener('orientationchange', () => setTimeout(probe, 250));
