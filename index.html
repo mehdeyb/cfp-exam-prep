@@ -954,6 +954,13 @@
   .difficulty-indicator .diff-dot.on{background:var(--gold);}
   .coach-actions{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--hair);flex-wrap:wrap;gap:10px;}
   .plan-date-row{display:flex;gap:10px;align-items:center;margin-top:10px;}
+  .ewp{margin-top:10px;}
+  .ewp .ewp-label{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .ewp .ewp-warn{font-size:12.5px;color:var(--incorrect);margin-bottom:8px;line-height:1.4;}
+  .ewp .ewp-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .ewp button{font:inherit;font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;min-height:34px;transition:transform .12s var(--ease),border-color var(--t-fast) var(--ease);}
+  .ewp button:active{transform:scale(.95);}
+  .ewp button.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft);}
   #examDateInput{font-family:'IBM Plex Sans',sans-serif;font-size:16px;padding:9px 12px;border-radius:8px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);}
   .plan-phase-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:var(--gold-tint);color:var(--gold);margin-bottom:10px;}
   .plan-countdown{font-family:'Fraunces',serif;font-size:19px;margin-bottom:4px;}
@@ -2418,6 +2425,7 @@
           <input type="date" id="examDateInput" aria-label="Exam date" onchange="setExamDate(this.value)">
           <button class="btn ghost ex-clear" id="examDateClear" onclick="clearExamDate()" style="display:none;">Clear</button>
         </div>
+        <div id="examWindowPick" class="ewp"></div>
       </div>
       <div id="planBody" style="display:none;"></div>
     </div>
@@ -6351,6 +6359,17 @@ function domainMasteryList(){
   });
 }
 
+const EXAM_WINDOW_DAYS = ['2026-10-29','2026-10-30','2026-10-31','2026-11-01','2026-11-02','2026-11-03','2026-11-04','2026-11-05'];
+function renderExamWindowPick(){
+  const box = document.getElementById('examWindowPick'); if(!box) return;
+  const cur = DATA && DATA.examDate;
+  const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const inWin = cur && EXAM_WINDOW_DAYS.indexOf(cur) >= 0;
+  const nearWin = cur && cur >= '2026-09-01' && cur <= '2026-12-31';
+  box.innerHTML = (cur && !inWin && nearWin ? '<div class="ewp-warn">That date falls outside the October 2026 testing window (Oct 29 – Nov 5). Worth double-checking your confirmation email.</div>' : '')
+    + '<div class="ewp-label">October 2026 window — tap your day</div><div class="ewp-row">'
+    + EXAM_WINDOW_DAYS.map(d => '<button type="button" class="' + (d === cur ? 'on' : '') + '" onclick="setExamDate(\'' + d + '\')" aria-pressed="' + (d === cur) + '">' + fmt(d) + '</button>').join('') + '</div>';
+}
 function setExamDate(dateStr){
   if(!dateStr){ DATA.examDate = null; }
   else { DATA.examDate = dateStr; }
@@ -6556,6 +6575,7 @@ function renderStudyPlan(){
   const input = document.getElementById('examDateInput');
   const clearBtn = document.getElementById('examDateClear');
   if(!setup || !body) return;
+  try{ renderExamWindowPick(); }catch(e){}
 
   if(!DATA.examDate){
     body.style.display = 'none';
@@ -18439,7 +18459,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.65';
+const BUILD_ID = '2026-10-16.66';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
