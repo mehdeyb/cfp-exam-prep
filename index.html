@@ -2889,7 +2889,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button.</div>
       </div>
     </div>
 
@@ -3105,6 +3105,7 @@
           <div class="fc-mnemonic-row" id="fcMnemonicRow" style="display:none;">
             <button class="btn ghost" id="fcMnemonicBtn" onclick="event.stopPropagation(); requestFlashcardMnemonic();">Give me a memory trick for this</button>
             <button class="btn ghost" id="fcExplainBtn" onclick="event.stopPropagation(); requestFlashcardExplain();">Explain it with an example</button>
+            <button class="btn ghost" id="fcTutorBtn" onclick="event.stopPropagation(); askTutorAboutCard();">Talk it through with the tutor</button>
           </div>
           <div class="fc-mnemonic-box" id="fcMnemonicBox" style="display:none;"></div>
         </div>
@@ -11008,6 +11009,11 @@ function fcKeepInView(){
   const r = c.getBoundingClientRect();
   if(r.top < 70 || r.bottom > window.innerHeight - 90){ try{ c.scrollIntoView({ block: 'center', behavior: 'auto' }); }catch(e){} }
 }
+function askTutorAboutCard(){
+  const c = fcQueue[fcIndex]; if(!c) return;
+  if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen();
+  askTutorAbout('I am studying the flashcard "' + c.term + '" (' + c.def + ') Check whether I really understand it: ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.');
+}
 let _fcUndo = null;
 function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b) return; const rc = document.getElementById('fcRecap'); const ok = _fcUndo && _fcUndo.queue === fcQueue && !(rc && rc.style.display === 'block'); b.classList.toggle('show', !!ok); }
 function undoFlashcardRating(){
@@ -18095,6 +18101,7 @@ function tutorGuideBubble(text, actions){
 function tutorGuessIntent(t){
   t = String(t || '').toLowerCase();
   if(/podcast/.test(t)) return null;
+  if(/\b(exam|sit|sitting|test day)\b/.test(t) && !/\?\s*$/.test(t) && tutorParseDate(t)) return 'date';
   if(/readiness|\bscore\b/.test(t)) return 'readiness';
   if(/tvm|calculator|time value/.test(t)) return 'tvm';
   if(/study guide/.test(t)) return 'guide';
@@ -18106,6 +18113,28 @@ function tutorGuessIntent(t){
   if(/missed|got this question wrong|my mistakes/.test(t)) return 'missed';
   if(/quiz|practice|session/.test(t)) return 'quiz';
   return null;
+}
+function tutorParseDate(text){
+  const t = String(text || '');
+  let m = t.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  let y, mo, d;
+  if(m){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else {
+    const names = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    m = t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(20\d{2}))?/i);
+    if(m){ mo = names.indexOf(m[1].toLowerCase()) + 1; d = +m[2]; y = m[3] ? +m[3] : null; }
+    else {
+      m = t.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}|\d{2}))?\b/);
+      if(!m) return null;
+      mo = +m[1]; d = +m[2]; y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : null;
+    }
+  }
+  if(!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+  const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(!y){ y = today.getFullYear(); if(new Date(y, mo-1, d) < today) y++; }
+  const dt = new Date(y, mo - 1, d); if(dt.getMonth() !== mo - 1) return null;
+  const iso = y + '-' + String(mo).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  return { iso, dt, days: Math.round((dt - today) / 86400000) };
 }
 function tutorLocalGuide(text){
   const kind = tutorGuessIntent(text);
@@ -18165,7 +18194,17 @@ function tutorLocalGuide(text){
     } else if(kind === 'tools'){
       tutorGuideBubble('The Tools tab has six decision tools: trusts, business entities, IRA deductibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open the Tools tab', primary: true, run: () => showTab('tools') }]);
     } else if(kind === 'date'){
-      tutorGuideBubble('Your exam date drives the countdown, the daily plan and how the session is paced.', [{ label: 'Show me where to set it', primary: true, run: () => tutorPoint('exam_date') }]);
+      const pd = tutorParseDate(text);
+      if(pd && pd.days >= 0){
+        const label = pd.dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+        const inWin = typeof EXAM_WINDOW_DAYS !== 'undefined' && EXAM_WINDOW_DAYS.indexOf(pd.iso) >= 0;
+        tutorGuideBubble(`That's ${label}, ${pd.days === 0 ? 'today' : pd.days + ' day' + (pd.days === 1 ? '' : 's') + ' away'}. Want me to set it as your exam date?` + (!inWin && pd.iso >= '2026-09-01' && pd.iso <= '2026-12-31' ? ' Note: it falls outside the October 2026 window (Oct 29 \u2013 Nov 5).' : ''), [
+          { label: 'Yes, set ' + pd.dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}), primary: true, run: () => { setExamDate(pd.iso); tutorGuideBubble(`Done. ${pd.days} day${pd.days === 1 ? '' : 's'} to go, and your plan now counts down to it.`, [{ label: 'Show me my plan', primary: true, run: () => { showTab('study'); } }]); } },
+          { label: 'No, pick a different day', run: () => tutorPoint('exam_date') },
+        ]);
+      } else {
+        tutorGuideBubble('Your exam date drives the countdown, the daily plan and how the session is paced.', [{ label: 'Show me where to set it', primary: true, run: () => tutorPoint('exam_date') }]);
+      }
     }
     return true;
   }catch(e){ return false; }
@@ -18538,7 +18577,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.68';
+const BUILD_ID = '2026-10-16.69';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
