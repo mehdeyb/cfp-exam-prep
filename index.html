@@ -1849,6 +1849,12 @@
   @keyframes panelOut{to{opacity:0;transform:translateY(10px) scale(.98);}}
   @keyframes pillIn{from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.96);}to{opacity:1;transform:translateX(-50%);}}
   .cd-pill{animation:pillIn .4s var(--ease-spring);}
+  #tutorThread > .tutor-msg:last-child{animation:riseIn .32s var(--ease-out);}
+  #resultsView:not([style*="none"]) > *{animation:riseIn .46s var(--ease-out) backwards;}
+  #resultsView:not([style*="none"]) > *:nth-child(2){animation-delay:.06s;} #resultsView:not([style*="none"]) > *:nth-child(3){animation-delay:.12s;}
+  #resultsView:not([style*="none"]) > *:nth-child(4){animation-delay:.18s;} #resultsView:not([style*="none"]) > *:nth-child(n+5){animation-delay:.24s;}
+  .tvm-howto[open] > *:not(summary){animation:ccBodyIn .28s var(--ease-out);}
+  body.returning #appHeader, body.returning #appTabbar{animation:softIn .38s var(--ease);}
   #qChoices > .choice-wrap{animation:riseIn .36s var(--ease-out) backwards;}
   #qChoices > .choice-wrap:nth-child(2){animation-delay:.04s;} #qChoices > .choice-wrap:nth-child(3){animation-delay:.08s;} #qChoices > .choice-wrap:nth-child(4){animation-delay:.12s;} #qChoices > .choice-wrap:nth-child(n+5){animation-delay:.16s;}
   #glossaryDomainFilter, #podcastDomainSelect, #podcastTypeSelect{max-width:100%;min-width:0;box-sizing:border-box;}
@@ -2818,7 +2824,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion.</div>
       </div>
     </div>
 
@@ -14577,6 +14583,12 @@ function exitFullScreenQuiz(){
   document.getElementById('scoreRow').style.display = '';
   document.getElementById('coachLine').style.display = '';
   unlockBodyScroll();
+  try{
+    const _p = document.querySelector('.tab-panel.active');
+    document.body.classList.add('returning');
+    if(_p){ _p.classList.add('tab-enter'); setTimeout(() => _p.classList.remove('tab-enter'), 800); }
+    setTimeout(() => document.body.classList.remove('returning'), 500);
+  }catch(e){}
 }
 
 
@@ -18364,7 +18376,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.57';
+const BUILD_ID = '2026-10-16.58';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
