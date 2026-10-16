@@ -29,6 +29,7 @@
 <script>
 /* Pick light/dark before first paint so the app never flashes the wrong theme. */
 (function(){try{
+  document.documentElement.classList.add('booting');
   var m='auto';try{var d=JSON.parse(localStorage.getItem('cfp-blueprint-v3')||'null');if(d&&d.themeMode)m=d.themeMode;}catch(e){}
   var dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
   var light=m==='light'||(m==='auto'&&!dark);
@@ -51,6 +52,12 @@
     --shadow-gold:0 4px 20px rgba(156,122,22,0.14);
   }
   html[data-boot-theme="light"], html[data-boot-theme="light"] body{background-color:#F6F4EE;}
+  html.booting *, html.booting *::before, html.booting *::after{transition:none !important;}
+  html[data-boot-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:scale(.5) rotate(90deg);}
+  html[data-boot-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:scale(1) rotate(0deg);}
+  @keyframes bootFade{from{opacity:0;}to{opacity:1;}}
+  body{animation:bootFade .45s cubic-bezier(.22,1,.36,1);}
+  @media (prefers-reduced-motion:reduce){body{animation:none;}}
   :root{
     --ink:#0F1A2C;
     --surface:#17293F;
@@ -5244,6 +5251,11 @@ async function loadData(){
   applyTheme();
   pruneRetiredQuestionIds();
   renderAll();
+  try{
+    const _ap = document.querySelector('.tab-panel.active'); if(_ap){ _ap.classList.add('tab-enter'); setTimeout(() => _ap.classList.remove('tab-enter'), 600); }
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('booting')));
+    setTimeout(() => document.documentElement.classList.remove('booting'), 2000);
+  }catch(_){}
   renderReference();
   initFlashcards();
   initToolsTab();
@@ -18401,7 +18413,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.61';
+const BUILD_ID = '2026-10-16.62';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
