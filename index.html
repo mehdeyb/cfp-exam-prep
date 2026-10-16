@@ -1797,6 +1797,51 @@
       scroll-behavior:auto !important;
     }
   }
+  /* ================= Motion layer =================
+     One set of curves and durations for the whole app. Only transform and opacity move, so it stays smooth on a phone.
+     The global reduced-motion rule above turns all of this off for people who ask their phone for less motion. */
+  :root{--ease-out:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);--t-slow:.42s;}
+  @keyframes overlayIn{from{opacity:0;transform:translateY(18px) scale(.985);}to{opacity:1;transform:none;}}
+  @keyframes overlayOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(14px) scale(.99);}}
+  @keyframes panelIn{from{opacity:0;transform:translateY(14px) scale(.97);}to{opacity:1;transform:none;}}
+  @keyframes softIn{from{opacity:0;}to{opacity:1;}}
+  @keyframes riseIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes noteIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+  @keyframes choicePop{0%{transform:scale(1);}40%{transform:scale(1.025);}100%{transform:scale(1);}}
+  @keyframes choiceGlow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--correct) 45%,transparent);}100%{box-shadow:0 0 0 12px color-mix(in srgb,var(--correct) 0%,transparent);}}
+  @keyframes choiceShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-5px);}40%{transform:translateX(4px);}60%{transform:translateX(-3px);}80%{transform:translateX(2px);}}
+  @keyframes fcFlipIn{from{transform:perspective(900px) rotateY(80deg) scale(.97);opacity:.1;}to{transform:none;opacity:1;}}
+  @keyframes fcCardIn{from{opacity:0;transform:translateX(18px) scale(.985);}to{opacity:1;transform:none;}}
+  @keyframes ccBodyIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  /* Full-screen screens glide up instead of just fading */
+  body.quiz-active #quizFullscreenHost, body.settings-active #settingsHost{animation:overlayIn .38s var(--ease-out);}
+  body.flashcard-fullscreen #flashcardFullscreenHost{animation:overlayIn .38s var(--ease-out);}
+  body.settings-active #settingsHost.closing{animation:overlayOut .2s var(--ease) forwards;pointer-events:none;}
+  .cd-overlay .cd-panel{animation:panelIn .34s var(--ease-out);}
+  /* Tabs: the panel fades, and what is on it rises in one after another */
+  .tab-panel.active{animation:softIn .2s var(--ease);}
+  .tab-panel.tab-enter > *{animation:riseIn .46s var(--ease-out) backwards;}
+  .tab-panel.tab-enter > *:nth-child(2){animation-delay:.04s;} .tab-panel.tab-enter > *:nth-child(3){animation-delay:.08s;}
+  .tab-panel.tab-enter > *:nth-child(4){animation-delay:.12s;} .tab-panel.tab-enter > *:nth-child(5){animation-delay:.16s;}
+  .tab-panel.tab-enter > *:nth-child(6){animation-delay:.2s;} .tab-panel.tab-enter > *:nth-child(n+7){animation-delay:.24s;}
+  /* Answers: the right one pops and glows, a wrong pick shakes, the explanations fade down in order */
+  .choice.correct{animation:choicePop .46s var(--ease-spring),choiceGlow .75s var(--ease-out);}
+  .choice.incorrect{animation:choiceShake .4s var(--ease);}
+  .choice .result-icon{transition-timing-function:var(--ease-spring);transition-duration:.28s;}
+  .choice-note{animation:noteIn .34s var(--ease-out) backwards;}
+  .choice-wrap:nth-child(2) .choice-note{animation-delay:.05s;} .choice-wrap:nth-child(3) .choice-note{animation-delay:.1s;} .choice-wrap:nth-child(4) .choice-note{animation-delay:.15s;}
+  /* Flashcards: a real turn over, and a new card slides in */
+  .fc-card{transition:transform .15s var(--ease),border-color var(--t-fast) var(--ease),opacity .15s var(--ease);}
+  .fc-card.fc-flipping{opacity:.1;transform:perspective(900px) rotateY(-80deg) scale(.97);}
+  .fc-card.fc-flip-in{animation:fcFlipIn .26s var(--ease-out);}
+  .fc-card.fc-card-in{animation:fcCardIn .34s var(--ease-out);}
+  /* Folded cards open with a soft drop */
+  .cc-card.cc-open > .cc-body{animation:ccBodyIn .28s var(--ease-out);}
+  .cc-card > .card-head h2::after{transition:transform .3s var(--ease-spring);}
+  /* Bars fill smoothly, taps give a little back */
+  .progress-fill, .pt-bar i, .syl-bar i, .bar-mini i, .diag-hours-fill{transition:width .6s var(--ease-out);}
+  .tab-btn:active{transform:scale(.94);}
+  .card-head:active{opacity:.8;}
   #glossaryDomainFilter, #podcastDomainSelect, #podcastTypeSelect{max-width:100%;min-width:0;box-sizing:border-box;}
   /* Sticky Next/Exit bar: the quiz host's own bottom padding left a strip under the bar
      where scrolling content showed through. The bar now owns the bottom edge. */
@@ -2764,6 +2809,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion.</div>
       </div>
     </div>
 
@@ -3321,9 +3367,10 @@ function showTab(name, opts){
   if(curName && !same){
     _tabScroll[curName] = window.scrollY || 0;
   }
-  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(el=>{ el.classList.remove('active'); el.classList.remove('tab-enter'); });
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
+  if(!same){ const _p = document.getElementById('tab-'+name); _p.classList.add('tab-enter'); setTimeout(() => _p.classList.remove('tab-enter'), 800); }
   document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
   const hero = document.getElementById('heroIntro');
   if(hero) hero.style.display = (name === 'study') ? 'block' : 'none';
@@ -10531,6 +10578,7 @@ function renderFlashcard(){
   { const rc = document.getElementById('fcRecap'); if(rc && rc.style.display !== 'none' && fcRound.total === 0){ rc.style.display = 'none'; rc.innerHTML = ''; } }
   if(fcIndex >= fcQueue.length) fcIndex = 0;
   const card = fcQueue[fcIndex];
+  { const _el = document.getElementById('fcCard'); if(_el && window._fcShownId !== card.id){ window._fcShownId = card.id; _el.classList.remove('fc-card-in'); void _el.offsetWidth; _el.classList.add('fc-card-in'); setTimeout(() => _el.classList.remove('fc-card-in'), 420); } }
   const domainMeta = DOMAINS.find(d=>d.key===card.domain);
   progress.textContent = `Card ${fcIndex+1} of ${fcQueue.length}`;
   document.getElementById('fcDomain').textContent = domainMeta.code + ' — ' + domainMeta.name;
@@ -10566,6 +10614,9 @@ function flipFlashcard(){
   setTimeout(() => {
     flipFlashcardContent();
     card.classList.remove('fc-flipping');
+    card.classList.remove('fc-card-in');
+    card.classList.add('fc-flip-in');
+    setTimeout(() => card.classList.remove('fc-flip-in'), 320);
   }, 150);
 }
 
@@ -12300,6 +12351,7 @@ function closeDomainPicker(){
 }
 
 function openSettings(){
+  { const _h = document.getElementById('settingsHost'); if(_h) _h.classList.remove('closing'); }
   document.body.classList.add('settings-active');
   try{ window._vpNote && window._vpNote('settings'); const vh = document.getElementById('vpHistory'); if(vh && window._vpHist) vh.textContent = 'Height history: ' + window._vpHist.join(' → '); }catch(e){}
   lockBodyScroll();
@@ -12343,8 +12395,12 @@ function renderAiTokenUsage(){
 }
 
 function closeSettings(){
-  document.body.classList.remove('settings-active');
+  const h = document.getElementById('settingsHost');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   unlockBodyScroll();
+  if(!h || reduce || !document.body.classList.contains('settings-active')){ document.body.classList.remove('settings-active'); return; }
+  h.classList.add('closing');
+  setTimeout(() => { if(h.classList.contains('closing')){ h.classList.remove('closing'); document.body.classList.remove('settings-active'); } }, 200);
 }
 
 function renderVoicePrefOptions(){
@@ -18289,7 +18345,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.55';
+const BUILD_ID = '2026-10-16.56';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
