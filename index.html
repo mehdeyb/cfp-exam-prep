@@ -3433,7 +3433,10 @@ function showTab(name, opts){
   try{ conductorRefreshPill(); }catch(e){}
   if(DATA){
     if(name === 'reference' || !window._refRenderedOnce){ renderReference(); window._refRenderedOnce = true; }
-    rebuildFlashcardQueue();
+    // Keep your place in the deck when you hop between tabs; only re-plan it when something that changes the plan has happened
+    // (a quiz answer, a card rating, a new day) or the deck has gone stale.
+    { const sig = fcPlanSignature();
+      if(!fcQueue.length || window._fcPlanSig !== sig || (Date.now() - (window._fcBuiltAt || 0)) > 20*60000){ rebuildFlashcardQueue(); } }
     renderExamDayCallout();
     updateTutorContextNote();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
@@ -10363,8 +10366,22 @@ function fcShowAllCards(){
   const d = document.getElementById('fcDomainFilter'); if(d) d.value = '';
   rebuildFlashcardQueue();
 }
+function fcPlanSignature(){
+  try{
+    let n = 0; const qs = DATA.questionStats || {}; for(const k in qs){ n += (qs[k].attempts || qs[k].seen || 0); }
+    const fs = DATA.flashcardStats || {}; let m = 0; for(const k in fs){ m += (fs[k].seen || 0); }
+    return n + '|' + m + '|' + new Date().toDateString();
+  }catch(e){ return ''; }
+}
+const _fcSessionSeed = Math.floor(Math.random()*1e9);
+function fcJitter(id){
+  // A small, per-launch nudge so equally-ranked cards don't always come out in the same order.
+  let h = _fcSessionSeed; for(let i=0;i<id.length;i++){ h = (h*31 + id.charCodeAt(i)) >>> 0; }
+  return 1 + (h % 1000) / 1000 * 0.12;
+}
 function rebuildFlashcardQueue(){
   _fcCtx = null; fcCustomKind = null;
+  window._fcBuiltAt = Date.now(); window._fcPlanSig = fcPlanSignature();
   const toggle = document.getElementById('fcFilterToggle');
   const onlyLearning = toggle ? toggle.checked : false;
   const domainSelect = document.getElementById('fcDomainFilter');
@@ -10376,7 +10393,7 @@ function rebuildFlashcardQueue(){
   if(domainFilter){
     pool = pool.filter(f => f.domain === domainFilter);
   }
-  const prio = new Map(pool.map(c => [c.id, flashcardPriority(c)]));
+  const prio = new Map(pool.map(c => [c.id, flashcardPriority(c) * fcJitter(String(c.id))]));
   pool = pool.slice().sort((a,b)=> prio.get(b.id) - prio.get(a.id));
   fcQueue = domainFilter ? pool : fcInterleave(pool);
   fcCustomQueue = false;
@@ -18422,7 +18439,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.64';
+const BUILD_ID = '2026-10-16.65';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
