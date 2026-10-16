@@ -427,6 +427,7 @@
   .choice-skel:nth-child(2){animation-delay:.12s;} .choice-skel:nth-child(3){animation-delay:.24s;} .choice-skel:nth-child(4){animation-delay:.36s;}
   @keyframes skelPulse{0%,100%{opacity:.45;}50%{opacity:1;}}
   @media (prefers-reduced-motion:reduce){.choice-skel{animation:none;}}
+  html.vp-test body.settings-active #settingsHost{bottom:auto;height:var(--full-h);}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -1866,9 +1867,13 @@
      When the page detects that, the quiz sizes itself to the full screen height instead. */
   @media (orientation:portrait) and (max-width:640px){
     html.vp-short body.quiz-active #quizFullscreenHost{bottom:auto;height:var(--full-h);}
+    html.vp-test body.quiz-active #quizFullscreenHost{bottom:auto;height:var(--full-h);}
     html.vp-short body.quiz-active #quizView .quiz-actions{position:sticky;left:auto;right:auto;bottom:0;padding:8px 0 max(8px, calc(env(safe-area-inset-bottom) - 12px));}
+    html.vp-test body.quiz-active #quizView .quiz-actions{position:sticky;left:auto;right:auto;bottom:0;padding:8px 0 max(8px, calc(env(safe-area-inset-bottom) - 12px));}
     html.vp-short body.quiz-active #quizView{padding-bottom:0;}
+    html.vp-test body.quiz-active #quizView{padding-bottom:0;}
     html.vp-short #moreChoicesCue{bottom:calc(72px + max(8px, calc(env(safe-area-inset-bottom) - 12px)));}
+    html.vp-test #moreChoicesCue{bottom:calc(72px + max(8px, calc(env(safe-area-inset-bottom) - 12px)));}
   }
   /* Folded cards: the 44px tap-target header made the title sit low; trim the card's top padding to balance it.
      Flashcards "how the ordering works" toggle: drop the heading margin that left a ~50px hole below it. */
@@ -3225,6 +3230,7 @@
               <button class="btn ghost" onclick="winExp('height')">Ask for device height</button>
               <button class="btn ghost" onclick="winExp('nudge')">Nudge scroll</button>
               <button class="btn ghost" onclick="winExp('plain')">Drop full-screen mode</button>
+              <button class="btn ghost" onclick="winExp('stretch')">Stretch pages to full height</button>
             </div>
             <p class="hint" id="winExpOut" style="margin-top:8px;"></p>
           </details>
@@ -4732,7 +4738,14 @@ function winExp(kind){
   };
   const before = window.innerHeight;
   try{
-    if(kind === 'nudge'){
+    if(kind === 'stretch'){
+      const on = !document.documentElement.classList.contains('vp-test');
+      const lv = (window._vpInfo && window._vpInfo.lvh) || screen.height;
+      document.documentElement.style.setProperty('--full-h', lv + 'px');
+      document.documentElement.classList.toggle('vp-test', on);
+      if(out) out.textContent = 'stretch ' + (on ? 'on' : 'off') + ': pages sized to ' + lv + 'px. Look at the bottom of this page, then open a quiz.';
+      return;
+    } else if(kind === 'nudge'){
       window.scrollTo(0,1); setTimeout(()=>window.scrollTo(0,0), 60);
       window.dispatchEvent(new Event('resize'));
     } else if(mv){
@@ -18259,7 +18272,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.50';
+const BUILD_ID = '2026-10-15.51';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
