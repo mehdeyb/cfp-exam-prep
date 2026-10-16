@@ -18422,7 +18422,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.63';
+const BUILD_ID = '2026-10-16.64';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -18434,7 +18434,9 @@ async function checkForNewBuild(){
     const m = t.match(/const BUILD_ID = '([^']+)'/);
     if(m && m[1] !== BUILD_ID){
       if(document.body.classList.contains('quiz-active')){ window._updPending = true; return; }
-      location.reload();
+      // Never reload under the person's thumb: the new copy is already saved, so apply it when the app is put away.
+      if(document.hidden){ location.reload(); return; }
+      if(!window._updOnHide){ window._updOnHide = true; document.addEventListener('visibilitychange', () => { if(document.hidden && !document.body.classList.contains('quiz-active')) location.reload(); }); }
     }
   }catch(e){} finally{ _updChecking = false; }
 }

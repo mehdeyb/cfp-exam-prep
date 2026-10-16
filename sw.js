@@ -1,7 +1,7 @@
 /* Offline support for The Blueprint. The page itself is always fetched fresh when online (so a new version shows up
    on the next load) and the last good copy is used when offline. Only this site's files and the Google Fonts files
    are handled; calls to the AI service are never touched. */
-const CACHE = 'blueprint-shell-v1';
+const CACHE = 'blueprint-shell-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -21,6 +21,15 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.open(CACHE).then(c => c.match(req).then(hit => {
       const net = fetch(req).then(r => { if(r && (r.ok || r.type === 'opaque')) c.put(req, r.clone()); return r; }).catch(() => hit);
       return hit || net;
+    })));
+    return;
+  }
+  if(req.mode === 'navigate'){
+    // Open instantly from the saved copy, and refresh it in the background for next time.
+    e.respondWith(caches.open(CACHE).then(c => c.match('./index.html').then(hit => {
+      const net = fetch(req, {cache:'no-cache'}).then(r => { if(r && r.ok){ c.put('./index.html', r.clone()); c.put('./', r.clone()); } return r; });
+      if(hit){ e.waitUntil(net.catch(() => null)); return hit; }
+      return net.catch(() => caches.match(req));
     })));
     return;
   }
