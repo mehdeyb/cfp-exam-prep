@@ -1842,6 +1842,15 @@
   .progress-fill, .pt-bar i, .syl-bar i, .bar-mini i, .diag-hours-fill{transition:width .6s var(--ease-out);}
   .tab-btn:active{transform:scale(.94);}
   .card-head:active{opacity:.8;}
+  body.domain-picker-active #domainPickerHost{animation:overlayIn .38s var(--ease-out);}
+  .cd-overlay.cd-out{animation:softOut .19s var(--ease) forwards;pointer-events:none;}
+  .cd-overlay.cd-out .cd-panel{animation:panelOut .19s var(--ease) forwards;}
+  @keyframes softOut{to{opacity:0;}}
+  @keyframes panelOut{to{opacity:0;transform:translateY(10px) scale(.98);}}
+  @keyframes pillIn{from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.96);}to{opacity:1;transform:translateX(-50%);}}
+  .cd-pill{animation:pillIn .4s var(--ease-spring);}
+  #qChoices > .choice-wrap{animation:riseIn .36s var(--ease-out) backwards;}
+  #qChoices > .choice-wrap:nth-child(2){animation-delay:.04s;} #qChoices > .choice-wrap:nth-child(3){animation-delay:.08s;} #qChoices > .choice-wrap:nth-child(4){animation-delay:.12s;} #qChoices > .choice-wrap:nth-child(n+5){animation-delay:.16s;}
   #glossaryDomainFilter, #podcastDomainSelect, #podcastTypeSelect{max-width:100%;min-width:0;box-sizing:border-box;}
   /* Sticky Next/Exit bar: the quiz host's own bottom padding left a strip under the bar
      where scrolling content showed through. The bar now owns the bottom edge. */
@@ -7280,7 +7289,16 @@ function conductorEndPart(reason){
   persist();
   return entry;
 }
-function conductorHide(){ const o = document.getElementById('conductorOverlay'); if(o) o.style.display = 'none'; }
+let _cdHideTimer = null;
+function conductorHide(){
+  const o = document.getElementById('conductorOverlay'); if(!o) return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce || o.style.display !== 'flex'){ o.style.display = 'none'; return; }
+  o.classList.add('cd-out');
+  clearTimeout(_cdHideTimer);
+  _cdHideTimer = setTimeout(() => { o.classList.remove('cd-out'); o.style.display = 'none'; try{ conductorRefreshPill(); }catch(e){} }, 190);
+  try{ conductorRefreshPill(); }catch(e){}
+}
 function conductorDots(c, asId){
   const pr = conductorProgress(c, asId);
   let h = '';
@@ -7312,6 +7330,7 @@ function conductorWrapHtml(c){
 function conductorShow(kind){
   const c = conductorState(); const o = document.getElementById('conductorOverlay'); const panel = document.getElementById('conductorPanel');
   if(!c || !o || !panel) return;
+  clearTimeout(_cdHideTimer); o.classList.remove('cd-out');
   let html = '';
   if(kind === 'brief'){
     const plan = buildStudyPlan(); const fake = { ran: [], skipped: [], log: [] };
@@ -7412,7 +7431,7 @@ function conductorRefreshPill(){
   const pill = document.getElementById('conductorPill'); if(!pill) return;
   const c = conductorState();
   const ov = document.getElementById('conductorOverlay');
-  const overlayOpen = ov && ov.style.display === 'flex';
+  const overlayOpen = ov && ov.style.display === 'flex' && !ov.classList.contains('cd-out');
   if(!c || overlayOpen || (c.log.length === 0 && !c.current)){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   const pr = conductorProgress(c), total = pr.total;
   const title = c.current ? String(c.current.title || '') : '';
@@ -18345,7 +18364,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.56';
+const BUILD_ID = '2026-10-16.57';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
