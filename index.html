@@ -423,6 +423,8 @@
       max(20px, env(safe-area-inset-left));
     animation:quizIn .32s var(--ease);
   }
+  /* If the phone's app window is shorter than its screen, content reaches that edge and stops. Fade it out there instead of cutting it mid-button. */
+  body.settings-active #settingsHost{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -18214,7 +18216,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.44';
+const BUILD_ID = '2026-10-15.45';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
