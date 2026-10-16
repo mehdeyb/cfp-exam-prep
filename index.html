@@ -1316,6 +1316,21 @@
   .glossary-chevron{margin-left:auto;color:var(--muted);font-size:11px;transition:transform var(--t-fast) var(--ease);}
   .glossary-item.expanded .glossary-chevron{color:var(--gold);}
   .glossary-domain-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-left:6px;}
+  .tech-pick{padding:14px 16px;border-radius:12px;background:var(--gold-soft);border:1px solid var(--gold);margin-bottom:12px;}
+  .tech-pick .tp-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+  .tech-pick .tp-title{font-family:'Fraunces',serif;font-size:17px;margin-bottom:4px;color:var(--paper);}
+  .tech-pick .tp-why{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:10px;}
+  .tech-item{border-top:1px solid var(--hair);}
+  .tech-item summary{list-style:none;cursor:pointer;padding:13px 0;display:flex;align-items:center;gap:10px;min-height:44px;}
+  .tech-item summary::-webkit-details-marker{display:none;}
+  .tech-item .ti-name{flex:1;font-size:14.5px;font-weight:500;color:var(--paper);}
+  .tech-item .ti-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);border-radius:999px;padding:2px 8px;white-space:nowrap;}
+  .tech-item .ti-tag.mod{color:var(--muted);border-color:var(--hair-strong);}
+  .tech-item .ti-body{padding:0 0 14px;font-size:13.5px;line-height:1.55;color:var(--muted);}
+  .tech-item .ti-body p{margin:0 0 8px;}
+  .tech-item .ti-body .btn{font-size:12.5px;padding:8px 14px;min-height:40px;margin-top:2px;}
+  .tech-item[open] summary .ti-chev{transform:rotate(180deg);}
+  .tech-item .ti-chev{color:var(--muted);transition:transform .2s var(--ease);}
   .glossary-extra{margin-top:10px;} .glossary-extra .fc-contrast{margin-bottom:10px;} .glossary-extra .glossary-tutor{font-size:12.5px;padding:8px 14px;min-height:40px;}
   .glossary-def{font-size:13.5px;color:var(--muted);line-height:1.5;}
   .glossary-example{font-size:13px;line-height:1.55;color:var(--paper);margin-top:10px;padding:14px 16px;border-radius:10px;background:var(--teal-tint);border:1px solid var(--teal);}
@@ -2890,7 +2905,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress.</div>
       </div>
     </div>
 
@@ -2968,6 +2983,11 @@
 
   <!-- ================= REFERENCE TAB ================= -->
   <div class="tab-panel" id="tab-reference">
+    <div class="card" id="techCard">
+      <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
+      <div id="techPick"></div>
+      <div id="techList"></div>
+    </div>
     <div class="card">
       <div class="card-head"><h2>Glossary</h2><div class="note" id="glossaryCountNote">search all terms</div></div>
       <p class="hint">Every term from your flashcards, always visible for quick lookup — no flipping, no rating, just a fast way to check a definition while you're reading something else.</p>
@@ -9209,7 +9229,70 @@ function filterGlossary(){
   }
 }
 
+const STUDY_TECHNIQUES = [
+  { id:'recall', name:'Blank-page recall', tag:'Top-tier', top:true,
+    what:'Close everything and write down all you can remember about one topic for three minutes, then check what you missed. Pulling an idea out of memory builds it far more than rereading does.',
+    how:'Pick a topic from your weakest domain, such as how each retirement plan type works. Mark what you missed in a different color, and those gaps are your next flashcards.',
+    prompt:'Run a blank-page recall with me on {dom}. Ask me to write down everything I remember about one topic, wait for my answer, then show me exactly what I left out and what the exam would test.', cta:'Do one with the tutor' },
+  { id:'spaced', name:'Spaced review', tag:'Top-tier', top:true,
+    what:'Review a fact just as you are about to forget it, then again after longer gaps. Several short sessions across days beat one long session, which is why a cram only lasts until the test.',
+    how:'The flashcards already schedule this for you: cards you miss come back soon, cards you know come back later. Do a few every day rather than all at once.', go:'flashcards', cta:'Open flashcards' },
+  { id:'mix', name:'Mix topics together', tag:'Helpful', 
+    what:'Switching between topics feels harder but teaches you to tell which rule applies, which is exactly what exam questions test. Blocking one topic at a time feels easy and fades fast.',
+    how:'Use the adaptive session instead of drilling one domain for an hour. It interleaves domains and leans on your weak spots.', go:'adaptive', cta:'Start an adaptive session' },
+  { id:'explain', name:'Explain it to a client', tag:'Helpful',
+    what:'If you can explain a rule in plain words to someone who knows nothing, you understand it. Where you stumble is where your understanding has a hole.',
+    how:'Pick any concept and say it out loud as if to a new client, with no jargon. Then have the tutor play that client and push back.',
+    prompt:'Play a new client who knows nothing about finance. Let me explain {dom} concepts to you one at a time, ask naive follow-up questions, and then tell me where my explanation was wrong or too vague.', cta:'Practice with the tutor' },
+  { id:'why', name:'Ask "why" until it clicks', tag:'Helpful',
+    what:'Asking why a rule exists makes it stick better than memorizing what it says. Most CFP rules exist to stop a specific abuse or fix a specific problem.',
+    how:'For any rule, ask: what problem is this solving, and what would go wrong without it? For example, why does a wash sale rule exist, or why must a trust be irrevocable to leave the estate?',
+    prompt:'Pick five rules in {dom} and for each one ask me why the rule exists before telling me. Then explain the real reason and how it shows up in an exam question.', cta:'Try it with the tutor' },
+  { id:'pretest', name:'Test before you study', tag:'Helpful',
+    what:'Trying questions on a topic before you review it, even getting them wrong, makes the later review stick better and shows you what you do not know yet.',
+    how:'When you start a new topic, do five questions on it first. The misses tell you what to read closely and what to skip.', go:'adaptive', cta:'Start questions now' },
+  { id:'palace', name:'Memory palace for ordered lists', tag:'Situational',  mod:true,
+    what:'Picture each item of a list in a place you know well, such as your home, and walk through it. It works well for ordered lists, but poorly for broad understanding, so use it only for lists that must be recalled in order.',
+    how:'Good candidates: the seven steps of the financial planning process, or a list of qualified plan features.',
+    prompt:'Help me build a memory palace for the seven steps of the financial planning process. Ask me to name a familiar place first, then tie each step to a place in it with a vivid image.', cta:'Build one with the tutor' },
+  { id:'draw', name:'Draw it', tag:'Helpful',
+    what:'Sketching a flow of money or ownership, or a timeline of cash flows, turns words into a picture you can recall and check.',
+    how:'Draw who owns what, who gets income, and who gets the remainder in any trust problem. For TVM, draw the cash-flow timeline before pressing any keys.', go:'tools', cta:'Open the decision tools' },
+  { id:'exam', name:'Exam-day moves', tag:'Test skill',
+    what:'Technique matters on test day. Answer what you know first and flag the rest, eliminate two options before guessing, and only change an answer when you can name a reason.',
+    how:'On your calculator, clear the time-value registers before every problem and confirm payments per year is set the way the question needs. At the start, jot down the formulas and key numbers you trust on whatever scratch material the test center gives you. Check what your center allows ahead of time.',
+    prompt:'Coach me on exam-day technique for the CFP exam: how to pace, flag and return, eliminate options, avoid second-guessing, and what to write on scratch material first. Keep it practical and ask me what trips me up.', cta:'Coach me on this' },
+  { id:'sleep', name:'Sleep and short focus blocks', tag:'Foundation',
+    what:'Memory is consolidated during sleep, so a full night after studying helps more than extra late-night hours. Focused blocks of about 25 to 45 minutes with a short break keep quality high.',
+    how:'In the last few days, protect sleep, keep sessions short and stop cramming new material the night before. Review your flashcards and key numbers instead.' }
+];
+function studyTechniquePick(){
+  let st = null; try{ st = computeStats(); }catch(e){}
+  const days = getDaysUntilExam();
+  let due = 0, unseen = 0; try{ const p = computeFlashcardProgress(); due = p.dueCount; unseen = p.unseenCount; }catch(e){}
+  const dom = (st && st.weakestMeta && st.weakestMeta.name) || 'my weakest domain';
+  const by = id => STUDY_TECHNIQUES.find(t => t.id === id);
+  if(days !== null && days >= 0 && days <= 7) return { t: by('exam'), why: days + ' day' + (days === 1 ? '' : 's') + ' to go: technique now earns points that new facts no longer can.' };
+  if(due >= 15) return { t: by('spaced'), why: 'You have ' + due + ' flashcards due. A short review today is the most efficient use of your time.' };
+  if(st && st.totalAnswered >= 20 && st.accuracy !== null && st.accuracy < 65) return { t: by('explain'), why: 'Your accuracy is ' + st.accuracy + '%. Explaining ideas in your own words finds the gaps that rereading hides.' };
+  if(st && st.totalAnswered < 10) return { t: by('pretest'), why: 'You are just getting started. Trying questions first shows you what to study.' };
+  return { t: by('recall'), why: 'A three-minute blank-page recall on ' + dom + ' is the best single move for your weakest area.' };
+}
+function studyTechniqueRun(id){
+  const t = STUDY_TECHNIQUES.find(x => x.id === id); if(!t) return;
+  if(t.prompt){ let dom = 'my weakest domain'; try{ const st = computeStats(); if(st.weakestMeta) dom = st.weakestMeta.name; }catch(e){} askTutorAbout(t.prompt.replace(/\{dom\}/g, dom)); return; }
+  if(t.go === 'flashcards') showTab('flashcards');
+  else if(t.go === 'adaptive') startAdaptive();
+  else if(t.go === 'tools') showTab('tools');
+}
+function renderStudyTechniques(){
+  const pick = document.getElementById('techPick'), list = document.getElementById('techList'); if(!pick || !list) return;
+  const p = studyTechniquePick();
+  pick.innerHTML = '<div class="tech-pick"><div class="tp-label">Try this today</div><div class="tp-title">' + p.t.name + '</div><div class="tp-why">' + p.why + '</div>' + (p.t.cta ? '<button type="button" class="btn" onclick="studyTechniqueRun(\'' + p.t.id + '\')">' + p.t.cta + '</button>' : '') + '</div>';
+  list.innerHTML = STUDY_TECHNIQUES.map(t => '<details class="tech-item"><summary><span class="ti-name">' + t.name + '</span><span class="ti-tag' + (t.top ? '' : ' mod') + '">' + t.tag + '</span><span class="ti-chev" aria-hidden="true">▾</span></summary><div class="ti-body"><p>' + t.what + '</p><p><b>For the CFP exam:</b> ' + t.how + '</p>' + (t.cta ? '<button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + t.id + '\')">' + t.cta + '</button>' : '') + '</div></details>').join('');
+}
 function renderReference(){
+  try{ renderStudyTechniques(); }catch(e){}
   renderGlossaryDomainOptions();
   filterGlossary();
   initPodcastDomainOptions();
@@ -18596,7 +18679,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.71';
+const BUILD_ID = '2026-10-16.72';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
