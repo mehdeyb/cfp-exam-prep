@@ -14459,6 +14459,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
 
 let savedBodyScrollY = 0;
 function lockBodyScroll(){
+  try{window._vpMark&&window._vpMark('lock')}catch(_){}
   if(document.body.style.position === 'fixed') return; // already locked -- don't re-capture a possibly-stale scroll position mid-transition
   savedBodyScrollY = window.scrollY || window.pageYOffset || 0;
   document.body.style.position = 'fixed';
@@ -14468,6 +14469,7 @@ function lockBodyScroll(){
   document.body.style.width = '100%';
 }
 function unlockBodyScroll(){
+  try{window._vpMark&&window._vpMark('unlock')}catch(_){}
   document.body.style.position = '';
   document.body.style.top = '';
   document.body.style.left = '';
@@ -18279,7 +18281,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.53';
+const BUILD_ID = '2026-10-15.54';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -18450,6 +18452,11 @@ requestDurableStorage();
   document.addEventListener('DOMContentLoaded', () => note('dom'));
   window.addEventListener('load', () => note('load'));
   for(const ms of [150, 400, 800, 1500, 3000, 6000]) setTimeout(() => note('t+' + ms), ms);
+  ['touchstart','scroll','click'].forEach(ev => {
+    let n = 0;
+    document.addEventListener(ev, () => { if(n++ < 2) note('·first-' + ev, true); }, {capture:true, passive:true});
+  });
+  setInterval(() => note('poll'), 1000);
   window.addEventListener('resize', probe);
   if(window.visualViewport) window.visualViewport.addEventListener('resize', probe);
   window.addEventListener('orientationchange', () => setTimeout(probe, 250));
