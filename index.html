@@ -1316,6 +1316,7 @@
   .glossary-chevron{margin-left:auto;color:var(--muted);font-size:11px;transition:transform var(--t-fast) var(--ease);}
   .glossary-item.expanded .glossary-chevron{color:var(--gold);}
   .glossary-domain-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-left:6px;}
+  .glossary-extra{margin-top:10px;} .glossary-extra .fc-contrast{margin-bottom:10px;} .glossary-extra .glossary-tutor{font-size:12.5px;padding:8px 14px;min-height:40px;}
   .glossary-def{font-size:13.5px;color:var(--muted);line-height:1.5;}
   .glossary-example{font-size:13px;line-height:1.55;color:var(--paper);margin-top:10px;padding:14px 16px;border-radius:10px;background:var(--teal-tint);border:1px solid var(--teal);}
   .glossary-example .simplify-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:6px;}
@@ -1914,9 +1915,9 @@
   @keyframes pillIn{from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.96);}to{opacity:1;transform:translateX(-50%);}}
   .cd-pill{animation:pillIn .4s var(--ease-spring);}
   #tutorThread > .tutor-msg:last-child{animation:riseIn .32s var(--ease-out);}
-  #resultsView:not([style*="none"]) > *{animation:riseIn .46s var(--ease-out) backwards;}
-  #resultsView:not([style*="none"]) > *:nth-child(2){animation-delay:.06s;} #resultsView:not([style*="none"]) > *:nth-child(3){animation-delay:.12s;}
-  #resultsView:not([style*="none"]) > *:nth-child(4){animation-delay:.18s;} #resultsView:not([style*="none"]) > *:nth-child(n+5){animation-delay:.24s;}
+  #resultsView:not([style*="none"]) > *{animation:riseIn .34s var(--ease-out) backwards;}
+  #resultsView:not([style*="none"]) > *:nth-child(2){animation-delay:.04s;} #resultsView:not([style*="none"]) > *:nth-child(3){animation-delay:.08s;}
+  #resultsView:not([style*="none"]) > *:nth-child(4){animation-delay:.12s;} #resultsView:not([style*="none"]) > *:nth-child(n+5){animation-delay:.14s;}
   .tvm-howto[open] > *:not(summary){animation:ccBodyIn .28s var(--ease-out);}
   body.returning #appHeader, body.returning #appTabbar{animation:softIn .38s var(--ease);}
   #qChoices > .choice-wrap{animation:riseIn .26s var(--ease-out) backwards;}
@@ -2889,7 +2890,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened.</div>
       </div>
     </div>
 
@@ -8934,10 +8935,12 @@ async function toggleGlossaryExample(item, f){
     item.setAttribute('aria-expanded', 'false');
     if(chevron) chevron.textContent = '▾';
     box.style.display = 'none';
+    { const x = item.querySelector('.glossary-extra'); if(x) x.style.display = 'none'; }
     return;
   }
 
   item.classList.add('expanded');
+  { const x = item.querySelector('.glossary-extra'); if(x) x.style.display = 'block'; }
   item.setAttribute('aria-expanded', 'true');
   if(chevron) chevron.textContent = '▴';
   box.style.display = 'block';
@@ -9168,6 +9171,17 @@ function filterGlossary(){
       item.appendChild(termRow);
       item.appendChild(defRow);
       item.appendChild(exampleBox);
+      const extra = document.createElement('div');
+      extra.className = 'glossary-extra';
+      extra.style.display = 'none';
+      const ctr = (typeof fcContrastFor === 'function') ? fcContrastFor(f) : '';
+      if(ctr){ const cb = document.createElement('div'); cb.className = 'fc-contrast'; cb.innerHTML = ctr; extra.appendChild(cb); }
+      const tb = document.createElement('button');
+      tb.type = 'button'; tb.className = 'btn ghost glossary-tutor'; tb.textContent = 'Talk it through with the tutor';
+      tb.onclick = (ev) => { ev.stopPropagation(); askTutorAbout('Help me really understand "' + f.term + '" (' + f.def + ') Ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.'); };
+      extra.appendChild(tb);
+      extra.onclick = (ev) => ev.stopPropagation();
+      item.appendChild(extra);
       item.onclick = () => toggleGlossaryExample(item, f);
       item.onkeydown = (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleGlossaryExample(item, f); } };
       list.appendChild(item);
@@ -18577,7 +18591,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.69';
+const BUILD_ID = '2026-10-16.70';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
