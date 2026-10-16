@@ -2741,6 +2741,7 @@
         <div class="science-item"><b>The question stays in view beside the answers on a sideways phone</b>In landscape the question sits on the left and the answers on the right. The left side used to scroll away with the answers and leave a blank half screen once you answered. It now stays put while the answers and explanations scroll.</div>
         <div class="science-item"><b>The TVM walkthrough on a sideways phone</b>Held sideways, the page now keeps the problem, its timeline and the calculator together on one screen, with the two-part option under the calculator. The page rail on the left no longer shows through behind the calculator.</div>
         <div class="science-item"><b>Thin topics now have cards and scenario questions</b>A coverage check against the CFP topic list found areas with one mention or none: engagement letters and compensation disclosure, the 1933 Act, Sarbanes-Oxley, Dodd-Frank, flood and uninsured-motorist cover, Section 79, incontestability and grace periods, asset location, glide paths, pro rata conversions, 20% withholding, Social Security provisional income, IRMAA, codicils, Sections 2038 and 2042, and elder financial exploitation. The gaps got 67 new flashcards and 31 applied questions, including spousal lifetime access trusts, trust protectors, captive versus independent agents and bond premium amortization. Anything the bank already covered was left alone rather than repeated. The check matches keywords, so it flags thin spots rather than proving full coverage.</div>
+        <div class="science-item"><b>Light and dark follow your phone</b>The app now matches your phone's appearance setting and switches by itself when the phone does, for example at sunset if you use that. The sun and moon button still overrides it, and Settings has Auto, Light and Dark choices to hand control back.</div>
       </div>
     </div>
 
@@ -3155,6 +3156,13 @@
 
         <div class="settings-section">
           <h3>Display</h3>
+          <div class="note" style="margin-bottom:10px;">light or dark</div>
+          <div class="evening-mode-control" id="themeModeControl">
+            <button class="ev-mode-btn" id="themeMode_auto" onclick="setThemeMode('auto')">Auto</button>
+            <button class="ev-mode-btn" id="themeMode_light" onclick="setThemeMode('light')">Light</button>
+            <button class="ev-mode-btn" id="themeMode_dark" onclick="setThemeMode('dark')">Dark</button>
+          </div>
+          <div class="ev-mode-status" id="themeModeStatus" style="margin-bottom:16px;"></div>
           <div class="note" style="margin-bottom:10px;">evening warm tone</div>
           <div class="evening-mode-control" id="eveningModeControl">
             <button class="ev-mode-btn" id="evMode_auto" onclick="setEveningMode('auto')">Auto</button>
@@ -4643,8 +4651,49 @@ function renderEveningModeControl(){
   }
 }
 
+// Light/dark follows the phone's own setting unless the person has picked one.
+// themeMode: 'auto' (default, also for older saved data) | 'light' | 'dark'.
+function systemPrefersDark(){
+  try{ return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }catch(_){ return true; }
+}
+function effectiveTheme(){
+  const mode = (DATA && DATA.themeMode) || 'auto';
+  if(mode === 'light' || mode === 'dark') return mode;
+  return systemPrefersDark() ? 'dark' : 'light';
+}
+function setThemeMode(mode){
+  DATA.themeMode = mode;
+  DATA.theme = effectiveTheme();
+  applyTheme();
+  persist();
+  renderThemeModeControl();
+}
+function renderThemeModeControl(){
+  const mode = (DATA && DATA.themeMode) || 'auto';
+  ['auto','light','dark'].forEach(m=>{
+    const b = document.getElementById('themeMode_'+m);
+    if(b) b.classList.toggle('active', m===mode);
+  });
+  const st = document.getElementById('themeModeStatus');
+  if(st) st.textContent = mode === 'auto'
+    ? 'Following your phone: currently ' + effectiveTheme() + '. It switches by itself when your phone does.'
+    : 'Always ' + mode + '.';
+}
+try{
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onSystemChange = ()=>{
+    if(!DATA || (DATA.themeMode||'auto') !== 'auto') return;
+    if(document.body.classList.contains('exam-sim-mode')) return;
+    DATA.theme = effectiveTheme();
+    applyTheme();
+    renderThemeModeControl();
+  };
+  if(mq.addEventListener) mq.addEventListener('change', onSystemChange); else if(mq.addListener) mq.addListener(onSystemChange);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) onSystemChange(); });
+}catch(_){}
+
 function applyTheme(){
-  const isLight = DATA && DATA.theme === 'light';
+  const isLight = effectiveTheme() === 'light';
   const vars = isLight ? THEME_VARS.light : THEME_VARS.dark;
   const root = document.documentElement;
   Object.keys(vars).forEach(name => root.style.setProperty(name, vars[name]));
@@ -4659,9 +4708,9 @@ function applyTheme(){
 }
 
 function toggleTheme(){
-  DATA.theme = (DATA.theme === 'light') ? 'dark' : 'light';
-  applyTheme();
-  persist();
+  // The sun/moon button picks the opposite of what is showing now; Settings
+  // has an Auto choice to hand control back to the phone.
+  setThemeMode(effectiveTheme() === 'light' ? 'dark' : 'light');
 }
 
 function defaultData(){
@@ -9032,7 +9081,7 @@ function renderReference(){
   });
   if(!syl.querySelector('.syllabus-domain')){ const e = document.createElement('div'); e.className = 'glossary-empty'; e.textContent = 'Nothing matches this filter right now — good sign.'; syl.appendChild(e); }
 
-  renderEveningModeControl();
+  renderEveningModeControl(); renderThemeModeControl();
 }
 
 // ---------- Topic-level view of the 70 official subtopics ----------
@@ -16639,10 +16688,12 @@ function runContentIntegrityCheck(){
 async function resetProgress(){
   if(!confirm('Reset all saved progress? This clears your mastery stats, session history, missed-question list, syllabus checklist, flashcard ratings, AI-generated question and flashcard banks, and your tutor conversation.')) return;
   const keepTheme = DATA ? DATA.theme : 'light';
+  const keepThemeMode = DATA ? DATA.themeMode : 'auto';
   const keepExamDate = DATA ? DATA.examDate : null;
   const keepAiTokenUsage = DATA ? DATA.aiTokenUsage : null;
   DATA = defaultData();
   DATA.theme = keepTheme;
+  DATA.themeMode = keepThemeMode || 'auto';
   DATA.examDate = keepExamDate;
   if(keepAiTokenUsage) DATA.aiTokenUsage = keepAiTokenUsage;
   dataEpoch++;
@@ -18152,7 +18203,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.41';
+const BUILD_ID = '2026-10-15.42';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
