@@ -428,6 +428,7 @@
   @keyframes skelPulse{0%,100%{opacity:.45;}50%{opacity:1;}}
   @media (prefers-reduced-motion:reduce){.choice-skel{animation:none;}}
   html.vp-test body.settings-active #settingsHost{bottom:auto;height:var(--full-h);}
+  html.scroll-locked, html.scroll-locked body{overflow:hidden;overscroll-behavior:none;}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -2762,6 +2763,7 @@
         <div class="science-item"><b>Light and dark follow your phone</b>The app now matches your phone's appearance setting and switches by itself when the phone does, for example at sunset if you use that. The sun and moon button still overrides it, and Settings has Auto, Light and Dark choices to hand control back.</div>
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
+        <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
       </div>
     </div>
 
@@ -3305,7 +3307,7 @@
    on scrolls it to the top. */
 const _tabScroll = {};
 function _scrollPageTo(y){
-  if(document.body.style.position === 'fixed'){ savedBodyScrollY = y; document.body.style.top = (-y) + 'px'; return; }
+  if(bodyIsLocked()) savedBodyScrollY = y;
   try{ window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }catch(e){ window.scrollTo(0, y); }
 }
 function showTab(name, opts){
@@ -3317,8 +3319,7 @@ function showTab(name, opts){
     try{ window.scrollTo({ top: 0, left: 0, behavior: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }catch(e){ window.scrollTo(0, 0); }
   }
   if(curName && !same){
-    const locked = document.body.style.position === 'fixed';
-    _tabScroll[curName] = locked ? savedBodyScrollY : (window.scrollY || 0);
+    _tabScroll[curName] = window.scrollY || 0;
   }
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
@@ -8911,7 +8912,7 @@ function jumpToGlossaryTerm(term){
   // not (the results screen a recap sits on, which scrolls normally).
   // Only claim the lock -- and later release it -- when it wasn't
   // already locked for some other reason before this modal opened.
-  if(document.body.style.position !== 'fixed'){
+  if(!bodyIsLocked()){
     lockBodyScroll();
     keyTermModalOwnsScrollLock = true;
   }
@@ -14458,25 +14459,32 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
 }
 
 let savedBodyScrollY = 0;
+// Page lock: stops the page behind a full-screen screen from scrolling. This used to pin the body with position:fixed,
+// but on current iPhones that made iOS shrink the whole app window by about 62 points (a blank band under the app).
+// It now only hides the page's own overflow and blocks touch-scrolling that isn't inside a scrollable panel.
+function bodyIsLocked(){ return document.documentElement.classList.contains('scroll-locked'); }
 function lockBodyScroll(){
   try{window._vpMark&&window._vpMark('lock')}catch(_){}
-  if(document.body.style.position === 'fixed') return; // already locked -- don't re-capture a possibly-stale scroll position mid-transition
+  if(bodyIsLocked()) return; // already locked
   savedBodyScrollY = window.scrollY || window.pageYOffset || 0;
-  document.body.style.position = 'fixed';
-  document.body.style.top = (-savedBodyScrollY) + 'px';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 }
 function unlockBodyScroll(){
   try{window._vpMark&&window._vpMark('unlock')}catch(_){}
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
+  document.documentElement.classList.remove('scroll-locked');
   window.scrollTo && window.scrollTo(0, savedBodyScrollY);
 }
+document.addEventListener('touchmove', function(e){
+  if(!bodyIsLocked()) return;
+  let n = e.target;
+  while(n && n !== document.body && n.nodeType === 1){
+    const cs = getComputedStyle(n);
+    if((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && n.scrollHeight > n.clientHeight + 1) return;
+    if(n.tagName === 'TEXTAREA' || n.tagName === 'SELECT' || n.tagName === 'INPUT') return;
+    n = n.parentNode;
+  }
+  if(e.cancelable) e.preventDefault();
+}, {passive:false});
 
 function enterFullScreenQuiz(){
   document.body.classList.add('quiz-active');
@@ -18281,7 +18289,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.54';
+const BUILD_ID = '2026-10-15.55';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -18317,7 +18325,7 @@ document.addEventListener('keydown', e => {
     let mine = false;
     const sync = () => {
       const open = o.style.display === 'flex';
-      if(open && !mine && document.body.style.position !== 'fixed'){ lockBodyScroll(); mine = true; }
+      if(open && !mine && !bodyIsLocked()){ lockBodyScroll(); mine = true; }
       else if(!open && mine){ mine = false; unlockBodyScroll(); }
     };
     new MutationObserver(sync).observe(o, { attributes:true, attributeFilter:['style'] });
