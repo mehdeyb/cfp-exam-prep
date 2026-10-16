@@ -4503,6 +4503,7 @@ async function clearApiKeyFromStorage(){
 }
 
 async function checkAIAvailability(){
+  try{window._vpMark&&window._vpMark('ai-check')}catch(_){}
   if(hasArtifactStorage()){
     aiMode = 'artifact';
     aiFeaturesAvailable = true;
@@ -5187,6 +5188,7 @@ if(hasSpeechSupport()){
   window.speechSynthesis.getVoices();
   window.speechSynthesis.addEventListener('voiceschanged', () => {
     window.speechSynthesis.getVoices();
+    try{window._vpMark&&window._vpMark('voices')}catch(_){}
     renderVoicePrefOptions();
   });
 }
@@ -12229,6 +12231,7 @@ function startCase(id){
 // still untried, and no AI-written case is under half a day old, one is
 // prepared quietly after a session ends.
 function maybeAutoGenerateCase(){
+  try{window._vpMark&&window._vpMark('autogen')}catch(_){}
   try{
     if(!aiFeaturesAvailable || caseGenBusy || isGenerating || genBackoffActive() || session) return;
     if((DATA.answerCounter || 0) < 20) return;
@@ -18260,6 +18263,7 @@ window.addEventListener('storage', async function(e){
   window.addEventListener('unhandledrejection', e => note(e.reason && e.reason.message || e.reason, 'promise'));
 })();
 async function requestDurableStorage(){
+  try{window._vpMark&&window._vpMark('persist-start')}catch(_){}
   const el = document.getElementById('storageNote');
   try{
     if(!(navigator.storage && navigator.storage.persist)) return;
@@ -18267,6 +18271,7 @@ async function requestDurableStorage(){
     try{ ok = await navigator.storage.persisted(); }catch(e){}
     if(!ok) ok = await navigator.storage.persist();
     window.__storageDurable = !!ok;
+    try{window._vpMark&&window._vpMark('persist-done')}catch(_){}
     if(el){
       el.textContent = ok ? 'This browser has agreed to keep your saved progress.' : 'This browser may clear saved progress if it runs low on space or you stop visiting for a while, so back up now and then.';
       el.style.display = 'block';
@@ -18274,11 +18279,12 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-15.52';
+const BUILD_ID = '2026-10-15.53';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
   _updChecking = true;
+  try{window._vpMark&&window._vpMark('upd-check')}catch(_){}
   try{
     const r = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
     const t = await r.text();
@@ -18293,7 +18299,7 @@ window.addEventListener('load', () => setTimeout(checkForNewBuild, 1500));
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForNewBuild(); });
 setInterval(() => { if(window._updPending && !document.body.classList.contains('quiz-active')){ window._updPending = false; checkForNewBuild(); } }, 5000);
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => try{window._vpMark&&window._vpMark('sw-registered')}catch(_){}).catch(() => {}); });
 }
 document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
@@ -18424,16 +18430,17 @@ requestDurableStorage();
   window._vpHist = [];
   const t0 = Date.now();
   let lastH = null;
-  function note(why){
+  function note(why, force){
     const h = window.innerHeight;
-    if(h === lastH && why !== 'start') return;
+    if(h === lastH && why !== 'start' && !force) return;
     lastH = h;
     window._vpHist.push(h + ' ' + why + ' @' + ((Date.now()-t0)/1000).toFixed(1) + 's');
-    if(window._vpHist.length > 12) window._vpHist.shift();
+    if(window._vpHist.length > 24) window._vpHist.shift();
     const el = document.getElementById('vpHistory');
     if(el) el.textContent = 'Height history: ' + window._vpHist.join(' → ');
   }
   window._vpNote = note;
+  window._vpMark = name => note('·' + name, true);
   note('start');
   window.addEventListener('resize', () => note('resize'));
   if(window.visualViewport) window.visualViewport.addEventListener('resize', () => note('vv-resize'));
