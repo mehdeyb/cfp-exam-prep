@@ -274,11 +274,11 @@
       max(20px, env(safe-area-inset-left));
     animation:quizIn .32s var(--ease);
   }
-  .fc-fullscreen-inner{max-width:520px;width:100%;margin:0 auto;padding-top:clamp(0px,9vh,96px);} /* anchored from the top so the card does not jump when the answer buttons appear */
+  .fc-fullscreen-inner{position:relative;max-width:520px;width:100%;margin:0 auto;padding-top:clamp(0px,3vh,28px);} /* anchored from the top so the card does not jump when the answer buttons appear */
   body:not(.flashcard-fullscreen) .fc-fullscreen-inner{padding-top:10px;}
   #fcTopCardContent > p.hint{margin-bottom:2px;}
   #fcTopCardContent > p.hint:has(#fcScienceToggle){margin-top:0;}
-  #fcFullscreenCloseBtn.fc-fullscreen-close{display:none;position:sticky;top:0;margin-left:auto;margin-bottom:16px;}
+  #fcFullscreenCloseBtn.fc-fullscreen-close{display:none;position:absolute;top:0;right:0;margin:0;z-index:2;}
   body.flashcard-fullscreen #fcFullscreenCloseBtn.fc-fullscreen-close{display:flex;}
   body.flashcard-fullscreen .fc-card{padding:48px 32px;min-height:280px;}
   @media (max-width:640px){ body.flashcard-fullscreen .tabbar{display:none;} }
@@ -1399,7 +1399,7 @@
   .cd-resultbox .cd-title{font-size:18px;}
   .cd-start{margin:0 0 12px;}
   .fc-progress{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
-  body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;}
+  body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;min-height:44px;line-height:44px;margin-bottom:6px;}
   .fc-card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:40px 28px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),opacity 150ms var(--ease);}
   .fc-card.fc-flipping{opacity:0.12;}
   .fc-card:active{transform:scale(0.98);border-color:var(--gold);}
@@ -1409,6 +1409,20 @@
   .fc-contrast b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
   .fc-card .fc-back{font-size:14.5px;color:var(--paper);line-height:1.6;display:none;}
   .fc-card .fc-hint{margin-top:18px;font-size:11px;color:var(--muted-dim);font-family:'IBM Plex Mono',monospace;}
+  .fc-options-panel{margin:4px 0 14px;padding:12px;border:1px solid var(--hair);border-radius:12px;background:var(--surface2);animation:riseIn .22s var(--ease-out);}
+  .fc-options-panel .fc-adapt-row{margin-bottom:10px;}
+  .fc-options-panel .fc-filter{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .fc-options-panel .fc-domain-select{width:100%;}
+  /* keep the answer buttons' space reserved so the card never shifts when it is flipped */
+  #fcActions[style*="display: none"], #fcActions[style*="display:none"]{display:flex !important;visibility:hidden;pointer-events:none;}
+  #fcRecap[style*="display: block"] ~ #fcActions, #fcActions.fc-no-reserve{display:none !important;}
+  .fc-undo{display:none;position:absolute;left:0;top:0;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);background:none;border:0;padding:6px 4px;min-height:32px;cursor:pointer;}
+  .fc-undo.show{display:inline-flex;align-items:center;gap:5px;animation:softIn .2s var(--ease-out);}
+  .fc-swipehint{display:none;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;color:var(--muted);}
+  @media (hover:none){ .fc-card.flipped-state .fc-swipehint{display:block;} }
+  .fc-card.fc-dragging{transition:none !important;}
+  .fc-card.fc-drag-know{border-color:var(--correct);box-shadow:0 0 0 2px var(--correct-tint);}
+  .fc-card.fc-drag-learn{border-color:var(--incorrect);box-shadow:0 0 0 2px var(--incorrect-tint);}
   .fc-actions{display:flex;justify-content:center;gap:10px;margin-top:16px;}
   .fc-mnemonic-row{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:10px;}
   .fc-mnemonic-row .btn.ghost{font-size:12.5px;padding:9px 16px;min-height:44px;}
@@ -2875,7 +2889,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating.</div>
       </div>
     </div>
 
@@ -3040,13 +3054,12 @@
         <div class="card-head"><h2>Flashcards</h2><div class="note">tap the card to flip</div></div>
         <p class="hint">
           <span class="card-head" id="fcScienceToggle" onclick="toggleFlashcardScience()" role="button" tabindex="0" style="display:inline-flex;margin-top:0;">
-            <span class="note" id="fcScienceChevron">card options ▾</span>
+            <span class="note" id="fcScienceChevron">Options &amp; filters ▾</span>
           </span>
         </p>
-        <p class="hint" id="fcScienceBody" style="display:none;">Cards are ordered by what you need most, and spaced out as you get them right.</p>
-        <label class="fc-adapt-row" id="fcAdaptRow" style="display:none;"><input type="checkbox" id="fcAdaptToggle" checked onchange="setFcAdapt(this.checked)"> Adapt each card to my level</label>
-        <p class="hint fc-deck-line" id="fcDeckLine" style="display:none;"></p>
-        <div class="fc-controls">
+        <div class="fc-options-panel" id="fcOptionsPanel" style="display:none;">
+          <p class="hint" id="fcScienceBody" style="display:block;margin:0 0 10px;">Cards are ordered by what you need most, and spaced out as you get them right.</p>
+          <label class="fc-adapt-row" id="fcAdaptRow" style="display:flex;"><input type="checkbox" id="fcAdaptToggle" checked onchange="setFcAdapt(this.checked)"> Adapt each card to my level</label>
           <div class="fc-filter">
             <input type="checkbox" id="fcFilterToggle" onchange="applyFlashcardFilter()">
             <label for="fcFilterToggle">Show only cards I'm still learning</label>
@@ -3054,6 +3067,9 @@
           <select id="fcDomainFilter" class="fc-domain-select" onchange="applyFlashcardFilter()" aria-label="Filter flashcards by domain">
             <option value="">All domains</option>
           </select>
+        </div>
+        <p class="hint fc-deck-line" id="fcDeckLine" style="display:none;"></p>
+        <div class="fc-controls">
           <button class="btn ghost" id="fcGapBtn" onclick="startGapFlashcards()" style="display:none;">Cards on what I missed</button>
           <button class="btn ghost" onclick="shuffleFlashcards()">Shuffle</button>
           <button class="btn ghost" onclick="enterFlashcardFullscreen()">Fullscreen mode</button>
@@ -3064,6 +3080,7 @@
           <button class="dp-close fc-fullscreen-close" id="fcFullscreenCloseBtn" onclick="exitFlashcardFullscreen()" aria-label="Exit fullscreen" title="Exit fullscreen">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
+          <button type="button" class="fc-undo" id="fcUndoBtn" onclick="undoFlashcardRating()" aria-label="Undo last rating">↶ Undo</button>
           <div class="fc-progress" id="fcProgress">Card 1 of 40</div>
           <div class="fc-plan-line" id="fcPlanLine" style="display:none;"></div>
           <div class="fc-card" id="fcCard" onclick="flipFlashcard()" tabindex="0" role="button">
@@ -3073,6 +3090,7 @@
             <div class="fc-front" id="fcFront">Term</div>
             <div class="fc-back" id="fcBack">Definition</div>
             <div class="fc-contrast" id="fcContrast" style="display:none;"></div>
+            <div class="fc-swipehint" id="fcSwipeHint">← still learning · swipe · know it →</div>
             <div class="fc-hint" id="fcHint">tap to reveal</div>
             <button type="button" class="fc-hintbtn" id="fcHintBtn" style="display:none;" onclick="event.stopPropagation(); showFlashcardHint();">Need a hint?</button>
             <div class="fc-hintline" id="fcHintLine" style="display:none;"></div>
@@ -10404,7 +10422,8 @@ function fcJitter(id){
 }
 function rebuildFlashcardQueue(){
   _fcCtx = null; fcCustomKind = null;
-  window._fcBuiltAt = Date.now(); window._fcPlanSig = fcPlanSignature();
+  try{ fcOptionsLabel(); }catch(e){}
+  window._fcBuiltAt = Date.now(); window._fcPlanSig = fcPlanSignature(); _fcUndo = null; try{ fcUndoRefresh(); }catch(e){}
   const toggle = document.getElementById('fcFilterToggle');
   const onlyLearning = toggle ? toggle.checked : false;
   const domainSelect = document.getElementById('fcDomainFilter');
@@ -10698,7 +10717,7 @@ function renderFlashcard(){
   { const why = document.getElementById('fcWhy'); if(why){ const r = fcReasonsFor(card); { const g = (card.gapFor && getSpacedStat(DATA.flashcardStats, card.id).seen === 0) ? 'Written for a gap: ' + card.gapFor : ''; why.textContent = g; why.style.display = g ? 'block' : 'none'; } } }
   document.getElementById('fcBack').textContent = card.def;
   document.getElementById('fcBack').style.display = 'none';
-  { const ct = document.getElementById('fcContrast'); if(ct){ ct.style.display = 'none'; ct.innerHTML = ''; } }
+  { const ct = document.getElementById('fcContrast'); if(ct){ ct.style.display = 'none'; ct.innerHTML = ''; } const _c = document.getElementById('fcCard'); if(_c) _c.classList.remove('flipped-state'); }
   document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
   document.getElementById('fcActions').style.display = 'none';
   fcApplyAdaptation(card);
@@ -10714,6 +10733,7 @@ function renderFlashcard(){
 }
 
 function flipFlashcard(){
+  if(window._fcSwipedAt && Date.now() - window._fcSwipedAt < 350) return;
   if(fcView && fcView.mode === 'apply' && !fcView.applied) return; // answer the question first
   const card = document.getElementById('fcCard');
   if(!card || card.classList.contains('fc-flipping')) return; // ignore rapid repeat clicks mid-transition
@@ -10741,6 +10761,7 @@ function fcContrastFor(card){
 
 function flipFlashcardContent(){
   fcFlipped = !fcFlipped;
+  { const _c = document.getElementById('fcCard'); if(_c) _c.classList.toggle('flipped-state', fcFlipped); }
   { const ct = document.getElementById('fcContrast'), cc = fcQueue[fcIndex]; const h = (fcFlipped && cc) ? fcContrastFor(cc) : ''; if(ct){ ct.innerHTML = h; ct.style.display = h ? 'block' : 'none'; } }
   document.getElementById('fcFront').style.display = fcFlipped ? 'none' : 'block';
   document.getElementById('fcBack').style.display = fcFlipped ? 'block' : 'none';
@@ -10987,10 +11008,21 @@ function fcKeepInView(){
   const r = c.getBoundingClientRect();
   if(r.top < 70 || r.bottom > window.innerHeight - 90){ try{ c.scrollIntoView({ block: 'center', behavior: 'auto' }); }catch(e){} }
 }
+let _fcUndo = null;
+function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b) return; const rc = document.getElementById('fcRecap'); const ok = _fcUndo && _fcUndo.queue === fcQueue && !(rc && rc.style.display === 'block'); b.classList.toggle('show', !!ok); }
+function undoFlashcardRating(){
+  const u = _fcUndo; if(!u || u.queue !== fcQueue) return;
+  if(u.had) DATA.flashcardStats[u.id] = u.stat; else delete DATA.flashcardStats[u.id];
+  DATA.flashcardRatingCount = u.count;
+  const r = u.round; if(r){ r.total = Math.max(0, r.total - 1); if(u.knew) r.knew = Math.max(0, r.knew - 1); else { r.missed.pop(); r.missedIds.pop(); } }
+  fcIndex = u.index; _fcUndo = null;
+  persist(); renderFlashcard(); renderFlashcardStats(); fcUndoRefresh(); try{ refreshHeaderStats(); refreshCoachSurfaces(); }catch(e){}
+}
 function rateFlashcard(knowsIt){
   const card = fcQueue[fcIndex];
   if(fcView && fcView.mode === 'apply' && fcView.applyRight === false) knowsIt = false; // missed the applied question: the card is still learning, whatever the button
   if(fcView && fcView.mode === 'apply' && !fcView.applied) return;
+  _fcUndo = { id:card.id, queue:fcQueue, index:fcIndex, knew:!!knowsIt, round:fcRound, had:Object.prototype.hasOwnProperty.call(DATA.flashcardStats, card.id), stat:DATA.flashcardStats[card.id] ? JSON.parse(JSON.stringify(DATA.flashcardStats[card.id])) : null, count:DATA.flashcardRatingCount || 0 };
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
@@ -11008,6 +11040,7 @@ function rateFlashcard(knowsIt){
   renderFlashcardStats();
   fcKeepInView();
   refreshHeaderStats();
+  fcUndoRefresh();
   refreshCoachSurfaces(); // the next-step recommendation counts due flashcards
   maybeAutoExpandFlashcards();
   maybeGenerateGapFlashcards();
@@ -11018,7 +11051,7 @@ function rateFlashcard(knowsIt){
     if(box){
       document.getElementById('fcCard').style.display = 'none';
       document.getElementById('fcActions').style.display = 'none';
-      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block';
+      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block'; fcUndoRefresh();
       const b = box.querySelector('button'); if(b) b.focus({preventScroll:true});
     }
   }
@@ -17012,12 +17045,46 @@ function decodeBackup(text){
 }
 
 function toggleFlashcardScience(){
-  const body = document.getElementById('fcScienceBody');
-  const chevron = document.getElementById('fcScienceChevron');
-  const expanded = body.style.display === 'block';
-  body.style.display = expanded ? 'none' : 'block';
-  { const ar = document.getElementById('fcAdaptRow'); if(ar){ ar.style.display = expanded ? 'none' : 'flex'; const t = document.getElementById('fcAdaptToggle'); if(t) t.checked = fcAdaptOn(); } }
-  chevron.textContent = expanded ? 'card options ▾' : 'card options ▴';
+  const panel = document.getElementById('fcOptionsPanel');
+  const expanded = panel.style.display === 'block';
+  panel.style.display = expanded ? 'none' : 'block';
+  if(!expanded){ const t = document.getElementById('fcAdaptToggle'); if(t) t.checked = fcAdaptOn(); }
+  fcOptionsLabel();
+}
+(function(){
+  let sx=0, sy=0, dx=0, drag=false, locked=false, swiped=false;
+  function el(){ return document.getElementById('fcCard'); }
+  document.addEventListener('touchstart', e => {
+    const c = el(); if(!c || !c.contains(e.target) || e.touches.length !== 1) return;
+    if(!fcFlipped || (fcView && fcView.mode === 'apply' && !fcView.applied)) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; drag = true; locked = false; swiped = false;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if(!drag) return; const c = el(); if(!c) return;
+    const x = e.touches[0].clientX - sx, y = e.touches[0].clientY - sy;
+    if(!locked){ if(Math.abs(x) < 8 && Math.abs(y) < 8) return; if(Math.abs(y) > Math.abs(x)){ drag = false; return; } locked = true; c.classList.add('fc-dragging'); }
+    dx = x; swiped = true;
+    c.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx/30) + 'deg)';
+    c.classList.toggle('fc-drag-know', dx > 40); c.classList.toggle('fc-drag-learn', dx < -40);
+  }, {passive:true});
+  function end(){
+    if(!drag) return; drag = false; const c = el(); if(!c) return;
+    c.classList.remove('fc-dragging','fc-drag-know','fc-drag-learn');
+    if(locked && Math.abs(dx) > 90){
+      const right = dx > 0; c.style.transition = 'transform .16s ease-out, opacity .16s ease-out'; c.style.transform = 'translateX(' + (right ? 420 : -420) + 'px)'; c.style.opacity = '0';
+      setTimeout(() => { c.style.transition = ''; c.style.transform = ''; c.style.opacity = ''; rateFlashcard(right); }, 140);
+    } else { c.style.transform = ''; }
+    if(swiped){ window._fcSwipedAt = Date.now(); }
+  }
+  document.addEventListener('touchend', end, {passive:true});
+  document.addEventListener('touchcancel', end, {passive:true});
+})();
+function fcOptionsLabel(){
+  const chevron = document.getElementById('fcScienceChevron'), panel = document.getElementById('fcOptionsPanel'); if(!chevron || !panel) return;
+  const open = panel.style.display === 'block';
+  const tg = document.getElementById('fcFilterToggle'), dm = document.getElementById('fcDomainFilter');
+  const n = (tg && tg.checked ? 1 : 0) + (dm && dm.value ? 1 : 0);
+  chevron.textContent = 'Options & filters' + (n ? ' · ' + n + ' on' : '') + (open ? ' ▴' : ' ▾');
 }
 
 function toggleDiagnosis(){
@@ -18471,7 +18538,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.67';
+const BUILD_ID = '2026-10-16.68';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
