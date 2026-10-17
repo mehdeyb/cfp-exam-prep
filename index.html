@@ -8712,6 +8712,7 @@ function ebClose(){
   const o = document.getElementById('ebOverlay'); if(o) o.classList.remove('open');
   try{ if(ebLocked){ unlockBodyScroll(); ebLocked = false; } }catch(e){}
   try{ if(typeof st.onClose === 'function') st.onClose(st); }catch(e){}
+  if(st.graded){ try{ updateFcPlanLine(); renderFlashcardStats(); renderTodayPlan(); }catch(e){} }
 }
 function ebRenderWrite(){
   const st = ebState; if(!st) return;
@@ -8797,6 +8798,7 @@ function ebGrade(g){
       const id = st.key.slice(2); DATA.missed = DATA.missed || []; if(DATA.missed.indexOf(id) < 0) DATA.missed.push(id);
     }
     recordStudyDay(); persist();
+    try{ planMarkManualDone('teach'); }catch(e){} // counts as today's explain-it-back plan step
   }catch(e){}
   const b = document.getElementById('ebBody');
   const msg = g === 'nailed' ? 'Nice. This one will come back later than the rest.' : g === 'partly' ? 'Good start. It stays in your rotation.' : 'That is useful to know. It will come back sooner.';
@@ -19605,7 +19607,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.138';
+const BUILD_ID = '2026-10-17.139';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
