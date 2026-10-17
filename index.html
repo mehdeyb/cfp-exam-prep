@@ -1148,6 +1148,11 @@
 
   /* ---------- Quiz view ---------- */
   #quizView{display:none;}
+  /* Ghost scrolling: while a quiz or fullscreen card is up, the study page underneath must not move at all. iOS ignores
+     overflow:hidden on the body for touch drags, so the page is pinned and scroll never chains to it. */
+  html:has(body.quiz-active), html:has(body.flashcard-fullscreen){overflow:hidden;overscroll-behavior:none;height:100%;}
+  body.quiz-active, body.flashcard-fullscreen{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none;}
+  body.quiz-active #quizView, body.flashcard-fullscreen #flashcardFullscreenHost{overscroll-behavior:contain;}
   .quiz-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;}
   .quiz-progress-wrap{flex:1;min-width:0;}
   .quiz-progress{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:8px;}
@@ -19318,7 +19323,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.129';
+const BUILD_ID = '2026-10-17.130';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
