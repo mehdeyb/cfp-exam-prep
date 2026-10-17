@@ -2015,6 +2015,20 @@
   #quizView .quiz-actions,#resultsView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
   #quizView .quiz-actions > *,#resultsView .quiz-actions > *{pointer-events:auto;}
   #quizView .quiz-actions::before,#resultsView .quiz-actions::before{display:none;}
+  /* Landscape phones: Exit and Next move out into the empty side margins as round buttons, so the
+     question and answers get the full height. Exam simulations keep their labelled bar. */
+  @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
+    body.quiz-active:not(.exam-sim-mode) #quizFullscreenHost{padding-left:max(74px, calc(env(safe-area-inset-left) + 62px));padding-right:max(74px, calc(env(safe-area-inset-right) + 62px));}
+    body.quiz-active:not(.exam-sim-mode) #quizView{padding-bottom:0;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions{position:fixed;left:0;right:0;top:0;bottom:0;margin:0;padding:0;z-index:30;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn{position:absolute;bottom:max(14px, env(safe-area-inset-bottom));width:50px;height:50px;min-width:0;padding:0;border-radius:50%;font-size:0;line-height:0;display:flex;align-items:center;justify-content:center;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn::after{font-size:20px;line-height:1;font-weight:600;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn.ghost{left:max(12px, calc(env(safe-area-inset-left) + 6px));}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn.ghost::after{content:"\2715";font-size:16px;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > #nextBtn{right:max(12px, calc(env(safe-area-inset-right) + 6px));}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > #nextBtn::after{content:"\2192";}
+    body.quiz-active:not(.exam-sim-mode) #moreChoicesCue{bottom:16px;}
+  }
   #quizView .quiz-actions button.btn:disabled{opacity:1;color:color-mix(in srgb,var(--gold) 45%,var(--ink));border-color:color-mix(in srgb,var(--gold) 30%,var(--ink));background-color:var(--ink);}
   #quizView .quiz-actions .btn.ghost,#quizView .quiz-actions .btn:disabled,#resultsView .quiz-actions .btn.ghost{background-color:color-mix(in srgb,var(--ink) 90%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
   /* Phones (upright): keep the tagline on one line and the readiness block narrow enough that the
@@ -18952,7 +18966,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.105';
+const BUILD_ID = '2026-10-17.106';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
