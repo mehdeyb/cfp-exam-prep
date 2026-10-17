@@ -1009,6 +1009,7 @@
   .progress-scrub{position:relative;touch-action:pan-y;cursor:crosshair;-webkit-tap-highlight-color:transparent;border-radius:6px;outline-offset:3px;}
   .fc-plan-line{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin:-2px 0 8px;}
   .fc-plan-line.done{color:var(--correct);}
+  .fc-progress.plan-done{color:var(--correct);}
   .fr-plan{margin-top:6px;font-size:12.5px;color:var(--muted);}
   .plan-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap;}
   .plan-chip.done{border-color:var(--correct);color:var(--correct);}
@@ -5440,6 +5441,7 @@ function sanitizeLoadedData(d){
   d.answerCounter = Math.max(0, num(d.answerCounter, 0));
   if(typeof d.examDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.examDate)) d.examDate = null;
   if(typeof d.fcAdapt !== 'boolean') d.fcAdapt = true;
+  if(!d.fcShown || typeof d.fcShown !== 'object') d.fcShown = {};
   return d;
 }
 
@@ -10704,6 +10706,12 @@ function flashcardPriority(card){
   { const r = (fcContext().recent||{})[card.domain] || 0; p *= Math.max(0.5, 1/(1 + r/40)); } // rotate: a domain worked on today yields a little to the others
   // A card you just rated moves out of the way, so a session never shows the same cards again within the hour.
   if(justSeen && stat.box >= 1) p *= 0.2;
+  // A card that was put in front of you but never rated (you left, or moved on) has been "seen" in the sense that matters:
+  // it steps back so the next visit opens on something you have not had a turn with.
+  try{
+    const sh = (DATA.fcShown || {})[card.id];
+    if(sh && Date.now() - sh < 20*3600000 && !(stat.lastSeenAt && stat.lastSeenAt >= sh)) p *= 0.3;
+  }catch(e){}
   return p;
 }
 function fcReasonsFor(card){
@@ -11119,20 +11127,21 @@ function fcPlanState(){
   }catch(e){ return null; }
 }
 function updateFcPlanLine(){
-  const el = document.getElementById('fcPlanLine');
-  if(!el) return;
+  // One integrated line: where you are in this run, and where that sits against today's plan.
+  const progress = document.getElementById('fcProgress');
+  const old = document.getElementById('fcPlanLine'); if(old) old.style.display = 'none';
+  if(!progress || !fcQueue.length) return;
+  const pos = 'Card ' + (fcIndex + 1) + (fcCustomQueue ? ' of ' + fcQueue.length : '');
   const st = fcPlanState();
-  if(!st){ el.style.display = 'none'; return; }
-  el.className = 'fc-plan-line' + (st.done ? ' done' : '');
+  progress.className = 'fc-progress' + (st && st.done ? ' plan-done' : '');
+  if(!st){ progress.textContent = fcCustomQueue ? pos : pos + ' of ' + fcQueue.length; return; }
   if(st.done){
     let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('cards'); }catch(e){}
-    el.innerHTML = `Today's plan: cards done ✓ (${st.have} reviewed)` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
-  } else el.textContent = `Today's plan: ${st.have} of ${st.need} cards`;
-  el.style.display = 'block';
+    progress.innerHTML = escapeHtml(pos) + ` · plan done ✓ (${st.have} today)` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
+  } else progress.textContent = `${pos} · today's plan ${st.have} of ${st.need}`;
 }
 function renderFlashcard(){
   stopSpeech();
-  updateFcPlanLine();
   const progress = document.getElementById('fcProgress');
   if(!fcQueue.length){
     document.getElementById('fcCard').style.display = 'none';
@@ -11148,7 +11157,8 @@ function renderFlashcard(){
   const card = fcQueue[fcIndex];
   { const _el = document.getElementById('fcCard'); if(_el && window._fcShownId !== card.id){ window._fcShownId = card.id; _el.classList.remove('fc-card-in'); void _el.offsetWidth; _el.classList.add('fc-card-in'); setTimeout(() => _el.classList.remove('fc-card-in'), 420); } }
   const domainMeta = DOMAINS.find(d=>d.key===card.domain);
-  progress.textContent = `Card ${fcIndex+1} of ${fcQueue.length}`;
+  updateFcPlanLine();
+  try{ if(DATA.fcShown && DATA.fcShown[card.id] !== undefined ? Date.now() - DATA.fcShown[card.id] > 600000 : true){ DATA.fcShown = DATA.fcShown || {}; DATA.fcShown[card.id] = Date.now(); const cut = Date.now() - 3*86400000; for(const k in DATA.fcShown){ if(DATA.fcShown[k] < cut) delete DATA.fcShown[k]; } persist(); } }catch(e){}
   document.getElementById('fcDomain').textContent = domainMeta.code + ' — ' + domainMeta.name;
   document.getElementById('fcFront').textContent = card.term;
   document.getElementById('fcFront').style.display = 'block';
@@ -19281,7 +19291,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.123';
+const BUILD_ID = '2026-10-17.124';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
