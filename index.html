@@ -526,6 +526,11 @@
   .fkeys-ex{font-size:12.5px;color:var(--muted,#8a8a8e);margin:2px 0 4px;}
   .fd-note{font-size:12.5px;color:var(--muted);}
   .fd-tutor{margin-top:10px;width:100%;}
+  .plan-fold>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .plan-fold>summary::-webkit-details-marker{display:none;}
+  .plan-fold>summary .plan-chev{margin-left:auto;color:var(--muted);transition:transform .2s;}
+  .plan-fold[open]>summary .plan-chev{transform:rotate(180deg);}
+  .plan-fold[open]>summary{margin-bottom:8px;}
   .qcard-link{margin:10px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--line,rgba(128,128,128,.25));}
   .qcl summary{cursor:pointer;font-size:13.5px;list-style:none;}
   .qcl summary::-webkit-details-marker{display:none;}
@@ -2310,21 +2315,18 @@
     </div>
 
     <div class="panel card" id="modePanel">
-      <h2>Start a session</h2>
-      <p class="hint">Adaptive Session is the recommended default. Use Domain Drill for a topic that is still new.</p>
+      <h2>Practice a specific way</h2>
+      <p class="hint">Today's session above already mixes these for you. Use them when you want just one thing.</p>
 
-      <div class="featured-mode" role="button" tabindex="0" onclick="startAdaptive()">
-        <div class="fm-copy">
-          <div class="tag">Recommended · interleaved + spaced</div>
-          <h3>Adaptive Session</h3>
-          <p><span data-dyn="adaptiveQ">15</span> questions selected live: mixed across domains (interleaving), weighted toward your weakest areas, and pulled only from what's new or due — you won't see a repeat until the full bank's been covered. "Due" works the same way as the flashcards: answer one right and it steps further away before it's due again; miss it and it comes right back.</p>
-        </div>
-        <div class="mode-meta" data-mm="adaptive" style="margin:8px 0 0;"></div>
-        <button class="fm-cta">Start adaptive session</button>
-      </div>
-
-      <details class="more-modes" id="moreModes"><summary><span>More ways to practice</span><span class="mm-count">8</span><span class="mm-chev" aria-hidden="true">▾</span></summary>
+      <details class="more-modes" id="moreModes"><summary><span>All practice modes</span><span class="mm-count">9</span><span class="mm-chev" aria-hidden="true">▾</span></summary>
       <div class="mode-grid">
+        <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
+          <div class="tag">Interleaved + spaced</div>
+          <h3>Adaptive session</h3>
+          <p><span data-dyn="adaptiveQ">15</span> questions chosen live: mixed across domains, weighted toward your weak areas, with a scenario and a calculation in the mix, and only what is new or due. This is the core of today's session.</p>
+          <div class="mode-when">Use it: for a quick round without the full plan.</div>
+          <div class="mode-meta" data-mm="adaptive"></div>
+        </div>
         <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
           <div class="tag">Blocked practice</div>
           <h3>Domain drill</h3>
@@ -2946,7 +2948,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress. To keep the Study tab calm, the eight extra practice modes now sit under "More ways to practice", the week-by-week plan folds away until you want it, and the technique reminder is a single line. The flashcard flip is now a real turn of the card, edge-on and back, that never fades or stutters. The Next best step card and Today's plan no longer disagree: when the plan has something open, the card shows the plan's first part and keeps the bigger picture as a note. Adaptive sessions now carry one or two applied scenarios and a worked calculation when they are due, open with a plain recall question, and avoid same-topic and back-to-back scenario or calculation runs; a miss shows the flashcard for that idea right under the answer.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress. To keep the Study tab calm, the eight extra practice modes now sit under "More ways to practice", the week-by-week plan folds away until you want it, and the technique reminder is a single line. The flashcard flip is now a real turn of the card, edge-on and back, that never fades or stutters. The Next best step card and Today's plan no longer disagree: when the plan has something open, the card shows the plan's first part and keeps the bigger picture as a note. Adaptive sessions now carry one or two applied scenarios and a worked calculation when they are due, open with a plain recall question, and avoid same-topic and back-to-back scenario or calculation runs; a miss shows the flashcard for that idea right under the answer. The Study tab now has one start button: Start today's session, which runs the guided plan with adaptive practice at its core. The plan below it is a collapsed outline, and every other mode lives under one "Practice a specific way" list.</div>
       </div>
     </div>
 
@@ -7101,16 +7103,17 @@ function computeNextStep(stats){
   }
   // When today's plan already has something open, the plan and this card must say the same thing: the card shows the plan's
   // first open part (the plan is built from what is due, what is weak and what was missed), and keeps the bigger picture as a note.
-  if(step && (step.kicker === 'Biggest opportunity' || step.kicker === 'Looking strong')){
+  if(step && ['Biggest opportunity','Looking strong','Rebuild the basics','Blind spot','Spaced review','Flashcards due','Calculator practice','Formula practice','Exam-style practice','Weak topic'].includes(step.kicker)){
     try{
       const plan = buildStudyPlan();
       const open = plan.steps.filter(x => !x.done && !x.manual && typeof x.run === 'function');
       const first = open[0];
       if(first){
-        const idx = plan.steps.indexOf(first) + 1;
         const partial = (first.have || 0) > 0 && first.need > 0;
-        step = { kicker:`Today's plan · part ${idx} of ${plan.steps.length}`, title:first.title, why:first.why,
-          cta: partial ? 'Continue' : 'Start', meta:`about ${first.minutes} min`, run: first.run,
+        const total = Math.min(plan.minutes, open.reduce((a, x) => a + x.minutes, 0));
+        step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}`, title: open.length === 1 ? first.title : "Today's session",
+          why: open.length === 1 ? first.why : `It opens with: ${first.title.charAt(0).toLowerCase() + first.title.slice(1)}. ${open.length - 1} more part${open.length === 2 ? '' : 's'} follow, each with a short check-in, and the order adjusts to how you do.`,
+          cta: partial ? 'Continue' : "Start today's session", meta:`about ${total} min`, run: open.length === 1 ? first.run : () => conductorStart(),
           bigger: step.title };
       }
     }catch(e){}
@@ -7721,13 +7724,10 @@ function renderTodayPlan(){
     ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open;var m=this.querySelector('.pt-more-label');if(m)m.textContent=this.open?'Hide':'Show'"><summary><span class="pt-more-label">${window._ptMoreOpen ? 'Hide' : 'Show'}</span> the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
     : stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
-    <p class="pt-sub">${escapeHtml(sub)} Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
+  el.innerHTML = `<details class="plan-fold"${window._planFoldOpen ? ' open' : ''} ontoggle="window._planFoldOpen = this.open"><summary class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div><span class="plan-chev" aria-hidden="true">▾</span></summary>
+    <p class="pt-sub">${escapeHtml(sub)} This is the outline of today's session above; tap a part only to do just that one. Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
-    ${(() => { const left = plan.steps.filter(x => !x.done && !x.manual); const cs = conductorState();
-      if(cs) return `<button type="button" class="btn cd-start" onclick="conductorOpenMenu()">Continue my session</button>`;
-      return left.length ? `<button type="button" class="btn cd-start" onclick="conductorStart()">Start my session · about ${Math.min(plan.minutes, left.reduce((a, x) => a + x.minutes, 0))} min</button>` : ''; })()}
-    ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}`;
+    ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</details>`;
   el.style.display = 'block';
   try{ conductorRefreshPill(); }catch(e){}
 }
@@ -7746,7 +7746,7 @@ function renderNextStepCard(stats, refreshed){
       <span class="ns-meta">${escapeHtml(s.meta)}</span>
     </div>
     ${refreshed ? `<div class="ns-note ns-updated">Updated — your latest activity changed the best next step.</div>` : ''}
-    ${s.bigger ? `<div class="ns-note">Bigger picture: ${escapeHtml(s.bigger)}.</div>` : ''}
+    ${s.bigger ? `<div class="ns-note">Most pressing: ${escapeHtml(s.bigger.charAt(0).toLowerCase() + s.bigger.slice(1))}.</div>` : ''}
     ${s.streakNote ? `<div class="ns-note">${escapeHtml(s.streakNote)}</div>` : ''}`;
   el.style.display = 'block';
 }
@@ -18895,7 +18895,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.88';
+const BUILD_ID = '2026-10-17.91';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
