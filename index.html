@@ -1899,6 +1899,13 @@
     .fc-actions{margin-top:10px;}
     .fc-progress{margin-bottom:6px;}
   }
+  /* Landscape phones, fullscreen flashcards: the two rating buttons sit in the side margins, left for
+     "still learning" and right for "I know this" (the same sides as the swipe), so a thumb reaches them. */
+  @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
+    body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, env(safe-area-inset-bottom));min-width:124px;height:58px;padding:0 18px;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
+    body.flashcard-fullscreen #fcActions .btn.learning{left:max(16px, calc(env(safe-area-inset-left) + 8px));}
+    body.flashcard-fullscreen #fcActions .btn.know{right:max(16px, calc(env(safe-area-inset-right) + 8px));}
+  }
   @media (orientation:portrait) and (max-width:640px){
     h1{font-size:27px;line-height:1.12;}
     #heroIntro .sub{display:none;}
@@ -18966,7 +18973,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.106';
+const BUILD_ID = '2026-10-17.107';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
