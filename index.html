@@ -8147,8 +8147,14 @@ function updatePlanChip(){
   const runLen = (session.queue || []).length;
   if(!done && runLen && r.need <= runLen){ el.style.display = 'none'; return; }
   el.className = 'plan-chip' + (done ? ' done' : '');
-  el.textContent = done ? 'Plan step done ✓' : `Today ${have} of ${r.need}`;
-  el.title = done ? `${r.title}: finished. More questions are extra practice.` : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
+  let nx = null;
+  if(done){ try{ nx = planNextAfter(r.id); }catch(e){} }
+  el.textContent = done ? 'Plan step done ✓' + (nx ? ' · Next →' : '') : `Today ${have} of ${r.need}`;
+  if(done && nx){
+    el.setAttribute('role','button'); el.tabIndex = 0; el.style.cursor = 'pointer';
+    el.onclick = () => { if(confirm('Plan step done. Move on to \u201c' + nx.title + '\u201d now?\n\nThis ends the current run; your answers so far are saved.')) planGoNext(nx.id); };
+  } else { el.setAttribute('role','status'); el.removeAttribute('tabindex'); el.style.cursor = ''; el.onclick = null; }
+  el.title = done ? `${r.title}: finished. ${nx ? 'Tap to move on to ' + nx.title + '.' : 'More questions are extra practice.'}` : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
   el.style.display = 'inline-block';
 }
 // Move from one plan step to the next: the tutor names the step, says why it comes next, and one tap starts it.
@@ -19312,7 +19318,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.128';
+const BUILD_ID = '2026-10-17.129';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
