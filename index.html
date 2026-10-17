@@ -2632,6 +2632,7 @@
             <div class="rr-card" id="resultPace" style="display:none;"></div>
             <div class="rr-card" id="resultChat" style="display:none;"></div>
             <div class="rr-card" id="resultTvm" style="display:none;"></div>
+            <div class="rr-card" id="resultTools" style="display:none;"></div>
             <div class="rr-card" id="resultReadiness" style="display:none;"></div>
             <div class="quiz-actions">
               <button class="btn ghost" onclick="exitToMenu()">Back to studio</button>
@@ -16910,6 +16911,7 @@ function finishSession(){
   renderResultPace();
   renderResultChat();
   renderResultTvm();
+  renderResultTools();
   renderResultReadiness();
 }
 
@@ -16983,6 +16985,39 @@ function startChatRevisit(){
   if(!pool.length) return;
   beginSession(pool, 'review', null);
   if(session) session.revisitIds = ids.slice();
+}
+
+// A miss on a topic one of the Tools cards covers points to that card, so the picture is one tap from the mistake.
+const RESULT_TOOL_MATCH = [
+  { key:'trust', name:'Which trust fits?', re:/\b(trusts?|CRUT|CRAT|CLAT|QPRT|GRAT|ILIT|SLAT|crummey|grantor)\b/i },
+  { key:'entity', name:'Which business entity fits?', re:/\b(S corporation|S corp|LLC|C corporation|C corp|sole proprietor|general partnership|business entity|pass-through entity)\b/i },
+  { key:'ira', name:'Traditional IRA deductibility', re:/\bdeduct\w*[^.?]{0,80}\bIRA\b|\bIRA\b[^.?]{0,80}\bdeduct\w*|active participant/i },
+  { key:'socialSecurity', name:'When to claim Social Security', re:/social security[^.?]{0,120}\b(claim|delay|full retirement|FRA|spousal|early)\w*|\b(claim|delay)\w*[^.?]{0,80}social security/i },
+  { key:'optionsMatrix', name:'Options matrix', re:/\b(long|short) (call|put)s?\b|\b(call|put) options?\b|covered call|protective put|\boption (buyer|seller|writer|premium|holder)|\bwrit(e|ing) (a )?(call|put)/i },
+  { key:'qualifiedPlans', name:'Qualified plan family tree', re:/\b(401\(k\)|403\(b\)|SIMPLE IRA|SEP[ -]IRA|profit[- ]sharing|defined benefit|cash balance|money purchase|ESOP|qualified plan)\b/i }
+];
+function renderResultTools(){
+  const el = document.getElementById('resultTools');
+  if(!el) return;
+  el.style.display = 'none'; el.innerHTML = '';
+  try{
+    if(!session || session.mode === 'fullexam' || session.mode === 'mock') return;
+    const counts = {};
+    (session.answerLog || []).forEach(e => {
+      if(e.correct) return;
+      const q = session.queue[e.index]; if(!q) return;
+      const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' ');
+      RESULT_TOOL_MATCH.forEach(t => { if(t.re.test(hay)) counts[t.key] = (counts[t.key] || 0) + 1; });
+    });
+    const top = RESULT_TOOL_MATCH.filter(t => counts[t.key]).sort((a,b) => counts[b.key] - counts[a.key])[0];
+    if(!top) return;
+    el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>`;
+    el.style.display = 'block';
+  }catch(e){}
+}
+function openToolFromResults(key){
+  exitToMenu();
+  tutorPoint('tool_' + key, 'The tool for what you just missed');
 }
 
 function renderResultTvm(){
@@ -18031,6 +18066,12 @@ const TUTOR_POINT_TARGETS = {
   next_step:      { tab:'study',      sel:'#nextStepCard',    label:'Your next best step' },
   start_session:  { tab:'study',      sel:'#modePanel',       label:'Start a session here' },
   todays_plan:    { tab:'study',      sel:'#todayPlanCard',   label:"Today's plan" },
+  tool_trust:     { tab:'tools', sel:'.card:has(#dt-full-trust)',          label:'Which trust fits?' },
+  tool_entity:    { tab:'tools', sel:'.card:has(#dt-full-entity)',         label:'Which business entity fits?' },
+  tool_ira:       { tab:'tools', sel:'.card:has(#dt-full-ira)',            label:'Is a traditional IRA contribution deductible?' },
+  tool_socialSecurity: { tab:'tools', sel:'.card:has(#dt-full-socialSecurity)', label:'When should Social Security be claimed?' },
+  tool_optionsMatrix:  { tab:'tools', sel:'.card:has(#dt-full-optionsMatrix)',  label:'Options matrix' },
+  tool_qualifiedPlans: { tab:'tools', sel:'.card:has(#dt-full-qualifiedPlans)', label:'Qualified plan family tree' },
   your_coach:     { tab:'study',      sel:'.bp-focus',        label:'Your coach and focus areas' },
   blueprint:      { tab:'study',      sel:'#blueprintCard',   label:'Exam weight vs your mastery' },
   exam_date:      { tab:'study',      sel:'#examCountdownCard', label:'Set your exam date' },
@@ -18905,7 +18946,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.96';
+const BUILD_ID = '2026-10-17.97';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
