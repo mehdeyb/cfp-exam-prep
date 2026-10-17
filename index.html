@@ -18060,6 +18060,7 @@ async function executeTutorTool(toolName, toolInput){
         const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0,20);
         return startFlashcardSet(set, 'domain') ? `Started ${set.length} ${toolInput.domain} flashcards, ordered by what the student needs most.` : 'No flashcards in that domain.';
       }
+      if(fcCustomQueue){ try{ rebuildFlashcardQueue(); }catch(e){} } // drop any leftover custom set so the deck really is the regular, need-ordered one
       showTab('flashcards');
       return 'Opened the Flashcards tab; the deck is ordered by what the student needs most.';
     }
@@ -18745,7 +18746,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.79';
+const BUILD_ID = '2026-10-16.80';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
