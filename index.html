@@ -8785,7 +8785,7 @@ function ebGrade(g){
     DATA.teachStats = DATA.teachStats || {};
     const prev = DATA.teachStats[st.key] || { n:0, best:0 };
     const got = (st.result || []).filter(r => r.ok).length, n = (st.result || []).length || 1;
-    DATA.teachStats[st.key] = { n: prev.n + 1, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)) };
+    DATA.teachStats[st.key] = { n: prev.n + 1, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)), missN: n - got };
     const keys = Object.keys(DATA.teachStats);
     if(keys.length > 400){ keys.sort((a, b) => DATA.teachStats[a].last - DATA.teachStats[b].last).slice(0, keys.length - 400).forEach(k => delete DATA.teachStats[k]); }
     if(st.kind === 'card'){
@@ -8806,11 +8806,21 @@ function ebGrade(g){
   if(st.afterGrade) try{ st.afterGrade(g, st); }catch(e){}
 }
 // ---- entry points ----
+// The prompt follows your history with this idea: first time, a plain ask; after a shortfall, name what was missing; after a
+// clean run, make it harder (the exam trap or an example) so the same easy answer does not pass twice.
+function ebPromptFor(card){
+  const ts = (DATA.teachStats || {})['c:' + card.id];
+  let lvl = 'building'; try{ lvl = fcCardLevel(card); }catch(e){}
+  if(!ts) return lvl === 'strong' ? 'You know this one. Say it in your own words, then add the detail the exam is most likely to twist.' : 'Without looking, say what this means and when it matters, as if a client asked you.';
+  if(ts.grade === 'nailed') return 'You covered this before. Go one step further: give a quick example, or say what people most often confuse it with.';
+  const n = ts.missN || 0;
+  return 'Last time ' + (n ? n + ' key idea' + (n === 1 ? ' was' : 's were') + ' missing' : 'it fell a little short') + '. Start with the main idea, then fill in the rest.';
+}
 function ebOpenCard(card, opts){
   if(!card) return false;
   return ebOpen(Object.assign({
     key:'c:' + card.id, kind:'card', title: card.term,
-    prompt:'Without looking, say what this means and when it matters, as if a client asked you.',
+    prompt: ebPromptFor(card),
     points: ebSplitPoints(card.def), full: card.def,
   }, opts || {}));
 }
@@ -19607,7 +19617,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.139';
+const BUILD_ID = '2026-10-17.140';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
