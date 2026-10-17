@@ -7582,7 +7582,7 @@ function conductorRefreshPill(){
   // Already on this part's own screen, still working: the screen shows its own progress ("Today's plan: 8 of 20 cards"),
   // so the pill would only sit on top of the card. It comes back when the part is finished or when you leave.
   if(c.current && !finished){
-    const own = { cards:'flashcards' }[c.current.id];
+    const own = { cards:'flashcards', keys:'reference', teach:'tutor' }[c.current.id];
     const act = document.querySelector('.tab-panel.active');
     if(own && act && act.id === 'tab-' + own){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   }
@@ -18728,7 +18728,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.77';
+const BUILD_ID = '2026-10-16.78';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
