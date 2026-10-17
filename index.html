@@ -1884,7 +1884,7 @@
     body.quiz-active .q-text{margin-bottom:12px;}
     body.quiz-active .ask-chips{margin:0 0 10px;gap:5px;}
     body.quiz-active .ask-chip{font-size:11.5px;padding:3px 8px;}
-    .q-right > .ask-chips{margin:10px 0 0;}
+    body.quiz-active .q-right > .ask-chips{margin:12px 0 0;}
     body.quiz-active .choices{gap:6px;}
     body.quiz-active .choice{padding:8px 12px;font-size:13.5px;}
     body.quiz-active .choice-note{padding:5px 12px 2px 36px;font-size:12px;line-height:1.42;}
@@ -15515,24 +15515,40 @@ function calcCueHtml(q){
   }catch(e){}
   return t;
 }
-// In wide landscape the question column is the crowded one, so the calculator check sits under the answers where there is room.
-function placeCalcCue(){
-  const el = document.getElementById('calcCue'); if(!el) return;
-  const wide = window.matchMedia('(orientation:landscape) and (max-height:520px) and (min-width:520px)').matches;
-  const left = document.querySelector('#quizView .q-left'), right = document.querySelector('#quizView .q-right'), ch = document.getElementById('qChoices');
-  if(!left || !right || !ch) return;
-  if(wide){ if(el.parentNode !== right) right.insertBefore(el, ch.nextSibling); }
-  else if(el.parentNode !== left) left.appendChild(el);
-  // The reading hints move over with it when the left column is busy with a client scenario.
+// Adaptive landscape layout. The two columns hold different amounts depending on the question: a short recall item, a long
+// stem, a client scenario, a calculation with its calculator check. So the reading hints and the calculator check can sit on
+// either side and the column split can shift, and the arrangement that leaves the least to scroll wins. Portrait just flows.
+function placeCalcCue(){ applyQuizLayout(); }
+function applyQuizLayout(){
   try{
-    const ask = document.getElementById('qAsk'), q = (typeof session !== 'undefined' && session && session.queue) ? session.queue[session.index] : null;
-    if(ask){
-      if(wide && q && q.scenario){ if(ask.parentNode !== right) right.insertBefore(ask, ch.nextSibling); }
-      else if(ask.parentNode !== left){ const t = document.getElementById('qText'); t.after(ask); }
-    }
+    const card = document.querySelector('#quizView .q-card'), left = document.querySelector('#quizView .q-left'), right = document.querySelector('#quizView .q-right');
+    const cue = document.getElementById('calcCue'), ask = document.getElementById('qAsk'), ch = document.getElementById('qChoices'), qt = document.getElementById('qText');
+    if(!card || !left || !right || !ch || !qt) return;
+    if(ch.querySelector('.choice.locked')) return; // never rearrange under a finger once the question is answered
+    const wide = window.matchMedia('(orientation:landscape) and (max-height:520px) and (min-width:520px)').matches
+      && document.body.classList.contains('quiz-active') && !document.body.classList.contains('exam-sim-mode');
+    const put = (el, side) => {
+      if(!el) return;
+      if(side === 'right'){ if(el.parentNode !== right || el.previousElementSibling !== ch) right.insertBefore(el, ch.nextSibling); }
+      else if(el.parentNode !== left){ if(el === ask) qt.after(el); else left.appendChild(el); }
+    };
+    card.style.gridTemplateColumns = '';
+    if(!wide){ put(ask, 'left'); put(cue, 'left'); return; }
+    const vis = el => !!el && el.style.display !== 'none' && el.innerHTML !== '';
+    const sides = el => vis(el) ? ['left', 'right'] : ['left'];
+    const cols = ['minmax(0,6fr) minmax(0,5fr)', 'minmax(0,1fr) minmax(0,1fr)', 'minmax(0,7fr) minmax(0,4fr)', 'minmax(0,5fr) minmax(0,6fr)'];
+    const avail = left.style.maxHeight || window.innerHeight - 72;
+    let best = null;
+    sides(ask).forEach(sa => sides(cue).forEach(sc => cols.forEach((cs, ci) => {
+      put(ask, sa); put(cue, sc); card.style.gridTemplateColumns = cs;
+      const lh = left.scrollHeight, rh = right.scrollHeight, av = Math.max(120, parseFloat(getComputedStyle(left).maxHeight) || window.innerHeight - 72);
+      const score = Math.max(0, lh - av) * 1.15 + Math.max(0, rh - av) + rh * 0.01 + ci * 0.5 + (sa === 'right' ? 0.3 : 0) + (sc === 'right' ? 0.2 : 0);
+      if(!best || score < best.score) best = { score, sa, sc, cs };
+    })));
+    put(ask, best.sa); put(cue, best.sc); card.style.gridTemplateColumns = best.cs;
   }catch(e){}
 }
-window.addEventListener('resize', () => { try{ placeCalcCue(); }catch(e){} });
+window.addEventListener('resize', () => { try{ applyQuizLayout(); }catch(e){} });
 function renderCalcCue(q){
   const el = document.getElementById('calcCue'); if(!el) return;
   const html = calcCueHtml(q);
@@ -15773,7 +15789,7 @@ function fitQuizText(){
   }catch(e){}
 }
 function scheduleQuizFit(){
-  requestAnimationFrame(() => { fitQuizText(); setTimeout(fitQuizText, 350); });
+  requestAnimationFrame(() => { applyQuizLayout(); fitQuizText(); setTimeout(() => { applyQuizLayout(); fitQuizText(); }, 350); });
 }
 window.addEventListener('resize', () => { if(document.body.classList.contains('quiz-active') && !(session && session.locked)) scheduleQuizFit(); });
 window.addEventListener('orientationchange', () => setTimeout(scheduleQuizFit, 300));
@@ -19169,7 +19185,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.116';
+const BUILD_ID = '2026-10-17.117';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
