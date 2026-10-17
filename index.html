@@ -3681,6 +3681,7 @@ function showTab(name, opts){
   if(!same){
     _scrollPageTo(opts.fromBar ? (_tabScroll[name] || 0) : 0);
     if(name === 'tutor'){ const th = document.getElementById('tutorThread'); if(th) th.scrollTop = th.scrollHeight; }
+    if(name === 'tools'){ try{ renderToolPracticeButtons(); }catch(e){} }
   }
 }
 
@@ -10350,19 +10351,57 @@ const TOOL_PRACTICE_SETS = {
   qualifiedPlans: ['p4','p32','p48','ret-n7','n8','cov-p3','cov-p4','cov-p5','cv4-10','cv4-12','cv4-14','cv6-07','cv6-08','cv6-09'],
 };
 
+// How you stand on the questions a tool covers: tried, right, and how many are due or missed. Drives the line under each tool
+// and which questions "Practice this topic" picks.
+function toolPracticeStats(key){
+  const ids = TOOL_PRACTICE_SETS[key] || [];
+  const all = new Map(allQuestions().map(q => [q.id, q]));
+  let have = 0, tried = 0, right = 0, due = 0, missed = 0;
+  const missedSet = new Set(DATA.missed || []);
+  ids.forEach(id => {
+    if(!all.has(id)) return; have++;
+    const st = getSpacedStat(DATA.questionStats, id);
+    if(st.seen > 0){ tried++; if(st.correct > 0 && st.correct >= st.seen / 2) right++; if(isDue(st)) due++; }
+    if(missedSet.has(id)) missed++;
+  });
+  return { have, tried, right, due, missed };
+}
+function toolPracticePick(key, n){
+  const all = new Map(allQuestions().map(q => [q.id, q]));
+  const missedSet = new Set(DATA.missed || []);
+  const scored = (TOOL_PRACTICE_SETS[key] || []).filter(id => all.has(id)).map(id => {
+    const st = getSpacedStat(DATA.questionStats, id);
+    let sc = 0;
+    if(missedSet.has(id)) sc += 3;
+    if(st.seen > 0 && st.box <= 1) sc += 2;
+    if(st.seen > 0 && isDue(st)) sc += 2;
+    if(st.seen === 0) sc += 1.5;
+    if(st.seen > 0 && st.box >= 3 && !isDue(st)) sc -= 1;
+    return { q: all.get(id), sc: sc + Math.random() * 0.9 };
+  }).sort((a, b) => b.sc - a.sc);
+  return scored.slice(0, n).map(x => x.q);
+}
 function renderToolPracticeButtons(){
   Object.keys(TOOL_PRACTICE_SETS).forEach(key => {
     const host = document.getElementById('tool-practice-' + key);
     if(!host) return;
-    const ids = TOOL_PRACTICE_SETS[key];
-    host.innerHTML = `<button type="button" class="btn ghost" style="margin-top:12px;" onclick="startTopicPractice('${key}')">Practice this topic (${ids.length} questions)</button>`;
+    const st = toolPracticeStats(key);
+    if(!st.have) return;
+    const n = Math.min(10, st.have);
+    let line;
+    if(!st.tried) line = `${st.have} questions on this topic, none tried yet.`;
+    else {
+      const bits = [`${st.tried} of ${st.have} tried`, `${Math.round(100 * st.right / st.tried)}% right`];
+      if(st.missed) bits.push(`${st.missed} missed`);
+      if(st.due) bits.push(`${st.due} due`);
+      line = bits.join(' \u00b7 ');
+    }
+    host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line)}</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice this topic (${n})`}</button>`;
   });
 }
 
 function startTopicPractice(setKey){
-  const ids = TOOL_PRACTICE_SETS[setKey];
-  const all = allQuestions();
-  const pool = ids.map(id => all.find(q => q.id === id)).filter(Boolean);
+  const pool = toolPracticePick(setKey, 10);
   if(pool.length === 0) return;
   beginSession(shuffle(pool), 'drill', null);
 }
@@ -19617,7 +19656,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.140';
+const BUILD_ID = '2026-10-17.141';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
