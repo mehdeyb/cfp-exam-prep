@@ -10912,7 +10912,8 @@ function fcContext(){
   });
   const gapItems = Object.keys(w).sort((a,b)=>w[b]-w[a]).slice(0,160).map(id => {
     const q = qById.get(id);
-    return { id, w:w[id], domain:q.domain, text: fcNorm(q.q+' '+(q.scenario||'')+' '+q.choices[q.correct]+' '+(q.rationale||[]).join(' ')), stem:q.q };
+    const text = fcNorm(q.q+' '+(q.scenario||'')+' '+q.choices[q.correct]+' '+(q.rationale||[]).join(' '));
+    return { id, w:w[id], domain:q.domain, text, words:new Set(text.trim().split(' ')), stem:q.q };
   });
   let weak = [];
   try{ weak = weakSubtopics(40); }catch(e){}
@@ -10950,9 +10951,11 @@ function fcCardSignals(card){
   let sum = 0, hyper = false;
   const forms = fcTermForms(card);
   if(forms.length){
+    forms.forEach(f => { f.k = ' ' + f.n.trim() + ' '; f.ws = f.n.trim().split(' '); });
     ctx.gapItems.forEach(it => {
       for(const f of forms){
-        if(it.text.indexOf(' ' + f.n.trim() + ' ') >= 0){
+        if(!f.ws.every(w => it.words.has(w))) continue; // cheap reject: every word of the term must appear in the question
+        if(it.text.indexOf(f.k) >= 0){
           sum += it.w * f.weight;
           if(it.w >= 1) hyper = true;
           break;
@@ -19602,7 +19605,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.137';
+const BUILD_ID = '2026-10-17.138';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
