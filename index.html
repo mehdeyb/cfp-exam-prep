@@ -1881,6 +1881,8 @@
     body.quiz-active .q-scenario{padding:9px 13px;margin-bottom:10px;line-height:1.5;}
     body.quiz-active .q-scenario .cue-bar{margin:0 0 6px;gap:5px;}
     body.quiz-active .q-scenario{position:relative;}
+    body.quiz-active .q-scenario .scenario-label{margin-bottom:22px;padding-right:108px;line-height:1.4;}
+    .tutor-brief{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     body.quiz-active .q-scenario .cue-toggle{position:absolute;top:6px;right:10px;margin:0;min-height:30px;padding:0 11px;}
     body.quiz-active .q-text{margin-bottom:12px;}
     body.quiz-active .ask-chips{margin:0 0 10px;gap:5px;}
@@ -2048,9 +2050,11 @@
   #quizView .quiz-actions::before{background:linear-gradient(to top,var(--ink),transparent);}
   #resultsView .quiz-actions::before{background:linear-gradient(to top,var(--surface),transparent);}
   /* No band behind the action bar: just the two buttons floating over the page. */
-  #quizView .quiz-actions,#resultsView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
-  #quizView .quiz-actions > *,#resultsView .quiz-actions > *{pointer-events:auto;}
-  #quizView .quiz-actions::before,#resultsView .quiz-actions::before{display:none;}
+  #quizView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
+  #quizView .quiz-actions > *{pointer-events:auto;}
+  #quizView .quiz-actions::before{display:none;}
+  /* The results page keeps a solid bar: its buttons would otherwise sit on top of the table rows. */
+  #resultsView .quiz-actions{background:var(--surface);}
   /* Landscape phones: Exit and Next move out into the empty side margins as round buttons, so the
      question and answers get the full height. Exam simulations keep their labelled bar. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
@@ -4947,7 +4951,7 @@ function renderApiKeyUI(){
 
   const chipsDisabled = aiMode === 'none';
   // Without a key the tutor still answers "what should I do next" from the app's own data, so the box stays usable.
-  if(tutorInput){ tutorInput.disabled = false; tutorInput.placeholder = chipsDisabled ? 'Ask what to do next… (a key unlocks explanations)' : 'Ask about any CFP topic…'; }
+  if(tutorInput){ tutorInput.disabled = false; tutorInput.placeholder = chipsDisabled ? 'Ask what to do next, or look up a term' : 'Ask about any CFP topic…'; }
   if(tutorSendBtn){ tutorSendBtn.disabled = false; }
   if(tutorChips){ Array.from(tutorChips.children).forEach(b=>{ if(b.tagName==='BUTTON') b.disabled = false; }); }
 
@@ -19277,7 +19281,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.121';
+const BUILD_ID = '2026-10-17.123';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
