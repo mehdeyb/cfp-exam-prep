@@ -6586,6 +6586,11 @@ function renderProgressChart(){
   const fmtDate = iso => { const d = new Date(iso); return (d.getMonth()+1)+'/'+d.getDate(); };
   document.getElementById('progressLabelStart').textContent = fmtDate(points[0].date);
   document.getElementById('progressLabelEnd').textContent = fmtDate(points[points.length-1].date);
+  // One session is a dot, not a trend: show the sentence above and leave the empty chart out.
+  { const one = points.length < 2;
+    const sc = document.getElementById('progressScrub'); if(sc) sc.style.display = one ? 'none' : '';
+    const lb = document.getElementById('progressLabels'); if(lb) lb.style.display = one ? 'none' : '';
+    if(one){ const dr = document.getElementById('progressDiffRow'); if(dr) dr.style.display = 'none'; } }
   setupProgressScrub();
 }
 
@@ -7845,7 +7850,10 @@ function renderResultReadiness(){
     top = `<div class="rr-ready"><span class="rr-lbl">Readiness</span><span class="rr-nums">${start} → ${now}</span><span class="rr-delta ${cls}">${chip}</span></div>${note}`;
   }
   const s = currentNextStep;
-  const nextHtml = s ? `
+  // The plan-step line above already offers the next part with its own button; one "what next" per screen.
+  const planLine = document.getElementById('planResultLine');
+  const planHasNext = !!(planLine && planLine.style.display !== 'none' && planLine.querySelector('.pr-go'));
+  const nextHtml = (s && !planHasNext) ? `
     <div class="ns-card rr-next">
       <div class="ns-kicker"><span class="ns-label"><span class="ns-dot"></span>Next best step</span><span class="ns-tag">${escapeHtml(s.kicker)}</span></div>
       <div class="ns-title">${escapeHtml(s.title)}</div>
@@ -11260,7 +11268,10 @@ function rateFlashcard(knowsIt){
   maybeGenerateGapFlashcards();
   let hitTarget = false;
   try{ const cs = conductorState(); const ps0 = fcPlanState(); hitTarget = !!(cs && cs.current && cs.current.id === 'cards' && ps0 && ps0.done && fcRound.total >= 3); }catch(e){}
-  if(fcRound.total >= FC_CHECKPOINT || hitTarget){
+  // A checkpoint with only a few plan cards left just interrupts the finish; fold it into the final recap instead.
+  let nearEnd = false;
+  try{ const ps1 = fcPlanState(); nearEnd = !!(ps1 && !ps1.done && (ps1.need - ps1.have) <= 3 && fcRound.total < FC_CHECKPOINT + 3); }catch(e){}
+  if((fcRound.total >= FC_CHECKPOINT && !nearEnd) || hitTarget){
     const box = document.getElementById('fcRecap');
     if(box){
       document.getElementById('fcCard').style.display = 'none';
@@ -18895,7 +18906,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.91';
+const BUILD_ID = '2026-10-17.94';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
