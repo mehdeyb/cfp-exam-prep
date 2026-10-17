@@ -950,6 +950,9 @@
   .bp-chip-due{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--gold);background:var(--gold-tint);padding:1px 6px;border-radius:8px;}
   .bp-chip-rebuilding{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--gold);letter-spacing:.02em;}
   .source-note{margin-top:12px;font-size:11px;color:var(--muted-dim);line-height:1.5;}
+  .source-note summary{cursor:pointer;list-style:none;}
+  .source-note summary::-webkit-details-marker{display:none;}
+  .source-note summary::after{content:' ▾';}
   .source-note a{color:var(--muted);}
   .source-note a:hover{color:var(--gold);}
 
@@ -987,16 +990,13 @@
   .ewp button.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft);}
   #examDateInput{font-family:'IBM Plex Sans',sans-serif;font-size:16px;padding:9px 12px;border-radius:8px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);}
   .plan-phase-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:var(--gold-tint);color:var(--gold);margin-bottom:10px;}
-  .plan-countdown{font-family:'Fraunces',serif;font-size:19px;margin-bottom:4px;}
+  .plan-phase-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 8px;}
+  .plan-phase-row .plan-phase-badge{margin:0;}
+  .plan-countdown{font-family:'Fraunces',serif;font-size:19px;}
   .plan-summary{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px;}
   .pt-block{display:flex;align-items:center;gap:12px;}
   .pt-block .pt-block-text{flex:1;min-width:0;}
   .pt-block .pt-go{flex:none;}
-  .plan-weeks{border-top:1px solid var(--hair);padding-top:14px;}
-  .plan-week-row{display:flex;gap:12px;padding:9px 0;align-items:baseline;}
-  .plan-week-row .wk-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex:none;width:64px;}
-  .plan-week-row .wk-focus{font-size:13px;color:var(--paper);}
-  .plan-week-row .wk-focus b{color:var(--gold);}
   .progress-trend{font-size:14px;font-weight:600;margin-bottom:12px;}
   .progress-trend .up{color:var(--correct);}
   .progress-trend .down{color:var(--incorrect);}
@@ -1792,6 +1792,7 @@
   /* Study tab order: what to do now comes first (next step, today's plan, start a session);
      the big mastery chart and coach summary follow it. */
   #tab-study.active{display:flex;flex-direction:column;}
+  #focusCard.fc-empty{display:none !important;}
   #tab-study > #blueprintCard,#tab-study > #focusCard,#tab-study > #modePanel ~ *{order:1;}
   /* Phones: the session picker keeps each option to a title, a "use it when" line and its status;
      the long descriptions stay on larger screens. */
@@ -2293,7 +2294,7 @@
     </div>
 
       <div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div>
-      <div class="source-note">Domain weights and the <span data-dyn="subtopicN">70</span> official subtopics beneath them come straight from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a> — tap a segment or a row below to drill that domain. A pulsing gold marker means that domain is currently rebuilding fundamentals after a rough patch; a "due" badge means it has questions ready for spaced review right now.</div>
+      <details class="source-note"><summary>About these numbers</summary><div style="margin-top:6px;">Domain weights and the <span data-dyn="subtopicN">70</span> official subtopics beneath them come straight from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a> — tap a segment or a row below to drill that domain. A pulsing gold marker means that domain is currently rebuilding fundamentals after a rough patch; a "due" badge means it has questions ready for spaced review right now.</div></details>
     </div>
 
     <div class="card" id="focusCard">
@@ -2490,11 +2491,11 @@
 
     <div class="card" id="planCard">
       <div class="card-head">
-        <h2>Study plan</h2>
-        <div class="note">built from your exam date + weak spots</div>
+        <h2>Exam date</h2>
+        <div class="note">sets your phase and pace</div>
       </div>
       <div id="planSetup">
-        <p class="hint">When's your exam? The plan below updates automatically as your mastery changes.</p>
+        <p class="hint">When's your exam? Today's plan and the pace forecast follow it.</p>
         <div class="plan-date-row">
           <input type="date" id="examDateInput" aria-label="Exam date" onchange="setExamDate(this.value)">
           <button class="btn ghost ex-clear" id="examDateClear" onclick="clearExamDate()" style="display:none;">Clear</button>
@@ -6297,7 +6298,7 @@ function renderExamCountdownCard(){
     el.setAttribute('aria-label', '1 day left until your exam, which is tomorrow');
     el.onclick = () => showTab('examday');
   } else {
-    el.innerHTML = `<div class="ecc-big">${daysLeft} days left</div><div class="ecc-sub">Until your CFP® exam — see your full plan on the Exam Day tab.</div>`;
+    el.innerHTML = `<div class="ecc-big">${daysLeft} days left</div><div class="ecc-sub">Until your CFP® exam. The Exam Day tab has the checklist and what to bring.</div>`;
     el.setAttribute('aria-label', `${daysLeft} days left until your CFP exam`);
     el.onclick = () => showTab('examday');
   }
@@ -6716,22 +6717,11 @@ function renderStudyPlan(){
     phaseNote = `With ${weeksLeft} weeks to go, there's room to build unfamiliar material with Domain Drill before shifting to interleaved Adaptive Session review. Start with the domains below — they carry the most exam weight relative to where you stand today.`;
   }
 
-  const weeksToShow = Math.min(weeksLeft, 6);
-  let weekRows = '';
-  for(let w=0; w<weeksToShow; w++){
-    const focusDomains = [rows[w % rows.length], rows[(w+1) % rows.length]];
-    const names = focusDomains.map(d=>`<b>${d.code}</b>`).join(' + ');
-    const label = weeksLeft - w <= 1 ? 'Final wk' : `${weeksLeft - w} wks out`;
-    weekRows += `<div class="plan-week-row"><div class="wk-label">${label}</div><div class="wk-focus">${names} — ${focusDomains[0].name}${focusDomains[0].mastery!==null ? ' ('+focusDomains[0].mastery+'%)' : ' (not started)'}</div></div>`;
-  }
-
   body.innerHTML = `
-    <div class="plan-phase-badge">${phaseLabel}</div>
-    <div class="plan-countdown">${daysLeft} day${daysLeft===1?'':'s'} until exam day</div>
-    <details class="plan-more"${window._planMoreOpen ? ' open' : ''} ontoggle="window._planMoreOpen = this.open"><summary>See the week-by-week plan</summary>
+    <div class="plan-phase-row"><span class="plan-phase-badge">${phaseLabel}</span><span class="plan-countdown">${daysLeft} day${daysLeft===1?'':'s'} to go</span></div>
+    <details class="plan-more"${window._planMoreOpen ? ' open' : ''} ontoggle="window._planMoreOpen = this.open"><summary>How this phase works, and your pace</summary>
       <p class="plan-summary">${phaseNote}</p>
       ${paceForecastHtml(daysLeft)}
-      <div class="plan-weeks">${weekRows}</div>
     </details>
   `;
 }
@@ -8096,6 +8086,15 @@ function renderFocusCard(){
   renderDifficultyIndicator();
   renderPatternCallout();
   renderMixupCallout();
+  syncFocusCardVisibility();
+}
+// "Your coach" holds banked AI items and miss-pattern callouts. With none of those it is an empty card
+// (focus areas live in the Blueprint Bar), so it stays out of the way until it has something to say.
+function syncFocusCardVisibility(){
+  const card = document.getElementById('focusCard'); if(!card) return;
+  const shown = id => { const e = document.getElementById(id); return !!(e && e.style.display !== 'none' && e.textContent.trim()); };
+  const banks = (DATA.generatedBank||[]).length + (DATA.generatedFlashcards||[]).length;
+  card.classList.toggle('fc-empty', !banks && !shown('patternCallout') && !shown('mixupCallout'));
 }
 
 const MIXUP_PAIRS = [
@@ -18032,7 +18031,7 @@ const TUTOR_POINT_TARGETS = {
   next_step:      { tab:'study',      sel:'#nextStepCard',    label:'Your next best step' },
   start_session:  { tab:'study',      sel:'#modePanel',       label:'Start a session here' },
   todays_plan:    { tab:'study',      sel:'#todayPlanCard',   label:"Today's plan" },
-  your_coach:     { tab:'study',      sel:'#focusCard',       label:'Your coach and focus areas' },
+  your_coach:     { tab:'study',      sel:'.bp-focus',        label:'Your coach and focus areas' },
   blueprint:      { tab:'study',      sel:'#blueprintCard',   label:'Exam weight vs your mastery' },
   exam_date:      { tab:'study',      sel:'#examCountdownCard', label:'Set your exam date' },
   progress:       { tab:'study',      sel:'#progressCard',    label:'Your trend over time' },
@@ -18906,7 +18905,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.94';
+const BUILD_ID = '2026-10-17.96';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
