@@ -8891,6 +8891,23 @@ function podcastDomainPersonalizationContext(domainKey){
   return context;
 }
 
+// Offline episode: reads the most useful flashcards for the choice, term then meaning, in plain spoken sentences.
+function offlinePodcastScript(domainMeta, episodeType, episodeLength){
+  try{
+    const n = { short: 6, standard: 12, deep: 20 }[episodeLength] || 12;
+    let pool = allFlashcards().filter(c => episodeType === 'personalized' || c.domain === domainMeta.key);
+    const stat = c => getSpacedStat(DATA.flashcardStats, c.id);
+    let gaps = []; try{ gaps = fcGapCards().map(c => c.id); }catch(e){}
+    if(episodeType === 'formulas'){ const f = pool.filter(c => /[=×÷%]|\bdivided\b|\bmultipl|\bformula\b|\bratio\b|\$\d/i.test(c.def)); if(f.length >= 3) pool = f; }
+    pool = pool.map(c => ({ c, w: (gaps.indexOf(c.id) >= 0 ? 3 : 0) + (stat(c).seen === 0 ? 1 : 0) + Math.random() * (episodeType === 'mistakes' ? 0.2 : 2) }))
+      .sort((a, b) => b.w - a.w).slice(0, n).map(x => x.c);
+    if(!pool.length) return '';
+    const topic = episodeType === 'personalized' ? 'your weakest ideas right now' : domainMeta.name;
+    const kind = episodeType === 'formulas' ? 'key formulas and numbers' : episodeType === 'mistakes' ? 'ideas that trip people up' : episodeType === 'personalized' ? 'ideas to firm up' : 'key ideas';
+    const body = pool.map((c, i) => (i === 0 ? 'First, ' : i === pool.length - 1 ? 'And last, ' : 'Next, ') + c.term + '. ' + c.def.replace(/\s+/g, ' ')).join(' ');
+    return 'This episode is read from your flashcards. Connect an API key in Settings for a full conversational version. Here are ' + pool.length + ' ' + kind + ' for ' + topic + '. ' + body + ' That is the end of this episode.';
+  }catch(e){ return ''; }
+}
 async function generatePodcastEpisode(forceNew){
   const select = document.getElementById('podcastDomainSelect');
   const domainKey = select.value;
@@ -8932,11 +8949,24 @@ async function generatePodcastEpisode(forceNew){
   }
 
   if(!aiFeaturesAvailable){
+    // No API key: read the episode straight from the flashcards instead, so audio review still works.
+    const script = offlinePodcastScript(domainMeta, episodeType, episodeLength);
+    if(script){
+      if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
+      if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
+      if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
+      DATA.podcastEpisodes[cacheKey] = script;
+      DATA.podcastGeneratedAt[cacheKey] = Date.now();
+      DATA.podcastPersonalized[cacheKey] = false;
+      persist();
+      podcastDomainChanged();
+      return;
+    }
     transcript.className = 'podcast-transcript';
     transcript.innerHTML = '';
     const errSpan = document.createElement('span');
     errSpan.className = 'simplify-err';
-    errSpan.textContent = 'Connect an API key in Settings to generate podcast episodes.';
+    errSpan.textContent = 'There are no flashcards to read for this choice yet. Connect an API key in Settings for a written episode.';
     transcript.appendChild(errSpan);
     return;
   }
@@ -16670,7 +16700,7 @@ function selectAnswer(i){
   const simplifyRow = document.getElementById('simplifyRow');
   const simplifiedBox = document.getElementById('simplifiedExplanation');
   if(simplifyRow){
-    simplifyRow.style.display = confShown ? 'block' : 'none';
+    simplifyRow.style.display = (confShown && aiFeaturesAvailable) ? 'block' : 'none'; // both buttons need the API key, so without one they stay out of the way
     document.getElementById('simplifyBtn').disabled = false;
     document.getElementById('simplifyBtn').textContent = 'Explain this more simply';
   }
@@ -18828,6 +18858,44 @@ function tutorLocalGuide(text){
   }catch(e){ return false; }
 }
 
+// Without an API key the tutor still answers from what the app holds: the closest flashcards and a way to study them.
+function tutorOfflineAnswer(text){
+  try{
+    const stop = new Set('what does mean about explain tell with that this have from your their which when where would could should give help make memory trick walk through question concepts concept key know need exam into than then them they were been will just like also very more most some such only over under again'.split(' '));
+    const norm = fcNorm(text), toks = norm.trim().split(' ').filter(w => w.length > 3 && !stop.has(w));
+    const cards = allFlashcards();
+    const dm = (typeof DOMAINS !== 'undefined' ? DOMAINS : []).find(d => String(text).toLowerCase().indexOf(d.name.toLowerCase()) >= 0 || norm.indexOf(' ' + d.name.toLowerCase().replace(/[^a-z0-9]+/g,' ') + ' ') >= 0);
+    const scored = cards.map(c => {
+      let sc = 0;
+      fcTermForms(c).forEach(f => { if(norm.indexOf(' ' + f.n.trim() + ' ') >= 0) sc += 10 * f.weight; });
+      const tw = fcNorm(c.term).trim().split(' ').filter(w => w.length > 3 && !stop.has(w));
+      tw.forEach(w => { if(toks.indexOf(w) >= 0) sc += 3; });
+      const dw = fcNorm(c.def).trim().split(' ');
+      let hit = 0; toks.forEach(w => { if(dw.indexOf(w) >= 0) hit++; });
+      sc += Math.min(hit, 4) * 0.7;
+      if(dm && c.domain === dm.key) sc += 0.5;
+      return { c, sc };
+    }).filter(x => x.sc >= 3).sort((a, b) => b.sc - a.sc);
+    let picks = scored.slice(0, 3).map(x => x.c), lead;
+    if(picks.length){ lead = 'I can\'t write a fresh explanation without an API key, but here is what your flashcards say about it:'; }
+    else if(dm){
+      let pool = []; try{ pool = fcGapCards().filter(c => c.domain === dm.key); }catch(e){}
+      if(pool.length < 3) pool = pool.concat(cards.filter(c => c.domain === dm.key && pool.indexOf(c) < 0 && getSpacedStat(DATA.flashcardStats, c.id).seen === 0));
+      picks = pool.slice(0, 3);
+      lead = 'I can\'t write a fresh explanation without an API key, but these ' + dm.name + ' cards are the quickest way to build it:';
+    }
+    if(!picks.length) return false;
+    const body = lead + '\n\n' + picks.map(c => c.term + ': ' + c.def).join('\n\n');
+    const acts = [
+      { label: 'Study these cards', primary: true, run: () => { startFlashcardSet(picks.concat(cards.filter(c => c.domain === picks[0].domain && picks.indexOf(c) < 0).slice(0, 9)), 'topic'); } },
+      dm ? { label: 'Drill ' + dm.name, run: () => startDrill(dm.key) } : null,
+      { label: 'Open Reference', run: () => showTab('reference') },
+      { label: 'Add an API key', run: () => openSettings() },
+    ];
+    tutorGuideBubble(body, acts);
+    return true;
+  }catch(e){ return false; }
+}
 async function sendTutorMessage(presetText){
   const input = document.getElementById('tutorInput');
   const text = (presetText!==undefined ? presetText : input.value).trim();
@@ -18836,8 +18904,12 @@ async function sendTutorMessage(presetText){
   if(!aiFeaturesAvailable){
     renderTutorMessage('user', text);
     input.value = '';
-    if(!tutorLocalGuide(text)){
-      renderTutorMessage('assistant', "Explaining concepts and writing new questions need an API key — add one in Settings (it only takes a minute). Without one I can still tell you what to do next, where your weak spots are, and take you straight to anything in the app. Try asking \"what should I do next?\"");
+    if(!tutorLocalGuide(text) && !tutorOfflineAnswer(text)){
+      tutorGuideBubble("I couldn't match that to a topic in your cards. Writing a new explanation needs an API key, but I can still look up a term, tell you what to do next, show your weak spots or take you anywhere in the app. Try \"what does duration mean\" or \"what should I do next?\"", [
+        { label: 'What should I do next?', primary: true, run: () => tutorLocalGuide('what should I do next') },
+        { label: 'Open Reference', run: () => showTab('reference') },
+        { label: 'Add an API key', run: () => openSettings() },
+      ]);
     }
     return;
   }
@@ -19195,7 +19267,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.118';
+const BUILD_ID = '2026-10-17.120';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
