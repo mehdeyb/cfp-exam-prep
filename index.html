@@ -5273,7 +5273,7 @@ function defaultData(){
     lastTab: 'study',
     theme: 'light',
     confidenceStats: { confident:{correct:0,total:0}, somewhat:{correct:0,total:0}, unsure:{correct:0,total:0} },
-    examDate: null,
+    examDate: '2026-11-05', examDateConfirmedV1: true,
     recentAccuracyLog: [],
     lastBackupAtAnswerCount: 0,
     totalStudyMinutes: 0,
@@ -5465,6 +5465,12 @@ function sanitizeLoadedData(d){
   DOMAINS.forEach(dm => { if(!isObj(d.domainStats[dm.key])) d.domainStats[dm.key] = { correct: 0, total: 0 }; });
   d.answerCounter = Math.max(0, num(d.answerCounter, 0));
   if(typeof d.examDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.examDate)) d.examDate = null;
+  // One-time: the Prometric confirmation puts the sitting on Thursday 5 Nov 2026, 8:30 AM. Fill it in if no date is set, and
+  // correct the mistaken 6 Nov, once; any date the user chooses afterwards is left alone.
+  if(!d.examDateConfirmedV1){
+    d.examDateConfirmedV1 = true;
+    if(d.examDate === null || d.examDate === '2026-11-06') d.examDate = '2026-11-05';
+  }
   if(typeof d.fcAdapt !== 'boolean') d.fcAdapt = true;
   if(!d.fcShown || typeof d.fcShown !== 'object') d.fcShown = {};
   return d;
@@ -19340,7 +19346,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.134';
+const BUILD_ID = '2026-10-17.135';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
