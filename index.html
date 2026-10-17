@@ -14461,12 +14461,19 @@ function adaptiveInterleave(queue, reasons){
 // The flashcard that covers the idea a question just tested, shown right under a miss in a study session, so the fix is on screen
 // and the same card is already ranked up on the Flashcards tab for later.
 function cardForQuestion(q){
-  const hay = fcNorm([q.q, q.scenario || '', (q.choices || [])[q.correct] || '', (q.rationale || []).join(' ')].join(' '));
-  let best = null, bestLen = 0;
+  // The card should cover what the question was really testing: the answer and its explanation outrank words that only appear in the setup.
+  const core = fcNorm([(q.choices || [])[q.correct] || '', (q.rationale || []).join(' ')].join(' '));
+  const stem = fcNorm([q.q, q.scenario || ''].join(' '));
+  let best = null, bestScore = 0;
   allFlashcards().forEach(c => {
     if(c.domain !== q.domain) return;
     for(const f of fcTermForms(c)){
-      if(f.weight >= 1 && hay.indexOf(' ' + f.n.trim() + ' ') >= 0 && f.n.length > bestLen){ best = c; bestLen = f.n.length; }
+      if(f.weight < 1) continue;
+      const key = ' ' + f.n.trim() + ' ';
+      const inCore = core.indexOf(key) >= 0, inStem = stem.indexOf(key) >= 0;
+      if(!inCore && !inStem) continue;
+      const score = f.n.length + (inCore ? 1000 : 0);
+      if(score > bestScore){ best = c; bestScore = score; }
     }
   });
   return best;
@@ -18982,7 +18989,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.111';
+const BUILD_ID = '2026-10-17.112';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
