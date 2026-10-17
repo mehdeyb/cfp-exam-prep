@@ -8142,8 +8142,12 @@ function updatePlanChip(){
   if(!r || !(session.mode === 'adaptive' || session.mode === 'drill' || session.mode === 'review' || session.mode === 'case')){ el.style.display = 'none'; return; }
   const have = Math.min(r.need, r.base + (session.answerLog || []).length);
   const done = have >= r.need;
+  // One counter at a time: "Question 3 of 15" already tells you where you are. The plan figure only appears when it adds
+  // something the question count does not -- a plan step bigger than this run ("Today 13 of 40") or the moment it is finished.
+  const runLen = (session.queue || []).length;
+  if(!done && runLen && r.need <= runLen){ el.style.display = 'none'; return; }
   el.className = 'plan-chip' + (done ? ' done' : '');
-  el.textContent = done ? 'Plan step done ✓' : `Plan ${have} of ${r.need}`;
+  el.textContent = done ? 'Plan step done ✓' : `Today ${have} of ${r.need}`;
   el.title = done ? `${r.title}: finished. More questions are extra practice.` : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
   el.style.display = 'inline-block';
 }
@@ -19308,7 +19312,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.127';
+const BUILD_ID = '2026-10-17.128';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
