@@ -517,16 +517,21 @@
   .fd-keys li{font-family:inherit;}
   .fkeys{margin:8px 0 2px;}
   .fkeys summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--gold-bright,var(--gold));padding:6px 0;list-style:none;}
-  .fkeys summary::-webkit-details-marker{display:none;}
+  .fkeys summary::-webkit-details-marker,.fd-math summary::-webkit-details-marker{display:none;}
+  .fd-math summary{cursor:pointer;font-size:12.5px;color:var(--muted);padding:2px 0;list-style:none;}
+  .fd-math summary::after{content:' ▾';}
+  .fd-math[open] summary::after{content:' ▴';}
   .fkeys summary::after{content:' ▾';}
   .fkeys[open] summary::after{content:' ▴';}
   .fkeys-ex{font-size:12.5px;color:var(--muted,#8a8a8e);margin:2px 0 4px;}
   .fd-note{font-size:12.5px;color:var(--muted);}
   .fd-tutor{margin-top:10px;width:100%;}
   .qcard-link{margin:10px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--line,rgba(128,128,128,.25));}
-  .qcl-head{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
-  .qcl-term{font-weight:600;margin:4px 0 2px;}
-  .qcl-def{font-size:14px;line-height:1.45;}
+  .qcl summary{cursor:pointer;font-size:13.5px;list-style:none;}
+  .qcl summary::-webkit-details-marker{display:none;}
+  .qcl summary::after{content:' ▾';color:var(--muted);}
+  .qcl[open] summary::after{content:' ▴';}
+  .qcl-def{font-size:14px;line-height:1.45;margin-top:6px;}
   .qcl-note{font-size:12px;color:var(--muted);margin-top:6px;}
   .formula-row .fpractice{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted);}
   .formula-row .fpractice button{font-size:12px;padding:4px 12px;position:relative;}
@@ -4600,19 +4605,13 @@ const FLASHCARDS = [
 {id:'f819',domain:'invest',term:"ESG Investing",def:"Selects or screens investments using environmental, social and governance factors besides financial measures. Recommendations still have to fit the client's goals, costs, and risk tolerance, so the client's values must be documented."},
 {id:'f821',domain:'invest',term:"Life-Cycle Hypothesis",def:"People try to smooth consumption over their lives. They borrow when young, save at their income peak and spend savings in retirement. It underlies much of retirement planning."},
 {id:'f822',domain:'psych',term:"Cultural and Generational Influences on Money",def:"A client's background, upbringing, and generation shape attitudes toward risk, debt, saving, and family obligations. A planner should ask about them rather than assume."},
-{id:"fx1",domain:"general",term:"Goals-Based Planning",def:"The recommendations start from what the client wants to achieve, such as retiring at 62 or paying for college, and rank goals by importance and time horizon, instead of starting from products or investment returns."},
-{id:"fx2",domain:"general",term:"Monitoring and Updating the Plan",def:"The last step of the financial planning process: review progress on the agreed schedule and whenever life or the economy changes, then revise the recommendations. Planning is continuous, not a one-time report."},
-{id:"fx3",domain:"general",term:"529 Plan Qualified Expenses",def:"Tax-free 529 withdrawals cover tuition, fees, books, supplies and required equipment, and room and board if enrolled at least half-time. K–12 tuition qualifies up to $20,000 a year starting in 2026, and up to $10,000 lifetime per beneficiary can repay student loans. Other uses are taxed on the earnings plus a 10% penalty."},
-{id:"fx4",domain:"general",term:"529 Superfunding (Five-Year Election)",def:"A donor can contribute up to five years of annual exclusions at once ($95,000 per beneficiary in 2026) and spread it over five years for gift tax. Form 709 must be filed, and the donor must survive the five years to keep all of it out of the estate. A strong education funding tool for grandparents."},
 {id:"fx5",domain:"psych",term:"Client in Crisis: First Response",def:"Acknowledge the emotion first, slow the pace, and limit decisions to what is urgent. Avoid major, irreversible financial decisions during a crisis because judgment can be distorted. Confirm essential needs (cash, insurance, deadlines), then schedule a follow-up."},
 {id:"fx6",domain:"psych",term:"Job Loss and Unexpected Expenses",def:"Review the emergency fund, trim non-essential spending, compare COBRA with marketplace health coverage, and avoid early retirement-account withdrawals when other sources exist. Unemployment benefits and an unexpected expense both call for a fresh cash-flow plan."},
 {id:"fx7",domain:"psych",term:"Disaster and Emergency Planning for Clients",def:"After a disaster, help with insurance claims, records and temporary housing costs. Some disaster losses may be deductible, and the IRS often extends filing and payment deadlines in declared disasters. Keeping copies of documents beforehand speeds recovery in an emergency."},
 {id:"fx8",domain:"psych",term:"Collaborating with Other Professionals",def:"With the client's permission, a planner coordinates with the client's attorney, CPA and other advisers, sharing only what the client authorizes. Confidentiality still applies, and the planner clarifies who is responsible for which task. Collaboration prevents conflicting advice."},
 {id:"fx9",domain:"estate",term:"Inherited IRA Options",def:"A spouse beneficiary may treat the IRA as their own, roll it over, or remain a beneficiary. Most nonspouse beneficiaries must empty the account within 10 years, with annual required distributions in years one to nine if the owner died on or after the required beginning date."},
-{id:"fx10",domain:"estate",term:"SSI and Medicaid Resource Limits",def:"SSI and Medicaid are means-tested. The SSI resource limit is $2,000 for an individual, so a direct inheritance can end eligibility. Leaving assets to a special needs trust instead protects benefits."},
 {id:"fx11",domain:"estate",term:"Marital Deduction for a Non-Citizen Spouse",def:"Property passing to a non-citizen spouse does not qualify for the marital deduction unless it is held in a qualified domestic trust (QDOT). Lifetime gifts to a non-citizen spouse have a larger, indexed annual exclusion instead of an unlimited one."},
 {id:"fx12",domain:"estate",term:"Terminable Interest Rule",def:"An interest that ends on death or another event and then passes to someone else generally does not qualify for the marital deduction. The main exception is a QTIP trust. It is why a plain life estate for a spouse does not qualify."},
-{id:"fx13",domain:"estate",term:"Installment Sale to an IDGT",def:"The grantor sells an appreciated asset to an intentionally defective grantor trust for a note at the AFR. The sale is ignored for income tax, so no gain is recognized, and growth above the interest rate stays outside the estate. A seed gift (often about 10%) is usually made first. An intra-family transfer technique."},
 {id:"fx14",domain:"estate",term:"Intra-Family Loans (AFR)",def:"A loan to a family member at or above the applicable federal rate (AFR) avoids imputed interest and a taxable gift. The lender reports the interest as income. If the borrower earns more than the AFR, the extra return builds family wealth outside the lender's estate."},
 ];
 
@@ -13683,8 +13682,17 @@ function fdCheck(){
   const coach = fdCoachLine(ok, s);
   if(coach){ const c = document.createElement('div'); c.className = 'fd-coach'; c.textContent = coach; res.appendChild(c); }
   const ol = document.createElement('ol'); ol.className = 'fd-steps';
-  p.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+  // With button-level keys below, the arithmetic would be said twice: keep the formula line and fold the numbers away.
+  const fold = p.keys && p.keys.length && p.steps.length > 1;
+  (fold ? p.steps.slice(0, 1) : p.steps).forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
   res.appendChild(ol);
+  if(fold){
+    const dt = document.createElement('details'); dt.className = 'fd-math';
+    const sm = document.createElement('summary'); sm.textContent = 'Show the arithmetic'; dt.appendChild(sm);
+    const ol2 = document.createElement('ol'); ol2.className = 'fd-steps'; ol2.start = 2;
+    p.steps.slice(1).forEach(t => { const li = document.createElement('li'); li.textContent = t; ol2.appendChild(li); });
+    dt.appendChild(ol2); res.appendChild(dt);
+  }
   if(p.keys && p.keys.length){
     const kh = document.createElement('div'); kh.className = 'fd-keys-head'; kh.textContent = 'On your HP 10bII+';
     const kl = document.createElement('ol'); kl.className = 'fd-steps fd-keys';
@@ -14430,7 +14438,12 @@ function showCardForQuestion(q, isCorrect){
   box.style.display = 'none'; box.innerHTML = '';
   if(isCorrect || !isStudyMode() || q.tvmGen) return;
   const c = cardForQuestion(q); if(!c) return;
-  box.innerHTML = '<div class="qcl-head">The card for this idea</div><div class="qcl-term">' + escapeHtml(c.term) + '</div><div class="qcl-def">' + escapeHtml(c.def) + '</div><div class="qcl-note">It is ranked up in your flashcards, so it comes back soon.</div>';
+  // Skip it when the explanation above already says the same thing, so nothing is shown twice.
+  const words = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length > 3));
+  const dw = words(c.def), rw = words((q.rationale || []).join(' ') + ' ' + ((q.choices || [])[q.correct] || ''));
+  let shared = 0; dw.forEach(w => { if(rw.has(w)) shared++; });
+  if(dw.size && shared / dw.size >= 0.5) return;
+  box.innerHTML = '<details class="qcl"><summary>Flashcard on this idea: <b>' + escapeHtml(c.term) + '</b></summary><div class="qcl-def">' + escapeHtml(c.def) + '</div><div class="qcl-note">It is ranked up in your flashcards, so it comes back soon.</div></details>';
   box.style.display = 'block';
 }
 function startAdaptive(){
@@ -18882,7 +18895,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.87';
+const BUILD_ID = '2026-10-17.88';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
