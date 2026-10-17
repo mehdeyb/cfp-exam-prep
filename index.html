@@ -9405,7 +9405,7 @@ function renderReference(){
     const accTxt = acc === null ? (FD_GENS[f.name] ? 'not practised yet' : '') : `${Math.round(acc*100)}% right over ${fdStats(f.name).attempts}`;
     const practice = FD_GENS[f.name] ? `<div class="fpractice"><button class="btn ghost" onclick="openFormulaDrill(${JSON.stringify(f.name).replace(/"/g,'&quot;')})" aria-label="Practise ${f.name.replace(/"/g,'')}">Practise this</button><span>${accTxt}</span></div>` : '';
     let keysHtml = '';
-    if(FD_GENS[f.name]){ try{ const ex = FD_GENS[f.name](); if(ex && ex.keys && ex.keys.length) keysHtml = `<details class="fkeys"><summary>Keys on your HP 10bII+</summary><div class="fkeys-ex">Example: ${escapeHtml(ex.scenario)}</div><ol class="fd-steps fd-keys">${ex.keys.map(k => `<li>${escapeHtml(k)}</li>`).join('')}</ol></details>`; }catch(e){} }
+    // The HP 10bII+ key sequence lives in the drill ("Practise this"), shown with fresh numbers, so the list stays flat.
     return `<div class="formula-row"><div class="fname">${flag}${f.name}</div><div class="fexpr">${f.formula}</div><div class="fnote">${f.note}</div>${keysHtml}${practice}</div>`;
   }).join('');
 
@@ -18946,7 +18946,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.101';
+const BUILD_ID = '2026-10-17.102';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
