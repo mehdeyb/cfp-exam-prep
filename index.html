@@ -10355,7 +10355,10 @@ function fcContext(){
   const cards = allFlashcards();
   let backlog = 0;
   cards.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen > 0 && isDue(st)) backlog++; });
-  _fcCtx = { key, gapItems, weak, backlog, cardMemo:{} };
+  // How many cards of each domain were rated in the last 36 hours, so a domain you just worked on gives way a little to the others.
+  const recent = {}, cutoff = Date.now() - 36*3600000, byId = new Map(cards.map(c => [c.id, c]));
+  Object.keys(DATA.flashcardStats||{}).forEach(id => { const st = DATA.flashcardStats[id], c = byId.get(id); if(c && st && st.lastSeenAt > cutoff) recent[c.domain] = (recent[c.domain]||0) + 1; });
+  _fcCtx = { key, gapItems, weak, backlog, recent, cardMemo:{} };
   return _fcCtx;
 }
 function fcTermForms(card){
@@ -10423,6 +10426,7 @@ function flashcardPriority(card){
   const justSeen = stat.seen > 0 && stat.lastSeenAt && (Date.now() - stat.lastSeenAt) < 6*3600000;
   if(!justSeen && sig.gap >= 0.5 && stat.seen > 0 && !isDue(stat) && stat.box <= 2) p = Math.max(p, weaknessFactor * weightFactor * 1.4 * boost);
   if(days !== null && days <= 7 && stat.seen > 0 && stat.box >= 4 && !isDue(stat)) p *= 0.6;
+  { const r = (fcContext().recent||{})[card.domain] || 0; p *= Math.max(0.5, 1/(1 + r/40)); } // rotate: a domain worked on today yields a little to the others
   // A card you just rated moves out of the way, so a session never shows the same cards again within the hour.
   if(justSeen && stat.box >= 1) p *= 0.2;
   return p;
@@ -10441,15 +10445,21 @@ function fcReasonsFor(card){
   return out.slice(0,2);
 }
 function fcInterleave(sorted){
-  const rest = sorted.slice(), out = [];
+  // Keeps the priority order, but no one domain can fill a 20-card session (max 7), and never three in a row.
+  const rest = sorted.slice(), out = [], WIN = 20, CAP = 7;
   while(rest.length){
     const a = out[out.length-1], b = out[out.length-2];
-    let pick = 0;
-    if(a && b && a.domain === b.domain){
-      const lim = Math.min(rest.length, 120);
-      for(let i = 0; i < lim; i++){ if(rest[i].domain !== a.domain){ pick = i; break; } }
+    const start = out.length - (out.length % WIN), counts = {};
+    for(let k = start; k < out.length; k++) counts[out[k].domain] = (counts[out[k].domain]||0) + 1;
+    const lim = Math.min(rest.length, 400);
+    let pick = -1;
+    for(let i = 0; i < lim; i++){
+      const d = rest[i].domain;
+      if((counts[d]||0) >= CAP) continue;
+      if(a && b && a.domain === d && b.domain === d) continue;
+      pick = i; break;
     }
-    out.push(rest.splice(pick,1)[0]);
+    out.push(rest.splice(pick < 0 ? 0 : pick, 1)[0]);
   }
   return out;
 }
@@ -18746,7 +18756,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.80';
+const BUILD_ID = '2026-10-16.82';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
