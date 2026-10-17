@@ -1912,6 +1912,16 @@
      "still learning" and right for "I know this" (the same sides as the swipe), so a thumb reaches them. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, env(safe-area-inset-bottom));min-width:124px;height:58px;padding:0 18px;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
+    /* Use the width: a wider card, with the contrast note beside the definition instead of under it. */
+    body.flashcard-fullscreen .fc-fullscreen-inner{max-width:min(1100px, calc(100vw - 280px));padding-top:0;}
+    body.flashcard-fullscreen .fc-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:26px;align-content:start;text-align:center;padding:14px 26px;min-height:0;}
+    body.flashcard-fullscreen .fc-card > *{grid-column:1 / -1;}
+    body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]){grid-column:1;}
+    body.flashcard-fullscreen .fc-card > #fcContrast[style*="block"]{grid-column:2;align-self:start;margin-top:0;text-align:left;}
+    body.flashcard-fullscreen #speakFlashcardBtn{position:fixed;top:max(12px,env(safe-area-inset-top));left:16px;z-index:5;}
+    body.flashcard-fullscreen .fc-front{margin:4px 0;}
+    body.flashcard-fullscreen .fc-progress{margin-bottom:4px;}
+    body.flashcard-fullscreen .fc-actions{margin-top:8px;}
     body.flashcard-fullscreen #fcActions .btn.learning{left:16px;}
     body.flashcard-fullscreen #fcActions .btn.know{right:16px;}
   }
@@ -19185,7 +19195,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.117';
+const BUILD_ID = '2026-10-17.118';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
