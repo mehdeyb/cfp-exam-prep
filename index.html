@@ -1903,8 +1903,8 @@
      "still learning" and right for "I know this" (the same sides as the swipe), so a thumb reaches them. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, env(safe-area-inset-bottom));min-width:124px;height:58px;padding:0 18px;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
-    body.flashcard-fullscreen #fcActions .btn.learning{left:max(16px, calc(env(safe-area-inset-left) + 8px));}
-    body.flashcard-fullscreen #fcActions .btn.know{right:max(16px, calc(env(safe-area-inset-right) + 8px));}
+    body.flashcard-fullscreen #fcActions .btn.learning{left:16px;}
+    body.flashcard-fullscreen #fcActions .btn.know{right:16px;}
   }
   @media (orientation:portrait) and (max-width:640px){
     h1{font-size:27px;line-height:1.12;}
@@ -2025,14 +2025,14 @@
   /* Landscape phones: Exit and Next move out into the empty side margins as round buttons, so the
      question and answers get the full height. Exam simulations keep their labelled bar. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
-    body.quiz-active:not(.exam-sim-mode) #quizFullscreenHost{padding-left:max(74px, calc(env(safe-area-inset-left) + 62px));padding-right:max(74px, calc(env(safe-area-inset-right) + 62px));}
+    body.quiz-active:not(.exam-sim-mode) .quiz-inner{max-width:min(1080px, calc(100vw - 144px));}
     body.quiz-active:not(.exam-sim-mode) #quizView{padding-bottom:0;}
     body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions{position:fixed;left:0;right:0;top:0;bottom:0;margin:0;padding:0;z-index:30;}
     body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn{position:absolute;bottom:max(14px, env(safe-area-inset-bottom));width:50px;height:50px;min-width:0;padding:0;border-radius:50%;font-size:0;line-height:0;display:flex;align-items:center;justify-content:center;}
     body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn::after{font-size:20px;line-height:1;font-weight:600;}
-    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn.ghost{left:max(12px, calc(env(safe-area-inset-left) + 6px));}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn.ghost{left:10px;}
     body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > .btn.ghost::after{content:"\2715";font-size:16px;}
-    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > #nextBtn{right:max(12px, calc(env(safe-area-inset-right) + 6px));}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > #nextBtn{right:10px;}
     body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions > #nextBtn::after{content:"\2192";}
     body.quiz-active:not(.exam-sim-mode) #moreChoicesCue{bottom:16px;}
   }
@@ -16273,7 +16273,8 @@ function quizRevealFeedback(fb){
     const host = document.getElementById('quizFullscreenHost');
     const bar = document.querySelector('#quizView .quiz-actions');
     const hr = host.getBoundingClientRect(), fr = fb.getBoundingClientRect();
-    const limit = hr.bottom - (bar ? bar.offsetHeight : 60) - 10;
+    const barH = bar && bar.offsetHeight < window.innerHeight * 0.6 ? bar.offsetHeight : 16;
+    const limit = hr.bottom - (bar ? barH : 60) - 10;
     let d = fr.bottom > limit ? fr.bottom - limit : 0;
     if(fr.top - d < hr.top + 8) d = Math.max(0, fr.top - hr.top - 8);
     if(d > 1){
@@ -18973,7 +18974,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.107';
+const BUILD_ID = '2026-10-17.110';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -19077,7 +19078,8 @@ requestDurableStorage();
       if(qv && qv.offsetParent!==null && cs.length){
         const last=cs[cs.length-1].getBoundingClientRect();
         const bar=document.querySelector('#quizView .quiz-actions');
-        const limit=bar?bar.getBoundingClientRect().top:window.innerHeight;
+        let limit=window.innerHeight;
+        if(bar){const br=bar.getBoundingClientRect(); if(br.height<window.innerHeight*0.6) limit=br.top;} // a full-screen overlay bar (landscape) holds only floating buttons
         show = last.bottom > limit+2 && !document.querySelector('#qChoices .answered, #qChoices [disabled]');
       }
       cue.classList.toggle('show',show);
