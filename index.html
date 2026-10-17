@@ -2084,6 +2084,11 @@
   }
   #quizView .quiz-actions button.btn:disabled{opacity:1;color:color-mix(in srgb,var(--gold) 45%,var(--ink));border-color:color-mix(in srgb,var(--gold) 30%,var(--ink));background-color:var(--ink);}
   #quizView .quiz-actions .btn.ghost,#quizView .quiz-actions .btn:disabled,#resultsView .quiz-actions .btn.ghost{background-color:color-mix(in srgb,var(--ink) 90%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+  /* Solid buttons on a soft fade: text scrolling underneath never shows through them. */
+  #quizView .quiz-actions .btn,#quizView .quiz-actions .btn.ghost,#quizView .quiz-actions .btn:disabled{background-color:var(--ink) !important;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 2px 10px rgba(0,0,0,.10);}
+  @media (orientation:portrait) and (max-width:640px){
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions{background:linear-gradient(to top,var(--ink) 55%,transparent) !important;}
+  }
   /* Phones (upright): keep the tagline on one line and the readiness block narrow enough that the
      countdown card sits beside the ring instead of dropping below it with empty space left over. */
   @media (orientation:portrait) and (max-width:640px){
@@ -19303,7 +19308,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.126';
+const BUILD_ID = '2026-10-17.127';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
