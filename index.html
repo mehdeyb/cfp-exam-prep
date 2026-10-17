@@ -773,12 +773,12 @@
   .stat-strip .stat{text-align:right;}
   .exam-countdown-card{
     flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--hair);border-radius:12px;
-    padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:3px;cursor:pointer;
+    padding:12px 16px;display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px;cursor:pointer;
     transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);
   }
   .exam-countdown-card:hover{border-color:var(--gold);}
   .exam-countdown-card:active{transform:scale(0.98);}
-  .exam-countdown-card .ecc-big{font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--paper);line-height:1.15;}
+  .exam-countdown-card .ecc-big{font-family:'Fraunces',serif;font-weight:600;font-size:20px;color:var(--paper);line-height:1.15;}
   .exam-countdown-card .ecc-sub{font-size:12px;color:var(--muted);line-height:1.4;}
   .stat-strip .num{font-family:'IBM Plex Mono',monospace;font-size:19px;color:var(--paper);transition:color var(--t-med) var(--ease);}
   .stat-strip .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
@@ -792,6 +792,8 @@
   .coach-dot.busy{background:var(--gold);animation:pulse 1.4s ease-in-out infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
   .coach-line b{color:var(--paper);font-weight:600;}
+  .coach-line.empty{display:none !important;}
+  .bp-focus > .bp-trend-head,.bp-focus > #focusPills{display:none;}
 
   /* ---------- Readiness gauge extras ---------- */
   .score-ring-block{flex:none;min-width:150px;}
@@ -984,7 +986,9 @@
   .ewp{margin-top:10px;}
   .ewp .ewp-label{font-size:12px;color:var(--muted);margin-bottom:6px;}
   .ewp .ewp-warn{font-size:12.5px;color:var(--incorrect);margin-bottom:8px;line-height:1.4;}
-  .ewp .ewp-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .ewp .ewp-row{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;margin:0 -2px;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .ewp .ewp-row::-webkit-scrollbar{display:none;}
+  .ewp .ewp-row button{flex:none;white-space:nowrap;}
   .ewp button{font:inherit;font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;min-height:34px;transition:transform .12s var(--ease),border-color var(--t-fast) var(--ease);}
   .ewp button:active{transform:scale(.95);}
   .ewp button.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft);}
@@ -1054,7 +1058,7 @@
   .plan-more > summary::-webkit-details-marker{display:none;}
   .plan-more > summary::after{content:'▾';margin-left:8px;color:var(--muted);transition:transform .2s var(--ease);}
   .plan-more[open] > summary::after{transform:rotate(180deg);}
-  .more-modes{margin-top:12px;border-top:1px solid var(--hair);}
+  .more-modes{margin-top:12px;}
   .more-modes > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 0;min-height:44px;font-size:14.5px;font-weight:500;color:var(--paper);}
   .more-modes > summary::-webkit-details-marker{display:none;}
   .more-modes .mm-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair-strong);border-radius:999px;padding:1px 8px;}
@@ -1797,10 +1801,13 @@
   /* Phones: the session picker keeps each option to a title, a "use it when" line and its status;
      the long descriptions stay on larger screens. */
   @media (max-width:640px){
+    .mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
     #modePanel > p.hint{display:none;}
-    #modePanel .mode-grid .mode-card > p{display:none;}
-    #modePanel .mode-grid .mode-card{padding-top:12px;padding-bottom:12px;}
-    #modePanel .mode-grid .mode-card h3{margin-bottom:4px;}
+    #modePanel .mode-grid .mode-card > p,#modePanel .mode-grid .mode-card .tag{display:none;}
+    #modePanel .mode-grid .mode-card{padding:12px 12px 11px;display:flex;flex-direction:column;}
+    #modePanel .mode-grid .mode-card h3{margin:0 0 5px;font-size:14.5px;line-height:1.25;}
+    #modePanel .mode-grid .mode-card .mode-when{font-size:11.5px;margin-top:0;opacity:.75;}
+    #modePanel .mode-grid .mode-card .mode-meta{margin-top:auto;padding-top:7px;}
     #modePanel .featured-mode{gap:10px;padding:16px 18px;}
     #modePanel .featured-mode .fm-copy > p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
   }
@@ -2022,7 +2029,7 @@
     .tutor-brief .tb-label{display:inline;margin:0 6px 0 0;}
     body.quiz-active .q-card{padding:16px 16px 14px;}
     body.quiz-active .quiz-top{margin-bottom:8px;}
-    .pt-why{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer;}
+    .pt-why{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;cursor:pointer;}
     .pt-why.open{-webkit-line-clamp:unset;display:block;}
     .pt-step{padding:8px 0;}
     .score-row{margin-bottom:10px;}
@@ -2236,9 +2243,9 @@
 
     <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
 
-    <div class="coach-line" id="coachLine" role="status">
+    <div class="coach-line empty" id="coachLine" role="status">
       <span class="coach-dot" id="coachDot"></span>
-      <span id="coachText">Coach is ready — answer a few questions and it'll start spotting patterns.</span>
+      <span id="coachText"></span>
     </div>
 
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
@@ -2294,7 +2301,7 @@
     </div>
 
       <div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div>
-      <details class="source-note"><summary>About these numbers</summary><div style="margin-top:6px;">Domain weights and the <span data-dyn="subtopicN">70</span> official subtopics beneath them come straight from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a> — tap a segment or a row below to drill that domain. A pulsing gold marker means that domain is currently rebuilding fundamentals after a rough patch; a "due" badge means it has questions ready for spaced review right now.</div></details>
+      <div class="source-note">Weights and the <span data-dyn="subtopicN">70</span> subtopics come from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a>. Tap a domain to drill it. A gold pulse means it is rebuilding basics; "due" means reviews are ready.</div>
     </div>
 
     <div class="card" id="focusCard">
@@ -2319,7 +2326,7 @@
       <h2>Practice a specific way</h2>
       <p class="hint">Today's session above already mixes these for you. Use them when you want just one thing.</p>
 
-      <details class="more-modes" id="moreModes"><summary><span>All practice modes</span><span class="mm-count">9</span><span class="mm-chev" aria-hidden="true">▾</span></summary>
+      <div class="more-modes" id="moreModes">
       <div class="mode-grid">
         <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
           <div class="tag">Interleaved + spaced</div>
@@ -2385,7 +2392,7 @@
           <div class="mode-meta" data-mm="podcast"></div>
         </div>
       </div>
-      </details>
+      </div>
     </div>
 
     <div id="domainPickerHost">
@@ -2495,7 +2502,7 @@
         <div class="note">sets your phase and pace</div>
       </div>
       <div id="planSetup">
-        <p class="hint">When's your exam? Today's plan and the pace forecast follow it.</p>
+        
         <div class="plan-date-row">
           <input type="date" id="examDateInput" aria-label="Exam date" onchange="setExamDate(this.value)">
           <button class="btn ghost ex-clear" id="examDateClear" onclick="clearExamDate()" style="display:none;">Clear</button>
@@ -6254,10 +6261,8 @@ function refreshCoachIdleMessage(){
     return;
   }
 
-  if(DATA.answerCounter >= 5){
-    const idx = DATA.answerCounter % COACH_RESEARCH_TIPS.length;
-    setCoach(COACH_RESEARCH_TIPS[idx], false);
-  }
+  // No rotating generic tips: the line speaks only for a real milestone or a background task.
+  setCoach('', false);
 }
 
 function getDaysUntilExam(){
@@ -6299,7 +6304,7 @@ function renderExamCountdownCard(){
     el.setAttribute('aria-label', '1 day left until your exam, which is tomorrow');
     el.onclick = () => showTab('examday');
   } else {
-    el.innerHTML = `<div class="ecc-big">${daysLeft} days left</div><div class="ecc-sub">Until your CFP® exam. The Exam Day tab has the checklist and what to bring.</div>`;
+    el.innerHTML = `<div class="ecc-big">${daysLeft} days left</div><div class="ecc-sub">Until your CFP® exam · checklist on Exam Day</div>`;
     el.setAttribute('aria-label', `${daysLeft} days left until your CFP exam`);
     el.onclick = () => showTab('examday');
   }
@@ -6720,10 +6725,7 @@ function renderStudyPlan(){
 
   body.innerHTML = `
     <div class="plan-phase-row"><span class="plan-phase-badge">${phaseLabel}</span><span class="plan-countdown">${daysLeft} day${daysLeft===1?'':'s'} to go</span></div>
-    <details class="plan-more"${window._planMoreOpen ? ' open' : ''} ontoggle="window._planMoreOpen = this.open"><summary>How this phase works, and your pace</summary>
-      <p class="plan-summary">${phaseNote}</p>
-      ${paceForecastHtml(daysLeft)}
-    </details>
+    ${paceForecastHtml(daysLeft)}
   `;
 }
 
@@ -7108,7 +7110,7 @@ function computeNextStep(stats){
         const partial = (first.have || 0) > 0 && first.need > 0;
         const total = Math.min(plan.minutes, open.reduce((a, x) => a + x.minutes, 0));
         step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}`, title: open.length === 1 ? first.title : "Today's session",
-          why: open.length === 1 ? first.why : `It opens with: ${first.title.charAt(0).toLowerCase() + first.title.slice(1)}. ${open.length - 1} more part${open.length === 2 ? '' : 's'} follow, each with a short check-in, and the order adjusts to how you do.`,
+          why: open.length === 1 ? first.why : `Opens with ${first.title.charAt(0).toLowerCase() + first.title.slice(1)}, then ${open.length - 1} more part${open.length === 2 ? '' : 's'}. The order adjusts as you go.`,
           cta: partial ? 'Continue' : "Start today's session", meta:`about ${total} min`, run: open.length === 1 ? first.run : () => conductorStart(),
           bigger: step.title };
       }
@@ -7712,18 +7714,15 @@ function renderTodayPlan(){
       : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
     return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body"><div class="pt-title">${escapeHtml(st.title)}</div><div class="pt-why" onclick="this.classList.toggle('open')">${escapeHtml(st.why)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>`; });
-  const SHOW_STEPS = 2;
-  const rows = stepRows.length > SHOW_STEPS + 1
-    ? stepRows.slice(0, SHOW_STEPS).join('') + `<details class="pt-more"${window._ptMoreOpen ? ' open' : ''} ontoggle="window._ptMoreOpen = this.open;var m=this.querySelector('.pt-more-label');if(m)m.textContent=this.open?'Hide':'Show'"><summary><span class="pt-more-label">${window._ptMoreOpen ? 'Hide' : 'Show'}</span> the other ${stepRows.length - SHOW_STEPS} steps</summary>${stepRows.slice(SHOW_STEPS).join('')}</details>`
-    : stepRows.join('');
+  const rows = stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<details class="plan-fold"${window._planFoldOpen ? ' open' : ''} ontoggle="window._planFoldOpen = this.open"><summary class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div><span class="plan-chev" aria-hidden="true">▾</span></summary>
-    <p class="pt-sub">${escapeHtml(sub)} This is the outline of today's session above; tap a part only to do just that one. Built from what is due, what is weak and what you have already done today.${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${plan.minutes >= 150 && plan.steps.length >= 3 && plan.phase.key !== 'rest' && plan.phase.key !== 'taper' ? ' Take a ten-minute break about halfway; two focused blocks beat one long grind.' : ''}${autoNote}${lateNote}</p>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+    <p class="pt-sub">${escapeHtml(sub)}${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
-    ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</details>`;
+    ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
   try{ conductorRefreshPill(); }catch(e){}
 }
@@ -7775,7 +7774,7 @@ function renderModeMeta(){
     const lastOf = m => { for(let i = sessions.length - 1; i >= 0; i--) if(sessions[i].mode === m) return sessions[i]; return null; };
     const line = (m, noun) => {
       const s2 = lastOf(m);
-      if(!s2) return 'Not tried yet';
+      if(!s2) return '';
       const when = modeAgoText(new Date(s2.date).getTime());
       const tot2 = typeof s2.answered === 'number' ? s2.answered : s2.total; return tot2 ? 'Last: ' + when + ' · ' + s2.correct + '/' + tot2 + ' (' + Math.round(100 * s2.correct / tot2) + '%)' : 'Last: ' + when;
     };
@@ -7786,10 +7785,10 @@ function renderModeMeta(){
     put('fullexam', line('fullexam'));
     put('case', line('case') + (cueAccuracyText() ? ' · ' + cueAccuracyText() : ''));
     put('review', line('review'));
-    put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : 'Not tried yet');
-    put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : 'Not tried yet');
+    put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : '');
+    put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : '');
     const pg = Object.values(DATA.podcastGeneratedAt || {}).filter(Number).sort((a, b) => b - a)[0];
-    put('podcast', pg ? 'Last episode: ' + modeAgoText(pg) : 'Not tried yet');
+    put('podcast', pg ? 'Last episode: ' + modeAgoText(pg) : '');
   }catch(e){ /* a status line is never worth breaking the screen */ }
 }
 
@@ -8317,6 +8316,7 @@ function renderDifficultyIndicator(){
 }
 
 function setCoach(text, busy){
+  const line = document.getElementById('coachLine'); if(line) line.classList.toggle('empty', !text);
   document.getElementById('coachText').textContent = text;
   document.getElementById('coachDot').className = 'coach-dot' + (busy ? ' busy' : '');
 }
@@ -17374,7 +17374,7 @@ async function resetProgress(){
   if(tutorInputEl) tutorInputEl.disabled = false;
   const thread = document.getElementById('tutorThread');
   if(thread) thread.innerHTML = `<div class="tutor-msg tutor-msg-bot"><div class="tutor-bubble">Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. I can see your progress in this app, so feel free to just say "explain my weakest domain."</div></div>`;
-  setCoach('Coach is ready — answer a few questions and it\'ll start spotting patterns.', false);
+  setCoach('', false);
   renderAll();
   renderReference();
   rebuildFlashcardQueue();
@@ -18946,7 +18946,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.98';
+const BUILD_ID = '2026-10-17.101';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
