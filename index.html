@@ -14842,7 +14842,7 @@ function renderResumeSessionBanner(){
   const wasAlreadyAnswered = (saved.answerLog || []).some(e => e.index === saved.index);
   const displayIndex = wasAlreadyAnswered ? saved.index + 1 : saved.index;
   document.getElementById('resumeSessionDetail').textContent =
-    `You left your ${modeLabel} partway through — question ${Math.min(displayIndex + 1, saved.queue.length)} of ${saved.queue.length}, ${saved.correct} correct so far.`;
+    `You left your ${modeLabel} partway through: ${(saved.answerLog||[]).length} of ${saved.queue.length} answered, ${saved.correct} correct. You are back at question ${Math.min(displayIndex + 1, saved.queue.length)}.`;
   card.style.display = 'block';
 }
 
@@ -17435,7 +17435,14 @@ function exitToMenu(){
   stopSpeech();
   if(session && session.timerHandle) clearInterval(session.timerHandle);
   if(session && (session.mode==='fullexam' || session.mode==='mock')) restoreNormalTheme();
-  if(session && RESUMABLE_MODES.includes(session.mode)) clearInProgressSession();
+  // Leaving mid-session is not abandoning it: what you have answered stays saved and the Resume card picks up at the next
+  // question. Only a session with nothing answered yet (or one already finished, which cleared itself) is dropped.
+  if(session && RESUMABLE_MODES.includes(session.mode)){
+    const rv = document.getElementById('resultsView');
+    const finished = rv && rv.style.display !== 'none' && rv.style.display !== '';
+    if(!finished && (session.answerLog || []).length > 0 && session.index < session.queue.length){ saveInProgressSession(); }
+    else if(!(DATA.inProgressSession && (DATA.inProgressSession.answerLog || []).length > 0 && !finished)) clearInProgressSession();
+  }
   session = null;
   setTimeout(maybeAutoGenerateCase, 3000);
   document.getElementById('quizView').style.display = 'none';
@@ -19323,7 +19330,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.130';
+const BUILD_ID = '2026-10-17.131';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
