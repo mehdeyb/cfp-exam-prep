@@ -523,6 +523,11 @@
   .fkeys-ex{font-size:12.5px;color:var(--muted,#8a8a8e);margin:2px 0 4px;}
   .fd-note{font-size:12.5px;color:var(--muted);}
   .fd-tutor{margin-top:10px;width:100%;}
+  .qcard-link{margin:10px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--line,rgba(128,128,128,.25));}
+  .qcl-head{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .qcl-term{font-weight:600;margin:4px 0 2px;}
+  .qcl-def{font-size:14px;line-height:1.45;}
+  .qcl-note{font-size:12px;color:var(--muted);margin-top:6px;}
   .formula-row .fpractice{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted);}
   .formula-row .fpractice button{font-size:12px;padding:4px 12px;position:relative;}
   .formula-row .fpractice button::after{content:'';position:absolute;inset:-10px -6px;}
@@ -2538,6 +2543,7 @@
               <button class="btn ghost" id="tvmPracticeBtn" onclick="tvmPracticeFromQuiz()" style="display:none;">Practice on the calculator</button>
             </div>
             <div class="calc-steps-box" id="calcStepsBox" style="display:none;"></div>
+            <div class="qcard-link" id="qCardLink" style="display:none;"></div>
             <div class="simplify-row" id="simplifyRow" style="display:none;">
               <button class="btn ghost" id="simplifyBtn" onclick="requestSimplerExplanation()">Explain this more simply</button>
               <button class="btn ghost" id="qChatBtn" onclick="toggleQuestionChat()" aria-expanded="false" aria-controls="qChatBox">Ask the tutor about this</button>
@@ -2935,7 +2941,7 @@
         <div class="science-item"><b>The session pill stays out of Settings</b>The small "Part 5 of 9" pill that floats above the tab bar during a guided session used to sit on top of the Settings page and cover its buttons. It now hides while Settings is open and comes back when you close it.</div>
         <div class="science-item"><b>Launch pictures for newer iPhones</b>Some iPhones open an installed app in a window about 60 points shorter than the screen, which leaves a blank band along the bottom and cuts pages short. The app now includes launch pictures sized for current iPhones, which is what iOS uses to pick the right window size. iOS reads them when the app is added to the Home Screen, so it may take removing and re-adding the app to take effect.</div>
         <div class="science-item"><b>The page lock no longer shrinks the app window</b>When a full-screen screen such as Settings or a quiz opened, the app used to pin the page behind it. On current iPhones that made iOS cut the whole app window by about 62 points, leaving a blank band along the bottom until the app was reopened. The page is now locked by hiding its own scrolling instead, with touch scrolling allowed only inside the panel in front.</div>
-        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress. To keep the Study tab calm, the eight extra practice modes now sit under "More ways to practice", the week-by-week plan folds away until you want it, and the technique reminder is a single line. The flashcard flip is now a real turn of the card, edge-on and back, that never fades or stutters. The Next best step card and Today's plan no longer disagree: when the plan has something open, the card shows the plan's first part and keeps the bigger picture as a note.</div>
+        <div class="science-item"><b>One set of motion for the whole app</b>Screens now glide up instead of only fading, and Settings slides away when you close it. Switching tabs fades the page and brings each card in one after another. In a quiz the right answer pops with a soft glow, a wrong pick gives a small shake, and the explanations fade in down the list. Flashcards turn over and new cards slide in, folded cards drop open, and progress bars fill smoothly. Tutor replies rise in, the results page builds in section by section, the guided-session card slides away and the session pill springs into place, and leaving a quiz brings the page back with a soft fade. Only movement and fading are used, so it stays smooth on a phone, and it all switches off if your phone is set to reduce motion. Every animation is short and never blocks a tap, and switching tabs no longer rebuilds the Reference page each time. Flashcards for commonly confused ideas (ISO vs. NQSO, Sharpe vs. Treynor, JTWROS vs. tenancy in common and many more) now show a short "Don't mix up" note on the back. The flashcard screen is tidier too: filters sit under one Options button, the card no longer shifts when you flip it, you can swipe right or left to rate, and an Undo button takes back your last rating. The tutor can now set your exam date from a plain sentence ("my exam is Nov 2") after one confirming tap, and every flashcard has a "Talk it through with the tutor" button. Glossary terms now also show the "Don't mix up" note and a "Talk it through with the tutor" button when opened. After a round of flashcards, the checkpoint offers "Walk me through the misses" to hand the cards you missed to the tutor. The Reference tab now opens with a Study toolkit: ten proven techniques (blank-page recall, spaced review, mixing topics, explaining to a client, asking why, testing first, memory palace, drawing, exam-day moves, sleep), each tied to the CFP exam with a one-tap way to practice it, and a pick for today based on your progress. To keep the Study tab calm, the eight extra practice modes now sit under "More ways to practice", the week-by-week plan folds away until you want it, and the technique reminder is a single line. The flashcard flip is now a real turn of the card, edge-on and back, that never fades or stutters. The Next best step card and Today's plan no longer disagree: when the plan has something open, the card shows the plan's first part and keeps the bigger picture as a note. Adaptive sessions now carry one or two applied scenarios and a worked calculation when they are due, open with a plain recall question, and avoid same-topic and back-to-back scenario or calculation runs; a miss shows the flashcard for that idea right under the answer.</div>
       </div>
     </div>
 
@@ -11637,6 +11643,28 @@ function pickAdaptiveQueue(n){
   }
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
   DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(picks.map(q=>q.id)).slice(-40);
+  // Mode slots: a session should not be only plain recall. Make sure it carries one or two applied scenario questions (the exam's
+  // case-style items) and one worked-calculation item when such material is due, by swapping them in for plain new or due picks
+  // of the same domain, so the domain balance above is unchanged. Domains still being rebuilt keep to simpler material.
+  if(n >= 8){
+    const inFoundation = DATA.domainFoundationMode || {};
+    const swappable = q => ['fresh','due','domainFloor'].includes(reasons[q.id]);
+    const need = (pred, label, count) => {
+      let have = picks.filter(pred).length;
+      while(have < count){
+        const cands = eligible.filter(q => !usedIds.has(q.id) && !inFoundation[q.domain] && pred(q));
+        if(!cands.length) break;
+        const pri = weightedDrawWithoutReplacement(cands, 1)[0];
+        let idx = picks.findIndex(p => swappable(p) && !pred(p) && p.domain === pri.domain);
+        if(idx < 0) idx = picks.findIndex(p => swappable(p) && !pred(p));
+        if(idx < 0) break;
+        usedIds.delete(picks[idx].id); delete reasons[picks[idx].id];
+        picks[idx] = pri; usedIds.add(pri.id); reasons[pri.id] = label; have++;
+      }
+    };
+    need(q => !!q.scenario, 'applied', n >= 12 ? 2 : 1);
+    need(q => !!q.calcSteps && !q.tvmGen, 'calcItem', 1);
+  }
   // Foundation mode, when active for a question's domain, is the more
   // specific and actionable thing to tell the student -- it explains why
   // the material eased up, not just that this particular question was
@@ -14359,10 +14387,56 @@ function startMissedReview(){
   beginSession(pool, 'review', null);
 }
 
+// Orders an adaptive session so the mix works as practice, not a pile: it opens with a plain due-or-new recall question,
+// never runs two questions from the same domain back to back (switching topics is what trains telling ideas apart), and
+// never runs two calculations or two scenarios in a row. A question built to follow a miss stays right after it.
+function adaptiveInterleave(queue, reasons){
+  try{
+    if(!queue || queue.length < 4) return queue;
+    const kindOf = q => (q.tvmGen || q.calcSteps) ? 'calc' : q.scenario ? 'case' : 'recall';
+    const units = [];
+    queue.forEach((q, i) => { if(i > 0 && reasons && reasons[q.id] === 'conceptFollowup') units[units.length-1].push(q); else units.push([q]); });
+    const head = u => u[0], tail = u => u[u.length-1];
+    const rest = units.slice(), out = [];
+    let wi = rest.findIndex(u => kindOf(head(u)) === 'recall' && ['fresh','due','domainFloor'].includes(reasons && reasons[head(u).id]));
+    if(wi < 0) wi = rest.findIndex(u => kindOf(head(u)) === 'recall');
+    out.push(rest.splice(Math.max(0, wi), 1)[0]);
+    while(rest.length){
+      const prev = tail(out[out.length-1]);
+      const clash = u => kindOf(head(u)) !== 'recall' && kindOf(head(u)) === kindOf(prev);
+      let pick = rest.findIndex(u => head(u).domain !== prev.domain && !clash(u));
+      if(pick < 0) pick = rest.findIndex(u => head(u).domain !== prev.domain);
+      if(pick < 0) pick = rest.findIndex(u => !clash(u));
+      out.push(rest.splice(Math.max(0, pick), 1)[0]);
+    }
+    return out.flat();
+  }catch(e){ return queue; }
+}
+// The flashcard that covers the idea a question just tested, shown right under a miss in a study session, so the fix is on screen
+// and the same card is already ranked up on the Flashcards tab for later.
+function cardForQuestion(q){
+  const hay = fcNorm([q.q, q.scenario || '', (q.choices || [])[q.correct] || '', (q.rationale || []).join(' ')].join(' '));
+  let best = null, bestLen = 0;
+  allFlashcards().forEach(c => {
+    if(c.domain !== q.domain) return;
+    for(const f of fcTermForms(c)){
+      if(f.weight >= 1 && hay.indexOf(' ' + f.n.trim() + ' ') >= 0 && f.n.length > bestLen){ best = c; bestLen = f.n.length; }
+    }
+  });
+  return best;
+}
+function showCardForQuestion(q, isCorrect){
+  const box = document.getElementById('qCardLink'); if(!box) return;
+  box.style.display = 'none'; box.innerHTML = '';
+  if(isCorrect || !isStudyMode() || q.tvmGen) return;
+  const c = cardForQuestion(q); if(!c) return;
+  box.innerHTML = '<div class="qcl-head">The card for this idea</div><div class="qcl-term">' + escapeHtml(c.term) + '</div><div class="qcl-def">' + escapeHtml(c.def) + '</div><div class="qcl-note">It is ranked up in your flashcards, so it comes back soon.</div>';
+  box.style.display = 'block';
+}
 function startAdaptive(){
   const picked = pickAdaptiveQueue(Math.min(ADAPTIVE_LENGTH, allQuestions().length));
   const reasons = picked.reasons;
-  const queue = tvmInjectIntoAdaptive(picked.queue, reasons);
+  const queue = adaptiveInterleave(tvmInjectIntoAdaptive(picked.queue, reasons), reasons);
   beginSession(queue, 'adaptive', null, reasons);
 }
 
@@ -15534,6 +15608,8 @@ function renderQuestion(){
     foundation: 'rebuilding the foundation here first',
     conceptFollowup: 'building on what you just missed',
     tvmCalc: 'calculator practice at your level',
+    applied: 'an applied scenario, like the exam\'s case questions',
+    calcItem: 'a worked calculation',
     retest: 'a new question on an idea that was due back',
     newidea: 'a new question written on this idea',
   };
@@ -15613,6 +15689,7 @@ function renderQuestion(){
   }
   const calcStepsBtnReset = document.getElementById('calcStepsBtn');
   if(calcStepsBtnReset) calcStepsBtnReset.textContent = 'Show calculator steps';
+  { const cl = document.getElementById('qCardLink'); if(cl){ cl.style.display = 'none'; cl.innerHTML = ''; } }
 
   maybeSwapQuestionForVariant(q);
   saveInProgressSession();
@@ -16329,6 +16406,7 @@ function selectAnswer(i){
     simplifiedBox.innerHTML = '';
   }
 
+  try{ showCardForQuestion(q, isCorrect); }catch(e){}
   const calcStepsRow = document.getElementById('calcStepsRow');
   const calcStepsBox = document.getElementById('calcStepsBox');
   if(calcStepsRow){
@@ -18804,7 +18882,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.86';
+const BUILD_ID = '2026-10-17.87';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
