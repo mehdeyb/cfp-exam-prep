@@ -3355,7 +3355,7 @@
         <div class="settings-section">
           <h3>AI connection</h3>
           <div class="api-key-box" id="apiKeyBox" style="display:none;">
-            <p class="hint" style="margin-top:0;">Run as a downloaded file, the tutor, AI-generated practice, podcasts and other AI tools need your own API key (console.anthropic.com). It's stored only in this browser and sent straight to Anthropic, never through another server. Don't share this file once a key is saved in it.</p>
+            <p class="hint" style="margin-top:0;">The tutor, AI-written practice and podcasts need your own API key (console.anthropic.com). It stays encrypted in this browser and goes only to Anthropic. Everything else works without it.</p>
             <div class="api-key-row">
               <input type="password" id="apiKeyInput" class="tutor-input" aria-label="Anthropic API key" placeholder="sk-ant-..." onkeydown="if(event.key==='Enter') handleSaveApiKey();">
               <button class="btn" onclick="handleSaveApiKey()">Connect</button>
@@ -18946,7 +18946,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.97';
+const BUILD_ID = '2026-10-17.98';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
