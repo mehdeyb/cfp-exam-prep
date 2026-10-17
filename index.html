@@ -282,6 +282,13 @@
   body.flashcard-fullscreen #fcFullscreenCloseBtn.fc-fullscreen-close{display:flex;}
   body.flashcard-fullscreen .fc-card{padding:48px 32px;min-height:280px;}
   @media (max-width:640px){ body.flashcard-fullscreen .tabbar{display:none;} }
+  /* Portrait fullscreen: the session pill floats at the bottom, so the page scrolls clear of it and the answer buttons
+     stay pinned just above it instead of hiding under it when a long card is flipped. */
+  @media not ((orientation:landscape) and (max-height:520px) and (min-width:520px)){
+    body.flashcard-fullscreen #flashcardFullscreenHost{overflow-x:hidden;padding-bottom:calc(150px + env(safe-area-inset-bottom,0px));}
+    body.flashcard-fullscreen .fc-fullscreen-inner{align-self:flex-start;}
+    body.flashcard-fullscreen .fc-actions{position:sticky;bottom:-78px;z-index:4;padding:10px 0 6px;background:linear-gradient(to bottom,transparent,var(--ink) 38%);}
+  }
 
   /* ---------- Domain picker — its own dedicated fullscreen view,
      reusing the same overlay treatment as the quiz host above rather
@@ -19296,7 +19303,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.125';
+const BUILD_ID = '2026-10-17.126';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
