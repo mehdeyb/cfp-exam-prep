@@ -2011,6 +2011,10 @@
   #quizView .quiz-actions::before, #resultsView .quiz-actions::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:16px;pointer-events:none;}
   #quizView .quiz-actions::before{background:linear-gradient(to top,var(--ink),transparent);}
   #resultsView .quiz-actions::before{background:linear-gradient(to top,var(--surface),transparent);}
+  /* The action bar lets the question card show through instead of cutting it off with a solid band. */
+  #quizView .quiz-actions,#resultsView .quiz-actions{background:linear-gradient(to top,color-mix(in srgb,var(--ink) 62%,transparent) 0%,color-mix(in srgb,var(--ink) 30%,transparent) 70%,transparent 100%);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);}
+  #resultsView .quiz-actions{background:linear-gradient(to top,color-mix(in srgb,var(--surface) 62%,transparent) 0%,color-mix(in srgb,var(--surface) 30%,transparent) 70%,transparent 100%);}
+  #quizView .quiz-actions::before,#resultsView .quiz-actions::before{height:22px;}
   /* Phones (upright): keep the tagline on one line and the readiness block narrow enough that the
      countdown card sits beside the ring instead of dropping below it with empty space left over. */
   @media (orientation:portrait) and (max-width:640px){
@@ -18946,7 +18950,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.102';
+const BUILD_ID = '2026-10-17.103';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
