@@ -1479,6 +1479,7 @@
   #fcActions[style*="display: none"], #fcActions[style*="display:none"]{display:flex !important;visibility:hidden;pointer-events:none;}
   #fcRecap[style*="display: block"] ~ #fcActions, #fcActions.fc-no-reserve{display:none !important;}
   .fc-undo{display:none;position:absolute;left:0;top:0;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);background:none;border:0;padding:6px 4px;min-height:32px;cursor:pointer;}
+  body:not(.flashcard-fullscreen) .fc-undo{left:auto;right:0;}
   .fc-undo.show{display:inline-flex;align-items:center;gap:5px;animation:softIn .2s var(--ease-out);}
   .fc-swipehint{display:none;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;color:var(--muted);}
   @media (hover:none){ .fc-card.flipped-state .fc-swipehint{display:block;} }
@@ -1905,6 +1906,15 @@
     #fcTopCard,#fcTopCard.card{padding-top:12px;padding-bottom:12px;}
     #fcTopCard .card-head{margin-bottom:6px;}
     .fc-card{padding:16px 24px;min-height:120px;}
+    /* Flashcards tab in landscape: the card gets the width, and the deck notes and buttons share one row under it. */
+    body:not(.flashcard-fullscreen) #fcTopCard{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:18px;}
+    body:not(.flashcard-fullscreen) #fcTopCard > .card-head,body:not(.flashcard-fullscreen) #fcTopCard > #flashcardFullscreenHost{flex:1 1 100%;}
+    body:not(.flashcard-fullscreen) .fc-fullscreen-inner{max-width:min(880px,100%);}
+    body:not(.flashcard-fullscreen) #fcTopCardContent > p.hint{margin:8px 0 0;align-self:center;display:flex;align-items:center;}
+    body:not(.flashcard-fullscreen) #fcTopCardContent > .fc-controls{align-self:center;}
+    body:not(.flashcard-fullscreen) #fcTopCardContent > #fcDeckLine{margin:8px 0 0;order:2;}
+    body:not(.flashcard-fullscreen) #fcTopCardContent > .fc-controls{margin:8px 0 0 auto;flex:0 0 auto;flex-wrap:nowrap;}
+    body:not(.flashcard-fullscreen) #fcTopCardContent > .fc-options-panel{flex:1 1 100%;order:4;}
     .fc-actions{margin-top:10px;}
     .fc-progress{margin-bottom:6px;}
   }
@@ -19267,7 +19277,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.120';
+const BUILD_ID = '2026-10-17.121';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
