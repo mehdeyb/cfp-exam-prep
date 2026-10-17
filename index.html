@@ -5303,6 +5303,7 @@ function defaultData(){
     preferredHost1VoiceName: null,
     preferredHost2VoiceName: null,
     flashcardMnemonics: {},
+    teachStats: {}, fcShown: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5490,7 +5491,7 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','speechOptimizedText','glossaryExamples','flashcardMnemonics','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -8837,6 +8838,8 @@ function ebOpenForTopic(wk, weakDom){
     if(pat){ const m = cards.filter(c => pat.test((c.term + ' ' + c.def).toLowerCase())); if(m.length) cards = m; }
   }
   if(!cards.length) cards = allFlashcards();
+  const recentNailed = c => { const t = (DATA.teachStats || {})['c:' + c.id]; return t && t.grade === 'nailed' && Date.now() - t.last < 3*86400000; };
+  const pool = cards.filter(c => !recentNailed(c)); if(pool.length >= 4) cards = pool;
   const ranked = cards.slice().sort((a, b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, 6);
   return ebOpenCard(ranked[Math.floor(Math.random() * ranked.length)]);
 }
@@ -10984,6 +10987,7 @@ function flashcardPriority(card){
   }
   const boost = 1 + 0.9*sig.gap + 0.4*(sig.weakSub ? 1 : 0) + (sig.leech ? 0.5 : 0);
   let p = weaknessFactor * weightFactor * due * boost;
+  { const ts = (DATA.teachStats || {})['c:' + card.id]; if(ts && Date.now() - ts.last < 14*86400000){ if(ts.grade === 'missed') p *= 1.25; else if(ts.grade === 'partly') p *= 1.1; } } // an explanation that fell short should come back
   const justSeen = stat.seen > 0 && stat.lastSeenAt && (Date.now() - stat.lastSeenAt) < 6*3600000;
   if(!justSeen && sig.gap >= 0.5 && stat.seen > 0 && !isDue(stat) && stat.box <= 2) p = Math.max(p, weaknessFactor * weightFactor * 1.4 * boost);
   if(days !== null && days <= 7 && stat.seen > 0 && stat.box >= 4 && !isDue(stat)) p *= 0.6;
@@ -18560,6 +18564,15 @@ function buildTutorSystemPrompt(){
   }
 
   let flashcardContext = '';
+  let teachContext = '';
+  try{
+    const ts = DATA.teachStats || {}, ids = Object.keys(ts);
+    if(ids.length){
+      const byId = new Map(allFlashcards().map(c => [c.id, c.term]));
+      const shaky = ids.filter(k => k.startsWith('c:') && ts[k].grade !== 'nailed' && byId.get(k.slice(2))).sort((a, b) => ts[b].last - ts[a].last).slice(0, 4).map(k => byId.get(k.slice(2)));
+      teachContext = ` They have explained ${ids.length} concept${ids.length === 1 ? '' : 's'} back in their own words${shaky.length ? '; the ones that fell short were: ' + shaky.join(', ') : ''}.`;
+    }
+  }catch(e){}
   const fcProgress = computeFlashcardProgress();
   if(fcProgress.knownCount + fcProgress.learningCount > 0){
     flashcardContext = ` They've also been using the app's flashcards: ${fcProgress.knownCount} of ${fcProgress.total} marked as known, ${fcProgress.learningCount} still learning, and ${fcProgress.dueCount} currently due for review.`;
@@ -18593,7 +18606,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${teachContext}${foundationContext}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
@@ -19589,7 +19602,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.136';
+const BUILD_ID = '2026-10-17.137';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
