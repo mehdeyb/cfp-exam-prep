@@ -522,6 +522,7 @@
   .fkeys[open] summary::after{content:' ▴';}
   .fkeys-ex{font-size:12.5px;color:var(--muted,#8a8a8e);margin:2px 0 4px;}
   .fd-note{font-size:12.5px;color:var(--muted);}
+  .fd-tutor{margin-top:10px;width:100%;}
   .formula-row .fpractice{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted);}
   .formula-row .fpractice button{font-size:12px;padding:4px 12px;position:relative;}
   .formula-row .fpractice button::after{content:'';position:absolute;inset:-10px -6px;}
@@ -13572,6 +13573,14 @@ function closeFormulaDrill(){
   if(was && fd.opener && document.contains(fd.opener) && typeof fd.opener.focus === 'function'){ try{ fd.opener.focus({ preventScroll:true }); }catch(e){} }
   fd.opener = null;
 }
+function fdAskTutor(ok, x){
+  const p = fd.prob; if(!p) return;
+  const q = 'I am doing a formula drill on ' + fd.name + '. The problem: ' + p.scenario + ' The correct answer is ' + fdFormat(p, p.answer) + (ok ? ' and I got it right.' : ' and I answered ' + fdFormat(p, x) + '.') + (ok
+    ? ' Ask me one short question that checks I understand why the formula works and when the exam would change it, wait for my answer, then tell me what I am missing.'
+    : ' Walk me through it on my HP 10bII+, one button press at a time, show what the display should read after each step, and tell me what mistake most likely produced my answer.');
+  closeFormulaDrill();
+  askTutorAbout(q);
+}
 function fdSetFilter(v){ fd.filter = v; fdNext(); }
 function fdNext(){
   fd.name = fdChooseName();
@@ -13642,6 +13651,9 @@ function fdCheck(){
   }
   const f = FORMULAS.find(y => y.name === fd.name);
   if(f){ const n = document.createElement('div'); n.className = 'fd-note'; n.textContent = f.note; res.appendChild(n); }
+  { const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn ghost fd-tutor';
+    tb.textContent = ok ? 'Quiz me on why it works' : 'Walk me through it with the tutor';
+    tb.onclick = () => fdAskTutor(ok, x); res.appendChild(tb); }
   res.style.display = 'block';
   document.getElementById('fdCheck').style.display = 'none';
   const nb = document.getElementById('fdNextBtn'); nb.style.display = ''; nb.focus({ preventScroll:true });
@@ -18778,7 +18790,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.84';
+const BUILD_ID = '2026-10-17.85';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
