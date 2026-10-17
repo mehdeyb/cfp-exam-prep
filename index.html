@@ -1862,7 +1862,7 @@
   .confidence-row.done .confidence-pill{padding:6px 12px;}
   @media (orientation:landscape) and (min-width:520px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
     body.quiz-active .quiz-inner{max-width:1080px;}
-    body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:26px;align-items:start;}
+    body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);column-gap:22px;align-items:start;}
     body.quiz-active .q-left{position:sticky;top:6px;align-self:start;max-height:calc(100vh - 72px);overflow-y:auto;overscroll-behavior:contain;}
     body.quiz-active .confidence-pills{flex-wrap:wrap;}
     body.quiz-active .q-text{margin-bottom:14px;}
@@ -15566,8 +15566,16 @@ function fitQuizText(){
       el.style.fontSize = (base + Math.min(t, cap - base)) + 'px';
       chs.forEach(c => { c.style.fontSize = (cb + Math.min(t * 0.4, 2)) + 'px'; c.style.paddingTop = c.style.paddingBottom = (pb + Math.min(t, 5)) + 'px'; });
     };
-    const fits = () => host.scrollHeight <= host.clientHeight;
-    if(!fits()) return;
+    const ql = document.querySelector('#quizView .q-left');
+    const fits = () => host.scrollHeight <= host.clientHeight && (!ql || ql.scrollHeight <= ql.clientHeight + 1);
+    if(!fits()){
+      el.style.fontSize = '';
+      if(!document.body.classList.contains('exam-sim-mode') && window.innerWidth > window.innerHeight){
+        let f = base;
+        while(f > 14.5 && !fits()){ f -= 0.5; el.style.fontSize = f + 'px'; }
+      }
+      return;
+    }
     let t = 0;
     while(t < 8){
       apply(t + 1);
@@ -18974,7 +18982,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.110';
+const BUILD_ID = '2026-10-17.111';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
