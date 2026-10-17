@@ -7579,6 +7579,13 @@ function conductorRefreshPill(){
   // If today's plan already shows this part as finished, say so and offer the next one instead of "Done?".
   let finished = false;
   if(c.current){ try{ const st = buildStudyPlan().steps.find(x => x.id === c.current.id); finished = !!(st && st.done); }catch(e){} }
+  // Already on this part's own screen, still working: the screen shows its own progress ("Today's plan: 8 of 20 cards"),
+  // so the pill would only sit on top of the card. It comes back when the part is finished or when you leave.
+  if(c.current && !finished){
+    const own = { cards:'flashcards' }[c.current.id];
+    const act = document.querySelector('.tab-panel.active');
+    if(own && act && act.id === 'tab-' + own){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
+  }
   if(c.current && !finished){
     pill.innerHTML = `<span class="cd-pn">Part ${pr.n} of ${total}</span><span class="cd-pt">${escapeHtml(title)}</span><span class="cd-pa">Done?</span>`;
     pill.setAttribute('aria-label', `Session part ${pr.n} of ${total}: ${title}. Tap when this part is done.`);
@@ -18721,7 +18728,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-16.76';
+const BUILD_ID = '2026-10-16.77';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
