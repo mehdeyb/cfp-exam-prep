@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Blueprint — CFP® Practice Exam Studio</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0F1A2C">
 <meta name="color-scheme" content="dark light">
@@ -2364,6 +2364,10 @@
   .sub-back{display:inline-flex;align-items:center;gap:4px;margin:0 0 10px;padding:8px 12px 8px 8px;min-height:36px;font:inherit;font-size:13px;font-weight:600;color:var(--gold);background:transparent;border:0;border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
   .sub-back:active{background:var(--surface2);}
   body.flashcard-fullscreen .sub-back{display:none;}
+  .sync-status{font-size:12.5px;margin-top:8px;min-height:16px;color:var(--muted);}
+  .sync-status.ok{color:var(--correct);} .sync-status.err{color:var(--incorrect);} .sync-status.busy{color:var(--muted);}
+  .sync-steps{margin:0 0 12px;padding-left:20px;font-size:13.5px;line-height:1.5;color:var(--muted);} .sync-steps a{color:var(--gold);font-weight:600;}
+  #syncBox .tutor-input{width:100%;margin-top:4px;}
   @media (max-width:640px){ #modePanel .mode-grid .mode-card:last-child:nth-child(odd){grid-column:1 / -1;} }
 </style>
 </head>
@@ -3680,6 +3684,11 @@
             </div>
             <p class="hint" id="winExpOut" style="margin-top:8px;"></p>
           </details>
+        </div>
+
+        <div class="settings-section" id="syncSection">
+          <h3>Sync across devices</h3>
+          <div id="syncBox"></div>
         </div>
 
         <div class="settings-section">
@@ -6335,11 +6344,17 @@ function setStorageWarning(show){
 }
 
 async function persist(){
+  // With sync on, stamp the data whenever it actually changed, so two devices can tell whose edit is newer.
+  if(typeof SYNC !== 'undefined' && SYNC.on && !SYNC.applying && DATA){
+    const probe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+    if(probe !== SYNC.lastProbe){ SYNC.lastProbe = probe; DATA._modAt = Date.now(); }
+  }
   const payload = JSON.stringify(DATA);
   try{
     const ok = await storageSet(STORAGE_KEY, payload);
     if(ok === false) throw new Error('storageSet reported failure');
     if(persistFailureWarned){ persistFailureWarned = false; setStorageWarning(false); }
+    try{ syncSchedulePush(); }catch(_){}
     return true;
   }catch(e){
     // One retry after a short delay — covers transient failures (a brief
@@ -13715,6 +13730,7 @@ function openSettings(){
   lockBodyScroll();
   { const h = document.getElementById('settingsHost'); if(h) h.scrollTop = 0; }
   renderApiKeyUI();
+  try{ renderSyncCard(); }catch(e){}
   renderVoicePrefOptions();
   renderAiTokenUsage();
   // These quality checks are cheap and deterministic, so they simply run
@@ -18542,6 +18558,7 @@ async function resetProgress(){
   const keepExamDate = DATA ? DATA.examDate : null;
   const keepAiTokenUsage = DATA ? DATA.aiTokenUsage : null;
   DATA = defaultData();
+  DATA._epoch = Date.now();
   DATA.theme = keepTheme;
   DATA.themeMode = keepThemeMode || 'auto';
   DATA.examDate = keepExamDate;
@@ -18975,6 +18992,7 @@ async function restoreFromBackup(){
     if(wrongType) DATA[k] = dv;
   });
 
+  DATA._epoch = Date.now();
   dataEpoch++;
   pruneRetiredQuestionIds();
   await persist();
@@ -20193,7 +20211,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.180';
+const BUILD_ID = '2026-10-18.182';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -20240,7 +20258,345 @@ document.addEventListener('keydown', e => {
   };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
-loadData();
+/* ===========================================================
+   SYNC ACROSS DEVICES — one private GitHub gist holds the progress, merged (never overwritten) from every device
+=========================================================== */
+const SYNC_KEY = 'cfp-blueprint-sync-v1';
+const SYNC_FILE = 'cfp-blueprint-sync.json';
+const SYNC_DESC = 'CFP Blueprint sync (private)';
+// Per-device settings that should not follow you from phone to iPad.
+const SYNC_LOCAL_ONLY = ['speechOptimizedText','lastTab','theme','themeMode','eveningModeSetting','preferredVoiceName','preferredHost1VoiceName','preferredHost2VoiceName','conductor','fcShown','lastBackupAtAnswerCount','genRetryAt','genFailStreak','variantFailedAt'];
+const SYNC_UNION_ARRAYS = ['studyDates','checkedSubtopics','announcedMilestones','missed','hypercorrectionQueue'];
+const SYNC_ARRAY_CAP = { sessions: 300, errorLog: 500, tutorTopics: 300 };
+const SYNC_WHOLE = ['tvmProgress'];
+const SYNC = { on:false, token:null, gistId:null, etag:null, lastOkAt:0, status:'off', err:'', busy:false, again:false, timer:null, poll:null, pendingApply:false, applying:false, lastProbe:null, keyEncFor:null, keyEnc:null, keyPushedFor:null, lastPullTry:0 };
+
+function syncCanon(v){
+  if(Array.isArray(v)) return '[' + v.map(syncCanon).join(',') + ']';
+  if(v && typeof v === 'object') return '{' + Object.keys(v).filter(k => k !== '_modAt').sort().map(k => JSON.stringify(k) + ':' + syncCanon(v[k])).join(',') + '}';
+  return JSON.stringify(v === undefined ? null : v);
+}
+function syncKind(v){ return Array.isArray(v) ? 'arr' : (v && typeof v === 'object') ? 'obj' : typeof v === 'number' ? 'num' : 'other'; }
+function syncMergeVal(a, b, an, key){
+  if(b === undefined) return a;
+  if(a === undefined) return b;
+  const ka = syncKind(a), kb = syncKind(b);
+  if(ka !== kb) return an ? a : b;
+  if(ka === 'num') return Math.max(a, b);
+  if(ka === 'arr') return syncMergeArr(a, b, an, key);
+  if(ka === 'obj') return syncMergeObj(a, b, an, key);
+  return an ? a : b;
+}
+function syncMergeObj(a, b, an, key){
+  if(SYNC_WHOLE.indexOf(key) >= 0) return an ? a : b;
+  const ta = typeof a.lastSeenAt === 'number' ? a.lastSeenAt : a.lastAt, tb = typeof b.lastSeenAt === 'number' ? b.lastSeenAt : b.lastAt;
+  if(typeof ta === 'number' && typeof tb === 'number' && (ta || tb)){
+    if(ta !== tb) return ta > tb ? a : b;
+    return (a.seen || a.total || a.asked || 0) >= (b.seen || b.total || b.asked || 0) ? a : b;
+  }
+  const out = {};
+  Object.keys(a).forEach(k => { out[k] = syncMergeVal(a[k], b[k], an, k); });
+  Object.keys(b).forEach(k => { if(!(k in out)) out[k] = b[k]; });
+  return out;
+}
+function syncMergeArr(a, b, an, key){
+  const prim = x => x === null || typeof x !== 'object';
+  if(a.every(prim) && b.every(prim)){
+    if(SYNC_UNION_ARRAYS.indexOf(key) >= 0){ const s = new Set(a); b.forEach(x => s.add(x)); return Array.from(s).sort(); }
+    return an ? a : b;
+  }
+  const keyed = o => o && typeof o === 'object' && (o.id !== undefined || o.date !== undefined || o.t !== undefined || o.at !== undefined || o.createdAt !== undefined);
+  if(!a.concat(b).every(keyed)) return an ? a : b;
+  const idOf = o => o.id !== undefined ? 'i' + o.id : o.date !== undefined ? 'd' + o.date : o.t !== undefined ? 't' + o.t : o.at !== undefined ? 'a' + o.at : 'c' + o.createdAt;
+  const older = an ? b : a, newer = an ? a : b, m = new Map();
+  older.forEach(x => m.set(idOf(x), x)); newer.forEach(x => m.set(idOf(x), x));
+  let out = Array.from(m.values());
+  const tv = o => { const v = o.date !== undefined ? o.date : o.t !== undefined ? o.t : o.at !== undefined ? o.at : o.createdAt; if(typeof v === 'number') return v; const n = Date.parse(v); return isNaN(n) ? null : n; };
+  if(out.every(o => tv(o) !== null)) out = out.map((o, i) => [o, i]).sort((x, y) => (tv(x[0]) - tv(y[0])) || (x[1] - y[1])).map(p => p[0]);
+  const cap = SYNC_ARRAY_CAP[key]; if(cap && out.length > cap) out = out.slice(-cap);
+  return out;
+}
+// Merge two copies of the saved data. A reset or restore on either side (a larger _epoch) wins outright; otherwise counts take the larger value, lists are combined, and a single-value conflict goes to whichever device saved last.
+function syncMergeData(local, remote){
+  const le = local._epoch || 0, re = remote._epoch || 0, lm = local._modAt || 0, rm = remote._modAt || 0;
+  if(re > le){ const o = JSON.parse(JSON.stringify(remote)); return o; }
+  if(le > re) return JSON.parse(JSON.stringify(local));
+  const an = lm >= rm, out = {};
+  Object.keys(local).forEach(k => { out[k] = syncMergeVal(local[k], remote[k], an, k); });
+  Object.keys(remote).forEach(k => { if(!(k in out)) out[k] = remote[k]; });
+  out._modAt = Math.max(lm, rm);
+  return JSON.parse(JSON.stringify(out));
+}
+
+function syncDeviceLabel(){
+  const u = navigator.userAgent || '';
+  if(/iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return 'iPad';
+  if(/iPhone/.test(u)) return 'iPhone';
+  if(/Android/.test(u)) return 'Android';
+  return /Mac/.test(u) ? 'Mac' : 'this device';
+}
+function syncB64u(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function syncUnb64u(s){ s = s.replace(/-/g, '+').replace(/_/g, '/'); while(s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); }
+function syncLink(){
+  if(!SYNC.on) return '';
+  return location.href.split('#')[0] + '#sync=' + syncB64u(JSON.stringify({ t: SYNC.token, g: SYNC.gistId }));
+}
+async function syncGh(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({ 'Authorization': 'Bearer ' + SYNC.token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, opts.headers || {});
+  if(opts.body) headers['Content-Type'] = 'application/json';
+  return fetch('https://api.github.com' + path, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: 'no-store' });
+}
+async function syncSaveConfig(){
+  try{
+    let t = SYNC.token; try{ t = await sealSecret(SYNC.token); }catch(e){}
+    await storageSet(SYNC_KEY, JSON.stringify({ t, g: SYNC.gistId, e: SYNC.etag, ok: SYNC.lastOkAt }));
+  }catch(e){}
+}
+async function syncLoadConfig(){
+  try{
+    const raw = await storageGet(SYNC_KEY); if(!raw) return false;
+    const c = JSON.parse(raw), tok = await openSecret(c.t);
+    if(!tok || !c.g) return false;
+    SYNC.token = tok; SYNC.gistId = c.g; SYNC.etag = c.e || null; SYNC.lastOkAt = c.ok || 0; SYNC.on = true; SYNC.status = 'idle';
+    return true;
+  }catch(e){ return false; }
+}
+function syncAgo(ts){
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if(s < 45) return 'just now';
+  const m = Math.round(s / 60); if(m < 60) return m + ' min ago';
+  const h = Math.round(m / 60); if(h < 36) return h + ' h ago';
+  return Math.round(h / 24) + ' days ago';
+}
+function syncStatusText(){
+  if(!SYNC.on) return '';
+  if(SYNC.status === 'syncing') return 'Syncing…';
+  if(SYNC.status === 'offline') return 'Offline · syncs when you are back';
+  if(SYNC.status === 'error') return SYNC.err || 'Could not sync';
+  return SYNC.lastOkAt ? 'Synced ' + syncAgo(SYNC.lastOkAt) : 'Waiting to sync';
+}
+function syncSetStatus(st, err){
+  SYNC.status = st; SYNC.err = err || '';
+  const el = document.getElementById('syncStatus');
+  if(el){ el.textContent = syncStatusText(); el.className = 'sync-status ' + (st === 'error' ? 'err' : st === 'syncing' ? 'busy' : 'ok'); }
+}
+function syncErrText(e, status){
+  if(status === 401 || status === 403) return 'GitHub rejected the token. Make a new one and turn sync on again.';
+  if(status === 404) return 'The sync storage was not found. Turn sync off and on again.';
+  return 'Could not reach GitHub. Will retry.';
+}
+function syncCanApply(){
+  const b = document.body.classList;
+  return !b.contains('quiz-active') && !b.contains('flashcard-fullscreen') && !(typeof tutorBusy !== 'undefined' && tutorBusy);
+}
+async function syncBuildPayload(){
+  const d = {};
+  Object.keys(DATA).forEach(k => { if(SYNC_LOCAL_ONLY.indexOf(k) < 0) d[k] = DATA[k]; });
+  let enc = null;
+  try{
+    const key = await loadApiKey();
+    if(key){
+      if(SYNC.keyEncFor !== key){ SYNC.keyEnc = await lockWithPassphrase(key, SYNC.token); SYNC.keyEncFor = key; }
+      enc = SYNC.keyEnc;
+    }
+  }catch(e){}
+  return { data: d, keyEnc: enc };
+}
+async function syncApply(m){
+  SYNC.applying = true;
+  try{
+    Object.keys(m).forEach(k => { if(SYNC_LOCAL_ONLY.indexOf(k) < 0) DATA[k] = m[k]; });
+    dataEpoch++;
+    try{ pruneRetiredQuestionIds(); }catch(e){}
+    await persist();
+    renderAll(); renderReference(); rebuildFlashcardQueue(); renderExamDayCallout();
+    try{ refreshCoachSurfaces(); }catch(e){}
+    try{ updateTutorContextNote(); }catch(e){}
+  } finally { SYNC.applying = false; }
+  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+}
+async function syncNow(reason){
+  if(!SYNC.on || !DATA) return;
+  if(SYNC.busy){ SYNC.again = true; return; }
+  if(navigator.onLine === false){ syncSetStatus('offline'); return; }
+  SYNC.busy = true; syncSetStatus('syncing');
+  let httpStatus = 0;
+  try{
+    const r = await syncGh('/gists/' + SYNC.gistId, { headers: SYNC.etag ? { 'If-None-Match': SYNC.etag } : {} });
+    httpStatus = r.status;
+    if(r.status !== 200 && r.status !== 304) throw new Error('http ' + r.status);
+    let remote = null;
+    if(r.status === 200){
+      const j = await r.json(); SYNC.etag = r.headers.get('ETag') || null;
+      const f = j.files && j.files[SYNC_FILE];
+      let txt = f && f.content;
+      if(f && f.truncated && f.raw_url){ const rr = await fetch(f.raw_url, { cache: 'no-store' }); txt = await rr.text(); }
+      if(txt){ try{ remote = JSON.parse(txt); }catch(e){ remote = null; } }
+      if(remote && (remote.app !== 'cfp-blueprint' || !remote.data || typeof remote.data !== 'object')) remote = null;
+    }
+    const local = await syncBuildPayload();
+    let merged = local.data, remoteData = null;
+    if(remote){
+      remoteData = remote.data;
+      merged = syncMergeData(local.data, JSON.parse(JSON.stringify(remote.data)));
+      if(remote.keyEnc && !local.keyEnc){
+        try{ const k = await unlockWithPassphrase(remote.keyEnc, SYNC.token); if(/^sk-ant-/.test(k)){ await saveApiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
+      }
+    }
+    const mergedCanon = syncCanon(merged);
+    if(remote && mergedCanon !== syncCanon(local.data)){
+      if(syncCanApply()) await syncApply(merged); else SYNC.pendingApply = true;
+    }
+    const pushKey = !!local.keyEnc && (SYNC.keyPushedFor !== SYNC.keyEncFor || (!!remote && !remote.keyEnc));
+    const needPush = !remote ? (r.status === 200 || mergedCanon !== SYNC.lastPushedCanon) : (mergedCanon !== syncCanon(remoteData) || pushKey);
+    if(needPush){
+      const body = { app: 'cfp-blueprint', v: 1, build: (typeof BUILD_ID !== 'undefined' ? BUILD_ID : ''), device: syncDeviceLabel(), savedAt: Date.now(), data: merged, keyEnc: pushKey ? local.keyEnc : (remote && remote.keyEnc) || local.keyEnc || null };
+      const pr = await syncGh('/gists/' + SYNC.gistId, { method: 'PATCH', body: { files: { [SYNC_FILE]: { content: JSON.stringify(body) } } } });
+      httpStatus = pr.status;
+      if(!pr.ok) throw new Error('http ' + pr.status);
+      SYNC.etag = pr.headers.get('ETag') || null; SYNC.lastPushedCanon = mergedCanon;
+      if(pushKey) SYNC.keyPushedFor = SYNC.keyEncFor;
+    } else if(remote) SYNC.lastPushedCanon = mergedCanon;
+    SYNC.lastOkAt = Date.now();
+    syncSetStatus('ok'); syncSaveConfig();
+  }catch(e){
+    syncSetStatus(navigator.onLine === false ? 'offline' : 'error', syncErrText(e, httpStatus));
+  }finally{
+    SYNC.busy = false;
+    if(SYNC.again){ SYNC.again = false; setTimeout(() => syncNow('again'), 600); }
+  }
+}
+function syncSchedulePush(){
+  if(!SYNC.on || SYNC.applying) return;
+  clearTimeout(SYNC.timer);
+  SYNC.timer = setTimeout(() => syncNow('push'), 5000);
+}
+function syncStartLoops(){
+  if(SYNC.poll) return;
+  SYNC.poll = setInterval(() => { if(SYNC.on && document.visibilityState === 'visible'){ if(SYNC.pendingApply && syncCanApply()) SYNC.etag = null; syncNow('poll'); } const el = document.getElementById('syncStatus'); if(el && SYNC.status === 'ok') el.textContent = syncStatusText(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if(!SYNC.on) return; if(document.visibilityState === 'visible'){ if(Date.now() - SYNC.lastPullTry > 15000){ SYNC.lastPullTry = Date.now(); syncNow('foreground'); } } else { clearTimeout(SYNC.timer); syncNow('hide'); } });
+  window.addEventListener('online', () => { if(SYNC.on) syncNow('online'); });
+  window.addEventListener('offline', () => { if(SYNC.on) syncSetStatus('offline'); });
+}
+async function syncJoin(token, gistId, create){
+  SYNC.token = token;
+  // Check the token first, so a typo fails with a clear message.
+  const t = await syncGh('/gists?per_page=100');
+  if(t.status === 401 || t.status === 403) throw new Error('GitHub rejected that token.');
+  if(!t.ok) throw new Error('Could not reach GitHub.');
+  const scopes = t.headers.get('x-oauth-scopes');
+  if(scopes !== null && scopes.indexOf('gist') < 0) throw new Error('That token needs the "gist" permission.');
+  const list = await t.json();
+  if(!gistId){
+    const hit = (list || []).filter(g => g.files && g.files[SYNC_FILE]).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''))[0];
+    if(hit) gistId = hit.id;
+  } else {
+    const g = await syncGh('/gists/' + gistId);
+    if(!g.ok) throw new Error(g.status === 404 ? 'That link points to sync storage this token cannot see.' : 'Could not reach GitHub.');
+  }
+  if(!gistId){
+    if(!create) throw new Error('No sync found for this token.');
+    const body = { app: 'cfp-blueprint', v: 1, savedAt: Date.now(), data: {}, keyEnc: null };
+    const c = await syncGh('/gists', { method: 'POST', body: { description: SYNC_DESC, public: false, files: { [SYNC_FILE]: { content: JSON.stringify(body) } } } });
+    if(!c.ok) throw new Error('Could not create the sync storage.');
+    gistId = (await c.json()).id;
+  }
+  SYNC.gistId = gistId; SYNC.etag = null; SYNC.on = true; SYNC.status = 'idle'; SYNC.keyPushedFor = null; SYNC.lastPushedCanon = null;
+  DATA._modAt = DATA._modAt || Date.now();
+  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+  await syncSaveConfig();
+  syncStartLoops();
+  renderSyncCard(true);
+  await syncNow('join');
+}
+async function syncEnableFromInput(){
+  const inp = document.getElementById('syncToken'), msg = document.getElementById('syncMsg'), btn = document.getElementById('syncOnBtn');
+  const tok = inp ? inp.value.trim() : '';
+  if(!/^(ghp_|github_pat_|gho_|ghu_)?[A-Za-z0-9_]{20,}$/.test(tok)){ if(msg){ msg.textContent = 'Paste the token GitHub gave you.'; msg.className = 'sync-status err'; } return; }
+  if(btn) btn.disabled = true; if(msg){ msg.textContent = 'Checking…'; msg.className = 'sync-status busy'; }
+  try{ await syncJoin(tok, null, true); }
+  catch(e){ SYNC.on = false; if(msg){ msg.textContent = e.message || 'Could not turn sync on.'; msg.className = 'sync-status err'; } if(btn) btn.disabled = false; }
+}
+async function syncConnectFromText(text, quiet){
+  const m = /#sync=([A-Za-z0-9_\-]+)/.exec(text || '') || /^([A-Za-z0-9_\-]{30,})$/.exec((text || '').trim());
+  const msg = document.getElementById('syncMsg');
+  const say = (t, cls) => { if(msg && !quiet){ msg.textContent = t; msg.className = 'sync-status ' + cls; } };
+  if(!m){ say('That does not look like a sync link.', 'err'); return false; }
+  let o; try{ o = JSON.parse(syncUnb64u(m[1])); }catch(e){ say('That does not look like a sync link.', 'err'); return false; }
+  if(!o || !o.t || !o.g){ say('That does not look like a sync link.', 'err'); return false; }
+  if(SYNC.on && SYNC.gistId === o.g) { say('Already synced.', 'ok'); return true; }
+  say('Connecting…', 'busy');
+  try{ await syncJoin(o.t, o.g, false); return true; }
+  catch(e){ SYNC.on = false; say(e.message || 'Could not connect.', 'err'); return false; }
+}
+async function syncConnectFromInput(){ const inp = document.getElementById('syncLinkIn'); if(inp) await syncConnectFromText(inp.value); }
+async function syncCopyLink(){
+  const link = syncLink(), msg = document.getElementById('syncMsg');
+  try{ await navigator.clipboard.writeText(link); if(msg){ msg.textContent = 'Link copied. Keep it private.'; msg.className = 'sync-status ok'; } }
+  catch(e){ const ta = document.getElementById('syncLinkOut'); if(ta){ ta.style.display = 'block'; ta.value = link; ta.select(); } if(msg){ msg.textContent = 'Select and copy the link below.'; msg.className = 'sync-status'; } }
+}
+async function syncShareLink(){
+  const link = syncLink();
+  if(navigator.share){ try{ await navigator.share({ title: 'The Blueprint: sync link', text: 'Open this on your other device to continue where you left off.', url: link }); return; }catch(e){ if(e && e.name === 'AbortError') return; } }
+  syncCopyLink();
+}
+async function syncDisable(){
+  if(!confirm('Turn off sync on this device? Your other devices keep syncing, and your progress here stays.')) return;
+  SYNC.on = false; SYNC.token = null; SYNC.gistId = null; SYNC.etag = null; clearTimeout(SYNC.timer);
+  try{ await storageSet(SYNC_KEY, ''); }catch(e){}
+  renderSyncCard(true);
+}
+function renderSyncCard(force){
+  const box = document.getElementById('syncBox'); if(!box) return;
+  const state = SYNC.on ? 'on' : 'off';
+  if(!force && box.dataset.state === state) { syncSetStatus(SYNC.status, SYNC.err); return; }
+  box.dataset.state = state;
+  if(!SYNC.on){
+    box.innerHTML =
+      '<p class="hint" style="margin-top:0;">Keep progress, tutor memory and your AI key the same on your phone and iPad. It lives in a private gist in your own GitHub account.</p>' +
+      '<ol class="sync-steps"><li><a href="https://github.com/settings/tokens/new?description=CFP%20Blueprint%20sync&scopes=gist" target="_blank" rel="noopener">Create a GitHub token</a> with only the <b>gist</b> permission.</li><li>Paste it here, once.</li></ol>' +
+      '<input type="password" id="syncToken" class="tutor-input" placeholder="ghp_… token" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="GitHub token">' +
+      '<div class="backup-actions"><button class="btn" id="syncOnBtn" onclick="syncEnableFromInput()">Turn on sync</button></div>' +
+      '<div class="backup-label">Already synced on another device? Paste its link:</div>' +
+      '<input type="text" id="syncLinkIn" class="tutor-input" placeholder="Sync link" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Sync link">' +
+      '<div class="backup-actions"><button class="btn ghost" onclick="syncConnectFromInput()">Connect</button></div>' +
+      '<div class="sync-status" id="syncMsg" role="status"></div>';
+  } else {
+    box.innerHTML =
+      '<div class="sync-status ok" id="syncStatus" role="status"></div>' +
+      '<p class="hint" style="margin-top:6px;">Changes sync on their own. To add your iPad, open this link there. On an installed app, paste it into Settings › Sync instead. Keep it private: it unlocks your sync and your AI key.</p>' +
+      '<div class="backup-actions"><button class="btn" onclick="syncShareLink()">Share link</button><button class="btn ghost" onclick="syncCopyLink()">Copy link</button><button class="btn ghost" onclick="syncNow(\'manual\')">Sync now</button></div>' +
+      '<textarea id="syncLinkOut" class="backup-textarea" readonly onclick="this.select()" style="display:none;" aria-label="Sync link"></textarea>' +
+      '<div class="sync-status" id="syncMsg" role="status"></div>' +
+      '<div class="backup-actions"><button class="btn ghost" onclick="syncDisable()">Turn off on this device</button></div>';
+    syncSetStatus(SYNC.status, SYNC.err);
+  }
+}
+async function syncInit(){
+  try{
+    if(await syncLoadConfig()){
+      DATA._modAt = DATA._modAt || Date.now();
+      SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+      syncStartLoops();
+      setTimeout(() => syncNow('launch'), 1200);
+    }
+    renderSyncCard(true);
+    // Opened from a sync link: connect, then drop the link from the address bar.
+    await syncHandleHash();
+    window.addEventListener('hashchange', () => { syncHandleHash(); });
+  }catch(e){}
+}
+async function syncHandleHash(){
+  const h = location.hash || '';
+  if(!/^#sync=/.test(h)) return;
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  if(SYNC.on) return;
+  const ok = await syncConnectFromText(h, true);
+  if(ok){ try{ setCoach('Sync is on. Your progress, tutor memory and AI key follow you here.', false); }catch(e){} }
+}
+
+loadData().then(() => syncInit());
 requestDurableStorage();
 (function(){
   const th = document.getElementById('tutorThread'), c = document.getElementById('tutorCard');
