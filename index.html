@@ -1776,6 +1776,10 @@
     background:linear-gradient(to bottom, var(--ink) 80%, transparent);
     z-index:150;pointer-events:none;
   }
+  /* Full-screen sessions start their content right at the bottom of the status bar, so the soft fade below the strip dimmed the first line (the question counter). There the strip is exactly the status bar's height and frosted, so it blends with the page behind it. */
+  html:has(body.quiz-active)::before, html:has(body.flashcard-fullscreen)::before, html:has(body.tvm-active)::before{
+    height:env(safe-area-inset-top, 0px);background:color-mix(in srgb, var(--ink) 22%, transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
   html:has(body.light-mode)::before{display:none;}
   .calc-steps-row .btn.ghost{display:inline-flex;align-items:center;justify-content:center;}
   @media (max-height:520px) and (orientation:landscape){
@@ -19946,7 +19950,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.156';
+const BUILD_ID = '2026-10-17.157';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
