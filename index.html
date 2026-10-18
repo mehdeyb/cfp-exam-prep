@@ -632,6 +632,17 @@
   .tvm-timeline-wrap{margin-bottom:16px;}
   .tvm-timeline-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
   .tvm-timeline-svg text{font-family:'IBM Plex Mono',monospace;}
+  .tvm-modeseg{margin:0 0 10px;}
+  .tvm-registers.cf{grid-template-columns:repeat(auto-fill,minmax(62px,1fr));}
+  .tvm-reg-stale{opacity:.45;border-style:dashed;}
+  .tvm-key small{font-size:8px;opacity:.75;margin-left:2px;vertical-align:super;}
+  .tvm-tl-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+  .tvm-tl-chip{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:3px 8px;border-radius:999px;border:1px solid var(--hair);color:var(--muted);background:var(--card,transparent);white-space:nowrap;}
+  .tvm-tl-chip.unk{border-style:dashed;border-color:var(--gold);color:var(--gold);}
+  .tvm-tl-chip.done{border-color:var(--teal);color:var(--teal);font-weight:600;}
+  .tvm-tl-chip.warn{border-color:var(--gold);color:var(--gold);}
+  .tvm-tl-cap{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.35;}
+  .tvm-tl-cap b{font-weight:600;}
   .tvm-timeline-in{color:var(--teal);}
   .tvm-timeline-out{color:var(--gold);}
   .tvm-registers{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px;}
@@ -2688,18 +2699,21 @@
     <div id="tvmHost" role="dialog" aria-modal="true" aria-label="TVM walkthrough calculator">
       <div class="dp-inner">
         <div class="dp-header">
-          <h2>TVM walkthrough</h2>
+          <h2 id="tvmTitle">TVM walkthrough</h2>
           <button class="dp-close" onclick="closeTvmTool()" aria-label="Close TVM walkthrough" title="Close">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
-        <details class="tvm-howto" id="tvmHowto"><summary onclick="this.parentNode.dataset.user=1">How this works</summary><p class="hint" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p></details>
+        <div class="tvm-modeseg"><div class="dt-seg" id="tvmModeSeg" role="group" aria-label="Calculator practice mode"><button type="button" data-mode="tvm" class="on" aria-pressed="true" onclick="tvmSetMode('tvm')">Time value</button><button type="button" data-mode="cf" aria-pressed="false" onclick="tvmSetMode('cf')">Cash flows</button></div></div>
+        <details class="tvm-howto" id="tvmHowto"><summary onclick="this.parentNode.dataset.user=1">How this works</summary><p class="hint" id="tvmHowtoText" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p></details>
         <div class="tvm-status" id="tvmStatus" role="status"></div>
         <div class="tvm-scenario" id="tvmScenario"></div>
         <div class="tvm-level-badge" id="tvmLevelBadge"></div>
         <div class="tvm-timeline-wrap" id="tvmTimelineWrap" style="display:none;">
           <div class="tvm-timeline-label">Cash-flow timeline</div>
+          <div class="tvm-tl-meta" id="tvmTimelineMeta"></div>
           <div id="tvmTimeline"></div>
+          <div class="tvm-tl-cap" id="tvmTimelineCap"></div>
         </div>
 
         <div class="tvm-device" id="tvmDevice">
@@ -2723,7 +2737,7 @@
           <button class="tvm-key" onclick="tvmPressDigit('8')">8</button>
           <button class="tvm-key" onclick="tvmPressDigit('9')">9</button>
           <button class="tvm-key tvm-key-fn" onclick="tvmPressClear()">C</button>
-          <button class="tvm-key tvm-key-fn tvm-key-begend" onclick="tvmToggleBeginEnd()" id="tvmBeginEndBtn" title="Toggle BEGIN (annuity due) / END (ordinary annuity) mode">BEG/END</button>
+          <button class="tvm-key tvm-key-fn tvm-key-begend" onclick="tvmBeginEndOrClear()" id="tvmBeginEndBtn" title="Toggle BEGIN (annuity due) / END (ordinary annuity) mode">BEG/END</button>
 
           <button class="tvm-key" onclick="tvmPressDigit('4')">4</button>
           <button class="tvm-key" onclick="tvmPressDigit('5')">5</button>
@@ -14386,7 +14400,7 @@ function openCalcPicker(){
   const lvl = DATA.tvmProgress ? TVM_LEVEL_NAMES[DATA.tvmProgress.currentTier] : null;
   openChoicePicker('Calculator practice', 'Make the math automatic.', [
     { name: 'Formula drills', meta: FD_NAMES.length + ' formulas, fresh numbers each time', note: tried ? tried + ' of ' + FD_NAMES.length + ' practised' + (fdWeakest() ? ' · shakiest: ' + fdWeakest() : '') : 'Work it, type it, see the working.', run: () => openFormulaDrill() },
-    { name: 'TVM walkthrough', meta: 'Step by step on the HP 10bII+', note: lvl ? 'You are at ' + lvl : 'Set up, solve, see the keystrokes.', run: () => openTvmTool() }
+    { name: 'Calculator walkthrough', meta: 'Time value and cash flows (NPV, IRR) on the HP 10bII+', note: lvl ? 'You are at ' + lvl : 'Set up, solve, see the keystrokes.', run: () => openTvmTool() }
   ]);
 }
 function closeDomainPicker(){
@@ -14596,13 +14610,20 @@ const TVM_MULTISTAGE_PROBLEMS = [
     stage2:{ scenarioTemplate:"The investment has grown to {carriedValue}, carried over from Part 1. She now plans to withdraw a fixed amount at the end of each year for 15 years, fully depleting the account. If it continues to earn 6% annually, how much can she withdraw each year?",
              solveFor:'PMT', known:{ n:15, iy:6, fv:0 }, carryInto:'pv', carrySignFlip:true } },
 ];
-const TVM_LEVEL_NAMES = { 1:'Level 1 · lump sum basics', 2:'Level 2 · annuities', 3:'Level 3 · advanced (monthly compounding & annuity due)' };
+const TVM_LEVEL_NAMES = { 1:'Level 1 · lump sum basics', 2:'Level 2 · annuities', 3:'Level 3 · advanced (monthly compounding & annuity due)', 4:'Level 4 · exam-style (bonds, loan balances, solving for rate or time)' };
+const TVM_TEMPLATE_LABELS = { 'fv-lump':'lump-sum growth','pv-lump':'lump-sum present value','n-lump':'time to a goal (lump sum)','iy-lump':'rate of return (lump sum)','fv-annuity':'annuity future value','pmt-goal':'savings needed for a goal','pv-annuity':'annuity present value','n-annuity':'time to a goal (annuity)','fv-monthly-lump':'monthly compounding','pv-monthly-annuity':'monthly withdrawals','pmt-loan':'loan payments','pv-annuity-due':'annuity due (BEGIN)','pmt-lease-begin':'lease payments (BEGIN)','bond-price':'bond prices','bond-ytm':'bond yield to maturity','balance-after-k':'loan balance after k years','fv-annuity-due':'saving at the start of each year','iy-annuity':'rate of return (annuity)','quarterly-lump':'quarterly compounding','pmt-savings-monthly':'monthly savings for a goal','n-loan':'months to pay off a loan','cf-npv':'NPV of uneven flows','cf-npv-repeat':'NPV with repeated flows','cf-irr':'IRR','cf-irr-repeat':'IRR with repeated flows','cf-npv-gap':'NPV with a gap year','cf-npv-mixed':'NPV with a later outlay' };
+function tvmNoteTemplate(key, ok){ try{ if(!key) return; if(!DATA.tvmTemplateStats) DATA.tvmTemplateStats = {}; const t = DATA.tvmTemplateStats[key] || { a:0, c:0, lastAt:0 }; t.a++; if(ok) t.c++; t.lastAt = Date.now(); DATA.tvmTemplateStats[key] = t; }catch(e){} }
+function tvmTemplateAcc(key){ const t = DATA.tvmTemplateStats && DATA.tvmTemplateStats[key]; return t && t.a ? t.c / t.a : null; }
 const TVM_MISTAKE_LABELS = {
   signConvention: 'mixing up sign convention (positive vs. negative cash flows)',
   decimalForm: 'entering interest rates as decimals instead of whole-number percents',
   negativeN: 'entering N (number of periods) as a negative number',
   monthlyConversion: 'forgetting to convert N and I/YR to a monthly basis on compounding problems',
   beginEndMismatch: 'forgetting to switch between BEGIN and END mode to match the problem',
+  cashFlowOutlay: 'getting the sign of a cash flow wrong, or leaving out the cost at time 0 (cash-flow worksheet)',
+  cashFlowTiming: 'putting cash flows in the wrong year, including skipping a year with no flow (cash-flow worksheet)',
+  cashFlowRepeat: 'miscounting a repeated cash flow with Nj (cash-flow worksheet)',
+  cashFlowClear: 'forgetting to clear the cash-flow worksheet with C ALL before a new problem',
 };
 
 /* ===========================================================
@@ -14747,7 +14768,89 @@ const TVM_GEN_TEMPLATES = {
       mist:[
         { cat:'beginEndMismatch', why:`is what you get in END mode (payments at the end of each month). Lease payments are due at the start of each month, so BEGIN mode applies.`, v:()=>tvmGS(m,r/12,-V,0,0,'PMT',false) },
         { cat:'generic', why:`just divides the equipment value by ${m} payments, with no interest at all.`, v:()=>V/m },
-        { cat:'monthlyConversion', why:`leaves I/YR at the annual ${r}% instead of ${tvmGNum(r/12)}% a month, so every month is charged a full year's rate.`, v:()=>tvmGS(m,r,-V,0,0,'PMT',true) } ] }; } }
+        { cat:'monthlyConversion', why:`leaves I/YR at the annual ${r}% instead of ${tvmGNum(r/12)}% a month, so every month is charged a full year's rate.`, v:()=>tvmGS(m,r,-V,0,0,'PMT',true) } ] }; } },
+  'bond-price': { level:4, quiz:true, make(){
+    const par = 1000, cr = tvmGPick([4,5,6,7,8]), y = tvmGPick([5,8,10,12,15,20]), ytm = tvmGPick([3,4,5,6,7,9,10].filter(v => v !== cr)), c = par*cr/100;
+    return { solveFor:'PV', domain:'invest', per:{name:'half-year', m:2}, known:{n:y*2, iy:ytm/2, pmt:c/2, fv:par}, absAnswer:true,
+      scenario:`A $1,000 par bond pays a ${cr}% coupon semiannually and matures in ${y} years. If the market yield is ${ytm}% (compounded semiannually), what is the bond's price?`,
+      hint:'Remember: coupons are paid twice a year, so N is half-years and I/YR is the half-year rate.',
+      concept:'This is a bond price: the present value of the coupons plus the present value of par at maturity, discounted at the market yield. Coupon is PMT, par is FV, and the price comes out as PV.',
+      mist:[
+        { cat:'monthlyConversion', why:`treats the bond as paying once a year (N = ${y}, I/YR = ${ytm}, PMT = ${tvmGMoney(c)}) instead of twice a year (N = ${y*2}, I/YR = ${tvmGNum(ytm/2)}, PMT = ${tvmGMoney(c/2)}).`, v:()=>tvmGS(y,ytm,0,c,par,'PV') },
+        { cat:'monthlyConversion', why:`uses ${y*2} half-year periods but leaves I/YR at the annual ${ytm}% instead of ${tvmGNum(ytm/2)}%.`, v:()=>tvmGS(y*2,ytm,0,c/2,par,'PV') },
+        { cat:'generic', why:`leaves out the $1,000 par value paid at maturity (FV = 0), so only the coupons are valued.`, v:()=>tvmGS(y*2,ytm/2,0,c/2,0,'PV') },
+        { cat:'generic', why:`is par. A bond only sells at par when the market yield equals the coupon rate, and here they differ.`, v:()=>par } ] }; } },
+  'bond-ytm': { level:4, quiz:true, make(){
+    const par = 1000, cr = tvmGPick([4,5,6,7,8]), y = tvmGPick([5,8,10,12,15]), ytm = tvmGPick([3,4,5,6,7,9,10].filter(v => v !== cr)), c = par*cr/100;
+    const price = Math.round(Math.abs(tvmGS(y*2, ytm/2, 0, c/2, par, 'PV')));
+    const nominal = tvmGS(y*2, 0, -price, c/2, par, 'IY') * 2;
+    return { solveFor:'IY', domain:'invest', per:{name:'half-year', m:2}, annualize:2, known:{n:y*2, pv:-price, pmt:c/2, fv:par}, nominal,
+      scenario:`A $1,000 par bond with a ${cr}% coupon paid semiannually matures in ${y} years and sells for ${tvmGMoney(price)}. What is its yield to maturity (annual rate, semiannual compounding)?`,
+      hint:'Remember: the calculator returns the half-year rate. Double it for the annual yield.',
+      concept:'This is yield to maturity: enter the price as a negative PV, the half-year coupon as PMT and par as FV, then solve I/YR. The result is a half-year rate, so double it for the annual yield.',
+      mist:[
+        { cat:'monthlyConversion', why:`is the half-year rate straight from the I/YR key. It must be doubled to give the annual yield.`, v:()=>nominal/2 },
+        { cat:'generic', why:`is the ${cr}% coupon rate. Yield differs from the coupon rate whenever the price is not par.`, v:()=>cr },
+        { cat:'generic', why:`is the current yield (annual coupon ÷ price). It ignores the gain or loss when the bond is redeemed at par.`, v:()=>c/price*100 },
+        { cat:'monthlyConversion', why:`treats the coupons as annual (N = ${y}, PMT = ${tvmGMoney(c)}) instead of semiannual.`, v:()=>tvmGS(y, 0, -price, c, par, 'IY') } ] }; } },
+  'balance-after-k': { level:4, quiz:true, make(){
+    const y = tvmGPick([15,30]), k = tvmGPick([5,8,10]), L = tvmGPick([200000,250000,300000,350000,400000]), r = tvmGPick([4,4.5,5,6,7]);
+    const P = Math.round(Math.abs(tvmGS(y*12, r/12, L, 0, 0, 'PMT'))*100)/100, pTxt = '$' + P.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return { solveFor:'FV', domain:'general', monthly:true, absAnswer:true, known:{n:k*12, iy:r/12, pv:L, pmt:-P},
+      scenario:`A client has a ${tvmGMoney(L)} mortgage at ${r}% (compounded monthly) over ${y} years, with monthly payments of ${pTxt}. After ${k} years of payments, what is the remaining balance?`,
+      hint:'Remember: N is the number of payments made so far, in months. The balance is the FV left over.',
+      concept:'This is a loan balance: enter the original loan as PV, the payment as a negative PMT and the number of payments made as N, then solve FV. What is left is the balance still owed.',
+      mist:[
+        { cat:'generic', why:`subtracts the payments from the loan (${tvmGMoney(L)} − ${k*12} × ${pTxt}). Most of each early payment is interest, so the balance falls much more slowly than that.`, v:()=>L - P*k*12 },
+        { cat:'monthlyConversion', why:`uses N = ${k} instead of ${k*12} payments, so only ${k} months of payments are credited.`, v:()=>tvmGS(k, r/12, L, -P, 0, 'FV') },
+        { cat:'monthlyConversion', why:`treats the loan as annual (N = ${k}, I/YR = ${r}, PMT = ${tvmGMoney(P*12)}), which ignores monthly compounding.`, v:()=>tvmGS(k, r, L, -P*12, 0, 'FV') },
+        { cat:'beginEndMismatch', why:`is what you get in BEGIN mode. Mortgage payments are made at the end of each month, so END mode applies.`, v:()=>tvmGS(k*12, r/12, L, -P, 0, 'FV', true) } ] }; } },
+  'fv-annuity-due': { level:4, quiz:true, make(){
+    const A = tvmGPick([3000,5000,6000,8000,10000,12000]), r = tvmGPick([4,5,6,7,8]), n = tvmGPick([10,15,20,25,30]);
+    return { solveFor:'FV', domain:'retirement', begin:true, known:{n, iy:r, pv:0, pmt:-A},
+      scenario:`A client contributes ${tvmGMoney(A)} at the START of each year for ${n} years to an account earning ${r}% annually. What will the account be worth at the end of year ${n}?`,
+      hint:'Remember: deposits at the start of each period mean BEGIN mode.', concept:'This is the future value of an annuity due: deposits at the start of each year earn one extra year of interest, so the calculator must be in BEGIN mode.',
+      mist:[
+        { cat:'beginEndMismatch', why:`is what you get in END mode (deposits at the end of each year). These deposits are at the start of each year, so BEGIN mode applies and each earns an extra year of interest.`, v:()=>tvmGS(n,r,0,-A,0,'FV',false) },
+        { cat:'generic', why:`just adds up the deposits (${tvmGMoney(A)} × ${n}), with no growth.`, v:()=>A*n },
+        { cat:'generic', why:`treats ${tvmGMoney(A)} as a single deposit made today (a lump sum), ignoring the later annual deposits.`, v:()=>tvmGS(n,r,-A,0,0,'FV') } ] }; } },
+  'iy-annuity': { level:4, quiz:true, make(){
+    const A = tvmGPick([3000,4000,5000,6000,8000,10000]), r = tvmGPick([5,6,7,8,9]), n = tvmGPick([10,12,15,20,25]);
+    const F = Math.round(Math.abs(tvmGS(n, r, 0, -A, 0, 'FV'))/500)*500;
+    const nominal = tvmGS(n, 0, 0, -A, F, 'IY');
+    return { solveFor:'IY', domain:'retirement', known:{n, pv:0, pmt:-A, fv:F}, nominal,
+      scenario:`A client has contributed ${tvmGMoney(A)} at the end of each year for ${n} years, and the account is now worth ${tvmGMoney(F)}. What annual return did the account earn?`,
+      concept:'This solves for the rate on an annuity: enter N, the payment (negative) and the ending value (positive), with PV at zero, then press I/YR.',
+      mist:[
+        { cat:'generic', why:`treats ${tvmGMoney(A)} as a single deposit made at the start (PMT = 0) instead of a payment every year.`, v:()=>tvmGS(n,0,-A,0,F,'IY') },
+        { cat:'beginEndMismatch', why:`is what you get in BEGIN mode. These contributions are made at the end of each year, so END mode applies.`, v:()=>tvmGS(n,0,0,-A,F,'IY',true) },
+        { cat:'generic', why:`is the total gain spread evenly over the years, (${tvmGMoney(F)} − ${tvmGMoney(A*n)}) ÷ ${tvmGMoney(A*n)} ÷ ${n}. It ignores compounding and the timing of each deposit.`, v:()=>(F-A*n)/(A*n)/n*100 },
+        { cat:'generic', why:`counts ${n-1} payments instead of ${n}.`, v:()=>tvmGS(n-1,0,0,-A,F,'IY') } ] }; } },
+  'quarterly-lump': { level:4, quiz:true, make(){
+    const P = tvmGPick([8000,10000,15000,20000,30000]), r = tvmGPick([4,6,8,10,12]), y = tvmGPick([3,4,5,6,8]);
+    return { solveFor:'FV', domain:'general', per:{name:'quarter', m:4}, known:{n:y*4, iy:r/4, pv:-P, pmt:0},
+      scenario:`A client deposits ${tvmGMoney(P)} today into an account paying ${r}% annual interest, compounded quarterly. What is it worth after ${y} years?`,
+      hint:'Remember: convert N and I/YR to a quarterly basis.', concept:'This is a lump-sum future value with quarterly compounding, so N is quarters and I/YR is the quarterly rate.',
+      mist:[
+        { cat:'monthlyConversion', why:`compounds once a year (N = ${y}, I/YR = ${r}). The question says compounded quarterly.`, v:()=>tvmGS(y,r,-P,0,0,'FV') },
+        { cat:'monthlyConversion', why:`uses ${y*4} quarters but leaves I/YR at the annual ${r}%, applying a full year's rate each quarter.`, v:()=>tvmGS(y*4,r,-P,0,0,'FV') },
+        { cat:'monthlyConversion', why:`compounds monthly (N = ${y*12}, I/YR = ${tvmGNum(r/12)}) instead of quarterly.`, v:()=>tvmGS(y*12,r/12,-P,0,0,'FV') },
+        { cat:'generic', why:`uses simple interest, so interest never earns interest.`, v:()=>P*(1+r/100*y) } ] }; } },
+  'pmt-savings-monthly': { level:4, quiz:true, make(){
+    const G = tvmGPick([30000,50000,75000,100000,150000,250000]), y = tvmGPick([5,8,10,15,20]), r = tvmGPick([3,4.5,6,7.5,9]);
+    return { solveFor:'PMT', domain:'general', monthly:true, absAnswer:true, known:{n:y*12, iy:r/12, pv:0, fv:G},
+      scenario:`A client wants ${tvmGMoney(G)} in ${y} years and will save a level amount at the end of each month in an account earning ${r}% annually, compounded monthly. How much must be saved each month?`,
+      hint:TVM_GEN_LEVEL_HINT, concept:'This solves for the monthly savings needed to reach a goal: N is months, I/YR is the monthly rate, the goal is FV and PV is zero.',
+      mist:[
+        { cat:'monthlyConversion', why:`finds the annual amount (N = ${y}, I/YR = ${r}) and divides by 12, which ignores monthly compounding.`, v:()=>tvmGS(y,r,0,0,G,'PMT')/12 },
+        { cat:'generic', why:`divides the goal by ${y*12} months with no interest earned.`, v:()=>G/(y*12) },
+        { cat:'beginEndMismatch', why:`is what you get in BEGIN mode (deposits at the start of each month). These are made at the end of each month, so END mode applies.`, v:()=>tvmGS(y*12,r/12,0,0,G,'PMT',true) },
+        { cat:'monthlyConversion', why:`uses ${y*12} months but leaves I/YR at the annual ${r}%.`, v:()=>tvmGS(y*12,r,0,0,G,'PMT') } ] }; } },
+  'n-loan': { level:4, quiz:false, make(){
+    const L = tvmGPick([15000,20000,25000,30000,40000]), r = tvmGPick([4.5,6,7.5,9]), base = Math.abs(tvmGS(60, r/12, L, 0, 0, 'PMT')), P = Math.ceil(base/10)*10;
+    return { solveFor:'N', domain:'general', monthly:true, known:{iy:r/12, pv:L, pmt:-P, fv:0},
+      scenario:`A client owes ${tvmGMoney(L)} at ${r}% annual interest, compounded monthly, and pays ${tvmGMoney(P)} at the end of each month. About how many months until the loan is paid off?`,
+      hint:TVM_GEN_LEVEL_HINT.replace('N and ', ''), concept:'This solves for the number of payments: enter the monthly rate, the loan as PV, the payment as a negative PMT and FV of zero, then press N.', mist:[] }; } }
 };
 
 function tvmGenCalcSteps(spec, answerText){
@@ -14761,11 +14864,12 @@ function tvmGenCalcSteps(spec, answerText){
       ? 'Turn on BEGIN mode: press Shift then [BEG/END] -- the display shows "BEGIN". Payments at the start of each period need this.'
       : 'Confirm END mode: the display should not show "BEGIN". If it does, press Shift then [BEG/END] to turn it off.');
   }
-  if(spec.monthly){
-    steps.push(`Convert to a monthly basis first: N = years × 12 and I/YR = the annual rate ÷ 12.`);
+  const per = spec.per || (spec.monthly ? { name:'month', m:12 } : null);
+  if(per){
+    steps.push(per.m === 12 ? `Convert to a monthly basis first: N = years × 12 and I/YR = the annual rate ÷ 12.` : `Convert to a ${per.name} basis first: N = years × ${per.m} and I/YR = the annual rate ÷ ${per.m}.`);
   }
   const keyNames = {n:'N', iy:'I/YR', pv:'PV', pmt:'PMT', fv:'FV'};
-  const why = {n: spec.monthly ? 'number of months' : 'number of years', iy: spec.monthly ? 'the monthly rate' : 'the annual rate', pv:'the amount today', pmt:'the recurring payment', fv:'the amount at the end'};
+  const why = {n: per ? 'number of ' + per.name + 's' : 'number of years', iy: per ? 'the ' + per.name + ' rate' : 'the annual rate', pv:'the amount today', pmt:'the recurring payment', fv:'the amount at the end'};
   ['n','iy','pv','pmt','fv'].forEach(key => {
     if(key === spec.solveFor.toLowerCase()) return;
     const v = k[key];
@@ -14776,15 +14880,23 @@ function tvmGenCalcSteps(spec, answerText){
     else steps.push(`Enter ${mag}, press [${keyNames[key]}] -- ${why[key]}${key==='n'||key==='iy' ? '' : ', money coming in as a positive number'}.`);
   });
   steps.push(`Press [${keyNames[spec.solveFor.toLowerCase()]}] to solve -- the HP 10bII+ has no separate compute step, so this displays the answer directly: ${answerText}.`);
-  if(spec.absAnswer) steps.push('The calculator shows the payment as a negative number because it is money going out. The amount is the same without the sign.');
+  if(spec.annualize) steps.push(`That is the ${spec.per ? spec.per.name : 'periodic'} rate. Multiply by ${spec.annualize} for the annual yield.`);
+  if(spec.absAnswer) steps.push('The calculator shows this as a negative number because it is money going out. The amount is the same without the sign.');
   return steps;
 }
 
+// Problem types you have missed, or not seen yet, come up more often.
+function tvmGWeighted(keys){
+  const w = keys.map(k => { const a = tvmTemplateAcc(k); return a === null ? 3 : 1 + 3*(1 - a); });
+  let r = Math.random() * w.reduce((x,y) => x + y, 0);
+  for(let i = 0; i < keys.length; i++){ r -= w[i]; if(r <= 0) return keys[i]; }
+  return keys[keys.length - 1];
+}
 function tvmGenSpec(level, templateKey){
   let keys = Object.keys(TVM_GEN_TEMPLATES).filter(t => TVM_GEN_TEMPLATES[t].level === level);
   if(templateKey) keys = [templateKey];
   else if(keys.length > 1 && tvmLastGenTemplate) keys = keys.filter(t => t !== tvmLastGenTemplate);
-  const key = tvmGPick(keys);
+  const key = templateKey ? templateKey : tvmGWeighted(keys);
   tvmLastGenTemplate = key;
   const spec = TVM_GEN_TEMPLATES[key].make();
   spec.template = key; spec.level = TVM_GEN_TEMPLATES[key].level;
@@ -14797,15 +14909,15 @@ function tvmGenerateProblem(level, templateKey){
   tvmGenCounter++;
   return { id:'gen-'+spec.template+'-'+tvmGenCounter, generated:true, template:spec.template,
     solveFor:spec.solveFor, difficulty:spec.level, isBeginMode:!!spec.begin,
-    scenario: spec.scenario + (spec.hint ? ' (' + spec.hint + ')' : ''), known: spec.known };
+    scenario: spec.scenario + (spec.hint ? ' (' + spec.hint + ')' : ''), known: spec.known, annualize: spec.annualize || 0, per: spec.per || (spec.monthly ? { name:'month', m:12 } : null) };
 }
 
 // A multiple-choice calculation question for adaptive sessions. Returns null
 // if three clearly different wrong answers cannot be built.
 function tvmGenerateQuizQuestion(level){
   const quizKeys = Object.keys(TVM_GEN_TEMPLATES).filter(t => TVM_GEN_TEMPLATES[t].quiz && TVM_GEN_TEMPLATES[t].level === level);
-  for(let attempt = 0; attempt < 6; attempt++){
-    const key = tvmGPick(quizKeys.length > 1 && tvmLastGenTemplate ? quizKeys.filter(t=>t!==tvmLastGenTemplate) : quizKeys);
+  for(let attempt = 0; attempt < 14; attempt++){
+    const key = tvmGWeighted(quizKeys.length > 1 && tvmLastGenTemplate ? quizKeys.filter(t=>t!==tvmLastGenTemplate) : quizKeys);
     const spec = TVM_GEN_TEMPLATES[key].make();
     spec.template = key; spec.level = TVM_GEN_TEMPLATES[key].level;
     const k = spec.known;
@@ -14822,7 +14934,8 @@ function tvmGenerateQuizQuestion(level){
       if(!isFinite(v) || v <= 0) return;
       const txt = fmt(v);
       if(used.has(txt)) return;
-      if(Math.abs(v - correctVal) / correctVal < 0.0015) return;
+      if(Math.abs(v - correctVal) / correctVal < 0.004) return;
+      if(wrong.some(w => Math.abs(parseFloat(w.text.replace(/[$,%]/g,'')) - v) / Math.max(1, v) < 0.004)) return;
       if(v > correctVal * 15) return;
       used.add(txt); wrong.push({ text:txt, cat:m.cat, why:m.why });
     });
@@ -14830,7 +14943,7 @@ function tvmGenerateQuizQuestion(level){
     wrong.length = 3;
     const answerWords = `approximately ${correctText}`;
     const choices = [correctText].concat(wrong.map(w => w.text));
-    const rationale = [`Correct — ${spec.concept} Entering it into the calculator gives ${answerWords}.${spec.absAnswer ? ' (The calculator shows the payment as a negative number because it is money going out.)' : ''}`]
+    const rationale = [`Correct — ${spec.concept} Entering it into the calculator gives ${answerWords}.${spec.absAnswer ? ' (The calculator shows this as a negative number because it is money going out.)' : ''}`]
       .concat(wrong.map(w => `Wrong — this ${w.why}`));
     const catByChoice = {}; wrong.forEach(w => { catByChoice[w.text] = w.cat; });
     tvmLastGenTemplate = key;
@@ -14852,8 +14965,8 @@ function tvmGenerateQuizQuestion(level){
 function tvmInjectIntoAdaptive(queue, reasons){
   try{
     if(!queue || queue.length < 8 || (DATA.answerCounter || 0) < 15) return queue;
-    const tier = Math.min(3, Math.max(1, (DATA.tvmProgress && DATA.tvmProgress.currentTier) || 1));
-    const wantTwo = queue.length >= 12 && tier >= 2 && Math.random() < 0.4;
+    const tier0 = Math.min(4, Math.max(1, (DATA.tvmProgress && DATA.tvmProgress.currentTier) || 1));
+    const wantTwo = queue.length >= 12 && tier0 >= 2 && Math.random() < 0.4;
     const out = queue.slice();
     for(let c = 0; c < (wantTwo ? 2 : 1); c++){
       const candidates = [];
@@ -14863,7 +14976,8 @@ function tvmInjectIntoAdaptive(queue, reasons){
         if(!why || why === 'fresh' || why === 'due') candidates.push(i);
       });
       if(!candidates.length) break;
-      const tq = tvmGenerateQuizQuestion(tier);
+      const cfT = Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1);
+      const tq = (tier0 >= 2 && Math.random() < 0.3 ? cfGenerateQuizQuestion(cfT) : null) || tvmGenerateQuizQuestion(tier0 >= 4 && Math.random() < 0.4 ? 3 : tier0);
       if(!tq) break;
       const at = candidates[Math.floor(Math.random()*candidates.length)];
       if(reasons) reasons[tq.id] = 'tvmCalc';
@@ -14878,15 +14992,17 @@ function tvmRecordQuizOutcome(q, chosenIndex, isCorrect){
   try{
     if(!DATA.tvmQuizStats) DATA.tvmQuizStats = { asked:0, correct:0, recent:[], lastAt:0 };
     const s = DATA.tvmQuizStats;
+    tvmNoteTemplate(q.tvmTemplate, isCorrect);
     s.asked++; if(isCorrect) s.correct++;
     s.recent.push(isCorrect ? 1 : 0); if(s.recent.length > 8) s.recent.shift();
     s.lastAt = Date.now();
     if(!DATA.tvmProgress) DATA.tvmProgress = { currentTier:1, correctStreak:0 };
-    const prog = DATA.tvmProgress;
+    if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
+    const prog = q.tvmCf ? DATA.cfProgress : DATA.tvmProgress, topTier = q.tvmCf ? 3 : 4;
     if(isCorrect){
       prog.quizMissRun = 0;
       prog.correctStreak = (prog.correctStreak || 0) + 1;
-      if(prog.correctStreak >= 2 && prog.currentTier < 3){ prog.currentTier++; prog.correctStreak = 0; }
+      if(prog.correctStreak >= 2 && prog.currentTier < topTier){ prog.currentTier++; prog.correctStreak = 0; }
     } else {
       prog.correctStreak = 0;
       prog.quizMissRun = (prog.quizMissRun || 0) + 1;
@@ -14907,7 +15023,7 @@ function tvmRecordQuizOutcome(q, chosenIndex, isCorrect){
 // fresh problem built from the same template, on top of the quiz.
 function tvmPracticeFromQuiz(){
   const q = session && session.queue ? session.queue[session.index] : null;
-  const p = q && q.tvmPractice ? tvmGenerateProblem(q.tvmPractice.level, q.tvmPractice.template) : null;
+  const p = q && q.tvmPractice ? (q.tvmPractice.cf ? cfGenerateProblem(q.tvmPractice.level, q.tvmPractice.template) : tvmGenerateProblem(q.tvmPractice.level, q.tvmPractice.template)) : null;
   openTvmTool(p || null);
 }
 
@@ -14927,6 +15043,7 @@ function tvmToggleBeginEnd(){
   if(tvmSolved || !tvmCurrent) return;
   tvmBeginMode = !tvmBeginMode;
   tvmUpdateBeginAnnunciator();
+  try{ renderTvmTimeline(); }catch(e){}
   const feedback = document.getElementById('tvmFeedback');
   if(feedback && typeof tvmCurrent.isBeginMode === 'boolean'){
     if(tvmCurrent.isBeginMode === tvmBeginMode){
@@ -14944,7 +15061,7 @@ function tvmToggleBeginEnd(){
 }
 function tvmUpdateBeginAnnunciator(){
   const el = document.getElementById('tvmBeginAnnunciator');
-  if(el) el.style.display = tvmBeginMode ? 'inline-block' : 'none';
+  if(el) el.style.display = tvmBeginMode && tvmMode !== 'cf' ? 'inline-block' : 'none';
   const btn = document.getElementById('tvmBeginEndBtn');
   if(btn) btn.classList.toggle('tvm-begin-active', tvmBeginMode);
 }
@@ -15231,6 +15348,124 @@ const FD_GENS = {
       keys:[`Enter ${fdNum(liab,0).replace(/,/g,'')}, press [÷], enter ${assets}, press [×], enter 100, press [=] — the display shows ${pct}.`], steps:[`Debt ratio = total liabilities ÷ total assets`, `${fdMoney(liab)} ÷ ${fdMoney(assets)} = ${pct}%`] };
   },
 };
+// ===== Additional exam-calculation drills (CAPM, Jensen, 1031, beta, probability returns, ratios, WACC, etc.) =====
+FORMULAS.push(
+  {name:"Beta (from correlation)", domain:"invest", formula:"β = ρ(i,m) × σi ÷ σm", note:"Beta scales the asset's correlation with the market by the ratio of their standard deviations. Memory trick: the asset's σ goes on top, the market's σ underneath."},
+  {name:"Expected Return (probabilities)", domain:"invest", formula:"E(R) = Σ p × R", note:"Multiply each scenario's return by its probability and add them up. The probabilities must total 100%."},
+  {name:"Standard Deviation (probabilities)", domain:"invest", formula:"σ = √[ Σ p × (R − E(R))² ]", note:"Find the expected return, square each scenario's distance from it, weight by probability, add, then take the square root."},
+  {name:"Current Ratio", domain:"general", formula:"Current assets ÷ current liabilities", note:"Short-term liquidity. Above 1 means current assets cover current liabilities."},
+  {name:"Savings Ratio", domain:"general", formula:"Annual savings ÷ gross income", note:"Share of gross income saved each year. A common benchmark is about 10%."},
+  {name:"Dividend Yield", domain:"invest", formula:"Annual dividend ÷ price", note:"The income part of a stock's return, as a percent of today's price."},
+  {name:"Current Yield (bond)", domain:"invest", formula:"Annual coupon ÷ market price", note:"Coupon income relative to what the bond costs today. It ignores gain or loss at maturity."},
+  {name:"Sustainable Growth Rate", domain:"invest", formula:"g = ROE × retention ratio", note:"Retention ratio = 1 − payout ratio. Earnings kept in the firm, times what they earn, drive growth."},
+  {name:"DuPont ROE", domain:"invest", formula:"ROE = net margin × asset turnover × equity multiplier", note:"Profitability × efficiency × leverage. Net margin = net income ÷ sales; turnover = sales ÷ assets; multiplier = assets ÷ equity."},
+  {name:"WACC", domain:"invest", formula:"WACC = (E/V)Re + (D/V)Rd(1 − t)", note:"Weight each source of capital by its share of total value, and use the after-tax cost of debt because interest is deductible."},
+  {name:"Straight-Line Depreciation", domain:"tax", formula:"(Cost − salvage) ÷ useful life", note:"The same deduction every year. Salvage value is subtracted before dividing."},
+  {name:"Effective Tax Rate", domain:"tax", formula:"Total tax ÷ taxable income", note:"The average rate actually paid. It is always at or below the marginal rate."}
+);
+Object.assign(FD_GENS, {
+  'CAPM — Expected Return': () => {
+    const rf = fdPick([2,3,4,5]), rm = fdPick([8,9,10,11,12]), b = fdPick([0.6,0.8,1.2,1.4,1.5]);
+    const ans = rf + b*(rm - rf);
+    return { scenario:`The risk-free rate is ${rf}% and the market is expected to return ${rm}%. A stock has a beta of ${b}. What return does CAPM require?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${rm}, press [−], enter ${rf}, press [=] — the display shows ${rm-rf} (the market premium).`, `Press [×], enter ${b}, press [+], enter ${rf}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`E(R) = Rf + β(Rm − Rf)`, `Market premium: ${rm} − ${rf} = ${rm-rf}%`, `${rf} + ${b} × ${rm-rf} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (rf + b*rm)) < 0.05 ? 'Beta multiplies the market premium (Rm − Rf), not the full market return.' : null };
+  },
+  "Jensen's Alpha": () => {
+    const rf = fdPick([2,3,4]), rm = fdPick([8,9,10,11]), b = fdPick([0.8,1,1.2,1.3]), rp = fdPick([8,9,10,11,12,13,14]);
+    const req = rf + b*(rm - rf), ans = rp - req;
+    return { scenario:`A fund returned ${rp}% with a beta of ${b}. The risk-free rate is ${rf}% and the market returned ${rm}%. What is Jensen's alpha?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${rm}, press [−], enter ${rf}, press [×], enter ${b}, press [+], enter ${rf}, press [=] — the display shows ${fdNum(req,2)} (the CAPM return).`, `Enter ${rp}, press [−], enter ${fdNum(req,2)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Required (CAPM) return = ${rf} + ${b} × (${rm} − ${rf}) = ${fdNum(req,2)}%`, `Alpha = actual − required = ${rp} − ${fdNum(req,2)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (rp - rf)) < 0.05 ? 'That is plain excess return. Alpha compares the actual return with the CAPM return, which includes beta.' : null };
+  },
+  '§1031 Exchange — Recognized Gain': () => {
+    const basis = fdPick([150,200,250,300,400])*1000, gain = fdPick([100,150,200])*1000, fmv = basis + gain, boot = fdPick([20,40,60,250])*1000;
+    const ans = Math.min(boot, gain);
+    return { scenario:`An investor trades rental property (adjusted basis ${fdMoney(basis)}, fair market value ${fdMoney(fmv)}) for like-kind property and also receives ${fdMoney(boot)} cash. How much gain is recognized?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${fmv}, press [−], enter ${basis}, press [=] — the display shows ${gain} (realized gain).`, `Compare it with the ${boot} of cash boot. Recognized gain is the smaller one: ${ans}.`], steps:[`Realized gain = ${fdMoney(fmv)} − ${fdMoney(basis)} = ${fdMoney(gain)}`, `Boot received = ${fdMoney(boot)}`, `Recognized = lesser of the two = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - gain) < 2 && boot < gain ? 'That recognizes the whole gain. Only the boot received is taxed now; the rest is deferred.' : null };
+  },
+  '§1031 Exchange — New Basis': () => {
+    const basis = fdPick([150,200,250,300])*1000, gain = fdPick([100,150,200])*1000, fmv = basis + gain, boot = fdPick([20,40,60])*1000;
+    const repl = fmv - boot, deferred = gain - boot, ans = repl - deferred;
+    return { scenario:`An investor trades property (adjusted basis ${fdMoney(basis)}, value ${fdMoney(fmv)}) for like-kind property worth ${fdMoney(repl)} plus ${fdMoney(boot)} cash. What is the basis of the new property?`, unit:'$', answer:ans, tol:2,
+      keys:[`Realized gain: ${fmv} − ${basis} = ${gain}. Recognized gain is the ${boot} cash, so the deferred gain is ${gain} − ${boot} = ${deferred}.`, `Enter ${repl}, press [−], enter ${deferred}, press [=] — the display shows ${ans}.`], steps:[`Deferred gain = ${fdMoney(gain)} − ${fdMoney(boot)} = ${fdMoney(deferred)}`, `New basis = ${fdMoney(repl)} − ${fdMoney(deferred)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - repl) < 2 ? 'That is the new property\'s value. Basis is value minus the deferred gain.' : null };
+  },
+  'Beta (from correlation)': () => {
+    const rho = fdPick([0.6,0.7,0.8,0.9]), si = fdPick([18,20,24,30]), sm = fdPick([12,15,16]);
+    const ans = rho*si/sm;
+    return { scenario:`A stock has a correlation of ${rho} with the market. Its standard deviation is ${si}% and the market's is ${sm}%. What is its beta? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
+      keys:[`Enter ${rho}, press [×], enter ${si}, press [÷], enter ${sm}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}.`], steps:[`β = ρ × σi ÷ σm`, `${rho} × ${si} ÷ ${sm} = ${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - rho*sm/si) < 0.015 ? 'That flips the ratio. The asset\'s standard deviation goes on top.' : null };
+  },
+  'Expected Return (probabilities)': () => {
+    const p = fdPick([[25,50,25],[20,50,30],[30,40,30]]), r = [fdPick([14,16,18,20]), fdPick([8,9,10,11]), fdPick([-8,-5,-2,0])];
+    const ans = (p[0]*r[0] + p[1]*r[1] + p[2]*r[2])/100;
+    return { scenario:`A stock returns ${r[0]}% in a boom (${p[0]}% chance), ${r[1]}% in a normal market (${p[1]}%) and ${r[2]}% in a recession (${p[2]}%). What is its expected return?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${p[0]/100}, press [×], enter ${r[0]}, press [=] — ${fdNum(p[0]/100*r[0],2)}. Write it down.`, `Do the same for the other two: ${fdNum(p[1]/100*r[1],2)} and ${fdNum(p[2]/100*r[2],2)}.`, `Add the three results: ${fdNum(ans,2)}.`], steps:[`E(R) = Σ p × R`, `${p[0]/100} × ${r[0]} + ${p[1]/100} × ${r[1]} + ${p[2]/100} × (${r[2]}) = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (r[0]+r[1]+r[2])/3) < 0.05 ? 'That is a simple average. Weight each return by its probability.' : null };
+  },
+  'Standard Deviation (probabilities)': () => {
+    const r = [fdPick([14,16,18,20]), fdPick([8,10,12]), fdPick([-6,-4,0,2])], p = [0.25,0.5,0.25];
+    const e = p[0]*r[0] + p[1]*r[1] + p[2]*r[2], v = p.reduce((a,pi,i) => a + pi*(r[i]-e)*(r[i]-e), 0), ans = Math.sqrt(v);
+    return { scenario:`A stock returns ${r[0]}%, ${r[1]}% or ${r[2]}% with probabilities of 25%, 50% and 25%. What is the standard deviation of its returns?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Expected return: 0.25 × ${r[0]} + 0.5 × ${r[1]} + 0.25 × ${r[2]} = ${fdNum(e,2)}.`, `For each outcome: R − ${fdNum(e,2)}, square it (multiply it by itself), then multiply by its probability.`, `Add the three results: variance ${fdNum(v,2)}.`, `Enter ${fdNum(v,4)}, press orange Shift, then [×] (yˣ), enter 0.5, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`σ = √[ Σ p(R − E)² ]`, `E(R) = ${fdNum(e,2)}%`, `Variance = ${fdNum(v,2)}`, `σ = √${fdNum(v,2)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - v) < 0.05 ? 'That is the variance. Take the square root to get the standard deviation.' : null };
+  },
+  'Current Ratio': () => {
+    const ca = fdPick([18,24,30,45])*1000, cl = fdPick([10,12,15,20])*1000, ans = ca/cl;
+    return { scenario:`A client has current assets of ${fdMoney(ca)} and current liabilities of ${fdMoney(cl)}. What is the current ratio? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
+      keys:[`Enter ${ca}, press [÷], enter ${cl}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Current ratio = current assets ÷ current liabilities`, `${fdMoney(ca)} ÷ ${fdMoney(cl)} = ${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - cl/ca) < 0.015 ? 'That is flipped. Assets go on top.' : null };
+  },
+  'Savings Ratio': () => {
+    const inc = fdPick([80,95,120,150,200])*1000, sv = fdPick([6,8,10,12,15,20])*1000, ans = sv/inc*100;
+    return { scenario:`A client earns ${fdMoney(inc)} gross and saves ${fdMoney(sv)} a year. What is the savings ratio?`, unit:'%', answer:ans, tol:0.1,
+      keys:[`Enter ${sv}, press [÷], enter ${inc}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Savings ratio = savings ÷ gross income`, `${fdMoney(sv)} ÷ ${fdMoney(inc)} = ${fdNum(ans,2)}%`] };
+  },
+  'Dividend Yield': () => {
+    const d = fdPick([1.2,1.6,2,2.4,3]), pr = fdPick([40,50,60,80]), ans = d/pr*100;
+    return { scenario:`A stock pays $${d} in dividends per year and trades at $${pr}. What is its dividend yield?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${d}, press [÷], enter ${pr}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Yield = annual dividend ÷ price`, `${d} ÷ ${pr} = ${fdNum(ans,2)}%`] };
+  },
+  'Current Yield (bond)': () => {
+    const par = 1000, cr = fdPick([4,5,6,7]), pr = fdPick([920,950,1040,1080]), c = par*cr/100, ans = c/pr*100;
+    return { scenario:`A $1,000 par bond pays a ${cr}% coupon and trades at ${fdMoney(pr)}. What is its current yield?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Annual coupon: ${par} × ${cr/100} = ${c}.`, `Enter ${c}, press [÷], enter ${pr}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Current yield = annual coupon ÷ price`, `${fdMoney(c)} ÷ ${fdMoney(pr)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - cr) < 0.05 ? 'That is the coupon rate, which uses par. Current yield uses today\'s price.' : null };
+  },
+  'Sustainable Growth Rate': () => {
+    const roe = fdPick([10,12,15,18,20]), pay = fdPick([20,30,40,50]), ans = roe*(1 - pay/100);
+    return { scenario:`A company earns a ${roe}% return on equity and pays out ${pay}% of earnings as dividends. What is its sustainable growth rate?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter 1, press [−], enter ${pay/100}, press [=] — the display shows ${fdNum(1-pay/100,2)} (retention).`, `Press [×], enter ${roe}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Retention = 1 − ${pay/100} = ${fdNum(1-pay/100,2)}`, `g = ROE × retention = ${roe} × ${fdNum(1-pay/100,2)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - roe*pay/100) < 0.05 ? 'That uses the payout ratio. Growth comes from the earnings retained.' : null };
+  },
+  'DuPont ROE': () => {
+    const m = fdPick([5,8,10,12]), t = fdPick([1.2,1.5,2]), em = fdPick([1.5,2,2.5]), ans = m*t*em;
+    return { scenario:`A company has a ${m}% net profit margin, asset turnover of ${t} and an equity multiplier of ${em}. What is its return on equity?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${m}, press [×], enter ${t}, press [×], enter ${em}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`ROE = margin × turnover × multiplier`, `${m}% × ${t} × ${em} = ${fdNum(ans,2)}%`] };
+  },
+  'WACC': () => {
+    const e = fdPick([50,60,70]), re = fdPick([10,12,14]), rd = fdPick([5,6,7]), t = fdPick([25,30,35]);
+    const ans = e/100*re + (1-e/100)*rd*(1-t/100);
+    return { scenario:`A firm is ${e}% equity and ${100-e}% debt. Equity costs ${re}%, debt costs ${rd}% before tax, and the tax rate is ${t}%. What is its WACC?`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Equity part: ${e/100} × ${re} = ${fdNum(e/100*re,2)}.`, `Debt part: ${fdNum(1-e/100,2)} × ${rd} × ${fdNum(1-t/100,2)} = ${fdNum((1-e/100)*rd*(1-t/100),3)}.`, `Add them: ${fdNum(ans,2)}.`], steps:[`WACC = (E/V)Re + (D/V)Rd(1 − t)`, `${fdNum(e/100*re,2)} + ${fdNum((1-e/100)*rd*(1-t/100),3)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (e/100*re + (1-e/100)*rd)) < 0.05 ? 'You skipped the tax shield. Debt cost is multiplied by (1 − tax rate).' : null };
+  },
+  'Straight-Line Depreciation': () => {
+    const cost = fdPick([60,80,120,200])*1000, salv = fdPick([5,10,20])*1000, life = fdPick([5,7,10]), ans = (cost - salv)/life;
+    return { scenario:`A business buys equipment for ${fdMoney(cost)}. It has a ${life}-year life and a salvage value of ${fdMoney(salv)}. What is the annual straight-line depreciation?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${cost}, press [−], enter ${salv}, press [÷], enter ${life}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`(Cost − salvage) ÷ life`, `(${fdMoney(cost)} − ${fdMoney(salv)}) ÷ ${life} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - cost/life) < 2 ? 'You forgot to subtract the salvage value first.' : null };
+  },
+  'Effective Tax Rate': () => {
+    const inc = fdPick([60,85,110,140,190])*1000, rate = fdPick([13.5,15.5,17,19.5,21.5]), tax = Math.round(inc*rate/100), ans = tax/inc*100;
+    return { scenario:`A client has taxable income of ${fdMoney(inc)} and total federal income tax of ${fdMoney(tax)}. What is the effective tax rate?`, unit:'%', answer:ans, tol:0.1,
+      keys:[`Enter ${tax}, press [÷], enter ${inc}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Effective rate = total tax ÷ taxable income`, `${fdMoney(tax)} ÷ ${fdMoney(inc)} = ${fdNum(ans,2)}%`] };
+  }
+});
+
 const FD_NAMES = Object.keys(FD_GENS);
 let fd = { name:null, prob:null, answered:false, filter:'mixed', tally:{ n:0, ok:0 }, last:null, opener:null, home:null };
 function fdStats(name){ if(!DATA.formulaStats) DATA.formulaStats = {}; return DATA.formulaStats[name] || { attempts:0, correct:0, streak:0, lastAt:0 }; }
@@ -15448,6 +15683,7 @@ document.addEventListener('keydown', e => {
 }, true);
 function openTvmTool(problem){
   tvmPresetProblem = (problem && problem.solveFor) ? problem : null;
+  if(tvmPresetProblem) tvmMode = tvmPresetProblem.cf ? 'cf' : 'tvm';
   tvmOpenedOverQuiz = !!(session && document.getElementById('quizView') && document.getElementById('quizView').style.display !== 'none');
   // The tool lives inside the Study tab, whose stacking context can sit below
   // the fullscreen quiz. Parking it directly under <body> while open keeps it on top.
@@ -15484,7 +15720,12 @@ function tvmPickProblem(){
   if(typeof DATA.tvmPickCounter !== 'number') DATA.tvmPickCounter = 0;
   const level = DATA.tvmProgress.currentTier;
   let pool = TVM_PROBLEMS.filter(p => p.difficulty === level);
-  if(pool.length === 0) pool = TVM_PROBLEMS;
+  if(pool.length === 0){
+    // Level 4 has no hand-written set: it is always freshly generated, leaning toward the problem types you miss.
+    const g0 = tvmGenerateProblem(level);
+    if(g0){ DATA.tvmPickCounter++; return g0; }
+    pool = TVM_PROBLEMS;
+  }
   // Never-seen problems first (randomized among themselves), then whichever
   // was least recently seen -- the same fresh-first principle already used
   // for question and flashcard selection, since pure random choice within a
@@ -15520,9 +15761,10 @@ function tvmRecordOutcome(cleanSolve){
   DATA.tvmSolvedCount = (DATA.tvmSolvedCount || 0) + 1;
   DATA.tvmToolLastAt = Date.now();
   try{ planDayLog().tvm++; }catch(e){}
+  try{ if(tvmCurrent && tvmCurrent.template) tvmNoteTemplate(tvmCurrent.template, cleanSolve); }catch(e){}
   if(cleanSolve){
     prog.correctStreak = (prog.correctStreak||0) + 1;
-    if(prog.correctStreak >= 2 && prog.currentTier < 3){
+    if(prog.correctStreak >= 2 && prog.currentTier < 4){
       prog.currentTier++;
       prog.correctStreak = 0;
     }
@@ -15536,66 +15778,140 @@ function tvmRecordOutcome(cleanSolve){
   tvmRenderStatus();
 }
 
+// ---- Timeline: one drawing routine for both the TVM and cash-flow modes ----
+function tvmShortMoney(v){
+  if(typeof v !== 'number' || !isFinite(v)) return '';
+  const a = Math.abs(v), sign = v < 0 ? '−' : '';
+  if(a >= 1e6) return sign + '$' + (Math.round(a/1e4)/100) + 'M';
+  if(a >= 100) return sign + '$' + Math.round(a).toLocaleString('en-US');
+  return sign + '$' + (Math.round(a*100)/100);
+}
+function tvmCompactMoney(v){
+  const a = Math.abs(v);
+  if(a < 10000) return tvmShortMoney(v);
+  const k = Math.round(a/100)/10, sign = v < 0 ? '−' : '';
+  return a >= 1e6 ? tvmShortMoney(v) : sign + '$' + (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'K';
+}
+// model: { items:[{x:0..1, dx?, val:number|null, name, big?, solved?, hit?}], ticks:[{x,label}], dots:[x...], endLabel }
+function tvmFlowSvg(model){
+  const X0 = 46, X1 = 354, W = 400;
+  const xs = f => X0 + (X1 - X0) * f;
+  const items = model.items;
+  const hasUp = items.some(it => it.val === null || it.val > 0), hasDown = items.some(it => typeof it.val === 'number' && it.val < 0);
+  const liftUp = items.some(it => it.lift && (it.val === null || it.val > 0)), liftDn = items.some(it => it.lift && typeof it.val === 'number' && it.val < 0);
+  const liftQ = items.some(it => it.lift && it.val === null), top = hasUp ? 52 + (liftQ ? 40 : liftUp ? 22 : 0) : 14, axisY = top, down = hasDown ? 46 + (liftDn ? 20 : 0) : 0;
+  const tickY = axisY + down + 15, vbH = tickY + 6;
+  let svg = `<svg class="tvm-timeline-svg" viewBox="0 0 ${W} ${vbH}" style="width:100%;height:auto;display:block;" role="img" aria-label="${escapeHtml(model.aria || 'Cash-flow timeline')}">`;
+  svg += `<line x1="${X0-8}" y1="${axisY}" x2="${X1+14}" y2="${axisY}" stroke="var(--hair-strong)" stroke-width="1.5"/>`;
+  svg += `<path d="M ${X1+14} ${axisY} l -5 -3 l 0 6 z" fill="var(--hair-strong)"/>`;
+  (model.ticks || []).forEach(t => {
+    svg += `<line x1="${xs(t.x)}" y1="${axisY-3}" x2="${xs(t.x)}" y2="${axisY+3}" stroke="var(--hair-strong)" stroke-width="1.2"/>`;
+    svg += `<text x="${xs(t.x)}" y="${tickY}" text-anchor="middle" font-size="11" fill="var(--muted)">${escapeHtml(String(t.label))}</text>`;
+  });
+  (model.dots || []).forEach(x => { svg += `<text x="${xs(x)}" y="${axisY+4}" text-anchor="middle" font-size="13" fill="var(--muted)">···</text>`; });
+  items.forEach(it => {
+    const x = xs(it.x) + (it.dx || 0);
+    const anchor = it.x <= 0.01 ? 'start' : it.x >= 0.99 ? 'end' : 'middle';
+    const lf = it.lift ? 1 : 0;
+    if(it.val === null){
+      const cy = axisY - 19 - (lf ? 38 : 0);
+      svg += `<circle cx="${x}" cy="${cy}" r="11" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="3 3"/>`;
+      svg += `<text x="${x}" y="${cy+4.5}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--gold)">?</text>`;
+      if(it.name) svg += `<text x="${x}" y="${cy-16}" text-anchor="middle" font-size="10.5" fill="var(--gold)">${it.name}</text>`;
+      return;
+    }
+    if(it.val === 0){ if(it.showZero) svg += `<text x="${x}" y="${axisY-8}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">$0</text>`; return; }
+    if(!it.val) return;
+    const up = it.val > 0, col = up ? 'var(--teal)' : 'var(--gold)';
+    const tip = up ? axisY - 30 - (lf ? 22 : 0) : axisY + 34 + (lf ? 20 : 0), dir = up ? -1 : 1, sw = it.big ? 3 : 2;
+    svg += `<line x1="${x}" y1="${axisY}" x2="${x}" y2="${tip}" stroke="${col}" stroke-width="${sw}"/>`;
+    svg += `<path d="M ${x-5} ${tip - dir*7} L ${x} ${tip} L ${x+5} ${tip - dir*7} Z" fill="${col}"/>`;
+    const ly = up ? tip - 4 : tip + 14;
+    const wgt = it.hit || it.solved ? 700 : 500;
+    svg += `<text x="${x}" y="${ly}" text-anchor="${anchor}" font-size="11" font-weight="${wgt}" fill="${col}">${it.name ? it.name + ' ' : ''}${escapeHtml(it.compact ? tvmCompactMoney(it.val) : tvmShortMoney(it.val))}</text>`;
+  });
+  svg += '</svg>';
+  return svg;
+}
+function tvmTimelineChip(txt, cls){ return `<span class="tvm-tl-chip${cls ? ' ' + cls : ''}">${escapeHtml(txt)}</span>`; }
+
+// The compounding period a problem uses, read from the problem itself (generated ones carry it; hand-written ones are inferred from the wording).
+function tvmUnitOf(pr){
+  if(!pr) return null;
+  if(pr.per) return pr.per;
+  const t = (pr.scenario || '') + '', iy = pr.known && typeof pr.known.iy === 'number' ? pr.known.iy : null;
+  if(/semiannual|half-year/i.test(t)) return { name:'half-year', m:2 };
+  if(/quarterly/i.test(t)) return { name:'quarter', m:4 };
+  if(/monthly|each month|per month|a month\b/i.test(t) && (iy === null || iy < 3)) return { name:'month', m:12 };
+  if(/each year|annual|per year|a year\b|years/i.test(t)) return { name:'year', m:1 };
+  return null;
+}
 function renderTvmTimeline(){
   const wrap = document.getElementById('tvmTimelineWrap');
   const host = document.getElementById('tvmTimeline');
+  const metaEl = document.getElementById('tvmTimelineMeta'), capEl = document.getElementById('tvmTimelineCap');
   if(!tvmCurrent || !wrap || !host){ if(wrap) wrap.style.display = 'none'; return; }
+  if(tvmCurrent.cf){ return tvmRenderCfTimeline(wrap, host, metaEl, capEl); }
 
   const solveKey = tvmCurrent.solveFor.toLowerCase();
   const known = tvmCurrent.known || {};
-  // Values as they'll actually be at the end of this problem: known ones from
-  // the problem definition, the solved one filled in once actually solved,
-  // otherwise left undefined (rendered as "?", since its sign isn't known yet).
-  const pv = solveKey === 'pv' ? (tvmSolved ? tvmRegisters.pv : undefined) : known.pv;
-  const pmt = solveKey === 'pmt' ? (tvmSolved ? tvmRegisters.pmt : undefined) : known.pmt;
-  const fv = solveKey === 'fv' ? (tvmSolved ? tvmRegisters.fv : undefined) : known.fv;
+  const val = key => key === solveKey ? (tvmSolved ? tvmRegisters[key] : null) : (known[key] === undefined ? 0 : known[key]);
+  const pv = val('pv'), pmt = val('pmt'), fv = val('fv'), nVal = val('n'), iyVal = val('iy');
+  const begin = !!tvmCurrent.isBeginMode;
+  const per = tvmUnitOf(tvmCurrent);
+  const unitName = per ? per.name : 'period';
+  const nLabel = typeof nVal === 'number' ? (Math.round(nVal*100)/100) : 'N';
+  const lastN = typeof nVal === 'number' ? Math.max(1, Math.round(nVal)) : null;
+  const hasPmt = pmt === null || (typeof pmt === 'number' && pmt !== 0);
 
-  function arrowMarkup(value, x, label, isUnknown){
-    if(isUnknown){
-      return `<text x="${x}" y="36" text-anchor="middle" font-size="14" fill="var(--muted)">?</text>
-        <text x="${x}" y="16" text-anchor="middle" font-size="10" fill="var(--muted)">${label}</text>`;
+  const items = [], ticks = [{ x:0, label:'0' }], dots = [];
+  const pmtSlots = begin ? [0, 0.2, 0.4, 0.8] : [0.2, 0.4, 0.8, 1];
+  const pmtLbl = begin ? ['0','1','2', lastN ? String(lastN-1) : 'N−1'] : ['1','2', lastN ? String(lastN-1) : 'N−1', lastN ? String(lastN) : 'N'];
+  if(hasPmt){
+    dots.push(0.6);
+    if(pmt === null){
+      [0,1,2].forEach(k => items.push({ x: pmtSlots[k], val:null, name: k === 2 ? 'PMT' : '' }));
+    } else {
+      pmtSlots.forEach((x, k) => { items.push({ x, val:pmt, name:'', compact:true, solved: solveKey === 'pmt' && tvmSolved }); });
     }
-    if(value === undefined || value === 0) return '';
-    const up = value > 0; // positive = money received, drawn above the line; negative = paid out, below
-    const y1 = 45, y2 = up ? 20 : 70;
-    const arrowColor = up ? 'var(--teal)' : 'var(--gold)';
-    const headY = up ? y2 : y2;
-    const headDir = up ? -1 : 1;
-    return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${arrowColor}" stroke-width="2"/>
-      <path d="M ${x-4} ${headY+headDir*6} L ${x} ${headY} L ${x+4} ${headY+headDir*6} Z" fill="${arrowColor}"/>
-      <text x="${x}" y="${up ? 12 : 88}" text-anchor="middle" font-size="10" fill="${arrowColor}">${label}</text>`;
+    pmtSlots.forEach((x, k) => { if(!(x === 0 && ticks.some(t => t.x === 0 && t.label === '0')) ) ticks.push({ x, label:pmtLbl[k] }); });
+    // begin mode: slot 0 already has the "0" tick; end mode: the "0" tick stays for the start
   }
+  const endTick = ticks.find(t => t.x === 1);
+  if(!endTick) ticks.push({ x:1, label: lastN ? String(lastN) : 'N' });
+  // lumps: PV at time 0, FV at time N. Step aside when a payment shares the moment.
+  const pmtAtStart = hasPmt && begin, pmtAtEnd = hasPmt && !begin;
+  if(pv === null || (typeof pv === 'number' && pv !== 0)) items.push({ x:0, dx: pmtAtStart ? -12 : 0, lift: pmtAtStart, val:pv, name:'PV', big:true, solved: solveKey === 'pv' && tvmSolved });
+  if(fv === null || (typeof fv === 'number' && fv !== 0)) items.push({ x:1, dx: pmtAtEnd ? 12 : 0, lift: pmtAtEnd, val:fv, name:'FV', big:true, solved: solveKey === 'fv' && tvmSolved });
+  // dedupe ticks at same x (keep first)
+  const seen = {}; const tk = ticks.filter(t => (seen[t.x] ? false : (seen[t.x] = true)));
+  const money = v => v === null ? '?' : tvmShortMoney(v);
+  const aria = `Timeline from time 0 to ${typeof nVal === 'number' ? nLabel + ' ' + unitName + 's' : 'N'}. PV ${money(pv)} at time 0. ` + (hasPmt ? `Payments of ${money(pmt)} at the ${begin ? 'start' : 'end'} of each ${unitName}. ` : '') + `FV ${money(fv)} at the end.`;
+  host.innerHTML = tvmFlowSvg({ items, ticks: tk, dots, aria });
 
-  // Trim empty space: only leave room below the axis when an arrow actually points down.
-  const hasDown = [pv, fv, pmt].some(v => typeof v === 'number' && v < 0);
-  const vbH = hasDown ? 94 : 64;
-  let svg = `<svg class="tvm-timeline-svg" viewBox="0 0 400 ${vbH}" style="width:100%;height:auto;">
-    <line x1="30" y1="45" x2="370" y2="45" stroke="var(--hair-strong)" stroke-width="1.5"/>
-    <circle cx="30" cy="45" r="3" fill="var(--hair-strong)"/>
-    <circle cx="370" cy="45" r="3" fill="var(--hair-strong)"/>
-    <text x="22" y="49" text-anchor="end" font-size="10" fill="var(--muted)">0</text>
-    <text x="378" y="49" text-anchor="start" font-size="10" fill="var(--muted)">N</text>`;
-
-  svg += arrowMarkup(pv, 30, 'PV', solveKey === 'pv');
-  svg += arrowMarkup(fv, 370, 'FV', solveKey === 'fv');
-
-  if(solveKey === 'pmt'){
-    svg += arrowMarkup(undefined, tvmCurrent.isBeginMode ? 165 : 200, 'PMT', true);
-  } else if(pmt !== undefined && pmt !== 0){
-    // Payments at the start of each period (BEGIN mode) sit one step earlier than end-of-period payments.
-    const dx = tvmCurrent.isBeginMode ? -35 : 0;
-    [130, 200, 270].forEach((x, i) => { svg += arrowMarkup(pmt, x + dx, i===1 ? 'PMT' : '', false); });
-    svg += `<text x="${165+dx}" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>
-      <text x="${235+dx}" y="45" text-anchor="middle" font-size="11" fill="var(--muted)">···</text>`;
+  if(metaEl){
+    const chips = [];
+    const pl = per ? ' ' + per.name + 's' : '';
+    chips.push(solveKey === 'n' ? tvmTimelineChip('N = ' + (tvmSolved ? nLabel : '?') + pl, tvmSolved ? 'done' : 'unk') : tvmTimelineChip('N = ' + nLabel + pl));
+    const rate = typeof iyVal === 'number' ? (Math.round(iyVal*10000)/10000) + '%' : '?';
+    chips.push(solveKey === 'iy' ? tvmTimelineChip('rate = ' + (tvmSolved ? rate : '?') + ' per ' + unitName, tvmSolved ? 'done' : 'unk') : tvmTimelineChip('rate = ' + rate + ' per ' + unitName));
+    if(hasPmt){
+      chips.push(tvmTimelineChip(begin ? 'payments at the START of each ' + unitName : 'payments at the END of each ' + unitName));
+    }
+    metaEl.innerHTML = chips.join('');
   }
-
-  svg += '</svg>';
-  host.innerHTML = svg;
+  if(capEl){
+    let cap = '<b>↑</b> money in · <b>↓</b> money out.';
+    if(tvmSolved) cap += ' The solved value\'s sign shows its direction: a minus means you pay it.';
+    else cap += ' Fill in the knowns, then solve for the dashed one.';
+    capEl.innerHTML = cap;
+  }
   wrap.style.display = 'block';
 }
 
 function tvmRenderRegisters(){
   renderTvmTimeline();
+  if(tvmCurrent && tvmCurrent.cf) return cfRenderRegisters();
   const order = ['n','iy','pv','pmt','fv'];
   const wrap = document.getElementById('tvmRegisters');
   wrap.innerHTML = '';
@@ -15613,7 +15929,7 @@ function tvmRenderRegisters(){
     const value = document.createElement('div');
     value.className = 'tvm-reg-value';
     if(isUnknown){
-      value.textContent = tvmSolved ? tvmFormatCurrency(tvmRegisters[key]) : '?';
+      value.textContent = !tvmSolved ? '?' : key === 'n' ? (Math.round(tvmRegisters[key]*100)/100) + '' : key === 'iy' ? (Math.round(tvmRegisters[key]*10000)/10000) + '%' : tvmFormatCurrency(tvmRegisters[key]);
     } else if(tvmRegisters[key] === null){
       value.textContent = '—';
     } else if(key === 'n'){
@@ -15677,9 +15993,11 @@ function loadTvmProblem(){
   if(entryBtn) entryBtn.style.display = 'inline-block';
   document.getElementById('tvmContinueStageBtn').style.display = 'none';
 
-  const next = tvmPresetProblem || tvmPickProblem();
+  const next = tvmPresetProblem || (tvmMode === 'cf' ? cfPickProblem() : tvmPickProblem());
   tvmPresetProblem = null;
   tvmCurrent = next;
+  tvmMode = next.cf ? 'cf' : 'tvm';
+  cfState = { flows: next.cf && cfLeftover ? cfLeftover.map(f => ({ amt:f.amt, n:f.n })) : [], rate:null, stale: !!(next.cf && cfLeftover), result:null };
   tvmDisplay = '0';
   tvmRegisters = { n:null, iy:null, pv:null, pmt:null, fv:null };
   tvmRegisterStatus = { n:null, iy:null, pv:null, pmt:null, fv:null };
@@ -15687,7 +16005,8 @@ function loadTvmProblem(){
   tvmSolved = false;
 
   document.getElementById('tvmScenario').textContent = tvmCurrent.scenario;
-  document.getElementById('tvmLevelBadge').textContent = TVM_LEVEL_NAMES[tvmCurrent.difficulty];
+  document.getElementById('tvmLevelBadge').textContent = (tvmCurrent.cf ? CF_LEVEL_NAMES : TVM_LEVEL_NAMES)[tvmCurrent.difficulty];
+  tvmApplyModeUI();
   document.getElementById('tvmFeedback').textContent = '';
   document.getElementById('tvmFeedback').className = 'tvm-feedback';
   document.getElementById('tvmSolution').style.display = 'none';
@@ -15713,15 +16032,32 @@ function tvmRenderStatus(){
   const howto = document.getElementById('tvmHowto');
   if(howto && !howto.dataset.user) howto.open = !(DATA.tvmSolvedCount > 0) && !((DATA.tvmProgress && DATA.tvmProgress.currentTier > 1)) && !(window.matchMedia && matchMedia('(max-height:520px) and (orientation:landscape)').matches);
   if(!el) return;
+  if(tvmMode === 'cf'){
+    const cp = DATA.cfProgress || { currentTier:1, correctStreak:0 }, ct = cp.currentTier || 1, cc = [];
+    if(ct < 3){ const need = 2 - (cp.correctStreak || 0); cc.push(`<span class="tvm-chip tvm-chip-main"><b>${CF_LEVEL_NAMES[ct].split(' · ')[0]}</b> · ${need} clean solve${need===1?'':'s'} to Level ${ct+1}</span>`); }
+    else cc.push(`<span class="tvm-chip tvm-chip-main"><b>Level 3</b> · top level</span>`);
+    const ck = Object.keys(CF_GEN_TEMPLATES), tried = ck.filter(k => tvmTemplateAcc(k) !== null).length;
+    if(tried) cc.push(`<span class="tvm-chip">${tried} of ${ck.length} cash-flow types tried</span>`);
+    const cats = DATA.tvmMistakeCategories || {}, top = ['cashFlowOutlay','cashFlowTiming','cashFlowRepeat','cashFlowClear'].sort((a,b)=>(cats[b]||0)-(cats[a]||0))[0];
+    if(top && (cats[top]||0) >= 2) cc.push(`<span class="tvm-chip tvm-chip-warn">Watch: ${TVM_MISTAKE_LABELS[top]} (${cats[top]}×)</span>`);
+    el.innerHTML = cc.join('');
+    return;
+  }
   const prog = DATA.tvmProgress || { currentTier:1, correctStreak:0 };
   const tier = prog.currentTier || 1;
   const chips = [];
-  if(tier < 3){
+  if(tier < 4){
     const need = 2 - (prog.correctStreak || 0);
     chips.push(`<span class="tvm-chip tvm-chip-main"><b>${TVM_LEVEL_NAMES[tier].split(' · ')[0]}</b> · ${need} clean solve${need===1?'':'s'} to Level ${tier+1}</span>`);
   } else {
-    chips.push(`<span class="tvm-chip tvm-chip-main"><b>Level 3</b> · top level</span>`);
+    chips.push(`<span class="tvm-chip tvm-chip-main"><b>Level 4</b> · top level</span>`);
   }
+  try{
+    const keys = Object.keys(TVM_GEN_TEMPLATES), tried = keys.filter(k => (tvmTemplateAcc(k) !== null)).length;
+    if(tried) chips.push(`<span class="tvm-chip">${tried} of ${keys.length} problem types tried</span>`);
+    const shaky = keys.filter(k => DATA.tvmTemplateStats && DATA.tvmTemplateStats[k] && DATA.tvmTemplateStats[k].a >= 2 && tvmTemplateAcc(k) < 0.6).sort((a,b)=>tvmTemplateAcc(a)-tvmTemplateAcc(b))[0];
+    if(shaky) chips.push(`<span class="tvm-chip tvm-chip-warn">Shaky: ${TVM_TEMPLATE_LABELS[shaky] || shaky}</span>`);
+  }catch(e){}
   const qs = DATA.tvmQuizStats;
   if(qs && qs.asked > 0) chips.push(`<span class="tvm-chip">In sessions: ${qs.correct} of ${qs.asked} right</span>`);
   const cats = DATA.tvmMistakeCategories || {};
@@ -15832,6 +16168,7 @@ function tvmPressClear(){
 }
 function tvmPressVarKey(key){
   if(tvmSolved || !tvmCurrent) return;
+  if(tvmCurrent.cf) return cfPressKey(key);
   const feedback = document.getElementById('tvmFeedback');
   const solveKey = tvmCurrent.solveFor.toLowerCase();
 
@@ -15925,7 +16262,7 @@ function tvmCalculateAndShow(){
   const displayVal = (key, val) => key === solveFor.toUpperCase() ? '?' : fmt(val);
   const steps = [];
   steps.push(`N = ${solveFor==='N'?'?':n}, I/YR = ${solveFor==='IY'?'?':iy+'%'}, PV = ${displayVal('PV', pv)}, PMT = ${displayVal('PMT', pmt)}, FV = ${displayVal('FV', fv)} — solving for ${solveFor}.`);
-  if(solveFor !== 'IY'){
+  if(solveFor !== 'IY' && solveFor !== 'N'){
     if(hasPmt){
       steps.push(`This has a level payment stream, so it's an annuity calculation, not a simple lump sum: PV×(1+i)ⁿ + PMT×[((1+i)ⁿ−1)/i] + FV = 0.`);
     } else {
@@ -15951,6 +16288,9 @@ function tvmCalculateAndShow(){
     }
   } else if(solveFor === 'PMT'){
     steps.push(`PMT = −(PV × ${factor.toFixed(5)} + FV) ÷ ${annFactor.toFixed(5)} = −(${fmt(pv)} × ${factor.toFixed(5)} + ${fmt(fv)}) ÷ ${annFactor.toFixed(5)} = ${fmt(result)}.`);
+  } else if(solveFor === 'N'){
+    const per = tvmCurrent.per;
+    steps.push(`The number of periods has no plug-in formula either: the calculator solves it internally. Enter the other four values, press [N], and it shows ${result.toFixed(2)} periods${per ? ', about ' + (result/per.m).toFixed(1) + ' years' : ''}. A part-period means one smaller final payment.`);
   } else if(solveFor === 'IY'){
     steps.push(`The rate has no plug-in formula like the other variables do — enter the other four values, press [I/YR], and the calculator solves it internally the same way it does on the real exam. Here, that comes out to ${result.toFixed(4)}%.`);
   }
@@ -15959,7 +16299,11 @@ function tvmCalculateAndShow(){
   }
 
   let solutionHtml = steps.map(s => `<div class="tvm-solution-step">${s}</div>`).join('');
-  solutionHtml += `<div class="tvm-solution-answer">${solveFor} = ${solveFor === 'IY' ? result.toFixed(2)+'%' : fmt(result)}</div>`;
+  solutionHtml += `<div class="tvm-solution-answer">${solveFor} = ${solveFor === 'IY' ? result.toFixed(2)+'%' : solveFor === 'N' ? result.toFixed(2) + (tvmCurrent.per ? ' ' + tvmCurrent.per.name + 's' : ' years') : fmt(result)}</div>`;
+  if(solveFor === 'IY' && tvmCurrent.annualize){
+    const m = tvmCurrent.annualize;
+    solutionHtml += `<div class="tvm-solution-step"><b>Annual yield:</b> ${result.toFixed(4)}% × ${m} = ${(result*m).toFixed(2)}%.</div>`;
+  }
 
   if(tvmMultiStageActive && tvmMultiStageIndex === 1){
     const s1 = tvmMultiStageProblem.stage1;
@@ -15997,6 +16341,349 @@ function tvmCalculateAndShow(){
   if(!wasMultiStageSolve){
     tvmRecordOutcome(tvmErrorsThisProblem === 0);
   }
+}
+
+/* ===========================================================
+   CASH-FLOW (CFLO) PRACTICE
+   The HP 10bII+ cash-flow worksheet: C ALL, CFj, Nj, I/YR, NPV, IRR/YR.
+   Generated problems are solved exactly (cfNpv/cfIrr), every key press is
+   checked as it happens, and the same templates feed the multiple-choice
+   calculation questions in adaptive sessions.
+=========================================================== */
+let tvmMode = 'tvm';
+let cfState = { flows:[], rate:null, stale:false };
+let cfLeftover = null; // flows left on the worksheet by the last solved problem, like a real calculator
+const CF_LEVEL_NAMES = { 1:'Level 1 · uneven cash flows (NPV)', 2:'Level 2 · repeated flows and IRR', 3:'Level 3 · exam-style (gap years, later outlays, repeats)' };
+
+function cfExpand(flows){ const a = []; flows.forEach(f => { for(let i = 0; i < (f.n || 1); i++) a.push(f.amt); }); return a; }
+function cfNpv(rate, flows){ const i = rate/100; return cfExpand(flows).reduce((s, a, t) => s + a/Math.pow(1+i, t), 0); }
+function cfIrr(flows){
+  const x = cfExpand(flows), f = r => x.reduce((s, a, t) => s + a/Math.pow(1+r, t), 0);
+  let lo = -0.9, hi = 5, fl = f(lo), fh = f(hi);
+  if(!(fl*fh < 0)) return null;
+  for(let k = 0; k < 200; k++){ const m = (lo+hi)/2, fm = f(m); if((fl < 0) === (fm < 0)){ lo = m; fl = fm; } else hi = m; }
+  return (lo+hi)/2*100;
+}
+function cfMoneyS(v){ return (v < 0 ? '−' : '') + tvmGMoney(v); }
+function cfList(arr){ return arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' and ' + arr[arr.length-1]; }
+function cfYears(n){ return n === 1 ? 'year 1' : 'years 1 to ' + n; }
+function cfRound(v, step){ return Math.round(v/step)*step; }
+
+const CF_GEN_TEMPLATES = {
+  'cf-npv': { level:1, quiz:true, make(){
+    const I0 = tvmGPick([20000,25000,30000,40000,50000,60000]), r = tvmGPick([6,8,9,10,12]), n = tvmGPick([3,4]);
+    const fl = []; for(let t = 0; t < n; t++) fl.push(cfRound(I0*tvmGPick([0.25,0.3,0.35,0.4,0.45]), 500));
+    const flows = [{amt:-I0, n:1}].concat(fl.map(a => ({amt:a, n:1})));
+    const pvIn = cfNpv(r, flows) + I0;
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A client is weighing a project that costs ${tvmGMoney(I0)} today and is expected to return ${cfList(fl.map(tvmGMoney))} at the end of years 1 to ${n}. Using a ${r}% discount rate, what is the project's NPV?`,
+      concept:'NPV is every cash flow discounted to today and added up. The cost today is CF0 and goes in as a negative.',
+      mist:[
+        { cat:'cashFlowOutlay', why:`leaves out the ${tvmGMoney(I0)} cost (CF0). It is only the present value of the inflows, not the NPV.`, v:()=>pvIn },
+        { cat:'cashFlowOutlay', why:`enters the cost as a positive number, so it is added to the inflows instead of subtracted.`, v:()=>pvIn + I0 },
+        { cat:'cashFlowTiming', why:`treats the cost as if it were paid at the end of year 1, so it gets discounted.`, v:()=>pvIn - I0/(1+r/100) },
+        { cat:'generic', why:`adds up the inflows without discounting them and subtracts the cost.`, v:()=>fl.reduce((a,b)=>a+b,0) - I0 } ] }; } },
+  'cf-npv-repeat': { level:2, quiz:true, make(){
+    const I0 = tvmGPick([30000,40000,50000,60000,80000]), r = tvmGPick([6,8,9,10,12]), k = tvmGPick([3,4,5]);
+    const A = cfRound(I0*tvmGPick([0.22,0.26,0.3]), 500), B = cfRound(I0*tvmGPick([0.3,0.4,0.5]), 500);
+    const flows = [{amt:-I0, n:1}, {amt:A, n:k}, {amt:B, n:1}];
+    const pvIn = cfNpv(r, flows) + I0;
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A project costs ${tvmGMoney(I0)} today. It returns ${tvmGMoney(A)} at the end of each of the next ${k} years, then a final ${tvmGMoney(B)} at the end of year ${k+1}. At a ${r}% discount rate, what is its NPV?`,
+      concept:'A flow that repeats is entered once with CFj, then its count with Nj. The final different flow gets its own CFj.',
+      mist:[
+        { cat:'cashFlowRepeat', why:`counts the ${tvmGMoney(A)} flow only once instead of ${k} years in a row (the Nj step was skipped).`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:A,n:1},{amt:B,n:1}]) },
+        { cat:'cashFlowRepeat', why:`repeats the ${tvmGMoney(A)} flow ${k+1} times, one too many, so the final ${tvmGMoney(B)} flow lands in the wrong year.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:A,n:k+1},{amt:B,n:1}]) },
+        { cat:'cashFlowOutlay', why:`leaves out the ${tvmGMoney(I0)} cost (CF0), so it is only the present value of the inflows.`, v:()=>pvIn },
+        { cat:'generic', why:`adds the flows without discounting them and subtracts the cost.`, v:()=>A*k + B - I0 } ] }; } },
+  'cf-irr': { level:2, quiz:true, make(){
+    const I0 = tvmGPick([20000,25000,30000,40000,50000]), n = tvmGPick([3,4]), hurdle = tvmGPick([8,9,10,12]);
+    const fl = []; for(let t = 0; t < n; t++) fl.push(cfRound(I0*tvmGPick([0.32,0.36,0.4,0.45]), 500));
+    const flows = [{amt:-I0, n:1}].concat(fl.map(a => ({amt:a, n:1})));
+    const irr = cfIrr(flows), avg = (fl.reduce((a,b)=>a+b,0)/I0 - 1)/n*100;
+    return { solveFor:'IRR', hurdle, flows, domain:'general',
+      scenario:`A project costs ${tvmGMoney(I0)} today and returns ${cfList(fl.map(tvmGMoney))} at the end of years 1 to ${n}. The client requires ${hurdle}%. What is the project's IRR?`,
+      concept:'IRR is the discount rate that makes the NPV zero. Enter the flows, then press IRR/YR. No rate is entered.',
+      mist:[
+        { cat:'generic', why:`is the average gain per year, (total inflows − cost) ÷ cost ÷ ${n}. It ignores when each flow arrives, so it is not the IRR.`, v:()=>avg },
+        { cat:'generic', why:`is just the ${hurdle}% required return. IRR is the rate the flows actually earn, which the calculator finds.`, v:()=>hurdle },
+        { cat:'cashFlowTiming', why:`leaves out the last year's flow, so the project looks weaker than it is.`, v:()=>cfIrr(flows.slice(0, -1)) },
+        { cat:'cashFlowTiming', why:`counts the flows one year too early, as if the first inflow arrived at time 0 alongside the cost.`, v:()=>cfIrr([{amt:-I0+fl[0],n:1}].concat(fl.slice(1).map(a=>({amt:a,n:1})))) } ] }; } },
+  'cf-irr-repeat': { level:3, quiz:true, make(){
+    const I0 = tvmGPick([40000,50000,60000,80000,100000]), k = tvmGPick([4,5,6]), hurdle = tvmGPick([8,10,12]);
+    const A = cfRound(I0*tvmGPick([0.2,0.24,0.28]), 500), B = cfRound(I0*tvmGPick([0.2,0.3]), 500);
+    const flows = [{amt:-I0, n:1}, {amt:A, n:k}, {amt:B, n:1}], irr = cfIrr(flows);
+    return { solveFor:'IRR', hurdle, flows, domain:'general',
+      scenario:`An investment costs ${tvmGMoney(I0)} today. It pays ${tvmGMoney(A)} at the end of each of the next ${k} years and ${tvmGMoney(B)} at the end of year ${k+1}. What is its IRR? (Hurdle rate ${hurdle}%.)`,
+      concept:'Enter the cost as CF0, the repeating flow with its Nj count, then the final flow. IRR/YR solves the rate.',
+      mist:[
+        { cat:'cashFlowRepeat', why:`counts the ${tvmGMoney(A)} flow only once instead of ${k} years in a row.`, v:()=>cfIrr([{amt:-I0,n:1},{amt:A,n:1},{amt:B,n:1}]) },
+        { cat:'cashFlowRepeat', why:`repeats the ${tvmGMoney(A)} flow ${k+1} times, so the last flow arrives a year late.`, v:()=>cfIrr([{amt:-I0,n:1},{amt:A,n:k+1},{amt:B,n:1}]) },
+        { cat:'generic', why:`is the average yearly gain on the cost. It ignores timing and is not the IRR.`, v:()=>((A*k+B)/I0 - 1)/(k+1)*100 },
+        { cat:'generic', why:`is just the ${hurdle}% hurdle rate, not the rate the flows earn.`, v:()=>hurdle } ] }; } },
+  'cf-npv-gap': { level:3, quiz:true, make(){
+    const I0 = tvmGPick([30000,40000,50000,60000]), r = tvmGPick([6,8,9,10,12]);
+    const a = cfRound(I0*0.35, 500), b = cfRound(I0*0.4, 500), c = cfRound(I0*0.45, 500);
+    const flows = [{amt:-I0,n:1},{amt:a,n:1},{amt:0,n:1},{amt:b,n:1},{amt:c,n:1}];
+    const pvIn = cfNpv(r, flows) + I0;
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A project costs ${tvmGMoney(I0)} today. It returns ${tvmGMoney(a)} at the end of year 1, nothing in year 2, ${tvmGMoney(b)} at the end of year 3 and ${tvmGMoney(c)} at the end of year 4. At a ${r}% discount rate, what is the NPV?`,
+      concept:'A year with no cash flow still needs its own entry: enter 0 with CFj so every later flow lands in the right year.',
+      mist:[
+        { cat:'cashFlowTiming', why:`skips the zero for year 2, so the year 3 and year 4 flows are discounted one year too little.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:b,n:1},{amt:c,n:1}]) },
+        { cat:'cashFlowOutlay', why:`leaves out the ${tvmGMoney(I0)} cost (CF0).`, v:()=>pvIn },
+        { cat:'cashFlowOutlay', why:`enters the cost as a positive number.`, v:()=>pvIn + I0 },
+        { cat:'generic', why:`adds the flows without discounting and subtracts the cost.`, v:()=>a + b + c - I0 } ] }; } },
+  'cf-npv-mixed': { level:3, quiz:true, make(){
+    const I0 = tvmGPick([40000,50000,60000,80000]), r = tvmGPick([6,8,10,12]), extra = cfRound(I0*0.2, 500);
+    const a = cfRound(I0*0.45, 500), b = cfRound(I0*0.5, 500), c = cfRound(I0*0.55, 500);
+    const flows = [{amt:-I0,n:1},{amt:a,n:1},{amt:-extra,n:1},{amt:b,n:1},{amt:c,n:1}];
+    const npv = cfNpv(r, flows);
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A project costs ${tvmGMoney(I0)} today. It returns ${tvmGMoney(a)} at the end of year 1, requires another ${tvmGMoney(extra)} investment at the end of year 2, then returns ${tvmGMoney(b)} in year 3 and ${tvmGMoney(c)} in year 4. At a ${r}% discount rate, what is the NPV?`,
+      concept:'Any cash flow that goes out is negative, whenever it happens. The year 2 investment is entered as a negative flow.',
+      mist:[
+        { cat:'cashFlowOutlay', why:`enters the year 2 investment as a positive number, treating money paid out as money received.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:extra,n:1},{amt:b,n:1},{amt:c,n:1}]) },
+        { cat:'cashFlowTiming', why:`ignores the year 2 investment altogether.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:0,n:1},{amt:b,n:1},{amt:c,n:1}]) },
+        { cat:'cashFlowTiming', why:`drops the year 2 flow instead of entering it, so years 3 and 4 slide one year earlier.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:b,n:1},{amt:c,n:1}]) },
+        { cat:'generic', why:`adds the flows without discounting.`, v:()=>a - extra + b + c - I0 } ] }; } }
+};
+
+function cfKeySteps(P, resultText){
+  const st = ['Clear the worksheet: press the orange Shift key, then C ALL.'];
+  P.flows.forEach((f, j) => {
+    const a = tvmGNum(Math.abs(f.amt));
+    let s;
+    if(f.amt === 0) s = `Enter 0, press [CFj] — ${j === 0 ? 'nothing happens at time 0' : 'a year with no cash flow still needs its own entry'}.`;
+    else s = `Enter ${a}, ${f.amt < 0 ? 'press [+/−], then ' : 'press '}[CFj]${j === 0 ? ' — this is CF0, the amount at time 0 (money paid out is negative)' : f.amt < 0 ? ' — money paid out is negative' : ''}.`;
+    st.push(s);
+    if(f.n > 1) st.push(`Enter ${f.n}, press the orange Shift key, then [Nj] — that flow repeats ${f.n} years in a row.`);
+  });
+  if(P.solveFor === 'NPV'){
+    st.push(`Enter ${tvmGNum(P.rate)}, press [I/YR].`);
+    st.push(`Press the orange Shift key, then [NPV]${resultText ? ' — the display shows ' + resultText : ''}.`);
+  } else {
+    st.push(`Press the orange Shift key, then [IRR/YR]${resultText ? ' — the display shows ' + resultText : ''}. No rate is entered; the calculator finds it.`);
+  }
+  return st;
+}
+function cfSpecToProblem(spec, template, level){
+  tvmGenCounter++;
+  return { id:'cf-'+template+'-'+tvmGenCounter, cf:true, generated:true, template, difficulty:level, solveFor:spec.solveFor, rate:spec.rate, hurdle:spec.hurdle,
+    flows:spec.flows, scenario:spec.scenario, known:{}, domain:spec.domain, concept:spec.concept };
+}
+function cfGenerateProblem(level, templateKey){
+  let keys = Object.keys(CF_GEN_TEMPLATES).filter(k => CF_GEN_TEMPLATES[k].level <= level && (templateKey ? k === templateKey : true));
+  if(!templateKey){
+    const exact = keys.filter(k => CF_GEN_TEMPLATES[k].level === level);
+    keys = exact.length ? exact.concat(Math.random() < 0.3 ? keys : []) : keys;
+    if(keys.length > 1 && tvmLastGenTemplate) keys = keys.filter(k => k !== tvmLastGenTemplate);
+  }
+  const key = templateKey || tvmGWeighted(keys);
+  tvmLastGenTemplate = key;
+  const spec = CF_GEN_TEMPLATES[key].make();
+  return cfSpecToProblem(spec, key, CF_GEN_TEMPLATES[key].level);
+}
+function cfPickProblem(){
+  if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
+  const p = cfGenerateProblem(Math.min(3, DATA.cfProgress.currentTier || 1));
+  DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1;
+  return p;
+}
+function cfGenerateQuizQuestion(level){
+  const keys = Object.keys(CF_GEN_TEMPLATES).filter(k => CF_GEN_TEMPLATES[k].quiz && CF_GEN_TEMPLATES[k].level <= level);
+  for(let attempt = 0; attempt < 14; attempt++){
+    const key = tvmGWeighted(keys.length > 1 && tvmLastGenTemplate ? keys.filter(k => k !== tvmLastGenTemplate) : keys);
+    const spec = CF_GEN_TEMPLATES[key].make();
+    const isNpv = spec.solveFor === 'NPV';
+    const correctVal = isNpv ? cfNpv(spec.rate, spec.flows) : cfIrr(spec.flows);
+    if(correctVal === null || !isFinite(correctVal)) continue;
+    const fmt = v => isNpv ? cfMoneyS(Math.round(v)) : (Math.round(v*10)/10).toFixed(1) + '%';
+    const correctText = fmt(correctVal), used = new Set([correctText]), wrong = [];
+    spec.mist.forEach(m => {
+      let v; try{ v = m.v(); }catch(e){ return; }
+      if(v === null || !isFinite(v)) return;
+      const txt = fmt(v);
+      if(used.has(txt)) return;
+      const scale = Math.max(1, Math.abs(correctVal));
+      if(Math.abs(v - correctVal)/scale < 0.01) return;
+      if(wrong.some(w => w.v !== undefined && Math.abs(w.v - v)/Math.max(1, Math.abs(v)) < 0.01)) return;
+      used.add(txt); wrong.push({ text:txt, cat:m.cat, why:m.why, v });
+    });
+    if(wrong.length < 3) continue;
+    wrong.length = 3;
+    const prob = cfSpecToProblem(spec, key, CF_GEN_TEMPLATES[key].level);
+    const choices = [correctText].concat(wrong.map(w => w.text));
+    const catByChoice = {}; wrong.forEach(w => { catByChoice[w.text] = w.cat; });
+    tvmLastGenTemplate = key;
+    return { id:'tvmq-'+key+'-'+(++tvmGenCounter), tvmGen:true, tvmCf:true, tvmTemplate:key, domain:'general', q:spec.scenario, choices, correct:0,
+      rationale:[`Correct — ${spec.concept} The calculator gives approximately ${correctText}.`].concat(wrong.map(w => `Wrong — this ${w.why}`)),
+      calcType:'tvm', calcSteps:[spec.concept].concat(cfKeySteps(prob, 'approximately ' + correctText)), tvmCatByChoice:catByChoice,
+      tvmPractice:{ cf:true, level:CF_GEN_TEMPLATES[key].level, template:key } };
+  }
+  return null;
+}
+
+function tvmBeginEndOrClear(){ if(tvmMode === 'cf') cfClearAll(); else tvmToggleBeginEnd(); }
+function tvmSetMode(m){
+  if(m === tvmMode && tvmCurrent) return;
+  tvmMode = m; tvmPresetProblem = null;
+  loadTvmProblem();
+}
+function tvmApplyModeUI(){
+  const cf = tvmMode === 'cf';
+  const set = (id, html) => { const e = document.getElementById(id); if(e) e.innerHTML = html; };
+  set('tvmKey_n', cf ? 'CFj' : 'N'); set('tvmKey_iy', cf ? 'Nj<small>⇧</small>' : 'I/YR'); set('tvmKey_pv', cf ? 'I/YR' : 'PV');
+  set('tvmKey_pmt', cf ? 'NPV<small>⇧</small>' : 'PMT'); set('tvmKey_fv', cf ? 'IRR<small>⇧</small>' : 'FV');
+  const be = document.getElementById('tvmBeginEndBtn');
+  if(be){ be.textContent = cf ? 'C ALL' : 'BEG/END'; be.title = cf ? 'Clear the cash-flow worksheet (orange Shift, then C ALL on the real calculator)' : 'Toggle BEGIN (annuity due) / END (ordinary annuity) mode'; be.classList.toggle('tvm-begin-active', !cf && tvmBeginMode); }
+  const ann = document.getElementById('tvmBeginAnnunciator'); if(ann && cf) ann.style.display = 'none';
+  const ms = document.getElementById('tvmMultiStageEntryBtn'); if(ms && cf) ms.style.display = 'none';
+  const h2 = document.getElementById('tvmTitle'); if(h2) h2.textContent = cf ? 'Cash-flow walkthrough' : 'TVM walkthrough';
+  const regs = document.getElementById('tvmRegisters'); if(regs) regs.classList.toggle('cf', cf);
+  const seg = document.getElementById('tvmModeSeg');
+  if(seg) seg.querySelectorAll('button').forEach(b => { const on = b.dataset.mode === tvmMode; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  const ht = document.getElementById('tvmHowtoText');
+  if(ht) ht.textContent = cf
+    ? 'Press C ALL, then enter each cash flow in time order, the cost at time 0 first and as a negative, pressing CFj after each one. If a flow repeats, type the count and press Nj. For NPV, type the rate and press I/YR, then NPV. For IRR, just press IRR. On the real calculator the keys marked ⇧ (Nj, NPV, IRR/YR) are orange-shift functions.'
+    : 'Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you\'re solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.';
+}
+
+function cfRenderRegisters(){
+  const wrap = document.getElementById('tvmRegisters'); if(!wrap) return;
+  wrap.innerHTML = '';
+  const P = tvmCurrent;
+  const mk = (label, value, cls) => { const c = document.createElement('div'); c.className = 'tvm-reg-chip' + (cls ? ' ' + cls : ''); const l = document.createElement('div'); l.className = 'tvm-reg-label'; l.textContent = label; const v = document.createElement('div'); v.className = 'tvm-reg-value'; v.textContent = value; v.title = value; c.appendChild(l); c.appendChild(v); wrap.appendChild(c); };
+  cfState.flows.forEach((f, j) => mk('CF' + j + (f.n > 1 ? ' ×' + f.n : ''), tvmCompactMoney(f.amt), cfState.stale ? 'tvm-reg-stale' : 'tvm-reg-correct'));
+  if(!cfState.flows.length) mk('CF0', '—', '');
+  if(P && P.solveFor === 'NPV') mk('I/YR', cfState.rate === null ? '—' : cfState.rate + '%', cfState.rate === null ? '' : 'tvm-reg-correct');
+  if(P) mk(P.solveFor, tvmSolved ? (P.solveFor === 'NPV' ? tvmFormatCurrency(cfState.result) : (Math.round(cfState.result*100)/100) + '%') : '?', 'tvm-reg-unknown');
+}
+function cfClearAll(){
+  if(!tvmCurrent || !tvmCurrent.cf || tvmSolved) return;
+  cfState.flows = []; cfState.rate = null; cfState.stale = false; cfLeftover = null;
+  tvmDisplay = '0'; tvmUpdateScreen();
+  const fb = document.getElementById('tvmFeedback'); fb.textContent = 'Worksheet cleared. Enter CF0 first.'; fb.className = 'tvm-feedback tvm-feedback-ok';
+  tvmRenderRegisters();
+}
+function cfPressKey(key){
+  if(tvmSolved || !tvmCurrent) return;
+  tvmCollapseHowto();
+  const P = tvmCurrent, fb = document.getElementById('tvmFeedback'), X = cfExpand(P.flows);
+  const say = (t, ok) => { fb.textContent = t; fb.className = 'tvm-feedback ' + (ok ? 'tvm-feedback-ok' : 'tvm-feedback-err'); };
+  const bump = cat => { tvmErrorsThisProblem++; if(cat){ if(!DATA.tvmMistakeCategories) DATA.tvmMistakeCategories = {}; DATA.tvmMistakeCategories[cat] = (DATA.tvmMistakeCategories[cat] || 0) + 1; persist(); } };
+  const E = cfExpand(cfState.flows).length, entered = parseFloat(tvmDisplay);
+  const k = { n:'cfj', iy:'nj', pv:'rate', pmt:'npv', fv:'irr' }[key];
+  const done = () => { tvmDisplay = '0'; tvmUpdateScreen(); tvmRenderRegisters(); };
+  if(cfState.stale){ bump('cashFlowClear'); say('The worksheet still holds the last problem\'s cash flows. Press C ALL to clear it first.'); tvmRenderRegisters(); return; }
+  if(k === 'cfj'){
+    if(E >= X.length){ bump(); say(`All ${X.length} cash flows are already in. ${P.solveFor === 'NPV' ? 'Enter the rate with I/YR, then press NPV.' : 'Press IRR to solve.'}`); return; }
+    const exp = X[E];
+    if(!isNaN(entered) && Math.abs(entered - exp) < 0.005){
+      cfState.flows.push({ amt:exp, n:1 });
+      const E2 = E + 1;
+      if(E2 >= X.length) say(P.solveFor === 'NPV' ? (cfState.rate === null ? 'All cash flows are in. Now type the rate and press I/YR, then NPV.' : 'All cash flows are in. Press NPV.') : 'All cash flows are in. Press IRR.', true);
+      else say(`CF${E} is in. Next: ${E2 === 0 ? 'time 0' : 'year ' + E2}.`, true);
+    } else {
+      if(E === 0 && !isNaN(entered) && entered > 0 && Math.abs(entered + exp) < 0.005){ bump('cashFlowOutlay'); say('CF0 is the cost paid today, so it goes in as a negative. Use [+/−] before CFj.'); }
+      else if(!isNaN(entered) && entered !== 0 && Math.abs(entered + exp) < 0.005){ bump('cashFlowOutlay'); say('Check the sign: money paid out is negative and money received is positive.'); }
+      else if(exp === 0){ bump('cashFlowTiming'); say(`Nothing comes in or goes out in year ${E}, but the calculator still needs a flow for that year. Enter 0, then CFj.`); }
+      else if(E === 0){ bump('cashFlowOutlay'); say('Start with CF0, the amount at time 0. The cost today goes in first, as a negative.'); }
+      else { bump('cashFlowTiming'); say(`That is not the flow for year ${E}. Flows go in time order, one entry per year.`); }
+    }
+    return done();
+  }
+  if(k === 'nj'){
+    if(!cfState.flows.length){ bump(); say('Enter a cash flow with CFj first, then type how many times it repeats and press Nj.'); return; }
+    const last = cfState.flows[cfState.flows.length - 1], E0 = E - last.n, c = Math.round(entered);
+    let run = 0; while(E0 + run < X.length && X[E0 + run] === last.amt) run++;
+    if(isNaN(entered) || c < 1 || c !== entered){ bump(); say('Nj needs a whole number of years, such as 4.'); return done(); }
+    if(c === run){ last.n = c; say(`Good. CF${cfState.flows.length - 1} now repeats ${c} times.`, true); }
+    else { bump('cashFlowRepeat'); say('That flow does not repeat that many times. Count the years in a row with the same amount.'); }
+    return done();
+  }
+  if(k === 'rate'){
+    if(P.solveFor !== 'NPV'){ say('IRR does not need a rate. Press IRR when every cash flow is in.'); return done(); }
+    if(isNaN(entered) || Math.abs(entered - P.rate) > 0.0005){
+      bump(!isNaN(entered) && Math.abs(entered*100 - P.rate) < 0.5 ? 'decimalForm' : null);
+      say(!isNaN(entered) && Math.abs(entered*100 - P.rate) < 0.5 ? `Close, but I/YR goes in as a whole-number percent: ${P.rate}, not ${entered}.` : 'That is not the discount rate in the problem. Check it again.');
+      return done();
+    }
+    cfState.rate = entered;
+    say(E >= X.length ? 'Rate is in. Press NPV.' : 'Rate is in. Finish the cash flows, then press NPV.', true);
+    return done();
+  }
+  // NPV / IRR
+  if(k !== P.solveFor.toLowerCase()){
+    bump(); say(P.solveFor === 'NPV' ? 'This question asks for NPV, not IRR. Enter the rate with I/YR, then press NPV.' : 'This question asks for IRR, not NPV. Press IRR.');
+    return;
+  }
+  if(E < X.length){ bump(); say(`Still need ${X.length - E} more year${X.length - E === 1 ? '' : 's'} of cash flow. Enter them in time order with CFj (or use Nj for a repeat).`); return; }
+  if(P.solveFor === 'NPV' && cfState.rate === null){ bump(); say('Enter the discount rate with I/YR first (as a whole-number percent), then press NPV.'); return; }
+  cfSolveAndShow();
+}
+function cfSolveAndShow(){
+  const P = tvmCurrent;
+  const result = P.solveFor === 'NPV' ? cfNpv(P.rate, P.flows) : cfIrr(P.flows);
+  cfState.result = result; tvmSolved = true;
+  tvmDisplay = result.toFixed(2); tvmUpdateScreen(); tvmRenderRegisters();
+  const resText = P.solveFor === 'NPV' ? tvmFormatCurrency(result) : result.toFixed(2) + '%';
+  const steps = cfKeySteps(P, resText).map(s => `<div class="tvm-solution-step">${escapeHtml(s)}</div>`);
+  if(P.solveFor === 'NPV'){
+    const X = cfExpand(P.flows), i = P.rate/100;
+    const rows = X.slice(0, 8).map((a, t) => `${t === 0 ? 'Time 0' : 'Year ' + t}: ${tvmFormatCurrency(a)}${t ? ' ÷ ' + Math.pow(1+i, t).toFixed(4) : ''} = ${tvmFormatCurrency(a/Math.pow(1+i, t))}`);
+    if(X.length > 8) rows.push('…');
+    steps.push(`<div class="tvm-solution-step"><b>Check by hand:</b> ${rows.map(escapeHtml).join('<br>')}<br>Total = ${tvmFormatCurrency(result)}.</div>`);
+    steps.push(`<div class="tvm-solution-step"><b>Decision:</b> ${result > 0 ? 'NPV is positive, so the project earns more than the ' + P.rate + '% required return. Accept.' : result < 0 ? 'NPV is negative, so the project earns less than the ' + P.rate + '% required return. Reject.' : 'NPV is zero: the project earns exactly the required return.'}</div>`);
+  } else {
+    steps.push(`<div class="tvm-solution-step"><b>Decision:</b> the IRR is ${result.toFixed(2)}% against the required ${P.hurdle}%. ${result > P.hurdle ? 'It beats the hurdle, so accept.' : 'It falls short of the hurdle, so reject.'}</div>`);
+  }
+  if(tvmErrorsThisProblem === 0) steps.push(`<div class="tvm-solution-step">Clean run. That is exactly the muscle memory you want on exam day.</div>`);
+  const solEl = document.getElementById('tvmSolution');
+  solEl.innerHTML = steps.join('') + `<div class="tvm-solution-answer">${P.solveFor} = ${resText}</div>`;
+  solEl.style.display = 'block';
+  try{
+    const host = document.getElementById('tvmHost');
+    if(host && document.body.classList.contains('tvm-active') && window.matchMedia && matchMedia('(max-width:640px) and (orientation:portrait)').matches){
+      const top = solEl.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+      host.scrollTo({ top: Math.max(0, top - Math.round(window.innerHeight*0.42)), behavior:'smooth' });
+    }
+  }catch(e){}
+  const fb = document.getElementById('tvmFeedback'); fb.textContent = 'Solved. The worked solution is below.'; fb.className = 'tvm-feedback';
+  document.getElementById('tvmContinueStageBtn').style.display = 'none';
+  document.getElementById('tvmNextBtn').style.display = 'inline-block';
+  cfLeftover = cfState.flows.length ? cfState.flows.map(f => ({ amt:f.amt, n:f.n })) : null;
+  cfRecordOutcome(tvmErrorsThisProblem === 0);
+}
+function cfRecordOutcome(clean){
+  if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
+  const prog = DATA.cfProgress;
+  DATA.tvmSolvedCount = (DATA.tvmSolvedCount || 0) + 1;
+  DATA.tvmToolLastAt = Date.now();
+  try{ planDayLog().tvm++; }catch(e){}
+  try{ if(tvmCurrent && tvmCurrent.template) tvmNoteTemplate(tvmCurrent.template, clean); }catch(e){}
+  if(clean){ prog.correctStreak = (prog.correctStreak || 0) + 1; if(prog.correctStreak >= 2 && prog.currentTier < 3){ prog.currentTier++; prog.correctStreak = 0; } }
+  else { prog.correctStreak = 0; if(tvmErrorsThisProblem >= 3 && prog.currentTier > 1) prog.currentTier--; }
+  persist();
+  tvmRenderStatus();
+}
+function tvmRenderCfTimeline(wrap, host, metaEl, capEl){
+  const P = tvmCurrent, X = cfExpand(P.flows), T = X.length - 1, E = cfExpand(cfState.flows).length;
+  const compress = T > 6;
+  const idxs = compress ? [0, 1, 2, T - 1, T] : X.map((_, t) => t);
+  const slotX = compress ? [0, 0.2, 0.4, 0.8, 1] : idxs.map(t => T ? t / T : 0);
+  const items = idxs.map((t, s) => ({ x:slotX[s], val:X[t], name:'', compact:true, showZero:true, hit:t < E && !cfState.stale }));
+  const ticks = idxs.map((t, s) => ({ x:slotX[s], label:String(t) }));
+  const aria = 'Cash-flow timeline: ' + X.map((a, t) => `time ${t} ${tvmShortMoney(a)}`).slice(0, 12).join(', ') + '.';
+  host.innerHTML = tvmFlowSvg({ items, ticks, dots: compress ? [0.6] : [], aria });
+  if(metaEl){
+    const chips = [tvmTimelineChip(`${X.length} cash flows over ${T} year${T === 1 ? '' : 's'}`)];
+    if(P.solveFor === 'NPV') chips.push(tvmTimelineChip('discount rate = ' + P.rate + '%'), tvmTimelineChip('NPV = ' + (tvmSolved ? tvmFormatCurrency(cfState.result) : '?'), tvmSolved ? 'done' : 'unk'));
+    else chips.push(tvmTimelineChip('IRR = ' + (tvmSolved ? cfState.result.toFixed(2) + '%' : '?'), tvmSolved ? 'done' : 'unk'));
+    metaEl.innerHTML = chips.join('');
+  }
+  if(capEl) capEl.innerHTML = '<b>↑</b> money in · <b>↓</b> money out. Time 0 is today; each later flow lands at the end of its year. ' + (tvmSolved ? '' : 'Bold arrows are flows you have entered.');
+  wrap.style.display = 'block';
 }
 
 function shuffle(arr){
@@ -19974,6 +20661,10 @@ function buildTutorSystemPrompt(){
     }
   }
 
+  try{
+    const cfp = DATA.cfProgress;
+    if(cfp && (cfp.currentTier > 1 || cfp.correctStreak > 0)) tvmContext += ` In the same tool's cash-flow mode (CFj, Nj, NPV, IRR) they are at ${CF_LEVEL_NAMES[cfp.currentTier].toLowerCase()}.`;
+  }catch(e){}
   let flashcardContext = '';
   let teachContext = '';
   try{
@@ -20041,6 +20732,7 @@ Guidelines:
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
+- The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
 - Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing.
 - If a student asks whether they should be in BEG or END mode: End is the standard default and what an ordinary annuity (payments at the end of each period) requires — the vast majority of TVM problems. BEG (annuity due, payments at the start of each period) only comes up when a problem explicitly says payments occur in advance, like a lease or a retirement withdrawal taken at the start of each year rather than the end. There's no "END" indicator on the display at all — only "BEGIN" shows when that mode is active, so its absence means the calculator is already in End mode. BEG/END has zero effect on a pure lump-sum FV or PV calculation with no payment involved.
@@ -20222,8 +20914,8 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'open_tvm_calculator',
-    description: "Open the app's TVM (time-value-of-money) calculator walkthrough tool. Use this when the student asks to practice a calculator problem or wants to work through a TVM calculation hands-on.",
-    input_schema: { type: 'object', properties: {} },
+    description: "Open the app's HP 10bII+ calculator walkthrough. It has two modes: time value of money (N, I/YR, PV, PMT, FV: loans, annuities, bonds, loan balances) and cash flows (CFj, Nj, NPV, IRR). Use this when the student asks to practice a calculator problem or wants to work through a calculation hands-on. Set mode to 'cashflow' for NPV, IRR or uneven-cash-flow work.",
+    input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['tvm', 'cashflow'], description: 'Which mode to open; omit for time value of money.' } } },
   },
   {
     name: 'open_formula_drill',
@@ -20423,6 +21115,8 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'open_tvm_calculator'){
       showTab('study');
+      if(toolInput && toolInput.mode === 'cashflow'){ openTvmTool(cfGenerateProblem(Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1))); return `Opened the cash-flow calculator (CFj, Nj, NPV, IRR) with a fresh problem.`; }
+      tvmMode = 'tvm';
       openTvmTool();
       return `Opened the TVM calculator tool.`;
     }
@@ -21381,7 +22075,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.222';
+const BUILD_ID = '2026-10-18.223';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -21438,7 +22132,7 @@ const SYNC_DESC = 'CFP Blueprint sync (private)';
 const SYNC_LOCAL_ONLY = ['tutorNotes','tutorNotesOff','speechOptimizedText','lastTab','theme','themeMode','eveningModeSetting','preferredVoiceName','preferredHost1VoiceName','preferredHost2VoiceName','conductor','fcShown','lastBackupAtAnswerCount','genRetryAt','genFailStreak','variantFailedAt'];
 const SYNC_UNION_ARRAYS = ['studyDates','checkedSubtopics','announcedMilestones','missed','hypercorrectionQueue'];
 const SYNC_ARRAY_CAP = { sessions: 300, errorLog: 500, tutorTopics: 300 };
-const SYNC_WHOLE = ['tvmProgress'];
+const SYNC_WHOLE = ['tvmProgress', 'cfProgress'];
 const SYNC = { on:false, token:null, gistId:null, etag:null, lastOkAt:0, status:'off', err:'', busy:false, again:false, timer:null, poll:null, pendingApply:false, applying:false, lastProbe:null, keyEncFor:null, keyEnc:null, keyPushedFor:null, lastPullTry:0 };
 
 function syncCanon(v){
