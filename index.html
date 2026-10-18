@@ -891,6 +891,17 @@
   .ns-meta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
   .ns-alt{margin-left:auto;background:none;border:none;padding:10px 2px;white-space:nowrap;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
   .ns-alt:active{color:var(--ink);}
+  .tn-card{background:var(--surface2);border:1px solid var(--hair);border-left:3px solid var(--gold);border-radius:12px;padding:13px 16px 6px;margin:4px 0 14px;}
+  .tn-kicker{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--gold-bright);margin-bottom:6px;}
+  .tn-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex:none;}
+  .tn-text{font-size:14px;line-height:1.5;color:var(--paper);}
+  .tn-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px;}
+  .tn-go{font:inherit;font-weight:600;font-size:13px;color:var(--gold-bright);background:none;border:none;padding:10px 0;min-height:44px;cursor:pointer;}
+  .tn-x{font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;padding:10px 2px;min-height:44px;cursor:pointer;}
+  .tn-go:active,.tn-x:active{opacity:.6;}
+  .tab-btn{position:relative;}
+  .tab-btn.has-note::after{content:"";position:absolute;top:5px;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px var(--surface);}
+  @media (min-width:641px){ .tab-btn.has-note::after{top:7px;left:auto;right:8px;} }
   @media (max-width:389px){ .ns-foot{gap:6px 8px;} .ns-cta{padding:12px 18px;} .ns-meta{font-size:11px;} .ns-alt{min-height:36px;padding:6px 2px;} }
   .ns-note{font-size:12px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);line-height:1.45;}
   .ns-updated{color:var(--teal);border-top-color:var(--teal);}
@@ -2487,6 +2498,8 @@
       <span id="coachText"></span>
     </div>
 
+    <div class="tn-card" id="tutorNoteCard" role="region" aria-label="Note from your tutor" style="display:none;"></div>
+
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
     
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
@@ -3633,6 +3646,15 @@
         </div>
 
         <div class="settings-section">
+          <h3>Tutor notes</h3>
+          <div class="evening-mode-control" id="tnModeControl">
+            <button class="ev-mode-btn" id="tnMode_on" onclick="tnSetEnabled(true)">On</button>
+            <button class="ev-mode-btn" id="tnMode_off" onclick="tnSetEnabled(false)">Off</button>
+          </div>
+          <div class="ev-mode-status" id="tnModeStatus"></div>
+        </div>
+
+        <div class="settings-section">
           <h3>Voice</h3>
           <p class="hint" style="margin-top:0;">The device voice that reads flashcards, rationales and podcasts aloud. Auto picks the most natural-sounding one available. The two podcast hosts use two different voices, and if you choose only one, the other is filled in automatically.</p>
           <div class="voice-pref-row">
@@ -3805,7 +3827,8 @@ function showTab(name, opts){
   }
   if(!same){
     _scrollPageTo(opts.fromBar ? (_tabScroll[name] || 0) : 0);
-    if(name === 'tutor'){ const th = document.getElementById('tutorThread'); if(th) th.scrollTop = th.scrollHeight; }
+    if(name === 'tutor'){ try{ tnOnTutorOpen(); }catch(e){} const th = document.getElementById('tutorThread'); if(th) th.scrollTop = th.scrollHeight; }
+    try{ tnRenderDot(); }catch(e){}
     if(name === 'tools'){ try{ renderToolPracticeButtons(); }catch(e){} }
   }
 }
@@ -5546,6 +5569,7 @@ function defaultData(){
     tvmSolvedCount: 0,
     recentAdaptiveIds: [],
     tutorTopics: [],
+    tutorNotes: [],
     announcedMilestones: []
   };
 }
@@ -5693,6 +5717,7 @@ function sanitizeLoadedData(d){
     d[k] = Array.isArray(d[k]) ? d[k].filter(x => x !== null && x !== undefined) : [];
   });
   d.sessions = d.sessions.filter(isObj);
+  d.tutorNotes = (Array.isArray(d.tutorNotes) ? d.tutorNotes : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.text === 'string' && typeof x.t === 'number').slice(-40);
   d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
@@ -8424,6 +8449,7 @@ function refreshCoachSurfaces(){
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
   try{ renderStudyTechniques(); }catch(e){}
   renderReadinessExtras(stats);
+  try{ tnTick(); tnRenderCard(); }catch(e){}
   renderNextStepCard(stats);
   renderTodayPlan();
   renderModeMeta();
@@ -14185,6 +14211,7 @@ function openSettings(){
   lockBodyScroll();
   { const h = document.getElementById('settingsHost'); if(h) h.scrollTop = 0; }
   renderApiKeyUI();
+  try{ tnRenderSettings(); }catch(e){}
   try{ renderSyncCard(); }catch(e){}
   renderVoicePrefOptions();
   renderAiTokenUsage();
@@ -19706,6 +19733,7 @@ function buildTutorSystemPrompt(){
     if(mem.length) timeContext += ' Things they have brought to you in earlier conversations, oldest first: ' + mem.map(m => `"${m.q}" (${modeAgoText(m.t)})`).join('; ') + '. Use this for continuity, the way a tutor who remembers last week would: connect to an earlier topic when it genuinely helps, check whether it stuck, but never recite the list.';
   }catch(e){}
   try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
+  timeContext += tnPromptBlock();
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
@@ -19828,7 +19856,7 @@ Guidelines:
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
-- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -20063,6 +20091,11 @@ const TUTOR_TOOLS = [
     input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 60 to 360. Optional.' } } },
   },
   {
+    name: 'schedule_check_in',
+    description: "Leave the student a short note that appears at the top of the Study tab the next time they open the app on or after a chosen day. Use it only when a follow-up has real value: they asked you to check back, a concept you just worked through is still shaky and a re-test in 1 to 3 days would help, or something time-sensitive needs a nudge. At most one per conversation unless they ask for more. The note is written by you, one or two specific sentences. It is not a phone notification, so never promise a time.",
+    input_schema: { type: 'object', properties: { text: { type: 'string', description: 'The note itself, in your voice to the student, one or two sentences, under 180 characters.' }, days: { type: 'number', description: 'Days from now, 1 to 14.' }, topic: { type: 'string', description: 'The topic to re-test when they tap Quiz me, a few words.' } }, required: ['text', 'days'] },
+  },
+  {
     name: 'start_plan_step',
     description: "Start one step of today's plan for the student, using the step id returned by plan_my_study (for example cards, adaptive, weak, missed, calc, case, checkpoint, keys, fullexam). Only do this once they have said yes, or asked you to start it.",
     input_schema: { type: 'object', properties: { step_id: { type: 'string', description: 'The id of the step to start.' } }, required: ['step_id'] },
@@ -20220,6 +20253,7 @@ async function executeTutorTool(toolName, toolInput){
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
       return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
+    if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'start_plan_step'){
       const plan = buildStudyPlan(240); // any step that applies today, even if it did not fit the time budget
       const st = plan.steps.concat(plan.blocks).find(x => x.id === (toolInput && toolInput.step_id));
@@ -20711,6 +20745,196 @@ function tutorOpeningLine(stats){
   try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time: \u201c${rt.q.length > 70 ? rt.q.slice(0, 67) + '\u2026' : rt.q}\u201d.`); }catch(e){}
   return parts.join(' ');
 }
+/* ===========================================================
+   TUTOR NOTES
+   The tutor's way of speaking first. A phone app cannot buzz you when it is closed, so the windows it has are the
+   moments you open it. At those moments it may leave ONE short note, only when it has something specific and useful:
+   a long gap, a strong domain going stale, falling behind the pace, an exam countdown milestone, or a follow-up the
+   tutor itself promised in chat (schedule_check_in). Each note re-checks that it is still true before it shows,
+   expires on its own, is limited to one new note a day, and never appears mid-session. Things that already have a
+   callout (mix-ups, miss patterns, streaks, score milestones) are deliberately not repeated here.
+=========================================================== */
+const TN_PRIORITY = { checkin: 0, countdown: 1, gap: 2, pace: 3, fade: 4 };
+const TN_EXPIRE = { checkin: 7 * 86400000, countdown: 2 * 86400000, gap: 2 * 86400000, pace: 3 * 86400000, fade: 3 * 86400000 };
+function tnList(){ if(!Array.isArray(DATA.tutorNotes)) DATA.tutorNotes = []; return DATA.tutorNotes; }
+function tnEnabled(){ return !(DATA && DATA.tutorNotesOff); }
+function tnKind(n){ return n.key === 'checkin' ? 'checkin' : String(n.key).split(':')[0].replace(/^cd.*/, 'countdown'); }
+function tnGapDays(){
+  const dates = (DATA.studyDates || []).slice().sort(); const last = dates[dates.length - 1];
+  return last ? dayKeyToNumber(localDayKey()) - dayKeyToNumber(last) : null;
+}
+function tnDomainStale(){
+  // Strong domains that have gone quiet: the score fades with time, so these are the ones worth a nudge.
+  const now = Date.now(), lastBy = {};
+  allQuestions().forEach(q => { const st = DATA.questionStats[q.id]; if(st && st.seen && st.lastSeenAt && st.lastSeenAt > (lastBy[q.domain] || 0)) lastBy[q.domain] = st.lastSeenAt; });
+  return domainMasteryList().filter(d => (d.total || 0) >= 10 && (d.mastery || 0) >= 60 && lastBy[d.key] && now - lastBy[d.key] >= 10 * 86400000)
+    .map(d => ({ d, days: Math.floor((now - lastBy[d.key]) / 86400000) })).sort((a, b) => b.d.weight - a.d.weight)[0] || null;
+}
+function tnRecentDayMinutes(n){
+  const out = []; const by = {};
+  (DATA.sessions || []).forEach(x => { if(x.minutes){ const k = localDayKey(new Date(x.date)); by[k] = (by[k] || 0) + x.minutes; } });
+  for(let i = 1; i <= n; i++){ const d = new Date(); d.setDate(d.getDate() - i); out.push(by[localDayKey(d)] || 0); }
+  return out;
+}
+// Each rule: make() returns {key, text, act} when the moment is right; still(note) says whether it is still true.
+const TN_RULES = [
+  { kind: 'countdown',
+    make(){
+      const d = getDaysUntilExam(); if(d === null || d < 1 || d > 14) return null;
+      const tier = d <= 1 ? 1 : d <= 3 ? 3 : d <= 7 ? 7 : 14;
+      const txt = { 14: `${d} days out. From here, timed sets and your weakest domains matter more than new material.`,
+        7: `${d} days left. No new topics now: work through what you have missed and keep one timed set going.`,
+        3: `${d} days out. Confirm your test-center details and ID, and keep sessions short.`,
+        1: `The exam is ${d === 1 ? 'tomorrow' : 'today'}. Light review only, then rest.` }[tier];
+      const act = tier <= 3 ? { kind: 'tab', arg: 'examday', label: 'Exam-day checklist' } : { kind: 'plan', label: "See today's plan" };
+      return { key: 'cd' + tier, text: txt, act, once: true };
+    },
+    still(n){ const d = getDaysUntilExam(); return d !== null && d >= 1; } },
+  { kind: 'gap',
+    make(){
+      const g = tnGapDays(); if(g === null || g < 3) return null;
+      const d = getDaysUntilExam(); if(d !== null && d <= 1) return null;
+      let due = 0; try{ due = computeDueCounts(); }catch(e){}
+      return { key: 'gap', cool: 4, text: `${g} days since your last session.${due ? ` ${due} item${due === 1 ? ' has' : 's have'} come due.` : ''} Ten minutes today keeps it from piling up.`, act: { kind: 'next', label: 'Start a short warm-up' } };
+    },
+    still(n){ const g = tnGapDays(); return g !== null && g >= 1; } },
+  { kind: 'pace',
+    make(){
+      const a = studyPaceAdvice(); if(!a || !a.known || a.days > 35) return null;
+      const last3 = tnRecentDayMinutes(3); if(!last3.every(m => m < a.minutes * 0.7) || last3.every(m => m === 0)) return null; // three empty days is the gap note's job
+      const avg = last3.reduce((x, y) => x + y, 0) / 3;
+      return { key: 'pace', cool: 5, text: `Under pace three days running: about ${paceHrs(Math.max(15, avg))} a day against the ${paceHrs(a.minutes)} that gets you ready by ${a.examLabel}.`,
+        act: { kind: 'ask', label: 'Build a catch-up plan', arg: `I have been under my study pace for three days. My exam is ${a.days} days away. Look at my plan and my weak areas, then give me a realistic catch-up plan that does not burn me out.` } };
+    },
+    still(n){ const a = studyPaceAdvice(); return !!a && tnRecentDayMinutes(1)[0] < a.minutes; } },
+  { kind: 'fade',
+    make(){
+      const d = getDaysUntilExam(); if(d !== null && (d > 60 || d < 2)) return null;
+      const s = tnDomainStale(); if(!s) return null;
+      return { key: 'fade:' + s.d.key, cool: 7, text: `${s.d.name} has not come up in ${s.days} days. Strong areas fade quietly; one short set keeps it sharp.`, act: { kind: 'drill', arg: s.d.key, label: `Quick ${s.d.code} set` } };
+    },
+    still(n){ const s = tnDomainStale(); return !!s && ('fade:' + s.d.key) === n.key; } },
+];
+function tnNoteStill(n){
+  if(n.key === 'checkin') return true;
+  const r = TN_RULES.find(x => x.kind === tnKind(n));
+  try{ return !r || r.still(n); }catch(e){ return true; }
+}
+function tnActive(){
+  const now = Date.now();
+  return tnList().filter(n => n.state === 'new' && (n.due || n.t) <= now && now - (n.due || n.t) < (TN_EXPIRE[tnKind(n)] || 2 * 86400000) && tnNoteStill(n))
+    .sort((a, b) => (TN_PRIORITY[tnKind(a)] - TN_PRIORITY[tnKind(b)]) || (a.t - b.t));
+}
+// Called whenever the app comes to the foreground or the Study tab refreshes. Cheap and quiet.
+function tnTick(){
+  try{
+    if(!DATA || !DATA.domainStats) return;
+    const list = tnList(), now = Date.now();
+    // housekeeping: retire what has expired or stopped being true; forget old history
+    list.forEach(n => { if(n.state === 'new' && ((n.due || n.t) + (TN_EXPIRE[tnKind(n)] || 2 * 86400000) < now || !tnNoteStill(n))) n.state = 'done'; });
+    DATA.tutorNotes = list.filter(n => now - (n.due || n.t) < 60 * 86400000).slice(-40);
+    if(!tnEnabled() || session || !DATA.sessions || !DATA.sessions.length){ tnRenderDot(); return; }
+    const today = localDayKey();
+    const madeToday = DATA.tutorNotes.some(n => n.from === 'rule' && localDayKey(new Date(n.t)) === today);
+    const pending = DATA.tutorNotes.some(n => n.state === 'new' && n.from === 'rule');
+    if(!madeToday && !pending){
+      for(const r of TN_RULES){
+        let m = null; try{ m = r.make(); }catch(e){}
+        if(!m) continue;
+        const prior = DATA.tutorNotes.filter(n => n.key === m.key).sort((a, b) => b.t - a.t)[0];
+        if(prior && (m.once || now - prior.t < (m.cool || 3) * 86400000)) continue;
+        DATA.tutorNotes.push({ id: 'n' + now.toString(36), key: m.key, t: now, from: 'rule', text: m.text, act: m.act, state: 'new' });
+        persist();
+        break;
+      }
+    }
+    tnRenderDot();
+  }catch(e){}
+}
+function tnRunAct(n){
+  const a = n && n.act; if(!a) return;
+  try{
+    if(a.kind === 'next'){ const s = computeNextStep(computeStats()); currentNextStep = s; if(s && typeof s.run === 'function') s.run(); }
+    else if(a.kind === 'drill') startDrill(a.arg);
+    else if(a.kind === 'ask') askTutorAbout(a.arg);
+    else if(a.kind === 'tab') showTab(a.arg);
+    else if(a.kind === 'plan'){ showTab('study'); const el = document.getElementById('todayPlanCard'); if(el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }
+  }catch(e){}
+}
+function tnAct(id){
+  const n = tnList().find(x => x.id === id); if(!n) return;
+  n.state = 'done'; persist(); tnRenderCard(); tnRenderDot(); tnRunAct(n);
+}
+function tnDismiss(id){
+  const n = tnList().find(x => x.id === id); if(!n) return;
+  n.state = 'done'; persist(); tnRenderCard(); tnRenderDot();
+  tnRenderCard(); tnRenderDot(); // a queued note takes its place; nothing new is created on a dismiss
+}
+function tnRenderCard(){
+  const el = document.getElementById('tutorNoteCard'); if(!el) return;
+  const n = (!session && tnEnabled()) ? tnActive()[0] : null;
+  if(!n){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  const when = n.key === 'checkin' ? 'Check-in you asked for' : 'From your tutor';
+  el.innerHTML = `<div class="tn-kicker"><span class="tn-dot"></span>${when}</div>
+    <div class="tn-text">${escapeHtml(n.text)}</div>
+    <div class="tn-foot">${n.act ? `<button type="button" class="tn-go" onclick="tnAct('${n.id}')">${escapeHtml(n.act.label)}</button>` : ''}<button type="button" class="tn-x" onclick="tnDismiss('${n.id}')">Dismiss</button></div>`;
+  el.style.display = 'block';
+}
+function tnRenderDot(){
+  const b = document.querySelector('.tab-btn[data-tab="tutor"]'); if(!b) return;
+  const on = tnEnabled() && !session && tnActive().length > 0 && !b.classList.contains('active');
+  b.classList.toggle('has-note', on);
+}
+// Opening the Tutor tab reads the waiting notes aloud in the thread, so the Study card steps aside.
+function tnOnTutorOpen(){
+  try{
+    if(!tnEnabled()) return;
+    const pend = tnActive();
+    if(!pend.length) return;
+    pend.forEach(n => {
+      const bubble = renderTutorMessage('bot', n.text);
+      if(n.act){ const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-show'; b.textContent = n.act.label; b.onclick = () => { n.state = 'done'; persist(); tnRunAct(n); }; bubble.appendChild(b); }
+      n.state = 'seen';
+    });
+    persist(); tnRenderCard(); tnRenderDot();
+  }catch(e){}
+}
+function tnSetEnabled(on){
+  DATA.tutorNotesOff = !on; persist(); tnRenderSettings(); tnRenderCard(); tnRenderDot();
+}
+function tnRenderSettings(){
+  const on = tnEnabled();
+  const a = document.getElementById('tnMode_on'), b = document.getElementById('tnMode_off'), s = document.getElementById('tnModeStatus');
+  if(a) a.classList.toggle('active', on); if(b) b.classList.toggle('active', !on);
+  if(s) s.textContent = on ? 'Your tutor may leave a short note when you open the app, at most one a day.' : 'Off. No notes or check-ins will appear.';
+}
+// For the tutor's own context: what it has already told the student, so it never repeats or contradicts itself.
+function tnPromptBlock(){
+  try{
+    const now = Date.now(); const sent = tnList().filter(n => n.state !== 'new' || (n.due || n.t) <= now).filter(n => now - n.t < 7 * 86400000).slice(-4);
+    const pending = tnList().filter(n => n.key === 'checkin' && n.state === 'new' && (n.due || n.t) > now);
+    let s = '';
+    if(sent.length) s += ' Short notes the app has already shown them this week (do not repeat them): ' + sent.map(n => `"${n.text}"`).join('; ') + '.';
+    if(pending.length) s += ' Check-ins you have already scheduled: ' + pending.map(n => `"${n.topic || n.text}" (${new Date(n.due).toLocaleDateString('en-US', { weekday: 'short' })})`).join('; ') + '.';
+    return s;
+  }catch(e){ return ''; }
+}
+function tnScheduleCheckIn(input){
+  if(!tnEnabled()) return 'Tutor notes are turned off in Settings, so nothing can be scheduled. Tell the student that plainly and suggest they come back tomorrow, or turn notes on in Settings.';
+  const text = String((input && input.text) || '').trim().slice(0, 180);
+  const topic = String((input && input.topic) || '').trim().slice(0, 100);
+  const days = Math.max(1, Math.min(14, Math.round(Number(input && input.days) || 1)));
+  if(text.length < 8) return 'Error: write the note itself, in your own words to the student (a sentence or two).';
+  const pend = tnList().filter(n => n.key === 'checkin' && n.state === 'new' && n.due > Date.now());
+  if(pend.length >= 2) return 'Two check-ins are already scheduled. Do not add another; tell the student you will use the ones already set.';
+  if(topic && pend.some(n => (n.topic || '').toLowerCase() === topic.toLowerCase())) return 'A check-in on that topic is already scheduled. Do not add a duplicate.';
+  const due = new Date(); due.setDate(due.getDate() + days); due.setHours(8, 0, 0, 0);
+  tnList().push({ id: 'c' + Date.now().toString(36), key: 'checkin', t: Date.now(), due: due.getTime(), from: 'tutor', topic, text,
+    act: { kind: 'ask', label: 'Quiz me', arg: `Check-in${topic ? ' on ' + topic : ''}: ask me one question to see whether it stuck, wait for my answer, then fill in anything I am missing.` }, state: 'new' });
+  persist();
+  return `Scheduled for ${due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. It appears as a note at the top of the Study tab the next time they open the app on or after that day. It does not send a phone notification, so say it that way: "I'll have a note waiting for you." Do not promise a time.`;
+}
+
 function updateTutorContextNote(){
   const tvmChip = document.getElementById('tutorTvmMistakeChip');
   if(tvmChip){
@@ -20866,7 +21090,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.215';
+const BUILD_ID = '2026-10-18.216';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
