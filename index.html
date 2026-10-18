@@ -2393,6 +2393,8 @@
   .sync-steps{margin:0 0 12px;padding-left:20px;font-size:13.5px;line-height:1.5;color:var(--muted);} .sync-steps a{color:var(--gold);font-weight:600;}
   #syncBox .tutor-input{width:100%;margin-top:4px;}
   @media (max-width:640px){ #modePanel .mode-grid .mode-card:last-child:nth-child(odd){grid-column:1 / -1;} }
+  .bp-plan{margin-top:12px;}
+  .bp-plan .plan-forecast{margin-top:8px;}
 </style>
 </head>
 <body>
@@ -2486,6 +2488,7 @@
       </div>
       <div class="bp-bar" id="bpBar"></div>
       <div class="bp-code-row" id="bpCodeRow"></div>
+      <div class="bp-plan" id="bpPlan" style="display:none;"></div>
       <div class="bp-trend" id="progressCard">
         <div class="bp-trend-head"><span class="bp-trend-title">Your trend</span><span class="trend-toggle" id="trendToggle" role="group" aria-label="What the line shows" style="display:none;"><button type="button" data-view="score" class="on" aria-pressed="true" onclick="setTrendView('score')">Score</button><button type="button" data-view="ready" aria-pressed="false" onclick="setTrendView('ready')">Readiness</button></span></div>
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
@@ -3615,7 +3618,6 @@
         </div>
         <div id="examWindowPick" class="ewp"></div>
       </div>
-          <div id="planBody" style="display:none;"></div>
         </div>
 
         <div class="settings-section">
@@ -7202,57 +7204,26 @@ function paceForecastHtml(daysLeft){
 }
 
 function renderStudyPlan(){
-  const setup = document.getElementById('planSetup');
-  const body = document.getElementById('planBody');
   const input = document.getElementById('examDateInput');
   const clearBtn = document.getElementById('examDateClear');
-  if(!setup || !body) return;
   try{ renderExamWindowPick(); }catch(e){}
-
-  if(!DATA.examDate){
-    body.style.display = 'none';
-    if(clearBtn) clearBtn.style.display = 'none';
-    return;
-  }
-  if(input && input.value !== DATA.examDate) input.value = DATA.examDate;
-  if(clearBtn) clearBtn.style.display = 'inline-block';
-
-  const daysLeft = getDaysUntilExam();
-
-  body.style.display = 'block';
-
-  if(daysLeft < 0){
-    body.innerHTML = `<p class="hint">That date has passed — update it in Settings once you've got a new exam date, or clear it to hide this card.</p>`;
-    return;
-  }
-  const weeksLeft = Math.max(0, Math.ceil(daysLeft/7));
-
-  // Priority = exam weight × how weak the domain currently is. A
-  // heavily-weighted domain you're weak in should dominate the plan far
-  // more than a lightly-weighted one you're already solid on.
-  const rows = domainMasteryList().map(d=>{
-    const masteryFrac = d.mastery===null ? 0 : d.mastery/100;
-    const weakness = 1 - masteryFrac;
-    const priority = d.weight * (0.3 + 0.7*weakness); // even mastered domains keep a small floor so nothing drops off the plan entirely
-    return {...d, priority};
-  }).sort((a,b)=> b.priority - a.priority);
-
-  let phaseLabel, phaseNote;
-  if(daysLeft <= 10){
-    phaseLabel = 'Final review';
-    phaseNote = `With ${daysLeft} day${daysLeft===1?'':'s'} left, prioritize full 170-question exam simulations for stamina and pacing, plus clearing out your missed-question list. New material is lower priority now than consolidating what you've already covered.`;
-  } else if(weeksLeft <= 8){
-    phaseLabel = 'Build phase';
-    phaseNote = `Adaptive Session should be your default from here — it interleaves everything and keeps surfacing your weak spots automatically. Weave in a full 170-question exam every couple of weeks to track real progress under timed conditions.`;
-  } else {
-    phaseLabel = 'Foundation phase';
-    phaseNote = `With ${weeksLeft} weeks to go, there's room to build unfamiliar material with Domain Drill before shifting to interleaved Adaptive Session review. Start with the domains below — they carry the most exam weight relative to where you stand today.`;
-  }
-
-  body.innerHTML = `
-    <div class="plan-phase-row"><span class="plan-phase-badge">${phaseLabel}</span><span class="plan-countdown">${daysLeft} day${daysLeft===1?'':'s'} to go</span></div>
-    ${paceForecastHtml(daysLeft)}
-  `;
+  try{ renderBlueprintPlan(); }catch(e){}
+  if(input && DATA.examDate && input.value !== DATA.examDate) input.value = DATA.examDate;
+  if(clearBtn) clearBtn.style.display = DATA.examDate ? 'inline-block' : 'none';
+}
+// The phase of preparation, shown on the countdown card; pace to exam day lives in "Why this score".
+function renderBlueprintPlan(){
+  const el = document.getElementById('bpPlan');
+  if(!el) return;
+  const d = getDaysUntilExam();
+  if(d === null || d < 0){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="plan-phase-row"><span class="plan-phase-badge">' + examPhaseLabel(d) + '</span><span class="plan-countdown">' + d + ' day' + (d === 1 ? '' : 's') + ' to go</span></div>' + (d >= 2 ? paceForecastHtml(d) : '');
+  el.style.display = '';
+}
+function examPhaseLabel(daysLeft){
+  if(daysLeft === null || daysLeft < 0) return '';
+  if(daysLeft <= 10) return 'Final review';
+  return Math.ceil(daysLeft / 7) <= 8 ? 'Build phase' : 'Foundation phase';
 }
 
 
