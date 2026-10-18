@@ -888,6 +888,8 @@
   .ns-cta:hover{transform:scale(1.04);}
   .ns-cta:active{transform:scale(.98);}
   .ns-meta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .ns-alt{margin-left:auto;background:none;border:none;padding:10px 4px;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
+  .ns-alt:active{color:var(--ink);}
   .ns-note{font-size:12px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);line-height:1.45;}
   .ns-updated{color:var(--teal);border-top-color:var(--teal);}
   .rr-card{margin:20px 0 4px;}
@@ -2430,15 +2432,6 @@
 
   <!-- ================= STUDY TAB ================= -->
   <div class="tab-panel active" id="tab-study">
-
-    <div class="panel card resume-session-card" id="resumeSessionCard" style="display:none;">
-      <h2>Pick up where you left off</h2>
-      <p class="hint" id="resumeSessionDetail"></p>
-      <div class="coach-actions">
-        <button class="btn" onclick="resumeInProgressSession()">Resume</button>
-        <button class="btn ghost" onclick="dismissInProgressSession()">Start fresh instead</button>
-      </div>
-    </div>
 
     <div class="score-row" id="scoreRow">
       <div class="score-ring-block">
@@ -7467,8 +7460,8 @@ function computeNextStep(stats){
     const nextIdx = Math.min((wasAnswered ? sv.index + 1 : sv.index), sv.queue.length);
     const left = Math.max(0, sv.queue.length - nextIdx);
     step = { kicker:'In progress', title:'Pick up where you left off',
-      why:`You stopped partway through a session with ${sv.correct} correct so far. Finishing it first keeps your spaced-review schedule on track.`,
-      cta:'Resume', meta:`${left} question${left===1?'':'s'} left`, run: () => resumeInProgressSession() };
+      why:`Your ${resumeSessionLabel(sv)} is partway through: ${(sv.answerLog||[]).length} of ${sv.queue.length} answered, ${sv.correct} correct. Finishing it first keeps your spaced-review schedule on track.`,
+      cta:'Resume', meta:`${left} question${left===1?'':'s'} left`, alt:{ label:'Start fresh instead', fn:'dismissInProgressSession()' }, run: () => resumeInProgressSession() };
   }
 
   if(!step && !session && conductorState()){
@@ -8294,6 +8287,7 @@ function renderNextStepCard(stats, refreshed){
     <div class="ns-foot">
       <button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button>
       <span class="ns-meta">${escapeHtml(s.meta)}</span>
+      ${s.alt ? `<button type="button" class="ns-alt" onclick="${s.alt.fn}">${escapeHtml(s.alt.label)}</button>` : ''}
     </div>
     ${refreshed ? `<div class="ns-note ns-updated">Updated — your latest activity changed the best next step.</div>` : ''}
     ${s.bigger ? `<div class="ns-note">Most pressing: ${escapeHtml(s.bigger.charAt(0).toLowerCase() + s.bigger.slice(1))}.</div>` : ''}
@@ -15893,22 +15887,13 @@ function dismissInProgressSession(){
   document.getElementById('modePanel').style.display = 'block';
   document.getElementById('blueprintCard').style.display = 'block';
   document.getElementById('focusCard').style.display = 'block';
-  renderResumeSessionBanner();
+  try{ renderNextStepCard(computeStats()); }catch(e){}
 }
-function renderResumeSessionBanner(){
-  const card = document.getElementById('resumeSessionCard');
-  if(!card) return;
-  const saved = DATA.inProgressSession;
-  if(!saved || session){
-    card.style.display = 'none';
-    return;
-  }
+// The half-finished session is offered once, in the Next best step card (resume, or start fresh); there is no separate banner.
+function renderResumeSessionBanner(){}
+function resumeSessionLabel(saved){
   const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study' }[saved.mode] || 'session');
-  const wasAlreadyAnswered = (saved.answerLog || []).some(e => e.index === saved.index);
-  const displayIndex = wasAlreadyAnswered ? saved.index + 1 : saved.index;
-  document.getElementById('resumeSessionDetail').textContent =
-    `You left your ${modeLabel} partway through: ${(saved.answerLog||[]).length} of ${saved.queue.length} answered, ${saved.correct} correct. You are back at question ${Math.min(displayIndex + 1, saved.queue.length)}.`;
-  card.style.display = 'block';
+  return modeLabel;
 }
 
 // Reorders a question's choices (and rationale, kept in lockstep) without
@@ -20591,7 +20576,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.189';
+const BUILD_ID = '2026-10-18.190';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
