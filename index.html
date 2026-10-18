@@ -1221,7 +1221,8 @@
      overflow:hidden on the body for touch drags, so the page is pinned and scroll never chains to it. */
   html:has(body.quiz-active), html:has(body.flashcard-fullscreen){overscroll-behavior:none;}
   html:has(body.quiz-active) body, html:has(body.flashcard-fullscreen) body{min-height:calc(100vh + 2px);}
-  body.quiz-active, body.flashcard-fullscreen{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none;}
+  /* Not position:fixed / overflow:hidden: that leaves the document with no height and iOS shrinks the installed window by the top inset. */
+  body.quiz-active, body.flashcard-fullscreen{overscroll-behavior:none;}
   body.quiz-active #quizView, body.flashcard-fullscreen #flashcardFullscreenHost{overscroll-behavior:contain;}
   .quiz-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;}
   .quiz-progress-wrap{flex:1;min-width:0;}
@@ -15904,6 +15905,16 @@ function unlockBodyScroll(){
   document.documentElement.classList.remove('scroll-locked');
   window.scrollTo && window.scrollTo(0, savedBodyScrollY);
 }
+document.addEventListener('wheel', function(e){
+  if(!bodyIsLocked()) return;
+  let n = e.target;
+  while(n && n !== document.body && n.nodeType === 1){
+    const cs = getComputedStyle(n);
+    if((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && n.scrollHeight > n.clientHeight + 1) return;
+    n = n.parentNode;
+  }
+  if(e.cancelable) e.preventDefault();
+}, {passive:false});
 let _tsX = 0, _tsY = 0;
 document.addEventListener('touchstart', function(e){ const t = e.touches && e.touches[0]; if(t){ _tsX = t.clientX; _tsY = t.clientY; } }, {passive:true, capture:true});
 document.addEventListener('touchmove', function(e){
@@ -20076,7 +20087,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.169';
+const BUILD_ID = '2026-10-17.170';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
