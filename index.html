@@ -10579,7 +10579,7 @@ function treeQuestions(key){
     };
     return {
       id:'dt-' + key + '-' + idx, domain:meta.domain, treeGen:true, treeKey:key,
-      q:'Following the “' + meta.name + '” decision tree with these answers, what does it recommend?',
+      q:'“' + meta.name + '” — route: ' + p.steps.map(s => s.a).join(' → ') + '. Where does the tree land?',
       scenario:p.steps.map(s => '• ' + s.q + ' — ' + s.a).join('\n'),
       choices:opts.map(o => o.title), correct:opts.findIndex(o => o.ok), rationale:opts.map(why)
     };
@@ -15372,7 +15372,7 @@ function renderResumeSessionBanner(){
     card.style.display = 'none';
     return;
   }
-  const modeLabel = { adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study' }[saved.mode] || 'session';
+  const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study' }[saved.mode] || 'session');
   const wasAlreadyAnswered = (saved.answerLog || []).some(e => e.index === saved.index);
   const displayIndex = wasAlreadyAnswered ? saved.index + 1 : saved.index;
   document.getElementById('resumeSessionDetail').textContent =
@@ -17722,6 +17722,7 @@ function finishSession(){
     : session.mode==='mock' ? 'Timed checkpoint'
     : session.mode==='review' ? 'Missed-question review'
     : session.mode==='adaptive' ? 'Adaptive session'
+    : session.treeDrill ? 'Decision-tree drill'
     : 'Domain drill';
   document.getElementById('resultLabel').textContent = `${modeLabel} · ${pct}% this session` + (early ? ` · you answered ${ansN} of ${session.queue.length}` : '');
   renderPlanResult();
@@ -19897,7 +19898,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.152';
+const BUILD_ID = '2026-10-17.154';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
