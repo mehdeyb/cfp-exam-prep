@@ -1356,6 +1356,14 @@
   .result-hero .big.tier-solid{color:var(--gold);}
   .result-hero .big.tier-building{color:var(--paper);}
   @keyframes resultPop{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+  .result-headline{font-family:'Fraunces',serif;font-size:19px;font-weight:600;line-height:1.3;margin:10px 18px 0;color:var(--paper);}
+  .result-dots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:12px 18px 6px;}
+  .result-dots i{width:11px;height:11px;border-radius:3px;background:var(--correct);opacity:.9;}
+  .result-dots i.miss{background:var(--incorrect);}
+  .result-dots.dense i{width:6px;height:6px;border-radius:2px;gap:2px;}
+  .result-sec-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin:22px 0 2px;}
+  .dom-code{display:inline-block;min-width:34px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;padding:2px 5px;border-radius:5px;background:var(--surface2);color:var(--muted);margin-right:6px;}
+  table.breakdown td.num .st-good{color:var(--correct);} table.breakdown td.num .st-bad{color:var(--incorrect);}
   .result-hero .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.07em;font-family:'IBM Plex Mono',monospace;}
   table.breakdown{width:100%;border-collapse:collapse;margin-top:8px;}
   table.breakdown th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:'IBM Plex Mono',monospace;padding:8px 6px;border-bottom:1px solid var(--hair);}
@@ -2763,21 +2771,24 @@
             <div class="result-hero">
               <div class="big" id="resultScore">0/0</div>
               <div class="label" id="resultLabel">Session complete</div>
+              <div class="result-headline" id="resultHeadline"></div>
+              <div class="result-dots" id="resultDots" role="img" aria-label=""></div>
             </div>
             <div class="plan-result" id="planResultLine" style="display:none;" role="status"></div>
+            <div class="rr-card" id="resultReadiness" style="display:none;"></div>
             <div class="improvement-callout" id="improvementCallout" style="display:none;"></div>
             <div id="sectionBreakdown" style="display:none;"></div>
-            <table class="breakdown">
-              <thead><tr><th>Domain</th><th style="text-align:right;">This session</th><th style="text-align:right;">Overall mastery</th></tr></thead>
-              <tbody id="resultBody"></tbody>
-            </table>
             <div id="retrievalRecap" style="display:none;"></div>
+            <div class="rr-card" id="resultTools" style="display:none;"></div>
+            <div class="rr-card" id="resultTvm" style="display:none;"></div>
             <div class="rr-card" id="resultCase" style="display:none;"></div>
             <div class="rr-card" id="resultPace" style="display:none;"></div>
             <div class="rr-card" id="resultChat" style="display:none;"></div>
-            <div class="rr-card" id="resultTvm" style="display:none;"></div>
-            <div class="rr-card" id="resultTools" style="display:none;"></div>
-            <div class="rr-card" id="resultReadiness" style="display:none;"></div>
+            <div class="result-sec-title">By domain</div>
+            <table class="breakdown">
+              <thead><tr><th>Domain</th><th style="text-align:right;">This session</th><th style="text-align:right;">Overall</th></tr></thead>
+              <tbody id="resultBody"></tbody>
+            </table>
             <div class="quiz-actions">
               <button class="btn ghost" onclick="exitToMenu()">Back to studio</button>
               <button class="btn" id="resultAgainBtn" onclick="restartSame()">Do it again</button>
@@ -17725,6 +17736,25 @@ function finishSession(){
     : session.treeDrill ? 'Decision-tree drill'
     : 'Domain drill';
   document.getElementById('resultLabel').textContent = `${modeLabel} · ${pct}% this session` + (early ? ` · you answered ${ansN} of ${session.queue.length}` : '');
+  try{
+    const missedN = (session.answerLog || []).filter(e => !e.correct).length;
+    const hl = document.getElementById('resultHeadline');
+    if(hl){
+      let t;
+      if(session.treeDrill) t = pct >= 80 ? 'You are reading the tree well' : 'The routes you missed come back first';
+      else if(pct >= 80) t = 'Strong session';
+      else if(pct >= 60) t = missedN === 1 ? 'Solid. One to lock in' : 'Solid. ' + missedN + ' to lock in';
+      else t = 'Building. The misses are where it sticks';
+      hl.textContent = t;
+    }
+    const dots = document.getElementById('resultDots');
+    if(dots){
+      const log = (session.answerLog || []).slice().sort((a, b) => a.index - b.index);
+      dots.innerHTML = log.map(e => '<i class="' + (e.correct ? '' : 'miss') + '"></i>').join('');
+      dots.classList.toggle('dense', log.length > 40);
+      dots.setAttribute('aria-label', (session.correct) + ' of ' + log.length + ' correct, in the order you answered');
+    }
+  }catch(e){}
   renderPlanResult();
 
   const sectionBox = document.getElementById('sectionBreakdown');
@@ -17746,14 +17776,15 @@ function finishSession(){
   const body = document.getElementById('resultBody');
   body.innerHTML = '';
   let bestImprovement = null;
-  DOMAINS.forEach(d=>{
+  DOMAINS.slice().sort((x, y) => { const sx = session.domainTally[x.key], sy = session.domainTally[y.key]; const px = sx.total ? sx.correct / sx.total : 2, py = sy.total ? sy.correct / sy.total : 2; return px - py || sy.total - sx.total; }).forEach(d=>{
     const st = session.domainTally[d.key];
     if(st.total===0) return;
     const overall = DATA.domainStats[d.key];
     const overallPct = overall.total ? Math.round((overall.correct/overall.total)*100) : 0;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${d.code} — ${d.name}</td>
-      <td class="num">${st.correct}/${st.total}</td>
+    const sp = st.correct / st.total;
+    tr.innerHTML = `<td><span class="dom-code">${d.code}</span>${d.name}</td>
+      <td class="num"><span class="${sp >= 0.8 ? 'st-good' : sp < 0.5 ? 'st-bad' : ''}">${st.correct}/${st.total}</span></td>
       <td class="num"><span class="bar-mini"><i style="width:${overallPct}%"></i></span> ${overallPct}%</td>`;
     body.appendChild(tr);
 
@@ -17952,8 +17983,8 @@ function renderRetrievalRecap(){
   }).join('');
 
   host.innerHTML = `<div class="retrieval-recap">
-    <div class="retrieval-recap-title">One more pass before you go</div>
-    <div class="retrieval-recap-sub">Before checking each one, try to genuinely recall the key point yourself first — that extra retrieval attempt is what makes it stick.</div>
+    <div class="retrieval-recap-title">Review what you missed (${missedThisSession.length})</div>
+    <div class="retrieval-recap-sub">Recall the key point first, then tap to check. That extra attempt is what makes it stick.</div>
     ${itemsHtml}
   </div>`;
   host.style.display = 'block';
@@ -19898,7 +19929,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.154';
+const BUILD_ID = '2026-10-17.155';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
