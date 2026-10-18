@@ -7680,9 +7680,14 @@ function buildStudyPlan(minutes){
       if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
         why:`You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
         run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
-      if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)) return { id:'weak', title:`Drill: ${weakDom.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
-        why:`${weakDom.name} is ${weakDom.weight}% of the exam and ${weakDom.mastery === null ? 'not yet started' : 'at ' + weakDom.mastery + '%'}. It is where the most points are waiting.`,
-        run: () => { showTab('study'); startDrill(weakDom.key); } };
+      if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)){
+        // Pinned for the day, so answering questions never swaps the step's topic out from under the count.
+        let wd = weakDom;
+        try{ const k = planTarget('weakDomKey', weakDom.key); wd = domainMasteryList().find(d => d.key === k) || weakDom; }catch(e){}
+        return { id:'weak', title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
+        why:`${wd.name} is ${wd.weight}% of the exam and ${wd.mastery === null ? 'not yet started' : 'at ' + wd.mastery + '%'}. It is where the most points are waiting.`,
+        run: () => { showTab('study'); startDrill(wd.key); } };
+      }
       return null;
     },
     missed: () => {
@@ -8130,9 +8135,12 @@ function conductorMaybeStartFromTutor(){
   return conductorStart() ? 'Opened the session briefing. The student taps Begin to start; parts run in order with a check-in after each.' : 'Nothing is left to do in today\'s plan. Suggest an adaptive session or rest.';
 }
 
+let _planLaunchId = null, _planLaunchTimer = null;
 function runPlanStep(id){
   const plan = buildStudyPlan();
   const st = plan.steps.concat(plan.blocks).find(x => x.id === id);
+  // A session started from a plan step is sized to what is left of that step, so a half-done step is finished, not restarted.
+  _planLaunchId = id; clearTimeout(_planLaunchTimer); _planLaunchTimer = setTimeout(() => { _planLaunchId = null; }, 1500);
   if(st && typeof st.run === 'function') st.run();
 }
 function renderTodayPlan(){
@@ -15865,6 +15873,15 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   // inside enterFullScreenQuiz is a safe no-op.
   lockBodyScroll();
   queue = dedupeQueue(queue, mode);
+  try{
+    if(_planLaunchId && ['drill','adaptive','review'].includes(mode)){
+      const plan = buildStudyPlan();
+      const st = plan.steps.concat(plan.blocks || []).find(x => x.id === _planLaunchId);
+      const left = st && st.need > 0 && !st.manual ? st.need - (st.have || 0) : 0;
+      if(left >= 1 && left < queue.length) queue = queue.slice(0, Math.max(3, left));
+    }
+  }catch(e){}
+  _planLaunchId = null;
   const freshened = freshenQueue(queue, mode);
   queue = freshened.queue.map(shuffleQuestionChoices);
   if(Object.keys(freshened.siblingOf).length || Object.keys(freshened.wantNew).length){
@@ -16181,6 +16198,20 @@ function sessionBriefHtml(){
     t += ' Skim the scenario once for numbers, dates and who owns what. For each question, tap the sentences that would change the answer before you choose; afterward you will see which facts really decided it.';
     try{ const ca = cueAccuracyText(); if(ca) t += ' So far: ' + ca + '.'; }catch(e){}
     return `<span class="tb-label">Your tutor's plan</span>${t}`;
+  }
+  if(session && ['adaptive','drill','review'].includes(session.mode)){
+    // Tied to today's plan: say how far the step is and what this run adds, so a continued step never reads like a fresh start.
+    try{
+      const r = session.planRef !== undefined ? session.planRef : planRefForSession(session);
+      if(r && r.need > 0){
+        const n = session.queue.length, have = Math.min(r.need, r.base);
+        let line;
+        if(have >= r.need) line = `<b>${escapeHtml(r.title)}</b> is already done today. These ${n} are extra practice.`;
+        else if(have > 0) line = `<b>${escapeHtml(r.title)}:</b> ${have} of ${r.need} ${r.unit} done today. ${n >= r.need - have ? `${r.need - have} more finish${r.need - have === 1 ? 'es' : ''} it.` : `This run adds ${n}.`}`;
+        else line = `<b>${escapeHtml(r.title)}:</b> ${r.need} ${r.unit} on today's plan, starting now.`;
+        return `<span class="tb-label">Your tutor's plan</span>${line}`;
+      }
+    }catch(e){}
   }
   if(!session || !['adaptive','drill','review'].includes(session.mode) || session.queue.length < 5) return '';
   const counts = {}; session.queue.forEach(q => { counts[q.domain] = (counts[q.domain]||0) + 1; });
@@ -20112,7 +20143,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.174';
+const BUILD_ID = '2026-10-17.175';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
