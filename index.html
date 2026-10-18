@@ -532,6 +532,9 @@
   }
   .fd-select{width:100%;margin:6px 0 12px;padding:10px 12px;border-radius:10px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);font:inherit;font-size:14px;}
   .fd-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin:14px 0 6px;}
+  .fd-support{margin:8px 0 0;padding:9px 12px;border-left:2px solid var(--gold);background:var(--gold-soft);border-radius:0 8px 8px 0;font-size:13px;line-height:1.5;color:var(--paper);}
+  .fd-support b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px;font-weight:600;}
+  .fd-peek{font:inherit;font-size:13px;font-weight:600;color:var(--gold);background:none;border:0;padding:4px 0;cursor:pointer;min-height:32px;}
   .fd-scenario{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:16px 18px;font-size:15px;line-height:1.6;color:var(--paper);}
   .fd-answer-row{display:flex;align-items:center;gap:8px;margin:14px 0 10px;flex-wrap:wrap;}
   .fd-field{display:flex;align-items:center;gap:6px;flex:1 1 160px;background:var(--surface);border:1px solid var(--hair-strong);border-radius:10px;padding:0 12px;}
@@ -2651,6 +2654,7 @@
         <select id="fdPick" class="fd-select" onchange="fdSetFilter(this.value)"></select>
         <div class="fd-tag" id="fdTag"></div>
         <div class="fd-scenario" id="fdScenario"></div>
+        <div class="fd-support" id="fdSupport" style="display:none;"></div>
         <div class="fd-answer-row">
           <div class="fd-field"><span id="fdUnitPre"></span><input id="fdInput" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer"><span id="fdUnitPost"></span></div>
           <button class="btn" id="fdCheck" onclick="fdCheck()">Check</button>
@@ -7733,7 +7737,7 @@ function buildStudyPlan(minutes){
   const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
   const needFor = w => { let n = SUBTOPIC_DRILL_LENGTH; try{ n = Math.min(SUBTOPIC_DRILL_LENGTH, subtopicPool(w.key, w.idx).length) || SUBTOPIC_DRILL_LENGTH; }catch(e){} return n; };
   const accTxt = w => (w.st && w.st.acc !== null && w.st.attempts) ? `${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts` : 'a weak spot';
-  const weakDom = domainMasteryList().map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100)))})).sort((a, b) => b.pr - a.pr)[0];
+  const weakDom = domainMasteryList().map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100))) * (1 + 0.15 * (4 - (d.total ? domainStageOf(d.key) : 1)))})).sort((a, b) => b.pr - a.pr)[0];
 
   const mk = {
     cards: () => {
@@ -7761,7 +7765,7 @@ function buildStudyPlan(minutes){
         let wd = weakDom;
         try{ const k = planTarget('weakDomKey', weakDom.key); wd = domainMasteryList().find(d => d.key === k) || weakDom; }catch(e){}
         return { id:'weak', title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
-        why:`${wd.name} is ${wd.weight}% of the exam and ${wd.mastery === null ? 'not yet started' : 'at ' + wd.mastery + '%'}. It is where the most points are waiting.`,
+        why:`${wd.name} is ${wd.weight}% of the exam and ${wd.mastery === null ? 'not yet started' : 'at ' + wd.mastery + '% (' + STAGES[domainStageOf(wd.key) - 1].name + ')'}. It is where the most points are waiting.`,
         run: () => { showTab('study'); startDrill(wd.key); } };
       }
       return null;
@@ -7784,6 +7788,7 @@ function buildStudyPlan(minutes){
     },
     case: () => {
       if(answered < 80) return null;
+      { const lv = DOMAINS.map(d => ((DATA.domainStats[d.key] || {}).total || 0) ? domainStageOf(d.key) : 1); if(lv.reduce((a, b) => a + b, 0) / lv.length < 2) return null; } // cases pay off once the basics are in place
       const cs = DATA.caseStats || {};
       const last = Math.max(0, ...Object.values(cs).map(c => c.lastAt || 0));
       if((Date.now() - last) < 7 * 86400000 && !act.modes.includes('case') && !L.targets.caseId) return null;
@@ -9444,14 +9449,15 @@ function podcastDomainPersonalizationContext(domainKey){
   }
   const pct = Math.round((stat.correct / stat.total) * 100);
   let context = `\n\nThis specific student has answered ${stat.total} questions in this domain so far, at ${pct}% accuracy. `;
-  if(inFoundation){
-    context += `They've recently had a confidence dip here and are currently rebuilding fundamentals in this domain -- keep this genuinely foundational, favoring clear basics and plain framing over nuance or edge cases they're not ready for yet.`;
-  } else if(pct >= 80){
-    context += `That's strong. Don't spend time on the absolute basics they've clearly got -- go straight at the nuance, the edge cases, and the distinctions that separate solid understanding from a truly confident one.`;
-  } else if(pct < 55){
-    context += `That suggests the fundamentals here aren't solid yet -- build from the ground up, define terms as you go, and don't assume prior familiarity with this domain.`;
+  const stg = domainStageOf(domainKey);
+  if(inFoundation || stg === 1){
+    context += `They are at the Foundation stage in this domain${inFoundation ? ' after a recent dip' : ''} -- keep it genuinely foundational: define terms as you go, use plain framing and one concrete example per idea, and skip edge cases they are not ready for.`;
+  } else if(stg === 2){
+    context += `They are at the Build stage -- the basics are there but not yet automatic. Mix a quick refresher of each idea with the common confusions, and tie each to how the exam asks about it.`;
+  } else if(stg === 3){
+    context += `They are at the Apply stage -- skip the definitions and work through client situations and calculations, naming the rule to choose before applying it.`;
   } else {
-    context += `That's a reasonable, middling grasp -- a normal mix of foundational review and some of the trickier distinctions works well here, without leaning too hard toward either extreme.`;
+    context += `They are Exam-ready here -- go straight at the nuance, edge cases, traps and close distinctions, briskly, with no basics.`;
   }
   return context;
 }
@@ -12682,6 +12688,17 @@ function stageSummaryForTutor(){
   return ' Skill level by domain (Foundation, Build, Apply, Exam-ready): ' + parts.join('; ') + '. Teach each domain at its level: in Foundation use a worked example and small steps and ask one easy question; in Build ask them to try first and give hints only after; in Apply use client scenarios and calculations and have them explain their reasoning; in Exam-ready be brief, test edge cases and traps, and hold back hints.';
 }
 
+function stagePromptLine(key){
+  const n = ((DATA.domainStats && DATA.domainStats[key]) || {}).total || 0;
+  if(!n) return '';
+  return ({
+    1: 'Level: this candidate is at the Foundation stage in this domain. Test one core idea per question, in plain wording, with clearly distinct choices and no multi-step reasoning.',
+    2: 'Level: this candidate is at the Build stage in this domain. One or two steps of reasoning, with distractors drawn from common confusions.',
+    3: 'Level: this candidate is at the Apply stage in this domain. Use client situations and calculations where they must choose the right rule before applying it.',
+    4: 'Level: this candidate is Exam-ready in this domain. Write hard, exam-style items with competing considerations, edge cases and close distractors.'
+  })[domainStageOf(key)];
+}
+
 function questionPriority(q){
   const dMeta = DOMAINS.find(d=>d.key===q.domain);
   const domainWeightFactor = dMeta.weight/100;
@@ -13140,7 +13157,7 @@ function buildPrompt(domainMeta, hardMode){
   const subtopics = (SUBTOPICS[domainMeta.key]||[]).join('; ');
   const difficultyInstruction = hardMode
     ? `This candidate has been performing very well on standard practice questions in this domain and needs harder material to keep growing — write these at the upper end of real CFP exam difficulty: multi-step application questions, client scenarios requiring you to weigh competing considerations, or calculations, rather than single-fact recall.`
-    : `Write exactly 5 new multiple-choice questions at real CFP exam difficulty.`;
+    : `Write exactly 5 new multiple-choice questions at real CFP exam difficulty. ${stagePromptLine(domainMeta.key)}`;
   return `You write original CFP® certification exam practice questions (never copied from a real exam) for the "${domainMeta.name}" Principal Knowledge Domain.
 This domain's official CFP Board subtopics are: ${subtopics}.
 ${difficultyInstruction}
@@ -13701,8 +13718,9 @@ function maybeGenerateHarderContent(){
   if(DATA.answerCounter - DATA.lastHardGenAt < 15) return;
   if(DATA.generatedBank.length >= GENERATED_CAP) return;
   const weights = estimateDifficultyWeights();
-  if(weights[3] < 2.0) return; // only the sustained-strong-performance tier, not just "doing okay"
-  const strong = strongestDomains(1);
+  const ladderStrong = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) >= 20).map(d => d.key);
+  if(weights[3] < 2.0 && !ladderStrong.length) return; // only a sustained strong run, or a domain that has reached Apply
+  const strong = ladderStrong.length ? ladderStrong.slice(0, 1) : strongestDomains(1);
   if(!strong.length) return;
   DATA.lastHardGenAt = DATA.answerCounter;
   generateForDomains(strong, {silent:true, hardMode:true});
@@ -13732,7 +13750,7 @@ function openDomainPicker(){
     row.setAttribute('role', 'button');
     row.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery`);
     row.onclick = () => startDrill(d.key);
-    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics</div></div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
+    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics${s.total ? ' · ' + STAGES[domainStageOf(d.key) - 1].name : ''}</div></div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
     list.appendChild(row);
   });
 }
@@ -13768,9 +13786,12 @@ function caseQuestions(id){
 let caseGenBusy = false;
 function buildCasePrompt(domainKeys){
   const titles = allCases().map(c => c.title).join('; ');
+  const avgStage = domainKeys.reduce((a, k) => a + domainStageOf(k), 0) / Math.max(1, domainKeys.length);
+  const caseLevel = avgStage < 2 ? 'Keep the case straightforward: one clear goal, simple figures, one complication, and questions that each test one core idea.' : avgStage < 3 ? 'Give the case two complications and ask questions needing one or two steps of reasoning.' : 'Make the case demanding: several complications, some irrelevant detail, and questions that need the right rule chosen before it is applied.';
   const domLines = domainKeys.map((k,i) => { const d = DOMAINS.find(x => x.key === k); return `${i+1}. "${k}" (${d.name})`; }).join('\n');
   return `You write realistic client case studies for CFP® exam candidates.
 Write ONE new client situation of 110 to 170 words with specific figures (ages, incomes, balances, goals, a few complications). It must feel different from these existing cases: ${titles}.
+${caseLevel}
 Then write exactly 5 multiple-choice questions, each of which depends on facts in the case, one per domain in this order:
 ${domLines}
 Rules for every question:
@@ -13861,10 +13882,17 @@ function removeGeneratedCase(id){
   pruneRetiredQuestionIds();
   persist(); renderAll(); openCasePicker();
 }
+// How well a case fits the learner right now: the average level across the domains its questions touch.
+function caseFit(id){
+  const ds = Array.from(new Set(caseQuestions(id).map(q => q.domain))).filter(Boolean);
+  if(!ds.length) return { avg:2, tag:'', cls:'' };
+  const avg = ds.reduce((a, k) => a + (((DATA.domainStats[k] || {}).total || 0) ? domainStageOf(k) : 1), 0) / ds.length;
+  return avg < 2 ? { avg, tag:'Try drills first', cls:'weak' } : avg < 3 ? { avg, tag:'Good fit', cls:'mid' } : { avg, tag:'Exam level', cls:'strong' };
+}
 function nextCaseToTry(excludeId){
   const stats = DATA.caseStats || {};
   const pool = allCases().filter(c => c.id !== excludeId && caseQuestions(c.id).length);
-  pool.sort((a,b) => ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
+  pool.sort((a,b) => ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
   return pool[0] || null;
 }
 function caseProgressLine(){
@@ -13921,7 +13949,7 @@ function openCasePicker(){
   genBox.appendChild(genNote);
   const oldBox = document.getElementById('caseGenBox'); if(oldBox) oldBox.remove();
   list.parentNode.insertBefore(genBox, list);
-  const order = allCases().sort((a,b) => ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0));
+  const order = allCases().sort((a,b) => ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0));
   order.forEach(c => {
     const qs = caseQuestions(c.id);
     if(!qs.length) return;
@@ -13938,7 +13966,7 @@ function openCasePicker(){
     const pill = st ? `<span class="dp-row-pct ${st.best>=75?'strong':st.best>=50?'mid':'weak'}">${st.best}%</span>` : `<span class="dp-row-pct none">New</span>`;
     const nameEl = document.createElement('div');
     const t = document.createElement('div'); t.className = 'dp-row-name'; t.textContent = c.title;
-    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '') + (st && st.cue && st.cue.decisive >= 3 ? ` · facts caught ${Math.round(100 * st.cue.found / st.cue.decisive)}%` : '');
+    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '') + (caseFit(c.id).tag ? ' · ' + caseFit(c.id).tag : '') + (st && st.cue && st.cue.decisive >= 3 ? ` · facts caught ${Math.round(100 * st.cue.found / st.cue.decisive)}%` : '');
     const b = document.createElement('div'); b.className = 'dp-row-meta'; b.style.marginTop = '2px'; b.textContent = c.blurb;
     nameEl.appendChild(t); nameEl.appendChild(m); nameEl.appendChild(b);
     row.appendChild(nameEl);
@@ -14789,6 +14817,28 @@ const FD_NAMES = Object.keys(FD_GENS);
 let fd = { name:null, prob:null, answered:false, filter:'mixed', tally:{ n:0, ok:0 }, last:null, opener:null, home:null };
 function fdStats(name){ if(!DATA.formulaStats) DATA.formulaStats = {}; return DATA.formulaStats[name] || { attempts:0, correct:0, streak:0, lastAt:0 }; }
 function fdAccuracy(name){ const s = fdStats(name); return s.attempts ? s.correct/s.attempts : null; }
+// Support fades as a formula is learned: the formula shown, then hidden behind a peek, then nothing (worked example -> faded -> unaided).
+function fdSupportLevel(name){
+  const s = fdStats(name), f = FORMULAS.find(x => x.name === name);
+  if(!f || !f.formula) return 'unaided';
+  const stg = domainStageOf(f.domain), acc = s.attempts ? s.correct / s.attempts : 0;
+  if(s.attempts < (stg === 1 ? 4 : 2) || acc < 0.5 || (s.missRun || 0) >= 2) return 'guided';
+  if(s.attempts >= (stg === 1 ? 7 : 5) && (((s.streak || 0) >= 3 && acc >= 0.75) || (stg >= 3 && (s.streak || 0) >= 2 && acc >= 0.7))) return 'unaided'; // at least a few tries with the formula hidden first
+  return 'try';
+}
+function fdRenderSupport(){
+  const box = document.getElementById('fdSupport'); if(!box) return;
+  const f = FORMULAS.find(x => x.name === fd.name);
+  box.innerHTML = ''; box.style.display = 'none';
+  if(!f) return;
+  const show = () => { box.innerHTML = ''; const l = document.createElement('b'); l.textContent = 'Formula'; box.appendChild(l); box.appendChild(document.createTextNode(f.formula)); box.style.display = 'block'; };
+  if(fd.level === 'guided') show();
+  else if(fd.level === 'try'){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'fd-peek'; b.textContent = 'Peek at the formula';
+    b.onclick = () => { fd.peeked = true; show(); };
+    box.appendChild(b); box.style.display = 'block';
+  }
+}
 function fdChooseName(){
   if(fd.filter !== 'mixed' && FD_GENS[fd.filter]) return fd.filter;
   const weights = FD_NAMES.map(n => {
@@ -14849,6 +14899,8 @@ function fdNext(){
   fd.last = fd.name;
   fd.prob = FD_GENS[fd.name]();
   fd.answered = false;
+  fd.level = fdSupportLevel(fd.name); fd.peeked = false;
+  fdRenderSupport();
   const f = FORMULAS.find(x => x.name === fd.name);
   const dm = f && DOMAINS.find(d => d.key === f.domain);
   document.getElementById('fdTag').textContent = fd.name + (dm ? ' · ' + dm.name : '');
@@ -14881,7 +14933,7 @@ function fdCheck(){
   fd.answered = true; inp.disabled = true;
   const p = fd.prob, ok = Math.abs(x - p.answer) <= p.tol;
   const s = fdStats(fd.name);
-  s.attempts++; if(ok){ s.correct++; s.streak = (s.streak||0) + 1; s.missRun = 0; } else { s.streak = 0; s.missRun = (s.missRun||0) + 1; } s.lastAt = Date.now();
+  s.attempts++; if(ok){ s.correct++; if(!fd.peeked) s.streak = (s.streak||0) + 1; s.missRun = 0; } else { s.streak = 0; s.missRun = (s.missRun||0) + 1; } s.lastAt = Date.now();
   DATA.formulaStats[fd.name] = s;
   DATA.formulaDrillCount = (DATA.formulaDrillCount || 0) + 1; DATA.formulaDrillLastAt = Date.now();
   try{ planDayLog().formula++; }catch(e){}
@@ -14950,7 +15002,8 @@ function fdRenderStatus(){
   const s = fdStats(fd.name);
   const acc = s.attempts ? Math.round(s.correct/s.attempts*100) + '% right over ' + s.attempts + (s.attempts===1?' try':' tries') : 'first time with this one';
   const t = fd.tally.n ? `<b>This sitting:</b> ${fd.tally.ok} of ${fd.tally.n}` : '<b>This sitting:</b> just started';
-  el.innerHTML = `<span>${t}</span><span><b>This formula:</b> ${escapeHtml(acc)}${s.streak >= 3 ? ' · ' + s.streak + ' in a row' : ''}</span>`;
+  const lv = fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula hidden' : ' · unaided';
+  el.innerHTML = `<span>${t}</span><span><b>This formula:</b> ${escapeHtml(acc)}${s.streak >= 3 ? ' · ' + s.streak + ' in a row' : ''}${lv}</span>`;
 }
 function fdWeakest(){
   const rows = FD_NAMES.map(n => ({ n, s: fdStats(n) })).filter(r => r.s.attempts >= 3);
@@ -16094,7 +16147,7 @@ async function executeWriteNewQuestion(input){
   const miscon = String(input.misconception || '').trim().slice(0, 300);
   const ctxCur = cur ? `\nThe student was just working on this question, which must NOT be reused or lightly reworded:\n"${cur.q}"\nCorrect answer: ${cur.choices[cur.correct]}\n` : '';
   const prompt = `Write ONE new CFP exam practice question in the ${meta.name} domain.${ctxCur}
-The idea it must test: ${idea}
+${stagePromptLine(domain) ? stagePromptLine(domain) + '\n' : ''}The idea it must test: ${idea}
 Shape: ${WRITE_ANGLE_TEXT[angle]}.${miscon ? '\nThe mistake to build a believable wrong choice from: ' + miscon + '.' : ''}
 It must be a real, different question, not a reworded copy: new situation, new details, different names. The correct answer must rest on current U.S. rules (use 2026 figures only if you are certain of them; otherwise avoid dollar limits).
 ${ONE_ASK_RULE}
@@ -20451,7 +20504,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.184';
+const BUILD_ID = '2026-10-18.185';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
