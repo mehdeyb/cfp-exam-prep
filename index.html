@@ -17434,15 +17434,27 @@ async function fetchCalcSteps(q){
   const correct = (q.choices||[])[q.correct];
   const prompt = HP_CALC_NOTE + '\n\nWrite exact key-by-key HP 10bII+ steps a student can follow to get the correct answer to this CFP practice question.\n' +
     (q.scenario ? 'Scenario: ' + q.scenario + '\n' : '') + 'Question: ' + q.q + '\nCorrect answer: ' + correct + '\n' +
-    'Rules: start with clearing (orange Shift, C ALL); set P/YR (1 for annual problems); state BEGIN/END when payments exist; give each entry as a step like "Type 25, press [N]"; use [+/-] for outflows; end with the key that solves and the displayed result (rounded) matching the correct answer. If the answer is not a time-value problem, give clear arithmetic keystrokes in order. Use only [N], [I/YR], [PV], [PMT], [FV] naming; never CPT or I/Y. Max 8 short steps.\n' +
+    'Rules: first decide if this is a time-value-of-money problem. If it is: start with clearing (orange Shift, C ALL), set P/YR (1 for annual problems), state BEGIN/END when payments exist, give each entry as "Type 25, press [N]", use [+/-] for outflows, and end with the key that solves and the rounded display. If it is NOT (a ratio, tax, exclusion ratio, percentage, etc.), skip all TVM setup and give plain arithmetic keystrokes in order using ordinary keys (x, ÷, +, −, %), showing each intermediate result, ending on the answer that matches the correct choice. Never mention CPT or I/Y. 3 to 8 short steps.\n' +
     'Return ONLY a JSON object: {"calcType":"tvm" or "general","calcSteps":["step 1","step 2"]}';
-  const raw = await callClaude(prompt, 700);
-  const m = String(raw).match(/\{[\s\S]*\}/); if(!m) throw new Error('no json');
-  const o = JSON.parse(m[0]);
-  const steps = (o.calcSteps||[]).map(x => String(x)).filter(Boolean).slice(0,10);
-  if(steps.length < 2 || steps.some(x => usesWrongCalculatorConventionInProse(x) || /\bCPT\b|\bI\/Y\b/.test(x))) throw new Error('bad steps');
-  q.calcSteps = steps; q.calcType = o.calcType === 'tvm' ? 'tvm' : 'general';
-  try{ DATA.calcStepsCache = DATA.calcStepsCache || {}; if(q.id && !q.treeGen) DATA.calcStepsCache[q.id] = { steps:steps, type:q.calcType }; persist(); }catch(e){}
+  let lastErr = null;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const raw = String(await callClaude(prompt + (attempt ? '\nReturn only the JSON object, nothing else.' : ''), 900) || '');
+      const clean = raw.replace(/```(?:json)?/gi, '');
+      let steps = null, type = 'general';
+      const m = clean.match(/\{[\s\S]*\}/);
+      if(m){ try{ const o = JSON.parse(m[0]); steps = o.calcSteps; if(o.calcType === 'tvm') type = 'tvm'; }catch(e){} }
+      if(!steps){ const a = clean.match(/\[[\s\S]*\]/); if(a){ try{ steps = JSON.parse(a[0]); }catch(e){} } }
+      if(!Array.isArray(steps)) steps = clean.split(/\n+/).map(x => x.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim()).filter(x => x.length > 6 && !/^[{}\[\]"]/.test(x));
+      steps = steps.map(x => typeof x === 'string' ? x : (x && (x.step || x.text)) || '').map(x => String(x).trim()).filter(Boolean).slice(0, 10);
+      if(steps.length < 2) throw Object.assign(new Error('no steps'), { code:'BAD_REPLY' });
+      if(steps.some(x => /\[CPT\]|\[I\/Y\]/.test(x))) throw Object.assign(new Error('wrong keys'), { code:'CALC_CONVENTION_MISMATCH' });
+      q.calcSteps = steps; q.calcType = type;
+      try{ DATA.calcStepsCache = DATA.calcStepsCache || {}; if(q.id && !q.treeGen) DATA.calcStepsCache[q.id] = { steps:steps, type:type }; persist(); }catch(e){}
+      return;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('failed');
 }
 async function toggleCalcSteps(){
   const q = session.queue[session.index];
@@ -17454,7 +17466,7 @@ async function toggleCalcSteps(){
     calcStepsBusy = true; btn.textContent = 'Working out the keys…'; btn.disabled = true;
     try{ await fetchCalcSteps(q); }catch(e){
       calcStepsBusy = false; btn.disabled = false; btn.textContent = 'Show calculator steps';
-      box.className = 'calc-steps-box'; box.innerHTML = '<span class="simplify-label">Calculator steps</span><div>Couldn\'t build the steps just now (needs a connection). Try again in a moment.</div>'; box.style.display = 'block';
+      box.className = 'calc-steps-box'; box.innerHTML = '<span class="simplify-label">Calculator steps</span><div>Couldn\'t build the steps: ' + escapeHtml(describeAiError(e)) + '</div>'; box.style.display = 'block';
       return;
     }
     calcStepsBusy = false; btn.disabled = false;
@@ -20060,7 +20072,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.166';
+const BUILD_ID = '2026-10-17.167';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
