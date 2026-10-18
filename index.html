@@ -899,6 +899,7 @@
   .tn-go{font:inherit;font-weight:600;font-size:13px;color:var(--gold-bright);background:none;border:none;padding:10px 0;min-height:44px;cursor:pointer;}
   .tn-x{font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;padding:10px 2px;min-height:44px;cursor:pointer;}
   .tn-go:active,.tn-x:active{opacity:.6;}
+  .tn-foot.tn-end{justify-content:flex-end;margin-top:0;}
   .tab-btn{position:relative;}
   .tab-btn.has-note::after{content:"";position:absolute;top:5px;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px var(--surface);}
   @media (min-width:641px){ .tab-btn.has-note::after{top:7px;left:auto;right:8px;} }
@@ -3513,6 +3514,8 @@
         <div class="tutor-capabilities-label">What you can ask me to do</div>
         <div class="tutor-capabilities-grid">
           <button class="tutor-cap-item" onclick="sendTutorMessage('Quiz me on a mixed session right now.')">Start a practice session</button>
+          <button class="tutor-cap-item" onclick="sendTutorMessage('Ask me one practice question right here in the chat, on whatever I am weakest at.')">Quiz me here in chat</button>
+          <button class="tutor-cap-item" onclick="sendTutorMessage('Leave me a check-in for tomorrow on the concept we just covered.')">Check in with me tomorrow</button>
           <button class="tutor-cap-item" onclick="sendTutorMessage('Open the TVM calculator so I can practice a problem.')">Open the TVM calculator</button>
           <button class="tutor-cap-item" onclick="askTutorCapabilityPrefill('What does ')">Look up a term</button>
           <button class="tutor-cap-item" onclick="sendTutorMessage('Show me my detailed progress breakdown.')">Show my progress</button>
@@ -19864,7 +19867,7 @@ Guidelines:
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
-- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails, in a few short lines. Ask one question at a time.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -19895,8 +19898,9 @@ function tutorParseChoices(text){
   }
   return null;
 }
-function tutorRenderReply(bubble, reply){
-  const parsed = tutorParseChoices(reply);
+function tutorRenderReply(bubble, reply, userText){
+  // A reply to a tapped answer is feedback (it often walks through the options), not a new question.
+  const parsed = /^[A-E]\) /.test(String(userText || '')) ? null : tutorParseChoices(reply);
   if(!parsed){ bubble.textContent = reply; return; }
   bubble.textContent = '';
   if(parsed.before){ const d = document.createElement('div'); d.textContent = parsed.before; bubble.appendChild(d); }
@@ -20638,7 +20642,7 @@ async function sendTutorMessage(presetText){
 
     const reply = finalTextBlocks.join('').trim() || "Sorry, I didn't quite get a response there — could you try asking again?";
     typingBubble.classList.remove('typing');
-    tutorRenderReply(typingBubble, reply);
+    tutorRenderReply(typingBubble, reply, text);
     status.textContent = '';
     tutorMaybeOfferTree(text, reply);
     if(presetText === undefined) tutorRemember(text, 'tutor');
@@ -20830,7 +20834,7 @@ const TN_RULES = [
         7: `${d} days left. No new topics now: work through what you have missed and keep one timed set going.`,
         3: `${d} days out. Confirm your test-center details and ID, and keep sessions short.`,
         1: `The exam is ${d === 1 ? 'tomorrow' : 'today'}. Light review only, then rest.` }[tier];
-      const act = tier <= 3 ? { kind: 'tab', arg: 'examday', label: 'Exam-day checklist' } : { kind: 'plan', label: "See today's plan" };
+      const act = tier <= 3 ? { kind: 'tab', arg: 'examday', label: 'Exam-day checklist' } : null; // the plan card sits right below, so no button
       return { key: 'cd' + tier, text: txt, act, once: true };
     },
     still(n){ const d = getDaysUntilExam(); return d !== null && d >= 1; } },
@@ -20839,7 +20843,7 @@ const TN_RULES = [
       const g = tnGapDays(); if(g === null || g < 3) return null;
       const d = getDaysUntilExam(); if(d !== null && d <= 1) return null;
       let due = 0; try{ due = computeDueCounts(); }catch(e){}
-      return { key: 'gap', cool: 4, text: `${g} days since your last session.${due ? ` ${due} item${due === 1 ? ' has' : 's have'} come due.` : ''} Ten minutes today keeps it from piling up.`, act: { kind: 'next', label: 'Start a short warm-up' } };
+      return { key: 'gap', cool: 4, text: `${g} days since your last session.${due ? ` ${due} item${due === 1 ? ' has' : 's have'} come due.` : ''} Ten minutes today keeps it from piling up.`, act: null }; // the Next best step card below is the button
     },
     still(n){ const g = tnGapDays(); return g !== null && g >= 1; } },
   { kind: 'pace',
@@ -20921,7 +20925,7 @@ function tnRenderCard(){
   const when = n.key === 'checkin' ? 'Check-in you asked for' : 'From your tutor';
   el.innerHTML = `<div class="tn-kicker"><span class="tn-dot"></span>${when}</div>
     <div class="tn-text">${escapeHtml(n.text)}</div>
-    <div class="tn-foot">${n.act ? `<button type="button" class="tn-go" onclick="tnAct('${n.id}')">${escapeHtml(n.act.label)}</button>` : ''}<button type="button" class="tn-x" onclick="tnDismiss('${n.id}')">Dismiss</button></div>`;
+    <div class="tn-foot${n.act ? '' : ' tn-end'}">${n.act ? `<button type="button" class="tn-go" onclick="tnAct('${n.id}')">${escapeHtml(n.act.label)}</button>` : ''}<button type="button" class="tn-x" onclick="tnDismiss('${n.id}')">${n.act ? 'Dismiss' : 'Got it'}</button></div>`;
   el.style.display = 'block';
 }
 function tnRenderDot(){
@@ -21134,7 +21138,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.217';
+const BUILD_ID = '2026-10-18.218';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -21188,7 +21192,7 @@ const SYNC_KEY = 'cfp-blueprint-sync-v1';
 const SYNC_FILE = 'cfp-blueprint-sync.json';
 const SYNC_DESC = 'CFP Blueprint sync (private)';
 // Per-device settings that should not follow you from phone to iPad.
-const SYNC_LOCAL_ONLY = ['speechOptimizedText','lastTab','theme','themeMode','eveningModeSetting','preferredVoiceName','preferredHost1VoiceName','preferredHost2VoiceName','conductor','fcShown','lastBackupAtAnswerCount','genRetryAt','genFailStreak','variantFailedAt'];
+const SYNC_LOCAL_ONLY = ['tutorNotes','tutorNotesOff','speechOptimizedText','lastTab','theme','themeMode','eveningModeSetting','preferredVoiceName','preferredHost1VoiceName','preferredHost2VoiceName','conductor','fcShown','lastBackupAtAnswerCount','genRetryAt','genFailStreak','variantFailedAt'];
 const SYNC_UNION_ARRAYS = ['studyDates','checkedSubtopics','announcedMilestones','missed','hypercorrectionQueue'];
 const SYNC_ARRAY_CAP = { sessions: 300, errorLog: 500, tutorTopics: 300 };
 const SYNC_WHOLE = ['tvmProgress'];
