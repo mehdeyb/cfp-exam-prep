@@ -2044,7 +2044,9 @@
     body.flashcard-fullscreen .fc-fullscreen-inner{max-width:min(1100px, calc(100vw - 280px));padding-top:0;}
     body.flashcard-fullscreen .fc-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:26px;align-content:start;text-align:center;padding:14px 26px;min-height:0;}
     body.flashcard-fullscreen .fc-card > *{grid-column:1 / -1;}
-    body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]){grid-column:1;}
+    body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]), body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcRetell[style*="block"]){grid-column:1;}
+    body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]):has(~ #fcRetell[style*="block"]){grid-row:1 / span 2;}
+    body.flashcard-fullscreen .fc-card > #fcRetell[style*="block"]{grid-column:2;align-self:start;margin-top:0;}
     body.flashcard-fullscreen .fc-card > #fcContrast[style*="block"]{grid-column:2;align-self:start;margin-top:0;text-align:left;}
     body.flashcard-fullscreen #speakFlashcardBtn{position:fixed;top:max(12px,env(safe-area-inset-top));left:16px;z-index:5;}
     body.flashcard-fullscreen .fc-front{margin:4px 0;}
@@ -8321,9 +8323,9 @@ function renderModeMeta(){
     const put = (key, text) => document.querySelectorAll('[data-mm="' + key + '"]').forEach(el => { el.textContent = text; });
     put('adaptive', line('adaptive'));
     { const low = DOMAINS.filter(d => ((DATA.domainStats[d.key] || {}).total || 0) > 0).sort((a, b) => domainStageOf(a.key) - domainStageOf(b.key) || b.weight - a.weight)[0];
-      put('drill', [line('drill'), low ? 'Try: ' + low.name + ' (' + STAGES[domainStageOf(low.key) - 1].name + ')' : ''].filter(Boolean).join(' · ')); }
+      put('drill', [line('drill'), low ? 'Try ' + low.code + ' · ' + STAGES[domainStageOf(low.key) - 1].name : ''].filter(Boolean).join(' · ')); }
     put('mock', line('mock'));
-    { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length; put('fullexam', [line('fullexam'), 'Apply or higher in ' + ap + ' of ' + DOMAINS.length + ' domains'].filter(Boolean).join(' · ')); }
+    { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length; put('fullexam', [line('fullexam'), 'Apply+ in ' + ap + '/' + DOMAINS.length].filter(Boolean).join(' · ')); }
     put('case', line('case') + (cueAccuracyText() ? ' · ' + cueAccuracyText() : ''));
     put('review', line('review'));
     put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : '');
@@ -11849,7 +11851,7 @@ function fcApplyAdaptation(card){
     } else {
       const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     }
-    const ex = fcExampleFor(card, Math.max(0, fcLapseN(card) - 1));
+    const ex = fcNeedsRetell(card) ? null : fcExampleFor(card, 0); // a card being retold shows its examples in the new-angle box instead, so nothing appears twice
     if(ex){
       const e = document.createElement('div'); e.className = 'fc-example';
       const l3 = document.createElement('span'); l3.className = 'fc-lbl'; l3.textContent = 'How it shows up on the exam'; e.appendChild(l3);
@@ -13966,7 +13968,7 @@ function openCasePicker(){
     const pill = st ? `<span class="dp-row-pct ${st.best>=75?'strong':st.best>=50?'mid':'weak'}">${st.best}%</span>` : `<span class="dp-row-pct none">New</span>`;
     const nameEl = document.createElement('div');
     const t = document.createElement('div'); t.className = 'dp-row-name'; t.textContent = c.title;
-    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '') + (caseFit(c.id).tag ? ' · ' + caseFit(c.id).tag : '') + (st && st.cue && st.cue.decisive >= 3 ? ` · facts caught ${Math.round(100 * st.cue.found / st.cue.decisive)}%` : '');
+    const m = document.createElement('div'); m.className = 'dp-row-meta'; m.textContent = `${qs.length} questions · ${domains.length} exam domains` + (st ? ` · tried ${st.attempts}×, last ${st.lastCorrect}/${st.lastTotal}` : '') + (caseFit(c.id).avg >= 2 ? ' · ' + caseFit(c.id).tag : '') + (st && st.cue && st.cue.decisive >= 3 ? ` · facts caught ${Math.round(100 * st.cue.found / st.cue.decisive)}%` : '');
     const b = document.createElement('div'); b.className = 'dp-row-meta'; b.style.marginTop = '2px'; b.textContent = c.blurb;
     nameEl.appendChild(t); nameEl.appendChild(m); nameEl.appendChild(b);
     row.appendChild(nameEl);
@@ -19094,7 +19096,9 @@ function renderBackupReminder(){
   const el = document.getElementById('backupReminder');
   if(!el) return;
   const gap = DATA.answerCounter - (DATA.lastBackupAtAnswerCount || 0);
-  if(gap >= 12){
+  // With sync on and recent, your progress already lives in a second place, so the backup nag stays quiet.
+  const synced = typeof SYNC !== 'undefined' && SYNC.on && SYNC.status !== 'error' && SYNC.lastOkAt && (Date.now() - SYNC.lastOkAt) < 36 * 3600000;
+  if(gap >= 12 && !synced){
     el.innerHTML = `<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>${gap} questions answered since your last backup — worth taking a fresh one.</span>`;
     el.style.display = 'flex';
   } else {
@@ -20504,7 +20508,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.185';
+const BUILD_ID = '2026-10-18.186';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -20671,6 +20675,7 @@ function syncStatusText(){
 }
 function syncSetStatus(st, err){
   SYNC.status = st; SYNC.err = err || '';
+  try{ renderBackupReminder(); }catch(e){}
   const el = document.getElementById('syncStatus');
   if(el){ el.textContent = syncStatusText(); el.className = 'sync-status ' + (st === 'error' ? 'err' : st === 'syncing' ? 'busy' : 'ok'); }
 }
