@@ -1362,6 +1362,7 @@
   .result-dots i.miss{background:var(--incorrect);}
   .result-dots.dense i{width:6px;height:6px;border-radius:2px;gap:2px;}
   .result-sec-title{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin:22px 0 2px;}
+  tr.dom-tap{cursor:pointer;} tr.dom-tap:active td{background:var(--surface2);} tr.dom-tap:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;}
   .dom-code{display:inline-block;min-width:34px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;padding:2px 5px;border-radius:5px;background:var(--surface2);color:var(--muted);margin-right:6px;}
   table.breakdown td.num .st-good{color:var(--correct);} table.breakdown td.num .st-bad{color:var(--incorrect);}
   .result-hero .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.07em;font-family:'IBM Plex Mono',monospace;}
@@ -2784,7 +2785,7 @@
             <div class="rr-card" id="resultCase" style="display:none;"></div>
             <div class="rr-card" id="resultPace" style="display:none;"></div>
             <div class="rr-card" id="resultChat" style="display:none;"></div>
-            <div class="result-sec-title">By domain</div>
+            <div class="result-sec-title" id="resultDomTitle">By domain</div>
             <table class="breakdown">
               <thead><tr><th>Domain</th><th style="text-align:right;">This session</th><th style="text-align:right;">Overall</th></tr></thead>
               <tbody id="resultBody"></tbody>
@@ -10626,6 +10627,7 @@ function startTopicPractice(setKey){
   const pool = toolPracticePick(setKey, 10);
   if(pool.length === 0) return;
   beginSession(shuffle(pool), 'drill', null);
+  if(session) session.toolPractice = setKey;
 }
 
 /* ===========================================================
@@ -15315,7 +15317,7 @@ function saveInProgressSession(){
   DATA.inProgressSession = {
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
-    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null,
+    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
@@ -15347,7 +15349,7 @@ function resumeInProgressSession(){
     sectionBreakIndex: null, onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
-    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, variantAttempted: saved.variantAttempted || {},
+    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null,
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
@@ -17745,7 +17747,13 @@ function finishSession(){
       else if(pct >= 80) t = 'Strong session';
       else if(pct >= 60) t = missedN === 1 ? 'Solid. One to lock in' : 'Solid. ' + missedN + ' to lock in';
       else t = 'Building. The misses are where it sticks';
+      // Name the area that cost the most, when the session was broad enough for that to mean something.
+      const lost = DOMAINS.map(d => { const st = session.domainTally[d.key]; return { d, miss:st.total - st.correct, total:st.total }; }).filter(x => x.total >= 2 && x.miss >= 2).sort((a, b) => b.miss - a.miss)[0];
+      if(lost && !session.treeDrill && session.mode !== 'fullexam' && session.mode !== 'mock') t += ' \u2014 ' + lost.d.name.split(/ (?:&|and) /)[0] + ' cost the most';
+      if(session.mode === 'fullexam' || session.mode === 'mock') t = (pct >= 80 ? 'Strong result' : pct >= 60 ? 'Solid result' : 'Room to build') + ' \u2014 tap a domain below to drill it';
       hl.textContent = t;
+      const again = document.getElementById('resultAgainBtn');
+      if(again) again.textContent = session.treeDrill ? 'Another round' : (session.mode === 'fullexam' || session.mode === 'mock') ? 'Retake' : 'Do it again';
     }
     const dots = document.getElementById('resultDots');
     if(dots){
@@ -17783,6 +17791,7 @@ function finishSession(){
     const overallPct = overall.total ? Math.round((overall.correct/overall.total)*100) : 0;
     const tr = document.createElement('tr');
     const sp = st.correct / st.total;
+    if(!session.treeDrill){ tr.className = 'dom-tap'; tr.tabIndex = 0; tr.setAttribute('role', 'button'); tr.setAttribute('aria-label', 'Drill ' + d.name); tr.onclick = () => startDrill(d.key); tr.onkeydown = ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); startDrill(d.key); } }; }
     tr.innerHTML = `<td><span class="dom-code">${d.code}</span>${d.name}</td>
       <td class="num"><span class="${sp >= 0.8 ? 'st-good' : sp < 0.5 ? 'st-bad' : ''}">${st.correct}/${st.total}</span></td>
       <td class="num"><span class="bar-mini"><i style="width:${overallPct}%"></i></span> ${overallPct}%</td>`;
@@ -17809,6 +17818,7 @@ function finishSession(){
     improvEl.style.display = 'none';
   }
 
+  { const dt = document.getElementById('resultDomTitle'); if(dt) dt.textContent = !session.treeDrill ? 'By domain \u00b7 tap one to drill it' : 'By domain'; }
   renderRetrievalRecap();
   renderAll();
   renderResultCase();
@@ -18005,7 +18015,14 @@ function restartSame(){
   else if(session.mode==='review') { if(session.revisitIds && session.revisitIds.length){ const keep = session.revisitIds.slice(); const pool = shuffle(allQuestions().filter(q => keep.includes(q.id))); if(pool.length){ beginSession(pool,'review',null); session.revisitIds = keep; return; } } startMissedReview(); }
   else if(session.mode==='case' && caseById(session.caseId)) startCase(session.caseId);
   else if(session.mode==='adaptive') startAdaptive();
-  else startDrill(session.queue[0].domain);
+  else if(session.treeDrill && TREE_META[session.treeDrill]) startTreeDrill(session.treeDrill);
+  else if(session.toolPractice && TOOL_PRACTICE_SETS[session.toolPractice]) startTopicPractice(session.toolPractice);
+  else if(session.drillTopic && /^[a-z]+-\d+$/.test(session.drillTopic) && subtopicPool(session.drillTopic.split('-')[0], +session.drillTopic.split('-')[1]).length >= 3) startSubtopicDrill(session.drillTopic.split('-')[0], +session.drillTopic.split('-')[1]);
+  else {
+    // The domain the session mostly covered, not just whichever question came first.
+    const tally = {}; session.queue.forEach(q => { if(q.domain) tally[q.domain] = (tally[q.domain] || 0) + 1; });
+    startDrill(Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0] || session.queue[0].domain);
+  }
 }
 
 function exitToMenu(){
@@ -19929,7 +19946,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.155';
+const BUILD_ID = '2026-10-17.156';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
