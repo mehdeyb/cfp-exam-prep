@@ -190,7 +190,7 @@
     background-color:var(--ink);
     color:var(--paper);
     font-family:'IBM Plex Sans',-apple-system,sans-serif;
-    min-height:100vh;
+    min-height:var(--vh-real, 100vh);
     padding:44px 24px 90px;
     -webkit-font-smoothing:antialiased;
     transition:background-color var(--t-med) var(--ease),color var(--t-med) var(--ease);
@@ -1510,7 +1510,7 @@
   .fc-deck-line{margin:6px 0 0;}
   .cd-overlay{overscroll-behavior:contain;touch-action:pan-y;}
   .cd-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(8,14,24,.72);backdrop-filter:blur(3px);overflow-y:auto;}
-  .cd-panel{width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--hair-strong,var(--hair));border-radius:18px;padding:22px 22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.35);color:var(--paper);}
+  .cd-panel{width:100%;max-width:520px;max-height:calc(var(--vh-real, 100vh) - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--hair-strong,var(--hair));border-radius:18px;padding:22px 22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.35);color:var(--paper);}
   .cd-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;}
   .cd-title{font-family:'Fraunces','Iowan Old Style',Georgia,serif;font-size:22px;line-height:1.25;margin:0 0 8px;}
   .cd-text{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 12px;}
@@ -1916,7 +1916,7 @@
   #tutorCard > *{order:9;}
   #tutorCard > .card-head{order:0;}
   #tutorCard > #tutorApiKeyHint{order:1;}
-  #tutorCard > #tutorThread{order:2;max-height:max(200px, calc(100dvh - 440px));}
+  #tutorCard > #tutorThread{order:2;max-height:max(200px, calc(var(--vh-real, 100vh) - 440px));}
   #tutorCard > #tutorChips{order:3;flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   #tutorCard > #tutorChips::-webkit-scrollbar{display:none;}
   #tutorCard > #tutorChips .chip{flex:none;white-space:nowrap;}
@@ -1928,9 +1928,9 @@
   #tutorCard > #tutorSnapshot{order:7;}
   #tutorCard > p.hint{order:8;}
   #tutorCard.has-convo > p.hint,#tutorCard.has-convo > #tutorSnapshot,#tutorCard.has-convo > #tutorCapabilities{display:none;}
-  @media (min-width:641px){ #tutorCard > #tutorThread{max-height:max(260px, calc(100dvh - 400px));} }
+  @media (min-width:641px){ #tutorCard > #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 400px));} }
   @media (orientation:landscape) and (max-height:520px){
-    #tutorCard > #tutorThread{max-height:max(120px, calc(100dvh - 245px));}
+    #tutorCard > #tutorThread{max-height:max(120px, calc(var(--vh-real, 100vh) - 245px));}
     #tutorCard.has-convo > .card-head{display:none;}
   }
   /* Flashcards: the card comes first, the explanations and filters sit beneath it,
@@ -1949,7 +1949,7 @@
   @media (orientation:landscape) and (min-width:520px) and (max-height:520px), (orientation:landscape) and (min-width:900px){
     body.quiz-active .quiz-inner{max-width:1080px;}
     body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);column-gap:22px;align-items:start;}
-    body.quiz-active .q-left{position:sticky;top:6px;align-self:start;max-height:calc(100vh - 72px);overflow-y:auto;overscroll-behavior:contain;}
+    body.quiz-active .q-left{position:sticky;top:6px;align-self:start;max-height:calc(var(--vh-real, 100vh) - 72px);overflow-y:auto;overscroll-behavior:contain;}
     body.quiz-active .confidence-pills{flex-wrap:wrap;}
     body.quiz-active .q-text{margin-bottom:14px;}
     body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
@@ -20017,7 +20017,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.161';
+const BUILD_ID = '2026-10-17.162';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -20135,8 +20135,9 @@ requestDurableStorage();
       root.classList.toggle('vh-roomy', portrait && inner >= 860);
       root.classList.toggle('vp-gap', gap > 4);
       window._screenProfile = { inner, w, insetB, eff, gap, scr, standalone };
+      window._profileNoteText = ' · bottom inset ' + insetB + ' → ' + eff + (gap > 4 ? ' (window ' + gap + ' short of screen)' : '');
       const note = document.getElementById('buildNote');
-      if(note && !/ · bottom inset/.test(note.textContent)) note.textContent += ' · bottom inset ' + insetB + ' → ' + eff + (gap > 4 ? ' (window ' + gap + ' short of screen)' : '');
+      if(note){ const base = note.textContent.split(' · bottom inset')[0]; note.textContent = base + window._profileNoteText; }
       if(document.body.classList.contains('quiz-active') && !(window.session && session.locked) && typeof scheduleQuizFit === 'function') scheduleQuizFit();
     }catch(e){}
   }
@@ -20224,7 +20225,7 @@ requestDurableStorage();
         }catch(e){}
       }
       const note = document.getElementById('buildNote');
-      if(note) note.textContent = 'Build ' + BUILD_ID + ' · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', first ' + window._vpFirst + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser');
+      if(note) note.textContent = 'Build ' + BUILD_ID + ' · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', first ' + window._vpFirst + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser') + (window._profileNoteText || '');
     }catch(e){}
   }
   window._vpProbe = probe;
