@@ -7417,7 +7417,9 @@ function computeNextStep(stats){
   if(!step && stats.totalAnswered === 0 && !(DATA.flashcardRatingCount > 0)){
     step = { kicker:'Start here', title:'Take your first adaptive session',
       why:`${ADAPTIVE_LENGTH} mixed questions across the exam. Every answer sharpens what the coach recommends from here on.`,
-      cta:'Start session', meta:`${ADAPTIVE_LENGTH} questions`, run: () => startAdaptive() };
+      cta:'Start session', meta:`${ADAPTIVE_LENGTH} questions`, run: () => startAdaptive(),
+      // A blank install may just be a second device: offer the sync link right here, only until sync is on.
+      alt: (typeof SYNC !== 'undefined' && SYNC && SYNC.on) ? null : { label:'Progress on another device?', fn:'openSettingsToSync()' } };
   }
 
   // The day before and the day of: no new material, just a light skim and rest.
@@ -14194,6 +14196,11 @@ function openSettings(){
 // it focused, rather than leaving them to find the right section
 // themselves -- used by the in-quiz repeat notice so acting on it is a
 // single tap, not a described path to go follow manually.
+function openSettingsToSync(){
+  openSettings();
+  const sec = document.getElementById('syncSection');
+  if(sec) setTimeout(() => sec.scrollIntoView({block:'start', behavior:'smooth'}), 60);
+}
 function openSettingsToExamDate(){
   openSettings();
   const sec = document.getElementById('examDateSection');
@@ -20857,7 +20864,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.213';
+const BUILD_ID = '2026-10-18.214';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
