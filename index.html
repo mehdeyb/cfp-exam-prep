@@ -463,6 +463,7 @@
   .dp-row:hover{background:var(--surface2);}
   .dp-row:active{background:var(--surface2);}
   .dp-row .dp-row-name{font-size:14px;color:var(--paper);font-weight:600;line-height:1.3;}
+  .dp-row .dp-weak{margin-top:8px;font:inherit;font-size:12px;font-weight:600;color:var(--gold);background:var(--gold-tint);border:none;border-radius:999px;padding:6px 12px;min-height:30px;cursor:pointer;text-align:left;max-width:100%;}
   .dp-row .dp-row-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.03em;margin-top:3px;}
   .dp-row .dp-row-pct{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;flex:none;}
   .dp-row .dp-row-pct.strong{color:var(--correct);}
@@ -2648,7 +2649,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
-        <p class="hint" id="dpHint" style="margin-top:0;">Untimed, single-domain practice — pick whichever still feels unfamiliar. Sorted by weakest first.</p>
+        <p class="hint" id="dpHint" style="margin-top:0;">Short, untimed practice on one domain, built from what is due and what you miss. Weakest first.</p>
         <div class="dp-list" id="dpList"></div>
       </div>
     </div>
@@ -7501,7 +7502,7 @@ function computeNextStep(stats){
       if(worst){
         step = { kicker:'Rebuild the basics', title:`Short drill on ${worst.name}`,
           why:`Your recent answers here have been rough. A focused, single-topic drill rebuilds the fundamentals before this domain goes back into the mix.`,
-          cta:'Start drill', meta:`${DRILL_LENGTH} questions`, run: () => startDrill(worst.key) };
+          cta:'Start drill', meta:`${drillLengthFor(worst.key)} questions`, run: () => startDrill(worst.key) };
       }
     }
   }
@@ -7512,7 +7513,7 @@ function computeNextStep(stats){
     if(blind){
       step = { kicker:'Blind spot', title:`Start ${blind.name}`,
         why:`It's ${blind.weight}% of the exam and you haven't answered a single question in it — ${blind.weight} points of readiness sitting untouched.`,
-        cta:'Start drill', meta:`${DRILL_LENGTH} questions`, run: () => startDrill(blind.key) };
+        cta:'Start drill', meta:`${drillLengthFor(blind.key)} questions`, run: () => startDrill(blind.key) };
     }
   }
 
@@ -7610,7 +7611,7 @@ function computeNextStep(stats){
           why: top.attempted===0
             ? `Not started, and worth ${top.weight}% of the exam.`
             : `You've tried ${top.attempted} of about ${top.coverageTarget} questions this domain needs to fully count, and it's ${top.weight}% of the exam. A focused drill gets you through unfamiliar material fastest.`,
-          cta:'Start drill', meta:`${DRILL_LENGTH} questions`, run: () => startDrill(top.key) };
+          cta:'Start drill', meta:`${drillLengthFor(top.key)} questions`, run: () => startDrill(top.key) };
       }
     } else {
       step = { kicker:'Looking strong', title:'Take a timed checkpoint',
@@ -13210,15 +13211,16 @@ async function callClaude(promptText, maxTokens){
   return anthropicMessagesRequest({ messages: [{ role: "user", content: promptText }], maxTokens: maxTokens || 4000 });
 }
 
-function buildPrompt(domainMeta, hardMode){
+function buildPrompt(domainMeta, hardMode, focus){
   const existing = allQuestions().filter(q=>q.domain===domainMeta.key).map(q=>q.q.slice(0,70)).join(' | ');
   const subtopics = (SUBTOPICS[domainMeta.key]||[]).join('; ');
   const difficultyInstruction = hardMode
     ? `This candidate has been performing very well on standard practice questions in this domain and needs harder material to keep growing — write these at the upper end of real CFP exam difficulty: multi-step application questions, client scenarios requiring you to weigh competing considerations, or calculations, rather than single-fact recall.`
-    : `Write exactly 5 new multiple-choice questions at real CFP exam difficulty. ${stagePromptLine(domainMeta.key)}`;
+    : `Write ${focus && focus.count ? 'exactly ' + focus.count : 'exactly 5'} new multiple-choice questions at real CFP exam difficulty. ${stagePromptLine(domainMeta.key)}`;
+  const focusLine = focus ? `\nFor this set: ${focus.count ? 'write exactly ' + focus.count + ' questions. ' : ''}${focus.topic ? 'Aim most of them at the subtopic "' + focus.topic + '". ' : ''}${focus.missed ? 'The candidate recently missed questions on these ideas, so test them again from a NEW angle and scenario (never the same wording): ' + focus.missed + '. ' : ''}${focus.ramp ? 'Order them from easier to harder: start with a core-idea question, then add steps and distractors. ' : ''}Build on what a learner at this level can already do, one step beyond it.\n` : '';
   return `You write original CFP® certification exam practice questions (never copied from a real exam) for the "${domainMeta.name}" Principal Knowledge Domain.
 This domain's official CFP Board subtopics are: ${subtopics}.
-${difficultyInstruction}
+${difficultyInstruction}${focusLine}
 Spread across DIFFERENT subtopics from that official list, and testing DIFFERENT concepts than these already-covered stems: ${existing}
 Every question must be meaningfully different from every stem listed above — do not restate, lightly reword, or reuse the same scenario as any of them.
 Use accurate, current 2026 U.S. figures (IRS/retirement/estate/tax limits, etc.) only where the concept requires a number; otherwise keep questions timeless and conceptual.
@@ -13792,15 +13794,19 @@ function openDomainPicker(){
   lockBodyScroll();
   document.getElementById('dpTitle').textContent = 'Choose a domain';
   const staleGen = document.getElementById('caseGenBox'); if(staleGen) staleGen.remove();
-  document.getElementById('dpHint').textContent = 'Untimed, single-domain practice — pick whichever still feels unfamiliar. Sorted by weakest first.';
+  document.getElementById('dpHint').textContent = 'Short, untimed practice on one domain, built from what is due and what you miss. Weakest first.';
   const list = document.getElementById('dpList');
   list.innerHTML = '';
   const weakOrder = allDomainsWeakestFirst();
+  const pickerParts = {};
+  try{ computeStats().parts.forEach(p => { pickerParts[p.key] = p; }); }catch(e){}
   weakOrder.forEach(key=>{
     const d = DOMAINS.find(x=>x.key===key);
     const s = DATA.domainStats[d.key];
-    const mastery = s.total ? Math.round((s.correct/s.total)*100) : 0;
+    const part = pickerParts[d.key];
+    const mastery = s.total ? (part ? Math.round(part.earned / part.weight * 100) : Math.round((s.correct/s.total)*100)) : 0; // same readiness as the Blueprint bar and the score
     const pctClass = s.total===0 ? 'none' : mastery>=75 ? 'strong' : mastery>=50 ? 'mid' : 'weak';
+    const plan = drillPlan(d.key);
 
     const row = document.createElement('div');
     row.className = 'dp-row';
@@ -13808,7 +13814,9 @@ function openDomainPicker(){
     row.setAttribute('role', 'button');
     row.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery`);
     row.onclick = () => startDrill(d.key);
-    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics${s.total ? ' · ' + STAGES[domainStageOf(d.key) - 1].name : ''}</div></div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
+    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics${s.total ? ' · ' + STAGES[domainStageOf(d.key) - 1].name : ''}</div><div class="dp-row-meta dp-row-plan">${plan.size} questions · ${plan.fresh} unseen${plan.missed ? ' · ' + plan.missed + ' to revisit' : ''}</div>${plan.weak ? '<button type="button" class="dp-weak" data-i="' + plan.weak.idx + '">Weak spot: ' + plan.weak.name + '</button>' : ''}</div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
+    const wb = row.querySelector('.dp-weak');
+    if(wb) wb.onclick = ev => { ev.stopPropagation(); document.body.classList.remove('domain-picker-active'); startSubtopicDrill(d.key, +wb.dataset.i); };
     list.appendChild(row);
   });
 }
@@ -15653,32 +15661,118 @@ function shuffle(arr){
   return a;
 }
 
-function startDrill(domainKey){
-  document.body.classList.remove('domain-picker-active'); // leave scroll locked continuously through this transition into the quiz — see lockBodyScroll's idempotency check
-  const domainPool = allQuestions().filter(q=>q.domain===domainKey);
-  const withStats = domainPool.map(q=>({ q, stat: getSpacedStat(DATA.questionStats, q.id) }));
-  // Never-seen questions first (randomized among themselves so it's not
-  // always the same ones), then least-recently-seen — so repeated drills on
-  // the same domain cover fresh material before ever repeating a question,
-  // matching the same pattern already used for mock exam selection. Without
-  // this, the entire domain pool got shuffled and shown in full every single
-  // time, so a repeated drill was genuinely the same full set, just reordered.
-  withStats.sort((a,b)=>{
-    if(a.stat.seen===0 && b.stat.seen===0) return Math.random()-0.5;
-    if(a.stat.seen===0) return -1;
-    if(b.stat.seen===0) return 1;
-    return a.stat.lastSeenAt - b.stat.lastSeenAt;
+// A drill is a short run on one domain, built from where you are in it: smaller bricks while the ground is new and longer runs as it firms up,
+// questions that are due, missed or confidently wrong first, the weakest subtopic given extra weight, and an easy-to-hard ramp at the early levels.
+function drillLengthFor(domainKey){
+  const n = (DATA.domainStats[domainKey] || {}).total || 0;
+  if(!n) return 10;
+  return ({1:10, 2:12, 3:15, 4:18})[domainStageOf(domainKey)] || DRILL_LENGTH;
+}
+function drillWeakTopic(domainKey){
+  let best = null;
+  (SUBTOPICS[domainKey] || []).forEach((name, i) => {
+    const st = subtopicStats(domainKey, i);
+    if(st.size >= 3 && st.attempts >= 4 && st.acc < 0.7 && (!best || st.acc < best.acc)) best = { idx:i, name, acc:st.acc, st };
   });
-  const drillSize = Math.min(DRILL_LENGTH, withStats.length);
-  const pool = shuffle(withStats.slice(0, drillSize).map(x=>x.q));
-  // Feed this drill's picks into the same "recently seen" list the
-  // adaptive algorithm itself checks before picking -- without this, a
-  // student who just drilled a domain gets no protection at all against
-  // an adaptive session immediately resurfacing those same questions,
-  // since that list previously only ever recorded adaptive's own picks.
+  return best;
+}
+function drillPlan(domainKey){
+  const pool = allQuestions().filter(q => q.domain === domainKey);
+  const missed = new Set(DATA.missed || []);
+  let due = 0, fresh = 0, miss = 0;
+  pool.forEach(q => { const st = getSpacedStat(DATA.questionStats, q.id); if(st.seen === 0) fresh++; else if(isDue(st)) due++; if(missed.has(q.id)) miss++; });
+  return { size: Math.min(drillLengthFor(domainKey), pool.length), due, fresh, missed: miss, weak: drillWeakTopic(domainKey) };
+}
+// A drill never reuses a question you have seen. It takes unseen ones first; when too few are left it has the AI write new ones for this domain at your
+// level (aimed at your weak subtopic and recent misses, easy to hard), and only when the AI is unavailable does it fall back to questions that are due.
+let _drillStarting = false;
+function drillUnseen(domainKey){ return allQuestions().filter(q => q.domain === domainKey && getSpacedStat(DATA.questionStats, q.id).seen === 0); }
+function drillBusy(msg){
+  let el = document.getElementById('drillBusy');
+  if(!msg){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'drillBusy'; el.setAttribute('role','status'); el.setAttribute('aria-live','polite'); el.style.cssText = 'position:fixed;left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%);z-index:400;background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:calc(100vw - 32px);text-align:center;'; document.body.appendChild(el); }
+  el.textContent = msg;
+}
+async function drillWriteNew(domainKey, count){
+  const meta = DOMAINS.find(d => d.key === domainKey);
+  const weak = drillWeakTopic(domainKey);
+  const missedStems = (DATA.missed || []).map(id => allQuestions().find(q => q.id === id)).filter(q => q && q.domain === domainKey).slice(-4).map(q => q.q.slice(0, 80)).join(' | ');
+  const stage = (DATA.domainStats[domainKey] || {}).total ? domainStageOf(domainKey) : 1;
+  const focus = { count, topic: weak ? weak.name : '', missed: missedStems, ramp: stage <= 2 };
+  const raw = await Promise.race([callClaude(buildPrompt(meta, false, focus), 4500), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))]);
+  let fresh = safeParseQuestions(raw, domainKey, null);
+  fresh = dedupeGenerated(fresh, allQuestions(), q => q.q);
+  fresh = dropSameFactGenerated(fresh);
+  if(!fresh.length) return 0;
+  // Make room: the oldest AI-written questions you have already answered go first.
+  const over = DATA.generatedBank.length + fresh.length - GENERATED_CAP;
+  if(over > 0){
+    const drop = new Set(DATA.generatedBank.filter(q => !q.tutorMade && getSpacedStat(DATA.questionStats, q.id).seen > 0).slice(0, over).map(q => q.id));
+    DATA.generatedBank = DATA.generatedBank.filter(q => !drop.has(q.id));
+    if(DATA.generatedBank.length + fresh.length > GENERATED_CAP) fresh = fresh.slice(0, Math.max(0, GENERATED_CAP - DATA.generatedBank.length));
+  }
+  DATA.generatedBank = DATA.generatedBank.concat(fresh);
+  noteGenSuccess();
+  await persist();
+  return fresh.length;
+}
+async function startDrill(domainKey){
+  if(_drillStarting) return;
+  _drillStarting = true;
+  try{
+    const size = Math.min(drillLengthFor(domainKey), allQuestions().filter(q => q.domain === domainKey).length);
+    let unseen = drillUnseen(domainKey);
+    let note = '';
+    if(unseen.length < size){
+      let aiOk = false; try{ aiOk = !!aiFeaturesAvailable && !genBackoffActive() && !isGenerating; }catch(e){}
+      if(aiOk){
+        isGenerating = true;
+        drillBusy('Writing new questions at your level…');
+        try{ await drillWriteNew(domainKey, Math.min(8, Math.max(4, size - unseen.length))); }
+        catch(e){ noteGenFailure(); }
+        isGenerating = false;
+        drillBusy('');
+        unseen = drillUnseen(domainKey);
+      }
+      if(unseen.length < size) note = 'review';
+    }
+    launchDrill(domainKey, size, unseen);
+  } finally { drillBusy(''); _drillStarting = false; }
+}
+function launchDrill(domainKey, size, unseen){
+  document.body.classList.remove('domain-picker-active'); // leave scroll locked continuously through this transition into the quiz — see lockBodyScroll's idempotency check
+  const all = allQuestions().filter(q => q.domain === domainKey);
+  const recent = new Set((DATA.recentAdaptiveIds || []).slice(-28));
+  const reasons = {}, picks = [], used = new Set();
+  const take = (q, why) => { picks.push(q); used.add(q.id); reasons[q.id] = why; };
+  const weak = drillWeakTopic(domainKey);
+  const weakIds = new Set(weak ? subtopicPool(domainKey, weak.idx).map(q => q.id) : []);
+  const draw = (cands, why, limit) => {
+    let rest = cands.filter(q => !used.has(q.id));
+    while(picks.length < limit && rest.length){
+      const w = rest.map(q => questionPriority(q) * (weakIds.has(q.id) ? 1.6 : 1));
+      let r = Math.random() * w.reduce((a, b) => a + b, 0), k = 0;
+      for(; k < w.length; k++){ r -= w[k]; if(r <= 0) break; }
+      k = Math.min(k, rest.length - 1);
+      take(rest[k], why); rest.splice(k, 1);
+    }
+  };
+  draw(unseen, 'fresh', size);
+  // Only if there is still no new material (offline, or the AI could not write more): the questions that are due, least recent first.
+  if(picks.length < size){
+    const due = all.filter(q => !used.has(q.id) && !recent.has(q.id) && isDue(getSpacedStat(DATA.questionStats, q.id)))
+      .sort((a, b) => getSpacedStat(DATA.questionStats, a.id).lastSeenAt - getSpacedStat(DATA.questionStats, b.id).lastSeenAt);
+    draw(due, 'due', size);
+  }
+  if(!picks.length){ const any = all.filter(q => !used.has(q.id)).slice(0, size); any.forEach(q => take(q, 'resting')); }
+  // Early levels climb from easy to hard with some shuffle; later levels are fully mixed.
+  const stage = DATA.domainStats[domainKey] && DATA.domainStats[domainKey].total ? domainStageOf(domainKey) : 1;
+  const queue = stage <= 2
+    ? picks.map(q => ({ q, k: questionDifficulty(q) + Math.random() * 1.4 })).sort((a, b) => a.k - b.k).map(x => x.q)
+    : shuffle(picks);
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
-  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(pool.map(q=>q.id)).slice(-40);
-  beginSession(pool, 'drill', null);
+  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
+  beginSession(queue, 'drill', null, reasons);
 }
 
 function startMock(){
@@ -20561,7 +20655,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.193';
+const BUILD_ID = '2026-10-18.195';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
