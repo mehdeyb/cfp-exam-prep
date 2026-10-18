@@ -884,13 +884,14 @@
   .ns-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex:none;}
   .ns-title{font-family:'Fraunces',serif;font-weight:600;font-size:19px;line-height:1.25;color:var(--paper);margin-bottom:6px;}
   .ns-why{font-size:13px;line-height:1.55;color:var(--muted);margin-bottom:14px;}
-  .ns-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .ns-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .ns-cta{font-family:inherit;font-weight:600;font-size:13px;color:var(--ink);background:var(--gold);border:none;border-radius:24px;padding:12px 22px;min-height:44px;cursor:pointer;transition:transform var(--t-fast) var(--ease);}
   .ns-cta:hover{transform:scale(1.04);}
   .ns-cta:active{transform:scale(.98);}
   .ns-meta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
-  .ns-alt{margin-left:auto;background:none;border:none;padding:10px 4px;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
+  .ns-alt{margin-left:auto;background:none;border:none;padding:10px 2px;white-space:nowrap;font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;min-height:44px;}
   .ns-alt:active{color:var(--ink);}
+  @media (max-width:389px){ .ns-foot{gap:6px 8px;} .ns-cta{padding:12px 18px;} .ns-meta{font-size:11px;} .ns-alt{min-height:36px;padding:6px 2px;} }
   .ns-note{font-size:12px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);line-height:1.45;}
   .ns-updated{color:var(--teal);border-top-color:var(--teal);}
   .rr-card{margin:20px 0 4px;}
@@ -7398,7 +7399,7 @@ function computeNextStep(stats){
     const left = Math.max(0, sv.queue.length - nextIdx);
     step = { kicker:'In progress', title:'Pick up where you left off',
       why:`Your ${resumeSessionLabel(sv)} is partway through: ${(sv.answerLog||[]).length} of ${sv.queue.length} answered, ${sv.correct} correct. Finishing it first keeps your spaced-review schedule on track.`,
-      cta:'Resume', meta:`${left} question${left===1?'':'s'} left`, alt:{ label:'Start fresh instead', fn:'dismissInProgressSession()' }, run: () => resumeInProgressSession() };
+      cta:'Resume', meta:`${left} question${left===1?'':'s'} left`, alt:{ label:'Start fresh', fn:'dismissInProgressSession()' }, run: () => resumeInProgressSession() };
   }
 
   if(!step && !session && conductorState()){
@@ -20746,7 +20747,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.208';
+const BUILD_ID = '2026-10-18.209';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
