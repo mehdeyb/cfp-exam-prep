@@ -1571,6 +1571,8 @@
   .fc-card .fc-domain{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--teal);margin-bottom:16px;}
   .fc-card .fc-front{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1.4;}
   .fc-contrast{margin-top:12px;padding:9px 12px;border-left:2px solid var(--gold);background:var(--gold-soft);border-radius:0 8px 8px 0;font-size:12px;line-height:1.5;color:var(--paper);text-align:left;width:100%;box-sizing:border-box;}
+  .fc-retell{margin-top:12px;padding:9px 12px;border-left:2px solid var(--teal);background:var(--teal-tint);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.5;color:var(--paper);text-align:left;width:100%;box-sizing:border-box;}
+  .fc-retell b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:3px;font-weight:600;}
   .fc-contrast b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
   .fc-card .fc-back{font-size:14px;color:var(--paper);line-height:1.6;display:none;}
   .fc-card .fc-hint{margin-top:18px;font-size:11.5px;color:var(--muted-dim);font-family:'IBM Plex Mono',monospace;}
@@ -3403,6 +3405,7 @@
             <div class="fc-front" id="fcFront">Term</div>
             <div class="fc-back" id="fcBack">Definition</div>
             <div class="fc-contrast" id="fcContrast" style="display:none;"></div>
+            <div class="fc-retell" id="fcRetell" style="display:none;"></div>
             <div class="fc-swipehint" id="fcSwipeHint">← still learning · swipe · know it →</div>
             <div class="fc-hint" id="fcHint">tap to reveal</div>
             <button type="button" class="fc-hintbtn" id="fcHintBtn" style="display:none;" onclick="event.stopPropagation(); showFlashcardHint();">Need a hint?</button>
@@ -5514,6 +5517,8 @@ function defaultData(){
     preferredHost1VoiceName: null,
     preferredHost2VoiceName: null,
     flashcardMnemonics: {},
+    fcLapse: {},
+    fcRetell: {},
     teachStats: {}, fcShown: {}, treeStats: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
@@ -11711,12 +11716,12 @@ function fcCoreSplit(def){ // {core, rest} only at a real sentence break, and on
   return { core: core + '.', rest: rest.charAt(0).toUpperCase() + rest.slice(1) };
 }
 function fcCoreClause(def){ const sp = fcCoreSplit(def); return sp ? sp.core : ''; }
-function fcExampleFor(card){
+function fcExampleFor(card, skip){
   const sorted = fcRelatedQuestions(card).map(q => {
     const ans = q.choices[q.correct];
     return { q, ans, ov: fcOverlap(ans, card.def) };
   }).filter(x => x.ov < 0.55).sort((a, b) => a.ov - b.ov); // an example that merely restates the definition teaches nothing
-  const pick = sorted[0]; if(!pick) return null;
+  const pick = sorted.length ? sorted[(skip || 0) % sorted.length] : null; if(!pick) return null; // a card missed again shows the next example, not the same one
   const q = pick.q;
   let rat = String((q.rationale || [])[q.correct] || '').replace(/^\s*correct\s*[—–-]\s*/i, '').trim();
   if(rat && (fcOverlap(rat, pick.ans + " " + card.def) > 0.6)) rat = ''; // skip a repeat of what's already on the card
@@ -11728,7 +11733,7 @@ function fcCardMode(card){
   const lvl = fcCardLevel(card), st = getSpacedStat(DATA.flashcardStats, card.id);
   const ds = (DATA.domainStats && DATA.domainStats[card.domain]) || { total:0, correct:0 };
   const mast = domainMastery(card.domain), practised = ds.total >= 5;
-  if(lvl === 'struggling') return 'foundation';
+  if(lvl === 'struggling'){ const n = fcLapseN(card); return (n >= 2 && n % 2 === 0 && fcMaskTerm(card.def, card.term) !== String(card.def)) ? 'cloze' : 'foundation'; } // every other miss, ask it from the definition's side
   if(lvl === 'new' && practised && mast < 0.5) return 'foundation-new';
   if(lvl === 'strong' && (mast >= 0.5 || st.box >= 5)){
     if(st.seen % 2 === 1 && fcRelatedQuestions(card).length) return 'apply';
@@ -11782,7 +11787,7 @@ function fcApplyAdaptation(card){
   const adapt = fcAdaptOn();
   const level = adapt ? fcCardLevel(card) : 'building';
   const mode = adapt ? fcCardMode(card) : 'core';
-  const reverse = mode === 'recall';
+  const reverse = mode === 'recall' || mode === 'cloze';
   fcView = { level, mode, reverse, hintUsed:false, applied:false, applyQ:null, applyRight:null };
   const front = document.getElementById('fcFront'), back = document.getElementById('fcBack');
   const hint = document.getElementById('fcHint'), modeEl = document.getElementById('fcMode'), ap = document.getElementById('fcApply');
@@ -11790,13 +11795,13 @@ function fcApplyAdaptation(card){
   front.classList.toggle('fc-front-def', reverse || mode === 'apply');
   if(ap){ ap.style.display = 'none'; ap.innerHTML = ''; }
   let msg = '', cls = 'fc-mode';
-  if(mode === 'recall'){
+  if(mode === 'recall' || mode === 'cloze'){
     front.textContent = fcMaskTerm(card.def, card.term);
     back.innerHTML = '';
     const t = document.createElement('div'); t.className = 'fc-back-term'; t.textContent = card.term; back.appendChild(t);
     const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     hint.textContent = 'name the term, then tap to reveal';
-    msg = 'Name the term'; cls += ' strong';
+    if(mode === 'cloze'){ msg = 'Missed ' + fcLapseN(card) + ' times — name it from the definition'; cls += ' tricky'; } else { msg = 'Name the term'; cls += ' strong'; }
   } else if(mode === 'apply'){
     const seenOf = x => (getSpacedStat(DATA.questionStats, x.id).seen || 0);
     const rel = fcRelatedQuestions(card).slice().sort(() => Math.random() - 0.5).sort((x, y) => seenOf(x) - seenOf(y)); // fresh questions first, never a repeat while others are unseen
@@ -11819,7 +11824,7 @@ function fcApplyAdaptation(card){
     } else {
       const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     }
-    const ex = fcExampleFor(card);
+    const ex = fcExampleFor(card, Math.max(0, fcLapseN(card) - 1));
     if(ex){
       const e = document.createElement('div'); e.className = 'fc-example';
       const l3 = document.createElement('span'); l3.className = 'fc-lbl'; l3.textContent = 'How it shows up on the exam'; e.appendChild(l3);
@@ -11827,7 +11832,7 @@ function fcApplyAdaptation(card){
       const p2 = document.createElement('div'); p2.className = 'fc-ex-ans'; p2.textContent = '→ ' + ex.answer + (ex.why ? '. ' + ex.why : ''); e.appendChild(p2);
       back.appendChild(e);
     }
-    if(mode === 'foundation'){ msg = 'Tricky card — a hint is available'; cls += ' tricky'; }
+    if(mode === 'foundation'){ const mn = fcLapseN(card); msg = mn >= 2 ? 'Missed ' + mn + ' times — a new angle after you flip' : 'Tricky card — a hint is available'; cls += ' tricky'; }
     else { msg = 'Building block for a weaker area — shown with an exam example'; cls += ' tricky'; }
   }
   modeEl.textContent = msg; modeEl.style.display = msg ? 'block' : 'none'; modeEl.className = cls;
@@ -11884,6 +11889,7 @@ function renderFlashcard(){
   { const why = document.getElementById('fcWhy'); if(why){ const r = fcReasonsFor(card); { const g = (card.gapFor && getSpacedStat(DATA.flashcardStats, card.id).seen === 0) ? 'Written for a gap: ' + card.gapFor : ''; why.textContent = g; why.style.display = g ? 'block' : 'none'; } } }
   document.getElementById('fcBack').textContent = card.def;
   document.getElementById('fcBack').style.display = 'none';
+  { const rt = document.getElementById('fcRetell'); if(rt){ rt.style.display = 'none'; rt.textContent = ''; } }
   { const ct = document.getElementById('fcContrast'); if(ct){ ct.style.display = 'none'; ct.innerHTML = ''; } const _c = document.getElementById('fcCard'); if(_c) _c.classList.remove('flipped-state'); }
   document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
   document.getElementById('fcActions').style.display = 'none';
@@ -11938,6 +11944,128 @@ function fcContrastFor(card){
   return keys.map(k => '<div><b>Don\u2019t mix up: ' + FC_CONTRAST[k].t.replace(/&/g,'&amp;') + '</b>' + FC_CONTRAST[k].x.replace(/&/g,'&amp;') + '</div>').join('');
 }
 
+
+/* ===========================================================
+   REPEATED MISSES: retell a card from a new angle
+   Each miss after the second brings a different way in (plain words, a client example, the deciding difference, the exam trap, a memory hook),
+   written from this student's own wrong picks and mix-ups, and the front alternates between term and definition. Nothing to press.
+=========================================================== */
+const FC_ANGLES = [
+  { k:'reword',   label:'In plain words',          ask:'Restate the idea in plain, everyday language a smart non-expert would follow, without reusing the definition\'s wording. One or two sentences.' },
+  { k:'example',  label:'A client example',        ask:'Give one short, concrete client scenario with simple numbers or facts that shows the idea in action, then say what it shows.' },
+  { k:'contrast', label:'The deciding difference', ask:'Name the one look-alike idea this is most often confused with and give the single fact that decides between them. If the student has a recorded mix-up, use that pair.' },
+  { k:'trap',     label:'How the exam trips you',  ask:'Say how the exam usually disguises this idea and the wrong answer it invites, then the quick rule that cuts through. If the student\'s actual wrong picks are given, address those.' },
+  { k:'hook',     label:'A way to remember it',    ask:'Give one vivid memory hook (an image, acronym or sound-alike) tied to the meaning, and the one fact it carries.' }
+];
+const _fcRetellBusy = {};
+function fcLapseN(card){ const l = DATA && DATA.fcLapse && DATA.fcLapse[card.id]; return l ? (l.n || 0) : 0; }
+// Worth retelling: missed at least twice and still not solid.
+function fcNeedsRetell(card){
+  if(!fcAdaptOn()) return false;
+  const n = fcLapseN(card); if(n < 2) return false;
+  return getSpacedStat(DATA.flashcardStats, card.id).box <= 2;
+}
+function fcNoteLapse(card, knew){
+  if(!DATA.fcLapse || typeof DATA.fcLapse !== 'object') DATA.fcLapse = {};
+  const c = DATA.fcLapse[card.id] || { n:0, run:0, lastAt:0 };
+  if(knew) c.run = 0; else { c.n++; c.run++; }
+  c.lastAt = Date.now();
+  DATA.fcLapse[card.id] = c;
+  if(!knew) fcMaybeRetell(card);
+}
+// What this student's own history says about the card: wrong picks on related questions, and a recorded mix-up.
+function fcMissContext(card){
+  const out = { picks:[], mix:null };
+  try{
+    fcRelatedQuestions(card).forEach(q => {
+      const h = (DATA.wrongChoiceHistory || {})[q.id]; if(!h) return;
+      const top = Object.keys(h).sort((a, b) => h[b] - h[a])[0];
+      if(top !== undefined && q.choices[top] !== undefined) out.picks.push({ stem:String(q.q).slice(0, 170), wrong:String(q.choices[top]).slice(0, 120), right:String(q.choices[q.correct]).slice(0, 120), n:h[top] });
+    });
+    out.picks.sort((a, b) => b.n - a.n); out.picks = out.picks.slice(0, 2);
+    MIXUP_PAIRS.forEach(pr => {
+      const ia = pr.ra.test(card.term), ib = pr.rb.test(card.term);
+      if(!ia && !ib) return;
+      const rec = (DATA.mixups || {})[pr.id];
+      if(!out.mix || (rec && rec.n > out.mix.n)) out.mix = { other: ia ? pr.b : pr.a, n: rec ? rec.n : 0 };
+    });
+  }catch(e){}
+  return out;
+}
+function fcAngleOrder(ctx){
+  const order = FC_ANGLES.map(a => a.k);
+  const first = [];
+  if(ctx.mix && ctx.mix.n) first.push('contrast');
+  if(ctx.picks.length) first.push('trap');
+  return first.concat(order.filter(k => first.indexOf(k) < 0));
+}
+async function fcRetellCall(card, angle, prior, lp, ctx){
+  const mast = Math.round(100 * domainMastery(card.domain));
+  const lines = [];
+  lines.push('You are re-teaching one CFP exam flashcard to a candidate who keeps missing it. They have missed it ' + lp.n + ' times' + (lp.run > 1 ? ' (' + lp.run + ' in a row)' : '') + '. Their score in this domain is about ' + mast + '%, so ' + (mast < 50 ? 'start from the basics and avoid jargon.' : 'assume the fundamentals and aim at the exam edge.'));
+  lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
+  if(ctx.picks.length) lines.push('Their own wrong picks on related questions:\n' + ctx.picks.map(p => '- "' + p.stem + '" They chose "' + p.wrong + '" (correct: "' + p.right + '")' + (p.n > 1 ? ' ' + p.n + ' times' : '')).join('\n'));
+  if(ctx.mix) lines.push('They have mixed this up with: ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '.');
+  if(prior.length) lines.push('Already shown to them (do not repeat or paraphrase):\n' + prior.map(v => '- ' + v.text).join('\n'));
+  lines.push('This time: ' + angle.ask);
+  lines.push('Plain text only, no markdown, no preamble, under 65 words. Do not invent rules or figures beyond the definition unless you are certain; if unsure, stay general.');
+  return String(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 220 })).trim();
+}
+async function fcMaybeRetell(card){
+  if(!aiFeaturesAvailable || !fcNeedsRetell(card) || _fcRetellBusy[card.id]) return;
+  const lp = DATA.fcLapse[card.id];
+  if(!DATA.fcRetell || typeof DATA.fcRetell !== 'object') DATA.fcRetell = {};
+  const list = DATA.fcRetell[card.id] || [];
+  if(list.length >= Math.min(FC_ANGLES.length, lp.n - 1)) return; // one fresh angle per miss, up to five
+  _fcRetellBusy[card.id] = true;
+  try{
+    const ctx = fcMissContext(card), used = new Set(list.map(v => v.k));
+    const k = fcAngleOrder(ctx).find(x => !used.has(x)) || FC_ANGLES[list.length % FC_ANGLES.length].k;
+    const angle = FC_ANGLES.find(a => a.k === k);
+    const text = (await fcRetellCall(card, angle, list, lp, ctx)).replace(/\s+/g, ' ');
+    if(text.length < 20 || text.length > 700) return;
+    const arr = (DATA.fcRetell[card.id] || []).filter(v => v.k !== k);
+    arr.push({ k, text, t: Date.now(), n: lp.n });
+    DATA.fcRetell[card.id] = arr.slice(-6);
+    persist();
+    try{ fcPaintRetell(); }catch(e){}
+  }catch(e){ /* quiet: the local angles below still cover it */ }
+  finally{ delete _fcRetellBusy[card.id]; }
+}
+// Without a generated angle, rotate through what the app already knows about this card.
+function fcRetellLocal(card, lp){
+  const opts = [];
+  const ctx = fcMissContext(card);
+  ctx.picks.forEach(p => opts.push({ label:'A question you missed', text:'“' + p.stem + '” You picked “' + p.wrong + '”. The answer: ' + p.right + '.' }));
+  const n = Math.max(0, lp.n - 2);
+  const ex = fcExampleFor(card, n);
+  if(ex) opts.push({ label:'How it shows up on the exam', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
+  const mn = DATA.flashcardMnemonics && DATA.flashcardMnemonics[card.id];
+  if(mn) opts.push({ label:'A way to remember it', text: mn });
+  return opts.length ? opts[n % opts.length] : null;
+}
+function fcRetellPick(card){
+  const lp = DATA.fcLapse && DATA.fcLapse[card.id];
+  const list = DATA.fcRetell && DATA.fcRetell[card.id];
+  if(list && list.length && lp){
+    const v = list[((lp.n - 2) % list.length + list.length) % list.length];
+    const a = FC_ANGLES.find(x => x.k === v.k);
+    return { label: a ? a.label : 'Another angle', text: v.text };
+  }
+  return lp ? fcRetellLocal(card, lp) : null;
+}
+function fcPaintRetell(){
+  const box = document.getElementById('fcRetell'); if(!box) return;
+  const card = fcQueue[fcIndex];
+  if(!fcFlipped || !card || !fcNeedsRetell(card) || (fcView && fcView.mode === 'apply' && !fcView.applied)){ box.style.display = 'none'; box.textContent = ''; return; }
+  const p = fcRetellPick(card);
+  if(!p){ box.style.display = 'none'; return; }
+  box.innerHTML = '';
+  const l = document.createElement('b'); l.textContent = p.label + ' · missed ' + fcLapseN(card) + '×'; box.appendChild(l);
+  box.appendChild(document.createTextNode(p.text));
+  box.style.display = 'block';
+}
+
 function flipFlashcardContent(){
   fcFlipped = !fcFlipped;
   { const _c = document.getElementById('fcCard'); if(_c) _c.classList.toggle('flipped-state', fcFlipped); }
@@ -11968,10 +12096,8 @@ function flipFlashcardContent(){
   }
   const speakBtn = document.getElementById('speakFlashcardBtn');
   if(speakBtn) speakBtn.style.display = (fcFlipped && hasSpeechSupport()) ? 'flex' : 'none';
-  if(fcFlipped && aiFeaturesAvailable && fcQueue[fcIndex] && fcCardSignals(fcQueue[fcIndex]).leech){
-    const eb = document.getElementById('fcExplainBtn');
-    if(eb && !eb.disabled) requestFlashcardExplain();
-  }
+  try{ fcPaintRetell(); }catch(e){}
+  if(fcFlipped && fcQueue[fcIndex]) try{ fcMaybeRetell(fcQueue[fcIndex]); }catch(e){} // a card that has run ahead of its re-teaching catches up while you read it
 }
 
 function openSettingsFromAnyFullscreen(){
@@ -12208,6 +12334,7 @@ function undoFlashcardRating(){
   const u = _fcUndo; if(!u || u.queue !== fcQueue) return;
   if(u.had) DATA.flashcardStats[u.id] = u.stat; else delete DATA.flashcardStats[u.id];
   DATA.flashcardRatingCount = u.count;
+  try{ if(!DATA.fcLapse) DATA.fcLapse = {}; if(u.lapse) DATA.fcLapse[u.id] = u.lapse; else delete DATA.fcLapse[u.id]; }catch(e){}
   const r = u.round; if(r){ r.total = Math.max(0, r.total - 1); if(u.knew) r.knew = Math.max(0, r.knew - 1); else { r.missed.pop(); r.missedIds.pop(); } }
   fcIndex = u.index; _fcUndo = null;
   persist(); renderFlashcard(); renderFlashcardStats(); fcUndoRefresh(); try{ refreshHeaderStats(); refreshCoachSurfaces(); }catch(e){}
@@ -12216,10 +12343,11 @@ function rateFlashcard(knowsIt){
   const card = fcQueue[fcIndex];
   if(fcView && fcView.mode === 'apply' && fcView.applyRight === false) knowsIt = false; // missed the applied question: the card is still learning, whatever the button
   if(fcView && fcView.mode === 'apply' && !fcView.applied) return;
-  _fcUndo = { id:card.id, queue:fcQueue, index:fcIndex, knew:!!knowsIt, round:fcRound, had:Object.prototype.hasOwnProperty.call(DATA.flashcardStats, card.id), stat:DATA.flashcardStats[card.id] ? JSON.parse(JSON.stringify(DATA.flashcardStats[card.id])) : null, count:DATA.flashcardRatingCount || 0 };
+  _fcUndo = { id:card.id, queue:fcQueue, index:fcIndex, knew:!!knowsIt, round:fcRound, had:Object.prototype.hasOwnProperty.call(DATA.flashcardStats, card.id), stat:DATA.flashcardStats[card.id] ? JSON.parse(JSON.stringify(DATA.flashcardStats[card.id])) : null, count:DATA.flashcardRatingCount || 0, lapse:(DATA.fcLapse && DATA.fcLapse[card.id]) ? JSON.parse(JSON.stringify(DATA.fcLapse[card.id])) : null };
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
+  try{ fcNoteLapse(card, knowsIt); }catch(e){}
   if(knowsIt && fcView.hintUsed && fcView.mode === 'foundation'){
     // Recalled with the hint: real progress, but not the same as an unaided recall, so hold the box where it was.
     const keep = Math.max(prevStat.box, 1), ns = DATA.flashcardStats[card.id];
@@ -20211,7 +20339,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.182';
+const BUILD_ID = '2026-10-18.183';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
