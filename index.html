@@ -19836,6 +19836,36 @@ function renderTutorMessage(role, text){
   return bubble;
 }
 
+// A decision tree shown right in the conversation: the student walks it without leaving the chat. Diagram tools
+// (options matrix, plan family tree) cannot run inline, so they get a button to the Tools tab instead.
+let _tutorTreeN = 0, _tutorTreeShown = {};
+function tutorTreeRow(key){
+  const thread = document.getElementById('tutorThread'); if(!thread) return null;
+  const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
+  const row = document.createElement('div'); row.className = 'tutor-msg tutor-msg-bot tutor-tree-row';
+  const box = document.createElement('div'); box.className = 'qcard-link tutor-tree';
+  if(DECISION_TREES[key]){
+    const inst = key + '@t' + (++_tutorTreeN);
+    box.innerHTML = '<details class="qcl" open><summary>Walk the decision tree: <b>' + escapeHtml(name) + '</b></summary><div id="dt-' + inst + '" style="margin-top:8px;"></div><div class="qcl-note">Same tree as in Decision tools.</div></details>';
+    row.appendChild(box); thread.appendChild(row);
+    try{ dtInit(inst); }catch(e){}
+  } else {
+    box.innerHTML = '<div class="qcl-def">This one is easier to see as a picture: <b>' + escapeHtml(name) + '</b></div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="tutorPoint(\'tool_' + key + '\', \'From your tutor chat\')">Open it in Decision tools</button>';
+    row.appendChild(box); thread.appendChild(row);
+  }
+  thread.scrollTop = thread.scrollHeight;
+  return row;
+}
+// After a tutor reply, offer the matching tool when the question (or what the tutor explained) is one a tool covers.
+function tutorMaybeOfferTree(userText, replyText){
+  try{
+    const hit = RESULT_TOOL_MATCH.find(t => t.re.test(userText)) || RESULT_TOOL_MATCH.find(t => t.re.test(replyText));
+    if(!hit || _tutorTreeShown[hit.key] === tutorConversationId) return;
+    _tutorTreeShown[hit.key] = tutorConversationId; // once per topic per conversation, so it never nags
+    tutorTreeRow(hit.key);
+  }catch(e){}
+}
+
 function renderTutorActionIndicator(text){
   const thread = document.getElementById('tutorThread');
   const row = document.createElement('div');
@@ -20146,6 +20176,11 @@ async function executeTutorTool(toolName, toolInput){
       };
       const meta = toolMeta[toolInput.tool];
       if(!meta) return `Error: "${toolInput.tool}" isn't a valid decision tool.`;
+      if(DECISION_TREES[toolInput.tool]){
+        _tutorTreeShown[toolInput.tool] = tutorConversationId;
+        tutorTreeRow(toolInput.tool);
+        return `Showed the "${meta.label}" tool right in the chat so the student can walk it without leaving the conversation. Tell them to tap through it, then ask what they chose and why.`;
+      }
       showTab('tools');
       const anchorEl = document.getElementById(meta.anchorId);
       const card = anchorEl ? anchorEl.closest('.card') : null;
@@ -20463,6 +20498,7 @@ async function sendTutorMessage(presetText){
         { label: 'Add an API key', run: () => openSettings() },
       ]);
     }
+    tutorMaybeOfferTree(text, '');
     return;
   }
   input.value = '';
@@ -20517,6 +20553,7 @@ async function sendTutorMessage(presetText){
     typingBubble.classList.remove('typing');
     typingBubble.textContent = reply;
     status.textContent = '';
+    tutorMaybeOfferTree(text, reply);
     if(presetText === undefined) tutorRemember(text, 'tutor');
   }catch(e){
     if(tutorConversationId !== conversationIdAtRequestTime) return;
@@ -20820,7 +20857,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.211';
+const BUILD_ID = '2026-10-18.212';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
