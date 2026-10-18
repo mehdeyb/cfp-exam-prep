@@ -2305,6 +2305,30 @@
   body.quiz-active #resultsView > .card > *{flex-shrink:0;}
   body.quiz-active #resultsView > .card > .quiz-actions{margin-top:auto;}
   body.quiz-active #quizView .quiz-inner{padding-top:max(6px, env(safe-area-inset-top));}
+
+  /* ---- Screen-area pass (phones, upright): nothing floats over content ---- */
+  @media (orientation:portrait) and (max-width:640px){
+    /* Kicker stays on one line */
+    body.quiz-active .q-domain{flex-wrap:nowrap;white-space:nowrap;overflow:hidden;gap:8px;}
+    body.quiz-active .q-domain .qd-name{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}
+    body.quiz-active .q-domain .gen-flag{flex:none;}
+    body.quiz-active .confidence-row{flex-wrap:nowrap;margin:0 0 12px;padding-bottom:10px;gap:8px;}
+    body.quiz-active .confidence-label{font-size:10.5px;white-space:nowrap;}
+    body.quiz-active .confidence-pills{flex-wrap:nowrap;gap:5px;}
+    body.quiz-active .confidence-pill{padding:10px 11px;min-height:38px;font-size:10px;}
+    /* Slim Exit/Next bar */
+    body.quiz-active #quizView .quiz-actions{padding:6px max(14px, env(safe-area-inset-right)) max(6px, calc(env(safe-area-inset-bottom) - 20px)) max(14px, env(safe-area-inset-left));align-items:center;}
+    body.quiz-active #quizView .quiz-actions .btn{padding:9px 18px;font-size:13px;min-height:40px;}
+    body.quiz-active #quizView{padding-bottom:calc(52px + max(6px, calc(env(safe-area-inset-bottom) - 20px)));}
+    /* "More answers below" lives in the bar's empty middle, as a small round button, never over an answer */
+    #moreChoicesCue{left:50%;bottom:calc(max(6px, calc(env(safe-area-inset-bottom) - 20px)) + 3px);width:40px;height:40px;padding:0;border-radius:50%;font-size:0;line-height:40px;text-align:center;box-shadow:none;z-index:8;}
+    #moreChoicesCue.show{display:block;}
+    #moreChoicesCue::after{content:"\2193";font-size:20px;font-weight:700;}
+    /* Session tag: a slim strip docked to the tab bar, reserved in the layout, tucked away while you scroll down */
+    .cd-pill{left:0;right:0;transform:none;max-width:none;width:100%;box-sizing:border-box;min-height:34px;padding:6px 16px;border-radius:0;border-width:1px 0 0;box-shadow:none;animation:none;bottom:var(--tab-h, calc(76px + env(safe-area-inset-bottom,0px)));justify-content:center;font-size:12px;transition:transform .22s var(--ease-out),opacity .22s;}
+    .cd-pill.cd-tuck{transform:translateY(120%);opacity:0;pointer-events:none;}
+    body.cd-pill-on .wrap::after{height:40px;}
+  }
 </style>
 </head>
 <body>
@@ -16515,18 +16539,18 @@ function renderQuestion(){
     missed: 'still working on this',
     due: 'due for review',
     fresh: 'new material',
-    resting: 'full lap through due material complete',
-    foundation: 'rebuilding the foundation here first',
-    conceptFollowup: 'building on what you just missed',
-    tvmCalc: 'calculator practice at your level',
-    applied: 'an applied scenario, like the exam\'s case questions',
-    calcItem: 'a worked calculation',
-    retest: 'a new question on an idea that was due back',
-    newidea: 'a new question written on this idea',
+    resting: 'review lap',
+    foundation: 'foundation',
+    conceptFollowup: 'follow-up',
+    tvmCalc: 'calculator practice',
+    applied: 'applied scenario',
+    calcItem: 'calculation',
+    retest: 'back for review',
+    newidea: 'new wording',
   };
   const reasonCode = session.selectionReasons ? session.selectionReasons[q.id] : null;
   const reasonFlag = reasonCode && reasonLabels[reasonCode] ? ` <span class="gen-flag" title="Why this question, right now">· ${reasonLabels[reasonCode]}</span>` : '';
-  document.getElementById('qDomain').innerHTML = domainMeta.code + ' — ' + domainMeta.name + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + reasonFlag;
+  document.getElementById('qDomain').innerHTML = '<span class="qd-name">' + domainMeta.code + ' — ' + domainMeta.name + '</span>' + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + reasonFlag;
   session.cueRevealed = false;
   paintScenario(q, false);
   const qTextDisplay = document.getElementById('qText');
@@ -19991,7 +20015,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.159';
+const BUILD_ID = '2026-10-17.160';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -20079,6 +20103,26 @@ requestDurableStorage();
   byTitle('tab-examday', ['Exam format', 'Calculator policy', 'What to bring']).forEach(ccMake);
   byTitle('tab-reference', ['Subject Podcast']).forEach(ccMake);
   window.ccSet = ccSet;
+})();
+
+
+// Keep the session tag flush on top of the tab bar whatever its real height is.
+(function(){
+  function sync(){ try{ const t = document.getElementById('appTabbar'); if(t){ const h = Math.round(t.getBoundingClientRect().height); if(h > 30) document.documentElement.style.setProperty('--tab-h', h + 'px'); } }catch(e){} }
+  window.addEventListener('resize', sync); window.addEventListener('load', sync); setInterval(sync, 1500); setTimeout(sync, 200);
+})();
+// Session tag tucks away while scrolling down, returns when scrolling up or at the top.
+(function(){
+  let lastY = 0;
+  window.addEventListener('scroll', () => {
+    try{
+      const pill = document.querySelector('.cd-pill'); if(!pill) return;
+      const y = window.scrollY || 0, d = y - lastY;
+      if(Math.abs(d) < 8) return;
+      pill.classList.toggle('cd-tuck', d > 0 && y > 80);
+      lastY = y;
+    }catch(e){}
+  }, {passive:true});
 })();
 
 // Shows a small "more answers below" cue while the last answer choice is hidden behind the sticky bar.
