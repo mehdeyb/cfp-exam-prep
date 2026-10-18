@@ -2189,8 +2189,12 @@
   #quizView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
   #quizView .quiz-actions > *{pointer-events:auto;}
   #quizView .quiz-actions::before{display:none;}
-  /* The results page keeps a solid bar: its buttons would otherwise sit on top of the table rows. */
-  #resultsView .quiz-actions{background:var(--surface);}
+  /* The results page works the same way: no band, just the buttons, with room left under the content so nothing is hidden behind them. */
+  #resultsView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
+  #resultsView .quiz-actions > *{pointer-events:auto;background-color:color-mix(in srgb,var(--surface) 94%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+  #resultsView .quiz-actions > .btn:not(.ghost){background-color:color-mix(in srgb,var(--surface) 94%,transparent);}
+  #resultsView .quiz-actions::before{display:none;}
+  #resultsView{padding-bottom:76px;}
   /* Landscape phones: Exit and Next move out into the empty side margins as round buttons, so the
      question and answers get the full height. Exam simulations keep their labelled bar. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
@@ -20655,7 +20659,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.195';
+const BUILD_ID = '2026-10-18.196';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
