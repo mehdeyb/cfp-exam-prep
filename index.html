@@ -10482,12 +10482,12 @@ function toolForQuestion(q){
 function showToolForQuestion(q, isCorrect){
   const box = document.getElementById('qToolLink'); if(!box) return;
   box.style.display = 'none'; box.innerHTML = '';
-  if(!isStudyMode() || isGenQ(q)) return;
-  if(isCorrect && session.selectedConfidence !== 'unsure') return;
-  const key = toolForQuestion(q); if(!key) return;
+  if(!isStudyMode() || q.tvmGen) return;
+  if(q.treeGen ? isCorrect : (isCorrect && session.selectedConfidence !== 'unsure')) return;
+  const key = q.treeGen ? q.treeKey : toolForQuestion(q); if(!key) return;
   const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
   if(DECISION_TREES[key]){
-    box.innerHTML = '<details class="qcl" ontoggle="if(this.open) qtoolOpen(\'' + key + '\')"><summary>Walk the decision tree: <b>' + escapeHtml(name) + '</b></summary><div id="dt-' + key + '@q" style="margin-top:8px;"></div><div class="qcl-note">Same tree as the Tools tab. Your session stays right here.</div></details>';
+    box.innerHTML = '<details class="qcl" ontoggle="if(this.open) qtoolOpen(\'' + key + '\')"><summary>' + (q.treeGen ? 'Retrace it on the tree: ' : 'Walk the decision tree: ') + '<b>' + escapeHtml(name) + '</b></summary><div id="dt-' + key + '@q" style="margin-top:8px;"></div><div class="qcl-note">Same tree as the Tools tab. Your session stays right here.</div></details>';
   } else {
     box.innerHTML = '<div class="qcl-def">This one is easier to see as a picture: <b>' + escapeHtml(name) + '</b></div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="openToolFromResults(\'' + key + '\')">Open it in the Tools tab</button><div class="qcl-note">Your place in this session is saved.</div>';
   }
@@ -10568,6 +10568,7 @@ function startTreeDrill(key){
   const pool = scored.slice(0, Math.min(6, scored.length)).map(x => x.q);
   if(!pool.length) return;
   beginSession(shuffle(pool), 'drill', null);
+  if(session) session.treeDrill = key;
 }
 
 function startTopicPractice(setKey){
@@ -15252,7 +15253,7 @@ function saveInProgressSession(){
   DATA.inProgressSession = {
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
-    variantAttempted: session.variantAttempted, startedAt: session.startedAt,
+    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
@@ -15284,7 +15285,7 @@ function resumeInProgressSession(){
     sectionBreakIndex: null, onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
-    startedAt: saved.startedAt, variantAttempted: saved.variantAttempted || {},
+    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null,
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
@@ -17822,6 +17823,12 @@ function renderResultTools(){
   el.style.display = 'none'; el.innerHTML = '';
   try{
     if(!session || session.mode === 'fullexam' || session.mode === 'mock') return;
+    if(session.treeDrill && TREE_META[session.treeDrill]){
+      const key = session.treeDrill, st = treeDrillStats(key);
+      el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;"><b>${escapeHtml(TREE_META[key].name)}</b>: ${st.solved} of ${st.total} routes solved${st.weak ? ', ' + st.weak + ' to revisit' : ''}. ${st.weak ? 'The routes you missed come back first next time.' : 'Every route you have tried is solid.'}</div><button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${key}')">Apply the tree again</button> <button type="button" class="btn ghost" onclick="openToolFromResults('${key}')">Open it in the Tools tab</button>`;
+      el.style.display = 'block';
+      return;
+    }
     const counts = {};
     (session.answerLog || []).forEach(e => {
       if(e.correct) return;
@@ -18801,6 +18808,10 @@ function buildTutorSystemPrompt(){
       const shaky = ids.filter(k => k.startsWith('c:') && ts[k].grade !== 'nailed' && byId.get(k.slice(2))).sort((a, b) => ts[b].last - ts[a].last).slice(0, 4).map(k => byId.get(k.slice(2)));
       teachContext = ` They have explained ${ids.length} concept${ids.length === 1 ? '' : 's'} back in their own words${shaky.length ? '; the ones that fell short were: ' + shaky.join(', ') : ''}.`;
     }
+  }catch(e){}
+  try{
+    const bits = Object.keys(TREE_META).map(k => { const st = treeDrillStats(k); return st.tried ? `${TREE_META[k].name} ${st.solved} of ${st.total} routes solved${st.weak ? ' (' + st.weak + ' to revisit)' : ''}` : ''; }).filter(Boolean);
+    if(bits.length) teachContext += ' In the decision-tree drills: ' + bits.join('; ') + '.';
   }catch(e){}
   const fcProgress = computeFlashcardProgress();
   if(fcProgress.knownCount + fcProgress.learningCount > 0){
@@ -19831,7 +19842,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.149';
+const BUILD_ID = '2026-10-17.150';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
