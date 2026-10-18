@@ -495,7 +495,10 @@
   @keyframes skelPulse{0%,100%{opacity:.45;}50%{opacity:1;}}
   @media (prefers-reduced-motion:reduce){.choice-skel{animation:none;}}
   html.vp-test body.settings-active #settingsHost{bottom:auto;height:var(--full-h);}
-  html.scroll-locked, html.scroll-locked body{overflow:hidden;overscroll-behavior:none;}
+  /* Never switch the page to overflow:hidden: with nothing left to scroll, iOS shrinks the installed app's window by the top inset (812 of 874 on a Pro). The page stays scrollable by a hair underneath; touches are blocked in script instead. */
+  html.scroll-locked, html.scroll-locked body{overscroll-behavior:none;}
+  html.scroll-locked body{min-height:calc(100vh + 2px);}
+  body.quiz-active #quizFullscreenHost, body.flashcard-fullscreen #flashcardFullscreenHost, body.tvm-active #tvmHost, body.settings-active #settingsHost{overscroll-behavior:contain;}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -1216,7 +1219,8 @@
   }
   /* Ghost scrolling: while a quiz or fullscreen card is up, the study page underneath must not move at all. iOS ignores
      overflow:hidden on the body for touch drags, so the page is pinned and scroll never chains to it. */
-  html:has(body.quiz-active), html:has(body.flashcard-fullscreen){overflow:hidden;overscroll-behavior:none;height:100%;}
+  html:has(body.quiz-active), html:has(body.flashcard-fullscreen){overscroll-behavior:none;}
+  html:has(body.quiz-active) body, html:has(body.flashcard-fullscreen) body{min-height:calc(100vh + 2px);}
   body.quiz-active, body.flashcard-fullscreen{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none;}
   body.quiz-active #quizView, body.flashcard-fullscreen #flashcardFullscreenHost{overscroll-behavior:contain;}
   .quiz-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;}
@@ -20072,7 +20076,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.168';
+const BUILD_ID = '2026-10-17.169';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
