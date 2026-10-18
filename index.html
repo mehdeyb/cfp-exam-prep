@@ -990,6 +990,8 @@
   .bp-chip-meta-row{display:flex;align-items:center;gap:6px;margin-top:2px;}
   .bp-chip-stage{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.02em;padding:1px 6px;border-radius:8px;color:var(--muted);background:var(--surface2);}
   .bp-chip-stage.s1{color:var(--gold);background:var(--gold-tint);} .bp-chip-stage.s3{color:var(--teal);background:var(--teal-tint);} .bp-chip-stage.s4{color:var(--correct);background:var(--teal-tint);}
+  .bp-chip-focus{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--surface);background:var(--gold);padding:1px 6px;border-radius:8px;}
+  .bp-code-cell.focus{color:var(--gold);font-weight:600;}
   .bp-chip-due{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--gold);background:var(--gold-tint);padding:1px 6px;border-radius:8px;}
   .bp-chip-rebuilding{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--gold);letter-spacing:.02em;}
   .source-note{margin-top:12px;font-size:11.5px;color:var(--muted-dim);line-height:1.5;}
@@ -2484,7 +2486,7 @@
     <div class="card" id="blueprintCard">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
-        <div class="note">width = exam weight · fill = your mastery</div>
+        <div class="note">width = exam weight · fill = readiness</div>
       </div>
       <div class="bp-bar" id="bpBar"></div>
       <div class="bp-code-row" id="bpCodeRow"></div>
@@ -6879,9 +6881,24 @@ function renderBlueprint(){
   bar.innerHTML = '';
   if(codeRow) codeRow.innerHTML = '';
   legend.innerHTML = '';
+  // The fill and the % are the same readiness the score is built from (knowledge above guessing, faded by forgetting), so the bar,
+  // the legend and the readiness ring always agree; raw accuracy stays in the tooltip.
+  let ready = {}, focusKey = null;
+  try{
+    const st = computeStats();
+    let best = -1;
+    st.parts.forEach(p => {
+      const k = p.weight ? p.earned / p.weight : 0;
+      ready[p.key] = Math.round(k * 100);
+      const gap = p.weight * (1 - k);
+      if(gap > best){ best = gap; focusKey = p.key; }
+    });
+    if(!st.totalAnswered) focusKey = null;
+  }catch(e){ ready = {}; }
   DOMAINS.forEach(d=>{
     const s = DATA.domainStats[d.key];
-    const mastery = s.total ? Math.round((s.correct/s.total)*100) : 0;
+    const accuracy = s.total ? Math.round((s.correct/s.total)*100) : 0;
+    const mastery = (ready[d.key] !== undefined && s.total) ? ready[d.key] : accuracy;
     const pctClass = s.total===0 ? 'none' : mastery>=75 ? 'strong' : mastery>=50 ? 'mid' : 'weak';
     const inFoundation = !!(DATA.domainFoundationMode && DATA.domainFoundationMode[d.key]);
     const dueCount = allQuestions().filter(q => {
@@ -6894,7 +6911,7 @@ function renderBlueprint(){
     seg.className = 'bp-seg' + (inFoundation ? ' foundation-active' : '');
     seg.style.flex = d.weight;
     const foundationNote = inFoundation ? ' — currently rebuilding fundamentals' : '';
-    seg.title = `${d.name} — ${d.weight}% of exam across ${(SUBTOPICS[d.key]||[]).length} official subtopics, ${mastery}% mastery (${s.correct}/${s.total})${s.total ? ', level ' + STAGES[domainStageOf(d.key) - 1].name + '. ' + stageNextText(d.key) : ''}${foundationNote}${dueCount ? `, ${dueCount} due for review` : ''}`;
+    seg.title = `${d.name} — ${d.weight}% of exam across ${(SUBTOPICS[d.key]||[]).length} official subtopics, ${mastery}% ready (${accuracy}% right, ${s.correct}/${s.total})${d.key === focusKey ? ', your biggest gap for the exam' : ''}${s.total ? ', level ' + STAGES[domainStageOf(d.key) - 1].name + '. ' + stageNextText(d.key) : ''}${foundationNote}${dueCount ? `, ${dueCount} due for review` : ''}`;
     seg.onclick = () => startDrill(d.key);
     seg.tabIndex = 0;
     seg.setAttribute('role', 'button');
@@ -6920,7 +6937,7 @@ function renderBlueprint(){
 
     if(codeRow){
       const codeCell = document.createElement('div');
-      codeCell.className = 'bp-code-cell';
+      codeCell.className = 'bp-code-cell' + (d.key === focusKey ? ' focus' : '');
       codeCell.style.flex = d.weight;
       codeCell.textContent = d.code;
       codeCell.title = d.name;
@@ -6928,6 +6945,7 @@ function renderBlueprint(){
     }
 
     const metaBits = [];
+    if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
     const stg = s.total ? domainStageOf(d.key) : 0;
     if(stg) metaBits.push('<span class="bp-chip-stage s' + stg + '">' + STAGES[stg - 1].name + '</span>');
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
@@ -6941,6 +6959,7 @@ function renderBlueprint(){
     legend.appendChild(chip);
   });
 
+  try{ renderBlueprintPlan(); }catch(e){}
   applyBlueprintCompactStyling();
 }
 
@@ -20542,7 +20561,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.192';
+const BUILD_ID = '2026-10-18.193';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
