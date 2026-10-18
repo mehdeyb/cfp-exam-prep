@@ -498,6 +498,8 @@
   /* Never switch the page to overflow:hidden: with nothing left to scroll, iOS shrinks the installed app's window by the top inset (812 of 874 on a Pro). The page stays scrollable by a hair underneath; touches are blocked in script instead. */
   html.scroll-locked, html.scroll-locked body{overscroll-behavior:none;}
   html.scroll-locked body{min-height:calc(100vh + 2px);}
+  /* Short landscape screens: the plan banner would cost a third of the height, and the plan chip already carries the count. */
+  @media (orientation:landscape) and (max-height:520px){ body.quiz-active #tutorBrief{display:none !important;} body.quiz-active .q-domain{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;} }
   html.scroll-locked::-webkit-scrollbar, html:has(body.quiz-active)::-webkit-scrollbar, html:has(body.flashcard-fullscreen)::-webkit-scrollbar{display:none;width:0;}
   html.scroll-locked, html:has(body.quiz-active), html:has(body.flashcard-fullscreen){scrollbar-width:none;}
   body.quiz-active #quizFullscreenHost, body.flashcard-fullscreen #flashcardFullscreenHost, body.tvm-active #tvmHost, body.settings-active #settingsHost{overscroll-behavior:contain;}
@@ -16304,7 +16306,7 @@ function applyQuizLayout(){
     if(!wide){ put(ask, 'left'); put(cue, 'left'); return; }
     const vis = el => !!el && el.style.display !== 'none' && el.innerHTML !== '';
     const sides = el => vis(el) ? ['left', 'right'] : ['left'];
-    const cols = ['minmax(0,6fr) minmax(0,5fr)', 'minmax(0,1fr) minmax(0,1fr)', 'minmax(0,7fr) minmax(0,4fr)', 'minmax(0,5fr) minmax(0,6fr)'];
+    const cols = ['minmax(0,4fr) minmax(0,7fr)', 'minmax(0,5fr) minmax(0,7fr)', 'minmax(0,6fr) minmax(0,5fr)', 'minmax(0,1fr) minmax(0,1fr)', 'minmax(0,7fr) minmax(0,4fr)', 'minmax(0,5fr) minmax(0,6fr)'];
     const avail = left.style.maxHeight || window.innerHeight - 72;
     let best = null;
     sides(ask).forEach(sa => sides(cue).forEach(sc => cols.forEach((cs, ci) => {
@@ -16542,10 +16544,19 @@ function fitQuizText(){
     const ql = document.querySelector('#quizView .q-left');
     const fits = () => host.scrollHeight <= host.clientHeight && (!ql || ql.scrollHeight <= ql.clientHeight + 1);
     if(!fits()){
+      // The plan note is a courtesy: when the answers do not fit, it steps aside so they can.
+      const brief = document.getElementById('tutorBrief');
+      if(brief && brief.style.display !== 'none'){ brief.style.display = 'none'; if(fits()) return; }
       el.style.fontSize = '';
       if(!document.body.classList.contains('exam-sim-mode') && window.innerWidth > window.innerHeight){
         let f = base;
         while(f > 14.5 && !fits()){ f -= 0.5; el.style.fontSize = f + 'px'; }
+        // Still too tall: tighten the answers a little so all four are on screen without scrolling.
+        let cf = cb, cp = pb;
+        while(!fits() && (cf > 12 || cp > 5)){
+          if(cf > 12) cf -= 0.5; if(cp > 5) cp -= 1;
+          chs.forEach(c => { c.style.fontSize = cf + 'px'; c.style.paddingTop = c.style.paddingBottom = cp + 'px'; });
+        }
       }
       return;
     }
@@ -20144,7 +20155,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.176';
+const BUILD_ID = '2026-10-17.177';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
