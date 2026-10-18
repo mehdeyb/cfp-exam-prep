@@ -1436,8 +1436,12 @@
   .syl-drill:active{transform:scale(.97);}
   .plan-today .pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
   .plan-today .pt-alldone{font-size:12.5px;font-weight:600;color:var(--green,#34c759);margin:2px 0 10px;}
+  .plan-today .pt-pace{font-size:12px;color:var(--muted);line-height:1.45;margin:-2px 0 10px;}
+  .plan-today .pt-use{font:inherit;font-weight:600;color:var(--gold);background:none;border:none;padding:6px 2px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  .plan-today .pt-min.sug::after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-left:4px;vertical-align:middle;}
   .plan-today .pt-sub{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
-  .plan-today .pt-mins{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;}
+  .plan-today .pt-mins{display:flex;gap:6px;flex-wrap:nowrap;margin:0 0 10px;}
+  .plan-today .pt-mins .pt-min{flex:1 1 0;min-width:0;padding:7px 4px;white-space:nowrap;text-align:center;}
   .plan-today .pt-min{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 14px;min-height:44px;border-radius:22px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease);}
   .plan-today .pt-min:hover{border-color:var(--gold);}
   .plan-today .pt-min:active{transform:scale(.96);}
@@ -7607,8 +7611,8 @@ function computeNextStep(stats){
 =========================================================== */
 // With the exam days away, short days no longer make sense: the plan is built for a real study block.
 const PLAN_MINUTE_CHOICES = [120, 150, 180];
-function planMinuteLabel(m){ return m === 120 ? '2 hrs' : m === 150 ? '2.5 hrs' : m === 180 ? '3 hrs' : (m % 60 === 0 ? (m/60) + ' hrs' : m + ' min'); }
-function planMinutesChosen(){ const m = DATA && DATA.planMinutes; return (m >= 120 && m <= 240) ? Math.round(m) : 0; }
+function planMinuteLabel(m){ return paceHrs(m); }
+function planMinutesChosen(){ const m = DATA && DATA.planMinutes; return (m >= 60 && m <= 360) ? Math.round(m) : 0; }
 // Until they pick a length, the plan follows how long they have really been studying: the average of their
 // recent study days, snapped to the nearest choice. With too little history it starts at 2.5 hours.
 function typicalStudyMinutes(){
@@ -7620,8 +7624,72 @@ function typicalStudyMinutes(){
     return PLAN_MINUTE_CHOICES.reduce((best, m) => Math.abs(m - avg) < Math.abs(best - avg) ? m : best, PLAN_MINUTE_CHOICES[0]);
   }catch(e){ return 0; }
 }
-function planMinutes(){ return planMinutesChosen() || typicalStudyMinutes() || 150; }
-function planMinutesAuto(){ return !planMinutesChosen() && !!typicalStudyMinutes(); }
+function paceHrs(m){
+  m = Math.round(m); if(m < 90) return m + ' min';
+  if(m % 60 === 0) return (m / 60) + ' hrs';
+  if(m % 30 === 0) return (m / 60) + ' hrs';
+  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+}
+// How long a day it takes to be ready on exam day, worked out from what is actually left: the questions and cards
+// not yet met, the weak domains, what was missed, and a few timed checks, spread over the days that remain.
+// It is an estimate, shown as one number you can accept or ignore.
+function studyPaceAdvice(){
+  try{
+    const days = getDaysUntilExam(); if(days === null || days < 2) return null;
+    const sessions = DATA.sessions || [];
+    let qa = 0, qm = 0;
+    sessions.forEach(x => { const n = sessionQuestionCount(x); if(x.minutes && n){ qa += n; qm += x.minutes; } });
+    const minPerQ = qa >= 30 ? Math.min(2.5, Math.max(0.8, qm / qa)) : 1.4;
+    // what they really average per day lately (full days before today)
+    const today = localDayKey(), cut = Date.now() - 8 * 86400000; let m8 = 0, first = Date.now();
+    sessions.forEach(x => { const t = new Date(x.date).getTime(); if(t < first) first = t; if(t >= cut && x.minutes && localDayKey(new Date(t)) !== today) m8 += x.minutes; });
+    const spanDays = Math.min(7, Math.floor((Date.now() - first) / 86400000));
+    const known = sessions.length > 0 && spanDays >= 2;
+    const avgMin = known ? m8 / spanDays : 0;
+    const seenQ = id => { const st = DATA.questionStats[id]; return !!(st && st.seen); };
+    const unseenQ = allQuestions().filter(q => !seenQ(q.id)).length;
+    let unseenCards = 0; try{ unseenCards = computeFlashcardProgress().unseenCount || 0; }catch(e){}
+    const missedN = (DATA.missed || []).length;
+    const repair = 0.5 * domainMasteryList().reduce((a, d) => a + (d.weight / 100) * Math.max(0, 75 - ((d.total || 0) >= 10 ? (d.mastery || 0) : 0)) / 75 * 1800, 0);
+    const lastFull = sessions.filter(x => x.mode === 'fullexam').pop();
+    const fullDone = lastFull && (Date.now() - new Date(lastFull.date).getTime()) < 10 * 86400000;
+    const checks = Math.floor(days / 7) * (typeof MOCK_MINUTES === 'number' ? MOCK_MINUTES : 51) + ((days >= 12 && !fullDone) ? 360 : 0);
+    const cf = days <= 7 ? 0.3 : days <= 14 ? 0.6 : 1; // close to the exam, consolidating beats chasing every new question
+    const parts = [
+      { label: unseenQ + ' new questions', min: unseenQ * minPerQ * cf },
+      { label: 'weak-domain repair', min: repair },
+      { label: unseenCards + ' new flashcards', min: unseenCards * 0.35 * cf },
+      { label: 'timed checks', min: checks },
+      { label: missedN + ' missed questions', min: missedN * 1.4 }
+    ];
+    const total = parts.reduce((a, p) => a + p.min, 0);
+    const effDays = days >= 3 ? days - 2 : 1; // the last day is rest and the day before it is light
+    const raw = total / effDays;
+    const rounded = Math.round(raw / 15) * 15;
+    const minutes = Math.max(90, Math.min(300, rounded));
+    const stretch = rounded > 300;
+    const status = !known ? 'new' : (avgMin >= minutes * 0.9 ? 'on' : 'behind');
+    const d = new Date(DATA.examDate + 'T00:00:00');
+    return { minutes, raw, avgMin, known, status, stretch, days, parts, examLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+  }catch(e){ return null; }
+}
+function paceAdviceText(a){
+  if(!a) return '';
+  const rec = paceHrs(a.minutes), avg = a.known ? paceHrs(a.avgMin) : '';
+  if(a.stretch) return (a.raw > 420 ? 'Not everything can be covered in the time left. ' : `Covering everything would take about ${paceHrs(a.raw)} a day. `) + `Planned at ${rec}, with your weakest domains first.`;
+  if(a.status === 'on') return `On pace. About ${rec} a day gets you ready by ${a.examLabel}; you are averaging ${avg}.`;
+  if(a.status === 'behind') return `To be ready by ${a.examLabel}, aim for about ${rec} a day. You are averaging ${avg}.`;
+  return `To be ready by ${a.examLabel}, aim for about ${rec} a day.`;
+}
+function planMinutes(){ if(planMinutesChosen()) return planMinutesChosen(); const a = studyPaceAdvice(); return (a && a.minutes) || typicalStudyMinutes() || 150; }
+function planMinutesAuto(){ return !planMinutesChosen(); }
+function planChipChoices(cur){
+  const a = studyPaceAdvice(); const set = new Set(PLAN_MINUTE_CHOICES);
+  if(a) set.add(a.minutes); if(cur) set.add(cur);
+  let arr = [...set].sort((x, y) => x - y);
+  while(arr.length > 5){ const drop = arr.find(v => v !== cur && !(a && v === a.minutes) && PLAN_MINUTE_CHOICES.includes(v)); if(drop === undefined) break; arr.splice(arr.indexOf(drop), 1); }
+  return { arr, sug: a ? a.minutes : 0 };
+}
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
   if(days <= 1) return { key:'rest', label:'Light day' };
@@ -7884,7 +7952,8 @@ function buildStudyPlan(minutes){
 }
 
 function setPlanMinutes(m){
-  DATA.planMinutes = m;
+  // Taking the suggestion means "follow it": it keeps adjusting as the exam date, progress and pace change.
+  { const a = studyPaceAdvice(); DATA.planMinutes = (a && a.minutes === m) ? 0 : m; }
   { const cs = conductorState(); if(cs) cs.minutes = m; }
   persist();
   renderTodayPlan();
@@ -8239,13 +8308,15 @@ function renderTodayPlan(){
   const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
     ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
   const runwayTxt = freshRunwayLine();
-  const autoNote = planMinutesAuto() ? ' The length follows how long you have been studying lately; tap another to change it.' : '';
-  const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
+    const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
     : plan.phase.key === 'taper' ? 'Consolidate what you know. No big new pushes now.'
     : plan.phase.key === 'sharpen' ? 'Repair weak spots and rehearse the real exam conditions.'
     : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
     : 'Mix topics, fix weak ones, and keep reviewing on a schedule.';
-  const mins = PLAN_MINUTE_CHOICES.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}">${planMinuteLabel(m)}</button>`).join('');
+  const chips = planChipChoices(plan.minutes);
+  const mins = chips.arr.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}${m === chips.sug ? ' sug' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}"${m === chips.sug ? ' title="Suggested for your exam date"' : ''}>${planMinuteLabel(m)}</button>`).join('');
+  const advice = studyPaceAdvice();
+  const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
   const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : 'questions';
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
   const stepRows = plan.steps.map((st, i) => {
@@ -8265,6 +8336,7 @@ function renderTodayPlan(){
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     <p class="pt-sub">${escapeHtml(sub)}${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
+    ${paceLine}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
@@ -19624,6 +19696,7 @@ function buildTutorSystemPrompt(){
     const mem = tutorRecentTopics(14);
     if(mem.length) timeContext += ' Things they have brought to you in earlier conversations, oldest first: ' + mem.map(m => `"${m.q}" (${modeAgoText(m.t)})`).join('; ') + '. Use this for continuity, the way a tutor who remembers last week would: connect to an earlier topic when it genuinely helps, check whether it stuck, but never recite the list.';
   }catch(e){}
+  try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
@@ -19947,8 +20020,8 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'plan_my_study',
-    description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (10 to 240); otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
-    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 120 to 240 (the plan offers 2, 2.5 or 3 hours). Optional.' } } },
+    description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (60 to 360), or the suggested pace from the app if they ask you to set it; otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
+    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 60 to 360. Optional.' } } },
   },
   {
     name: 'start_plan_step',
@@ -20096,12 +20169,12 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'plan_my_study'){
       const m = Math.round(Number(toolInput && toolInput.minutes));
-      if(m >= 120 && m <= 240){ DATA.planMinutes = m; persist(); }
+      if(m >= 60 && m <= 360){ DATA.planMinutes = m; persist(); }
       const plan = buildStudyPlan();
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
-      return `Phase: ${plan.phase.label}. ${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
     if(toolName === 'start_plan_step'){
       const plan = buildStudyPlan(240); // any step that applies today, even if it did not fit the time budget
@@ -20747,7 +20820,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.209';
+const BUILD_ID = '2026-10-18.211';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
