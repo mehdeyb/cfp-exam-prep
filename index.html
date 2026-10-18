@@ -661,6 +661,9 @@
   .tvm-feedback{font-size:13px;line-height:1.5;min-height:1px;margin-bottom:14px;color:rgba(255,255,255,0.75);}
   .tvm-feedback.tvm-feedback-err{color:#FF8A7A;}
   .tvm-feedback.tvm-feedback-ok{color:#7FCB9E;}
+  /* Rapid key presses must never read as a double-tap zoom or a text selection. */
+  button,.btn,.chip,[role="button"],a,select,summary,label,input[type="checkbox"],input[type="radio"]{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+  .tvm-device,.tvm-keypad,.tvm-key,.tvm-screen-wrap,.tvm-screen{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
   .tvm-keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;}
   .tvm-key{
     min-width:0;box-sizing:border-box;min-height:52px;
@@ -1678,6 +1681,11 @@
   .tutor-snapshot .stat{text-align:center;}
   .tutor-snapshot .num{font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--paper);line-height:1.2;}
   .tutor-snapshot .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+  .tutor-suggest{display:flex;gap:8px;overflow-x:auto;margin:10px -2px 8px;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .tutor-suggest::-webkit-scrollbar{display:none;}
+  .tutor-suggest .chip{flex:none;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;appearance:none;-webkit-appearance:none;min-height:36px;}
+  .tutor-suggest.open{flex-wrap:wrap;overflow:visible;}
+  .tutor-suggest .chip-more{color:var(--muted);border-style:dashed;}
   .tutor-capabilities{margin-bottom:16px;}
   .tutor-capabilities-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
   .tutor-capabilities-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -2004,10 +2012,9 @@
   #tutorCard > .tutor-input-row .btn{width:auto;flex:none;}
   #tutorCard > .tutor-input-row .tutor-input{width:auto;min-width:0;}
   #tutorCard > #tutorStatus{order:5;}
-  #tutorCard > #tutorCapabilities{order:6;}
   #tutorCard > #tutorSnapshot{order:7;}
   #tutorCard > p.hint{order:8;}
-  #tutorCard.has-convo > p.hint,#tutorCard.has-convo > #tutorSnapshot,#tutorCard.has-convo > #tutorCapabilities{display:none;}
+  #tutorCard.has-convo > p.hint,#tutorCard.has-convo > #tutorSnapshot{display:none;}
   @media (min-width:641px){ #tutorCard > #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 400px));} }
   @media (orientation:landscape) and (max-height:520px){
     #tutorCard > #tutorThread{max-height:max(120px, calc(var(--vh-real, 100vh) - 245px));}
@@ -3528,43 +3535,17 @@
         </div>
       </div>
 
-      <div class="tutor-capabilities" id="tutorCapabilities">
-        <div class="tutor-capabilities-label">What you can ask me to do</div>
-        <div class="tutor-capabilities-grid">
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Quiz me on a mixed session right now.')">Start a practice session</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Ask me one practice question right here in the chat, on whatever I am weakest at.')">Quiz me here in chat</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Leave me a check-in for tomorrow on the concept we just covered.')">Check in with me tomorrow</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Open the TVM calculator so I can practice a problem.')">Open the TVM calculator</button>
-          <button class="tutor-cap-item" onclick="askTutorCapabilityPrefill('What does ')">Look up a term</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Show me my detailed progress breakdown.')">Show my progress</button>
-          <button class="tutor-cap-item" onclick="askTutorCapabilityPrefill('My exam date is ')">Set my exam date</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Make me a personalized podcast episode about my progress.')">Make me a progress podcast</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Open my study guide.')">Open my study guide</button>
-          <button class="tutor-cap-item" onclick="sendTutorMessage('Open the decision tools tab.')">See the decision tools</button>
-        </div>
-      </div>
-
       <div class="api-key-nudge" id="tutorApiKeyHint" style="display:none;">
         <span>No AI connection yet — add your API key in Settings to activate the tutor and the app's other AI-powered tools.</span>
         <button class="btn ghost" onclick="openSettings()">Open Settings</button>
       </div>
 
-      <div class="tutor-chips" id="tutorChips">
-        <button class="chip" onclick="askTutorQuick('plan')">What should I do with my time today?</button>
-        <button class="chip" onclick="askTutorQuick('weakest')">Explain my weakest domain</button>
-        <button class="chip" onclick="askTutorQuick('missed')">Walk through a question I missed</button>
-        <button class="chip" onclick="askTutorQuick('mnemonic')">Give me a memory trick for this domain</button>
-        <button class="chip" id="tutorReadinessChip" onclick="askTutorQuick('readiness')" style="display:none;">Why is my readiness score what it is?</button>
-        <button class="chip" id="tutorNextStepChip" onclick="askTutorQuick('nextStep')" style="display:none;">Walk me through my next step</button>
-        <button class="chip" id="tutorTvmMistakeChip" onclick="askTutorQuick('tvmMistake')" style="display:none;">Explain my TVM setup mistake</button>
-        <button class="chip" id="tutorMixupChip" onclick="askTutorQuick('mixup')" style="display:none;">Tell two concepts apart</button>
-        <button class="chip" id="tutorRecurringMistakeChip" onclick="askTutorQuick('recurringMistake')" style="display:none;">Explain my recurring mistake</button>
-      </div>
       <div class="tutor-thread" id="tutorThread">
         <div class="tutor-msg tutor-msg-bot">
           <div class="tutor-bubble">Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. I can see your progress in this app, so feel free to just say "explain my weakest domain."</div>
         </div>
       </div>
+      <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
         <input type="text" id="tutorInput" class="tutor-input" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" onkeydown="if(event.key==='Enter') sendTutorMessage();">
         <button class="btn" id="tutorSendBtn" onclick="sendTutorMessage()">Send</button>
@@ -20791,6 +20772,7 @@ async function sendTutorMessage(presetText){
       ]);
     }
     tutorMaybeOfferTree(text, '');
+    try{ renderTutorChips(); }catch(e){}
     return;
   }
   input.value = '';
@@ -20863,6 +20845,7 @@ async function sendTutorMessage(presetText){
   document.getElementById('tutorSendBtn').disabled = false;
   input.disabled = false;
   input.focus && input.focus();
+  try{ renderTutorChips(); }catch(e){}
 }
 
 async function askTutorQuick(kind){
@@ -21185,39 +21168,84 @@ function tnScheduleCheckIn(input){
   return `Scheduled for ${due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. It appears as a note at the top of the Study tab the next time they open the app on or after that day. It does not send a phone notification, so say it that way: "I'll have a note waiting for you." Do not promise a time.`;
 }
 
+/* ===========================================================
+   TUTOR SUGGESTIONS
+   One row of chips above the message box, chosen from what is true right now: the exam countdown, what was missed,
+   the weakest domain, the tool you keep tripping on, the pace, whether a conversation is under way. Before you say
+   anything they are starting points; once the tutor has answered they become follow-ups (quiz me on this, simpler,
+   how the exam tests it). Nothing here is static, and anything that needs the AI disappears when it is not connected.
+=========================================================== */
+let _tutorChipsMore = false;
+function tutorShort(s, n){ s = String(s || ''); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; }
+function tutorToolFocus(){
+  // the decision tree that matches what was missed, else the one walked least
+  const counts = {};
+  (DATA.missed || []).forEach(id => { const q = allQuestions().find(x => x.id === id); if(!q) return; const k = toolForQuestion(q); if(k && TREE_SCENARIOS[k]) counts[k] = (counts[k] || 0) + 1; });
+  const hit = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  if(hit) return { key: hit, missed: counts[hit] };
+  const least = Object.keys(TREE_SCENARIOS).sort((a, b) => { const x = dtwStats(a), y = dtwStats(b); return (x.clean / (x.total || 1)) - (y.clean / (y.total || 1)); })[0];
+  return least ? { key: least, missed: 0 } : null;
+}
+function tutorSuggestions(){
+  const out = []; const add = (id, label, score, run, needsAi) => { if(needsAi && !aiFeaturesAvailable) return; out.push({ id, label, score, run }); };
+  const st = computeStats(), answered = st.totalAnswered || 0, weak = st.weakestMeta, days = getDaysUntilExam();
+  const talking = tutorMessages.length > 0;
+  const say = t => () => sendTutorMessage(t);
+  if(talking){
+    // follow-ups to what the tutor just said
+    add('f_quiz', 'Quiz me on this', 95, say('Ask me one practice question right here in the chat on what we just covered.'), true);
+    add('f_simple', 'Simpler, please', 80, say('Explain that again more simply, with one plain example.'), true);
+    add('f_exam', 'How the exam tests it', 75, say('How would the exam test that? Show me the trap answers people fall for.'), true);
+    add('f_check', 'Check in tomorrow', 55, say('Leave me a check-in for tomorrow on what we just covered.'), true);
+    add('f_back', 'Back to my plan', 50, () => { try{ showTab('study'); const el = document.getElementById('todayPlanCard'); if(el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }catch(e){} });
+  }
+  if(!DATA.examDate) add('date', 'Set my exam date', 99, () => askTutorCapabilityPrefill('My exam date is '));
+  if(days !== null && days >= 0 && days <= 3) add('eve', days <= 1 ? 'Exam-day walkthrough' : 'Walk me through exam eve', 96, say(`My exam is in ${days} day${days === 1 ? '' : 's'}. What should I do, and not do, between now and when I walk into the test center?`));
+  else if(days !== null && days > 3 && days <= 14) add('last', `Plan my last ${days} days`, 90, say(`My exam is in ${days} days. Using my weak areas, build a day-by-day plan for the time I have left.`));
+  else add('plan', days !== null && days <= 60 ? `Plan my ${days} days` : 'What should I study today?', talking ? 45 : 90, () => askTutorQuick('plan'));
+  let ns = null; try{ ns = computeNextStep(st); }catch(e){}
+  if(answered && ns && ns.title) add('next', 'Explain my next step', talking ? 40 : 80, () => askTutorQuick('nextStep'));
+  const nm = (DATA.missed || []).length;
+  if(nm) add('missed', nm === 1 ? 'Walk through my missed question' : `Walk through my ${nm} missed`, talking ? 42 : 86, () => askTutorQuick('missed'));
+  const mix = activeMixupPairs(1)[0];
+  if(mix) add('mix', `Tell ${tutorShort(mix.a, 14)} from ${tutorShort(mix.b, 14)}`, 88, () => askTutorQuick('mixup'));
+  const rec = Object.values(DATA.wrongChoiceHistory || {}).reduce((t, p) => t + Object.values(p).filter(n => n >= 2).length, 0);
+  if(rec) add('rec', 'Why do I keep missing the same one?', 84, () => askTutorQuick('recurringMistake'));
+  const cats = DATA.tvmMistakeCategories || {}; const topCat = Object.keys(TVM_MISTAKE_LABELS).sort((a, b) => (cats[b] || 0) - (cats[a] || 0))[0];
+  if(topCat && (cats[topCat] || 0) >= 3) add('tvm', 'Fix my TVM setup slip', 87, () => askTutorQuick('tvmMistake'));
+  else add('calc', 'Open the TVM calculator', 28, say('Open the TVM calculator so I can practice a problem.'));
+  if(answered && weak){
+    add('weak', 'Explain ' + tutorShort(weak.name, 24), talking ? 35 : 70, () => askTutorQuick('weakest'));
+    add('quiz', 'Quiz me on ' + tutorShort(weak.name, 20), talking ? 38 : 76, say(`Ask me one practice question right here in the chat on ${weak.name}, at a level that stretches me.`), true);
+    add('mn', 'Memory trick: ' + tutorShort(weak.code || weak.name, 12), 36, () => askTutorQuick('mnemonic'), true);
+    add('rd', `Why am I at ${st.readiness}/100?`, 52, () => askTutorQuick('readiness'));
+  } else if(!answered){
+    add('quiz0', 'Quiz me right here', 72, say('Ask me one practice question right here in the chat on a core CFP topic.'), true);
+  }
+  const tf = tutorToolFocus();
+  if(tf && answered >= 5) add('tree', tf.missed ? 'Client scenario: ' + ({ trust:'trusts', entity:'business entity', ira:'IRA deduction', roth:'Roth IRA', socialSecurity:'Social Security' }[tf.key] || 'decision tree') : 'Walk a client scenario', talking ? 36 : (tf.missed ? 78 : 44), () => openTreeWalk(tf.key));
+  try{ const pa = studyPaceAdvice(); if(pa && pa.known && pa.status === 'behind') add('pace', 'Am I on pace?', 66, say(`Am I on pace for my exam? Look at my study time and what is left, and tell me honestly what to change.`), true); }catch(e){}
+  if(answered >= 20) add('pod', 'Podcast on my weak spots', 30, say('Make me a personalized podcast episode about my progress.'), true);
+  add('term', 'Look up a term', 46, () => askTutorCapabilityPrefill('What does '));
+  add('prog', 'Show my progress', 33, say('Show me my detailed progress breakdown.'));
+  // an unanswered tap-to-answer question is on screen: the choices are the next move, not more suggestions
+  if(document.querySelector('#tutorThread .tutor-choices button:not(:disabled)')) return [];
+  const seen = new Set(); return out.filter(x => !seen.has(x.id) && seen.add(x.id)).sort((a, b) => b.score - a.score);
+}
+function renderTutorChips(){
+  const host = document.getElementById('tutorChips'); if(!host) return;
+  const all = tutorSuggestions(); const LIMIT = 6;
+  const shown = _tutorChipsMore ? all : all.slice(0, LIMIT);
+  host.innerHTML = '';
+  host.classList.toggle('open', _tutorChipsMore);
+  shown.forEach((x, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x.label; b.onclick = () => { if(typeof tutorBusy !== 'undefined' && tutorBusy) return; _tutorChipsMore = false; x.run(); }; host.appendChild(b); });
+  if(all.length > LIMIT){ const m = document.createElement('button'); m.type = 'button'; m.className = 'chip chip-more'; m.textContent = _tutorChipsMore ? 'Less' : 'More'; m.setAttribute('aria-expanded', String(_tutorChipsMore)); m.onclick = () => { _tutorChipsMore = !_tutorChipsMore; renderTutorChips(); }; host.appendChild(m); }
+  host.style.display = shown.length ? '' : 'none';
+}
+
 function updateTutorContextNote(){
-  const tvmChip = document.getElementById('tutorTvmMistakeChip');
-  if(tvmChip){
-    const cats = DATA.tvmMistakeCategories || {};
-    const topCat = Object.keys(TVM_MISTAKE_LABELS).sort((a,b) => (cats[b]||0) - (cats[a]||0))[0];
-    tvmChip.style.display = (topCat && (cats[topCat]||0) >= 3) ? 'inline-block' : 'none';
-  }
-
-  const mixChip = document.getElementById('tutorMixupChip');
-  if(mixChip){
-    const mp = activeMixupPairs(1)[0];
-    mixChip.style.display = mp ? 'inline-block' : 'none';
-    if(mp) mixChip.textContent = `Tell ${mp.a} and ${mp.b} apart`;
-  }
-
-  const recurringChip = document.getElementById('tutorRecurringMistakeChip');
-  if(recurringChip){
-    const recurringCount = Object.values(DATA.wrongChoiceHistory || {}).reduce((total, picks) => total + Object.values(picks).filter(n => n >= 2).length, 0);
-    recurringChip.style.display = recurringCount > 0 ? 'inline-block' : 'none';
-  }
-
+  try{ renderTutorChips(); }catch(e){}
   const stats = computeStats();
-
-  // Chips that mirror what the Study tab is showing right now
-  const rdChip = document.getElementById('tutorReadinessChip');
-  if(rdChip){
-    rdChip.style.display = stats.totalAnswered ? 'inline-block' : 'none';
-    rdChip.textContent = `Why is my readiness ${stats.readiness}/100?`;
-  }
-  const nsChip = document.getElementById('tutorNextStepChip');
-  if(nsChip){
-    nsChip.style.display = stats.totalAnswered ? 'inline-block' : 'none';
-  }
 
   // The welcome bubble is static HTML on first page load, so it can't
   // reflect real progress out of the box. Only touch it while the
@@ -21340,7 +21368,20 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.220';
+// Calculator guard: a second tap on a key within 350 ms is turned into a normal press instead of letting iOS treat it as a double-tap zoom,
+// and a pinch that starts on the calculator is ignored. Everywhere else, pinch zoom still works.
+(function(){
+  let lastEnd = 0;
+  document.addEventListener('touchend', e => {
+    const key = e.target && e.target.closest && e.target.closest('.tvm-key, .tvm-device');
+    if(!key) return;
+    const now = Date.now();
+    if(now - lastEnd < 350){ e.preventDefault(); const btn = e.target.closest('.tvm-key'); if(btn && !btn.disabled) btn.click(); }
+    lastEnd = now;
+  }, { passive: false });
+  document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
+})();
+const BUILD_ID = '2026-10-18.222';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
