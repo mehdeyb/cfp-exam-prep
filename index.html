@@ -7742,7 +7742,32 @@ function buildStudyPlan(minutes){
       const wf = (typeof fdWeakest === 'function') ? fdWeakest() : null;
       if(wf) return { id:'calc', title:`Formula practice: ${wf}`, minutes:8,
         why:'A handful of fresh problems on a formula you keep missing usually settles it.', need:4, have: Math.min(act.formula, 4), unit:'problems', run: () => { showTab('study'); openFormulaDrill(wf); } };
+      // No shaky formula yet: keep the math warm every few days with the one you have practised least.
+      const lastCalc = Math.max(DATA.formulaDrillLastAt || 0, DATA.tvmToolLastAt || 0);
+      if(answered >= 30 && (Date.now() - lastCalc > 4 * ONE_DAY_MS || act.formula > 0)){
+        const pickF = planTarget('calcFormula', FD_NAMES.slice().sort((a, b) => fdStats(a).attempts - fdStats(b).attempts)[0]);
+        return { id:'calc', title:`Formula practice: ${pickF}`, minutes:6,
+          why:'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.', need:4, have: Math.min(act.formula, 4), unit:'problems', run: () => { showTab('study'); openFormulaDrill(pickF); } };
+      }
       return null;
+    },
+    tool: () => {
+      // The decision tree that matches the ideas you keep missing.
+      const counts = {};
+      (DATA.missed || []).forEach(id => { const q = allQuestions().find(x => x.id === id); if(!q) return; const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' '); RESULT_TOOL_MATCH.forEach(t => { if(t.re.test(hay)) counts[t.key] = (counts[t.key] || 0) + 1; }); });
+      const top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= 2).sort((a, b) => counts[b.key] - counts[a.key])[0];
+      const key = planTarget('toolKey', top ? top.key : null);
+      const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
+      if(!t) return null;
+      return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
+        why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. Working through the choices yourself teaches which one fits.`,
+        manual:true, run: () => { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing'); } };
+    },
+    listen: () => {
+      if(answered < 20 || !weakDom) return null;
+      return { id:'listen', title:`Listen: ${weakDom.name}`, minutes:10,
+        why:'A spoken episode on your weakest area is a low-effort way to revisit it away from the questions.',
+        manual:true, run: () => { try{ document.getElementById('podcastDomainSelect').value = weakDom.key; podcastDomainChanged(); }catch(e){} openPodcastFromStudy(); } };
     },
     case: () => {
       if(answered < 80) return null;
@@ -7789,10 +7814,10 @@ function buildStudyPlan(minutes){
       manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
   };
   const order = {
-    foundation: ['cards','weak','adaptive','missed','calc','case','teach'],
-    build:      ['cards','adaptive','weak','missed','calc','case','checkpoint','teach'],
-    sharpen:    ['cards','missed','weak','adaptive','calc','checkpoint','teach'],
-    taper:      ['cards','missed','keys'],
+    foundation: ['cards','weak','adaptive','missed','tool','calc','case','teach','listen'],
+    build:      ['cards','adaptive','weak','missed','tool','calc','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','tool','adaptive','calc','checkpoint','teach'],
+    taper:      ['cards','missed','keys','listen'],
     rest:       ['keys','cards']
   }[phase.key];
   const steps = [];
@@ -7861,7 +7886,9 @@ const CONDUCTOR_CUES = {
   case: 'Read the scenario once for the numbers and who owns what, then decide which facts would change the answer.',
   checkpoint: 'Treat this like the real thing: no looking things up, and keep to the pace.',
   calc: 'Do the key presses by hand. The habit matters more than the answer.',
-  teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.'
+  teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.',
+  tool: 'Pick the answer at each fork yourself before you read why. The reasoning is what transfers to the exam.',
+  listen: 'Listen without a screen if you can, and pause to say the key idea back before the episode does.'
 };
 function conductorState(){
   const c = (typeof DATA !== 'undefined' && DATA) ? DATA.conductor : null;
@@ -9643,6 +9670,7 @@ function podcastPlaybackCallbacks(){
 
 function togglePodcastPlayback(){
   if(!hasSpeechSupport()) return;
+  try{ if(!naturalSpeechState.active) planMarkManualDone('listen'); }catch(e){} // starting an episode counts as today's listening step
   const status = document.getElementById('podcastStatus');
   if(naturalSpeechState.active && !naturalSpeechState.paused){
     pauseSpeechSequence();
@@ -18394,6 +18422,7 @@ function finishSession(){
   if(session.timerHandle) clearInterval(session.timerHandle);
   paceRecord();
   clearInProgressSession();
+  try{ if(session.treeDrill) planMarkManualDone('tool'); }catch(e){} // finishing a decision-tree drill counts as today's decision-tool step
   if(session.mode==='fullexam' || session.mode==='mock') restoreNormalTheme();
 
   const rawElapsedMin = session.startedAt ? (Date.now() - session.startedAt) / 60000 : 0;
@@ -19673,6 +19702,7 @@ Guidelines:
 - When you do explain something, prefer asking "why do you think that's the rule" or "what would happen if..." over stating the reasoning outright, and prefer connecting it to something concrete over stating it in the abstract -- a brief example, a scenario, or (when one exists above) the student's own actual missed question or recurring mistake on this exact topic. Explaining a concept in a vacuum is weaker than anchoring it to something the student already has some contact with, right or wrong.
 - Before moving from one topic to a clearly different one in the same explanation, a brief check that it landed ("does that distinction make sense?" or a quick one-question check) is worth the sentence it costs -- better to catch a gap immediately than assume it and build the next explanation on top of it.
 - You have tools to actually take actions in the app on the student's behalf: switching tabs, starting a real practice session (adaptive, a specific domain drill, or a review session covering everything currently missed), opening the TVM calculator, opening one of the six interactive decision trees directly, opening their personalized study guide, setting their exam date, looking up a term in the glossary, showing their detailed progress breakdown, opening the panel that explains how their readiness score is built, generating fresh practice material on a specific domain, generating a spoken podcast episode -- either on a specific domain or personalized to their own progress, and short or in-depth if they ask for that -- and marking a specific subtopic as reviewed in their own syllabus checklist once you've actually taught it and they've agreed. If a student asks something like "which trust should I use," "help me tell these plans apart," or "when should I claim Social Security," open that specific decision tool directly rather than just explaining it in text or sending them to the tab generically, since walking through it themselves is the more effective way to actually learn it. Use these when they clearly ask for one of these things -- "quiz me on tax planning," "let's do a full session," "let's review what I got wrong," "open the calculator," "my exam is March 15," "what's a GRAT," "show me my weak spots," "make me a study guide," "make me more questions on estate planning," "make me a podcast about how I'm doing," "give me a quick podcast on tax" -- rather than just describing what they could do. If they ask you to quiz them verbally right here in the chat instead, that's different from starting a real session -- just ask questions directly as described above. Never set an exam date unless the student has stated one explicitly; don't guess or infer it. For a term lookup, still give a real, direct answer in your own words too -- the tool shows them where to find it again, it doesn't replace actually answering. After a genuinely substantive explanation of a specific named subtopic, it's fine to offer to check it off their list -- but only mark it once they've actually agreed, never on your own initiative.
+- Ways to practice (the Practice a specific way menu): Adaptive session (a mixed round tuned to weak spots), Domain drill (one domain, only questions never seen, the AI writes new ones at their level when needed; start_quiz_session drill, or weakspot for a short drill on the weakest subtopic), Practice exam (a 24-question timed checkpoint about weekly, or the full 170-question exam once or twice in the last three weeks, rested), Case studies, Missed questions, Calculator practice (formula drills and the HP 10bII+ TVM walkthrough), Flashcards (gap cards, one domain, or due), Decision tools, and the Subject podcast. Pick by their level in the domain and the time left: Foundation levels get a domain drill, flashcards or the calculator steps; Apply and Exam-ready levels get mixed rounds, cases and timed exams. Say in one line why you chose it, then start it, or use show_practice_options when the choice is theirs. When they come back, ask how it went before moving on.
 - When the student says they are ready to study, or wants you to run their study time, call start_my_session: it opens a guided session with a briefing, each part in order and a check-in after each. Say in a sentence what it will cover, and when they come back, ask how it felt before they carry on.
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
@@ -19764,7 +19794,7 @@ const TUTOR_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        mode: { type: 'string', enum: ['adaptive','drill','review','case','checkpoint'], description: "'checkpoint' for the 24-question timed checkpoint at real exam pace (about 51 minutes; it counts toward readiness), 'adaptive' for a general mixed session, 'drill' for one specific domain, 'review' for everything currently missed, 'case' for a full exam-style client case study." },
+        mode: { type: 'string', enum: ['adaptive','drill','review','case','checkpoint','fullexam','weakspot'], description: "'fullexam' for the full 170-question exam in two 3-hour sections (only when they clearly ask for a full simulation and have the time; say how long it takes first), 'weakspot' with a domain for a short drill on that domain's weakest subtopic, 'checkpoint' for the 24-question timed checkpoint at real exam pace (about 51 minutes; it counts toward readiness), 'adaptive' for a general mixed session, 'drill' for one specific domain, 'review' for everything currently missed, 'case' for a full exam-style client case study." },
         case: { type: 'string', enum: CASE_STUDIES.map(c => c.id), description: "Optional when mode is 'case' -- which case to work; omit to let the app pick the one they have tried least. Cases: " + CASE_STUDIES.map(c => c.id + ' = ' + c.title).join('; ') + '.' },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when mode is 'drill' -- which domain to focus the session on." },
       },
@@ -19787,6 +19817,11 @@ const TUTOR_TOOLS = [
       },
       required: ['focus'],
     },
+  },
+  {
+    name: 'show_practice_options',
+    description: "Open one of the app's choosers so the student can pick for themselves: 'exam' (timed checkpoint or the full 170-question exam), 'calculator' (formula drills or the TVM walkthrough), 'domain' (the domain drill list with what is due and each weak spot) or 'case' (the client case studies). Use it when they ask what ways there are to practice, or when two options fit and the choice is theirs.",
+    input_schema: { type: 'object', properties: { which: { type: 'string', enum: ['exam','calculator','domain','case'], description: 'Which chooser to open.' } }, required: ['which'] },
   },
   {
     name: 'open_tvm_calculator',
@@ -19954,12 +19989,34 @@ async function executeTutorTool(toolName, toolInput){
         startMissedReview();
         return `Started a review session covering ${missedCount} currently-missed question${missedCount===1?'':'s'}.`;
       }
+      if(toolInput.mode === 'fullexam'){
+        startFullExam();
+        return `Started the full ${FULL_EXAM_QUESTION_COUNT}-question exam: two 3-hour sections with a break, in the real domain mix.`;
+      }
+      if(toolInput.mode === 'weakspot'){
+        const dm = DOMAINS.find(d => d.key === toolInput.domain);
+        if(!dm) return `Error: "${toolInput.domain}" isn't a valid domain.`;
+        const wk = drillWeakTopic(dm.key);
+        if(!wk){ startDrill(dm.key); return `No clear weak subtopic in ${dm.name} yet, so started a regular domain drill there.`; }
+        startSubtopicDrill(dm.key, wk.idx);
+        return `Started a short drill on ${dm.name}: ${wk.name}, their weakest subtopic there.`;
+      }
       if(toolInput.mode === 'checkpoint'){
         startMock();
         return `Started the timed checkpoint: 24 questions in the real exam's domain mix, timed at the real pace (51 minutes). Its score counts toward their readiness.`;
       }
       startAdaptive();
       return `Started an adaptive practice session.`;
+    }
+    if(toolName === 'show_practice_options'){
+      showTab('study');
+      const w = toolInput && toolInput.which;
+      if(w === 'exam') openExamPicker();
+      else if(w === 'calculator') openCalcPicker();
+      else if(w === 'domain') openDomainPicker();
+      else if(w === 'case') openCasePicker();
+      else return `Error: unknown chooser "${w}".`;
+      return `Opened the ${w} chooser for the student to pick from.`;
     }
     if(toolName === 'open_tvm_calculator'){
       showTab('study');
@@ -20662,7 +20719,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.198';
+const BUILD_ID = '2026-10-18.200';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
