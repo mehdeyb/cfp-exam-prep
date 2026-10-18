@@ -11616,6 +11616,62 @@ function fcJitter(id){
   let h = _fcSessionSeed; for(let i=0;i<id.length;i++){ h = (h*31 + id.charCodeAt(i)) >>> 0; }
   return 1 + (h % 1000) / 1000 * 0.12;
 }
+
+/* ===========================================================
+   A SESSION NEVER REPEATS AN IDEA, AND LEANS TOWARD NEW MATERIAL
+   Once a card has been rated, neither it nor any near-duplicate comes back until the next session (45 minutes idle starts a new one);
+   a missed card returns next time, not minutes later. The queue mixes unseen cards in with the review ones (about 4 in 10, fewer when
+   reviews are piling up or the exam is close), and similar cards are spread apart so two of them never sit close together.
+=========================================================== */
+const _fcSess = { at:0, seen:new Set(), near:new Set() };
+const _fcTok = {};
+function fcSessTouch(){ const now = Date.now(); if(now - _fcSess.at > 45 * 60000){ _fcSess.seen = new Set(); _fcSess.near = new Set(); } _fcSess.at = now; }
+function fcTok(c){ return _fcTok[c.id] || (_fcTok[c.id] = { t: fcWordSet(c.term), d: fcWordSet(c.def) }); }
+function fcSimilar(a, b){
+  if(a.id === b.id) return true;
+  const A = fcTok(a), B = fcTok(b);
+  const inter = (x, y) => { let n = 0; x.forEach(w => { if(y.has(w)) n++; }); return n; };
+  const ti = inter(A.t, B.t), tmin = Math.min(A.t.size, B.t.size);
+  const di = inter(A.d, B.d), un = A.d.size + B.d.size - di, dj = un ? di / un : 0;
+  if(tmin >= 2 && ti >= tmin) return true;                       // one term sits wholly inside the other
+  if(dj >= 0.5) return true;                                      // the same thing said twice
+  return tmin >= 1 && ti / tmin >= 0.5 && dj >= 0.3;              // shares the key word and much of the meaning
+}
+function fcSessNote(card){
+  fcSessTouch();
+  _fcSess.seen.add(card.id);
+  allFlashcards().forEach(c => { if(c.id !== card.id && fcSimilar(card, c)) _fcSess.near.add(c.id); });
+}
+function fcSessBlocked(c){ return _fcSess.seen.has(c.id) || _fcSess.near.has(c.id); }
+function fcCompose(pool, filtered){
+  fcSessTouch();
+  let open = pool.filter(c => !fcSessBlocked(c));
+  if(open.length < 8) open = pool.filter(c => !_fcSess.seen.has(c.id)).concat(pool.filter(c => _fcSess.seen.has(c.id))); // nearly the whole deck done: repeats only as a last resort, and last
+  const fresh = [], review = [], rest = [];
+  open.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen === 0) fresh.push(c); else if(isDue(st) || st.box <= 1) review.push(c); else rest.push(c); });
+  const days = getDaysUntilExam();
+  let share = (days !== null && days <= 7) ? 0.25 : 0.4;
+  try{ if(fcContext().backlog > 40) share = Math.min(share, 0.25); }catch(e){}
+  const mixed = []; let i = 0, j = 0;
+  while(i < fresh.length || j < review.length){
+    const takeFresh = i < fresh.length && (j >= review.length || i < share * (mixed.length + 1));
+    mixed.push(takeFresh ? fresh[i++] : review[j++]);
+  }
+  let list = mixed.concat(rest);
+  if(!filtered) list = fcInterleave(list);
+  // spread near-duplicates apart: a card similar to one of the last 40 waits at the back
+  const head = list.slice(0, 220), tail = list.slice(220), out = [], later = [];
+  head.forEach(c => { if(out.slice(-40).some(o => fcSimilar(o, c))) later.push(c); else out.push(c); });
+  return out.concat(tail, later);
+}
+function fcAdvancePastRepeats(){
+  while(fcIndex < fcQueue.length && fcSessBlocked(fcQueue[fcIndex])) fcIndex++;
+  if(fcIndex >= fcQueue.length){
+    if(fcCustomQueue) fcIndex = 0;
+    else { rebuildFlashcardQueue(); } // the rest of this deck was already seen: build a fresh one that leaves out what you have had
+  }
+}
+
 function rebuildFlashcardQueue(){
   _fcCtx = null; fcCustomKind = null;
   try{ fcOptionsLabel(); }catch(e){}
@@ -11633,7 +11689,7 @@ function rebuildFlashcardQueue(){
   }
   const prio = new Map(pool.map(c => [c.id, flashcardPriority(c) * fcJitter(String(c.id))]));
   pool = pool.slice().sort((a,b)=> prio.get(b.id) - prio.get(a.id));
-  fcQueue = domainFilter ? pool : fcInterleave(pool);
+  fcQueue = fcCompose(pool, !!domainFilter);
   fcCustomQueue = false;
   fcIndex = 0;
   renderFlashcard();
@@ -11689,6 +11745,13 @@ function fcMaskTerm(def, term){
   const words = String(term).split(/[^A-Za-z0-9]+/).filter(w => w.length >= 4 && !/^(the|and|rule|plan|tax|for|with|from)$/i.test(w));
   words.forEach(w => { out = out.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*', 'ig'), '▢▢▢'); });
   return out;
+}
+// Cloze only when the blanks hide the whole term; a half-masked term (one word blanked, the rest showing) gives it away and reads as a glitch.
+function fcMaskCovers(card){
+  const words = String(card.term).split(/[^A-Za-z0-9]+/).filter(w => w.length >= 4 && !/^(the|and|rule|plan|tax|for|with|from)$/i.test(w));
+  if(!words.length) return false;
+  const def = String(card.def);
+  return words.every(w => new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(def));
 }
 function fcHintText(card){
   const w = String(card.def).replace(/\s+/g, ' ').trim().split(' ');
@@ -11759,7 +11822,7 @@ function fcCardMode(card){
   const lvl = fcCardLevel(card), st = getSpacedStat(DATA.flashcardStats, card.id);
   const ds = (DATA.domainStats && DATA.domainStats[card.domain]) || { total:0, correct:0 };
   const stg = domainStageOf(card.domain), practised = ds.total >= 5;
-  if(lvl === 'struggling'){ const n = fcLapseN(card); return (n >= 2 && n % 2 === 0 && fcMaskTerm(card.def, card.term) !== String(card.def)) ? 'cloze' : 'foundation'; } // every other miss, ask it from the definition's side
+  if(lvl === 'struggling'){ const n = fcLapseN(card); return (n >= 2 && n % 2 === 0 && fcMaskCovers(card)) ? 'cloze' : 'foundation'; } // every other miss, ask it from the definition's side
   if(lvl === 'new' && practised && stg === 1) return 'foundation-new';
   if(lvl === 'strong' && (stg >= 2 || st.box >= 5)){
     if(st.seen % 2 === 1 && fcRelatedQuestions(card).length) return 'apply';
@@ -12019,6 +12082,8 @@ function fcMissContext(card){
   }catch(e){}
   return out;
 }
+// A usable angle is a finished thought: long enough, not absurdly long, and ending on punctuation (a reply cut off mid-sentence is thrown away).
+function fcRetellOk(t){ return typeof t === 'string' && t.length >= 30 && t.length <= 700 && /[.!?\u201d")]$/.test(t.trim()); }
 function fcAngleOrder(ctx){
   const order = FC_ANGLES.map(a => a.k);
   const first = [];
@@ -12036,21 +12101,22 @@ async function fcRetellCall(card, angle, prior, lp, ctx){
   if(prior.length) lines.push('Already shown to them (do not repeat or paraphrase):\n' + prior.map(v => '- ' + v.text).join('\n'));
   lines.push('This time: ' + angle.ask);
   lines.push('Plain text only, no markdown, no preamble, under 65 words. Do not invent rules or figures beyond the definition unless you are certain; if unsure, stay general.');
-  return String(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 220 })).trim();
+  return String(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 420 })).trim();
 }
 async function fcMaybeRetell(card){
   if(!aiFeaturesAvailable || !fcNeedsRetell(card) || _fcRetellBusy[card.id]) return;
   const lp = DATA.fcLapse[card.id];
   if(!DATA.fcRetell || typeof DATA.fcRetell !== 'object') DATA.fcRetell = {};
-  const list = DATA.fcRetell[card.id] || [];
+  const list = (DATA.fcRetell[card.id] || []).filter(v => fcRetellOk(v.text));
   if(list.length >= Math.min(FC_ANGLES.length, lp.n - 1)) return; // one fresh angle per miss, up to five
   _fcRetellBusy[card.id] = true;
   try{
     const ctx = fcMissContext(card), used = new Set(list.map(v => v.k));
     const k = fcAngleOrder(ctx).find(x => !used.has(x)) || FC_ANGLES[list.length % FC_ANGLES.length].k;
     const angle = FC_ANGLES.find(a => a.k === k);
-    const text = (await fcRetellCall(card, angle, list, lp, ctx)).replace(/\s+/g, ' ');
-    if(text.length < 20 || text.length > 700) return;
+    let text = (await fcRetellCall(card, angle, list, lp, ctx)).replace(/\s+/g, ' ');
+    if(!fcRetellOk(text)) text = (await fcRetellCall(card, angle, list, lp, ctx)).replace(/\s+/g, ' '); // one retry if the reply came back cut off
+    if(!fcRetellOk(text)) return;
     const arr = (DATA.fcRetell[card.id] || []).filter(v => v.k !== k);
     arr.push({ k, text, t: Date.now(), n: lp.n });
     DATA.fcRetell[card.id] = arr.slice(-6);
@@ -12073,7 +12139,8 @@ function fcRetellLocal(card, lp){
 }
 function fcRetellPick(card){
   const lp = DATA.fcLapse && DATA.fcLapse[card.id];
-  const list = DATA.fcRetell && DATA.fcRetell[card.id];
+  let list = DATA.fcRetell && DATA.fcRetell[card.id];
+  if(list) list = list.filter(v => fcRetellOk(v.text)); // anything saved earlier that was cut off is ignored
   if(list && list.length && lp){
     const v = list[((lp.n - 2) % list.length + list.length) % list.length];
     const a = FC_ANGLES.find(x => x.k === v.k);
@@ -12360,6 +12427,7 @@ function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b)
 function undoFlashcardRating(){
   const u = _fcUndo; if(!u || u.queue !== fcQueue) return;
   if(u.had) DATA.flashcardStats[u.id] = u.stat; else delete DATA.flashcardStats[u.id];
+  try{ _fcSess.seen.delete(u.id); }catch(e){}
   DATA.flashcardRatingCount = u.count;
   try{ if(!DATA.fcLapse) DATA.fcLapse = {}; if(u.lapse) DATA.fcLapse[u.id] = u.lapse; else delete DATA.fcLapse[u.id]; }catch(e){}
   const r = u.round; if(r){ r.total = Math.max(0, r.total - 1); if(u.knew) r.knew = Math.max(0, r.knew - 1); else { r.missed.pop(); r.missedIds.pop(); } }
@@ -12384,7 +12452,9 @@ function rateFlashcard(knowsIt){
   DATA.flashcardRatingCount = (DATA.flashcardRatingCount || 0) + 1;
   recordStudyDay();
   persist();
-  fcIndex = (fcIndex+1) % fcQueue.length;
+  try{ fcSessNote(card); }catch(e){}
+  fcIndex++;
+  fcAdvancePastRepeats();
   renderFlashcard();
   renderFlashcardStats();
   fcKeepInView();
@@ -20508,7 +20578,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.186';
+const BUILD_ID = '2026-10-18.187';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
