@@ -2737,18 +2737,10 @@
       </div>
     </div>
 
-    <div class="card" id="planCard">
+    <div class="card" id="planCard" style="display:none;">
       <div class="card-head">
-        <h2>Exam date</h2>
-        <div class="note">sets your phase and pace</div>
-      </div>
-      <div id="planSetup">
-        
-        <div class="plan-date-row">
-          <input type="date" id="examDateInput" aria-label="Exam date" onchange="setExamDate(this.value)">
-          <button class="btn ghost ex-clear" id="examDateClear" onclick="clearExamDate()" style="display:none;">Clear</button>
-        </div>
-        <div id="examWindowPick" class="ewp"></div>
+        <h2>Study plan</h2>
+        <div class="note" id="planNote">built around your exam date</div>
       </div>
       <div id="planBody" style="display:none;"></div>
     </div>
@@ -3616,6 +3608,19 @@
           <button class="dp-close" onclick="closeSettings()" aria-label="Close settings" title="Close">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
+        </div>
+
+        <div class="settings-section" id="examDateSection">
+          <h3>Exam date</h3>
+          <div class="note" style="margin-bottom:6px;">sets your countdown, phase and pace</div>
+      <div id="planSetup">
+        
+        <div class="plan-date-row">
+          <input type="date" id="examDateInput" aria-label="Exam date" onchange="setExamDate(this.value)">
+          <button class="btn ghost ex-clear" id="examDateClear" onclick="clearExamDate()" style="display:none;">Clear</button>
+        </div>
+        <div id="examWindowPick" class="ewp"></div>
+      </div>
         </div>
 
         <div class="settings-section">
@@ -6808,10 +6813,7 @@ function renderExamCountdownCard(){
   el.tabIndex = 0;
   const daysLeft = getDaysUntilExam();
 
-  function focusExamDateInput(){
-    const input = document.getElementById('examDateInput');
-    if(input){ input.scrollIntoView({behavior:'smooth', block:'center'}); input.focus(); }
-  }
+  function focusExamDateInput(){ openSettingsToExamDate(); }
 
   if(daysLeft === null){
     el.innerHTML = `<div class="ecc-big">Set your exam date</div><div class="ecc-sub">Tap to get a countdown and a personalized study plan built around it.</div>`;
@@ -7212,6 +7214,8 @@ function renderStudyPlan(){
   if(!setup || !body) return;
   try{ renderExamWindowPick(); }catch(e){}
 
+  const planCard = document.getElementById('planCard');
+  if(planCard) planCard.style.display = DATA.examDate ? '' : 'none';
   if(!DATA.examDate){
     body.style.display = 'none';
     if(clearBtn) clearBtn.style.display = 'none';
@@ -7225,7 +7229,7 @@ function renderStudyPlan(){
   body.style.display = 'block';
 
   if(daysLeft < 0){
-    body.innerHTML = `<p class="hint">That date has passed — update it above once you've got a new exam date, or clear it to hide this card.</p>`;
+    body.innerHTML = `<p class="hint">That date has passed — update it in Settings once you've got a new exam date, or clear it to hide this card.</p>`;
     return;
   }
   const weeksLeft = Math.max(0, Math.ceil(daysLeft/7));
@@ -7321,15 +7325,7 @@ function computePace(stats){
   return { daysLeft, remaining, need, perDay, hasRecent: recent.length > 0 };
 }
 
-function goSetExamDate(){
-  showTab('study');
-  const input = document.getElementById('examDateInput');
-  if(input){
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    input.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'center'});
-    input.focus();
-  }
-}
+function goSetExamDate(){ openSettingsToExamDate(); }
 
 function paceSummary(stats){
   const p = computePace(stats);
@@ -14086,6 +14082,11 @@ function openSettings(){
 // it focused, rather than leaving them to find the right section
 // themselves -- used by the in-quiz repeat notice so acting on it is a
 // single tap, not a described path to go follow manually.
+function openSettingsToExamDate(){
+  openSettings();
+  const sec = document.getElementById('examDateSection');
+  if(sec) setTimeout(() => sec.scrollIntoView({block:'start', behavior:'smooth'}), 60);
+}
 function openSettingsToApiKey(){
   openSettings();
   const input = document.getElementById('apiKeyInput');
@@ -20367,6 +20368,7 @@ function clearTutorPoint(){
   document.removeEventListener('keydown', clearTutorPoint, true);
 }
 function tutorPoint(key, note){
+  if(key === 'exam_date'){ openSettingsToExamDate(); return true; }
   const t = TUTOR_POINT_TARGETS[key];
   if(!t) return false;
   clearTutorPoint();
@@ -20576,7 +20578,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.190';
+const BUILD_ID = '2026-10-18.191';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
