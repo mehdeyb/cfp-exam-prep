@@ -373,6 +373,13 @@
     .print-only{display:block !important;}
     .screen-only{display:none !important;}
   }
+  .dto{font-size:14px;line-height:1.45;padding:4px 2px;}
+  .dto-q{font-weight:600;margin:6px 0 4px;}
+  .dto-branch{margin:4px 0 4px 10px;padding-left:12px;border-left:2px solid var(--hair);}
+  .dto-ans{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin:6px 0 2px;}
+  .dto-leaf{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:8px 10px;margin:2px 0 6px;}
+  .dto-leaf b{display:block;color:var(--teal);}
+  .dto-leaf span{display:block;font-size:13px;color:var(--muted);margin-top:2px;}
   .dt-widget{background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:18px;margin-top:4px;}
   .dt-breadcrumb{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.02em;line-height:1.6;margin-bottom:12px;min-height:14px;}
   .dt-breadcrumb .dt-crumb-answer{color:var(--gold);}
@@ -3105,7 +3112,7 @@
         <button type="button" class="chip" onclick="askTutorAbout('I am not sure which decision tool fits my situation. Ask me a couple of quick questions and point me to the right one.')">Not sure which tool? Ask the tutor</button>
         <button type="button" class="chip" onclick="askTutorAbout('Walk me through a time value of money problem on my HP 10bII+, one step at a time, and check my setup as we go.')">Practice a TVM problem</button>
       </div>
-      <p class="hint">Six tools built from the study guide's own knowledge — four walk you through one question at a time to a recommendation, two are built for exploring rather than following a single path.</p>
+      <p class="hint">Seven tools built from the study guide's own knowledge — five walk you through one question at a time to a recommendation, two are built for exploring rather than following a single path.</p>
     </div>
 
     <div class="card">
@@ -3133,6 +3140,15 @@
       <button type="button" class="dt-full-toggle" id="dt-toggle-ira" onclick="dtToggleFull('ira')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-ira"></div>
       <div id="tool-practice-ira"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Roth IRA: direct, backdoor or none?</h2></div>
+      <p class="hint">Whether a client can fund a Roth IRA depends on compensation first, then income. Above the limit, the backdoor route depends on what else is sitting in their IRAs.</p>
+      <div id="dt-roth"></div>
+      <button type="button" class="dt-full-toggle" id="dt-toggle-roth" onclick="dtToggleFull('roth')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
+      <div class="dt-full-tree" id="dt-full-roth"></div>
+      <div id="tool-practice-roth"></div>
     </div>
 
     <div class="card">
@@ -10306,6 +10322,28 @@ const DECISION_TREES = {
   }
 };
 
+DECISION_TREES.roth = {
+  start: 'q1',
+  nodes: {
+    q1: { question: "Does the client (or a working spouse, on a joint return) have taxable compensation at least equal to the contribution?",
+      options: [ {label:"No", next:'r_none'}, {label:"Yes", next:'q2'} ] },
+    r_none: { result:true, title:"No IRA contribution allowed",
+      body:"IRA contributions of either kind need taxable compensation. Investment income, pensions and Social Security don't count. A non-working spouse can still be covered through the working spouse's compensation on a joint return." },
+    q2: { question: "Where does the client's modified AGI fall against the Roth IRA phase-out range for their filing status?",
+      options: [ {label:"Below the range", next:'r_direct'}, {label:"Inside the range", next:'r_reduced'}, {label:"Above the range", next:'q3'} ] },
+    r_direct: { result:true, title:"Full direct Roth IRA contribution",
+      body:"Below the phase-out the full contribution is allowed. No deduction, but qualified withdrawals are tax-free, and there are no required distributions during the owner's life." },
+    r_reduced: { result:true, title:"Reduced direct Roth contribution (phase-out)",
+      body:"Inside the range the allowed contribution shrinks in proportion to how far the income is into the range. The rest of the year's IRA contribution can go to a traditional IRA, and a backdoor conversion is another route." },
+    q3: { question: "Does the client hold any pretax money in traditional, SEP or SIMPLE IRAs?",
+      options: [ {label:"No", next:'r_backdoor'}, {label:"Yes", next:'r_prorata'} ] },
+    r_backdoor: { result:true, title:"Backdoor Roth, generally tax-free",
+      body:"Make a nondeductible traditional IRA contribution, then convert it. With no pretax IRA money, the converted amount is all basis, so the conversion is generally tax-free. Report the nondeductible contribution on Form 8606. Conversions have no income limit." },
+    r_prorata: { result:true, title:"Backdoor Roth, partly taxable (pro-rata rule)",
+      body:"A conversion is treated as coming proportionally from pretax and after-tax money across all of the client's IRAs, so part of it is taxable. Rolling the pretax IRA money into an employer plan first can clean this up." }
+  }
+};
+
 const dtState = {}; // { treeKey: { path: [nodeId,...], answers: [label,...] } }
 
 // A tree key may carry an instance suffix ("trust@q" is the copy shown inside a question) so one tree can be open in two places at once.
@@ -10386,10 +10424,12 @@ function initToolsTab(){
   dtInit('entity');
   dtInit('ira');
   dtInit('socialSecurity');
+  dtInit('roth');
   document.getElementById('dt-full-trust').innerHTML = sgTrustFlowchartSvg();
   document.getElementById('dt-full-entity').innerHTML = sgEntityFlowchartSvg();
   document.getElementById('dt-full-ira').innerHTML = sgIraFlowchartSvg();
   document.getElementById('dt-full-socialSecurity').innerHTML = sgSocialSecurityFlowchartSvg();
+  document.getElementById('dt-full-roth').innerHTML = dtOutlineHtml('roth');
   document.getElementById('dt-full-optionsMatrix').innerHTML = sgOptionsMatrixSvg();
   document.getElementById('dt-full-qualifiedPlans').innerHTML = sgQualifiedPlansTreeSvg();
   document.getElementById('tc-optionsMatrix-host').innerHTML = tcRenderGrid('optionsMatrix');
@@ -10403,7 +10443,8 @@ function initToolsTab(){
 const TOOL_PRACTICE_SETS = {
   trust: ['e7','e11','e16','e19','e25','n5','cov-t11','cov-t12','cv6-11','cv3-23','cv3-24','cv3-25','cv4-06','cv4-07','cov-e2','cov-e4','cv4-42','cv4-43','cv4-46'],
   entity: ['t7','r9','t26','e18','eq1','cov-t5','cov-t6','cov-t7','cv2-11'],
-  ira: ['p2','p9','t21','cs3-3','calc-12','p36','p44','t45','cov-p2','cv4-08','cv4-09','p39','cv2-35','cv8-06'],
+  roth: ['t21','p2','cs4-6','cv15-06','p43','cv2-35','calc-12'],
+  ira: ['p9','cs3-3','p36','p44','t45','cov-p2','cv4-08','cv4-09','p39','cv2-35','cv8-06'],
   socialSecurity: ['p7','p16','p45','p46','ret-n15','n17','n18','sc1','cov-p10','cov-r7','cv4-15','cv4-16','cv4-17','cv3-35'],
   optionsMatrix: ['i21','i27','eq1','eq4','n7','cov-i6','cv2-08'],
   qualifiedPlans: ['p4','p32','p48','ret-n7','n8','cov-p3','cov-p4','cov-p5','cv4-10','cv4-12','cv4-14','cv6-07','cv6-08','cv6-09'],
@@ -10471,6 +10512,7 @@ const TREE_META = {
   trust: { name:'Which trust fits?', domain:'estate' },
   entity: { name:'Which business entity fits?', domain:'tax' },
   ira: { name:'Traditional IRA deductibility', domain:'retirement' },
+  roth: { name:'Roth IRA: direct, backdoor or none?', domain:'retirement', distinct:true },
   socialSecurity: { name:'When to claim Social Security', domain:'retirement' }
 };
 function toolForQuestion(q){
@@ -10514,7 +10556,7 @@ function treeQuestions(key){
     const correctTitle = p.node.title;
     const others = [], seen = new Set([correctTitle]);
     paths.forEach(o => {
-      if(seen.has(o.node.title) || treeTooClose(o.node.title, correctTitle)) return;
+      if(seen.has(o.node.title) || (!meta.distinct && treeTooClose(o.node.title, correctTitle))) return;
       seen.add(o.node.title); others.push(o);
     });
     // nearest outcomes first: the ones that share the longest start with this route make the sharpest wrong answers
@@ -10775,6 +10817,16 @@ function sgEntityFlowchartSvg(){
   </div>`;
 }
 
+// A readable outline of any decision tree, for trees without a hand-drawn diagram: every branch is one nested step.
+function dtOutlineHtml(key){
+  const t = DECISION_TREES[key];
+  const walk = id => {
+    const n = t.nodes[id];
+    if(n.result) return `<div class="dto-leaf"><b>${n.title}</b><span>${n.body}</span></div>`;
+    return `<div class="dto-q">${n.question}</div>` + n.options.map(o => `<div class="dto-branch"><div class="dto-ans">${o.label}</div>${walk(o.next)}</div>`).join('');
+  };
+  return `<div class="dto">${walk(t.start)}</div>`;
+}
 function sgIraFlowchartSvg(){
   return `<div class="tvm-timeline-wrap" style="text-align:center;">
     <svg viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:340px;font-family:'IBM Plex Mono',monospace;">
@@ -11042,6 +11094,7 @@ function renderStudyGuide(){
   sections.push(`<div class="sg-section" id="sg-trust"><h3>Which trust fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in the Tools tab — this is the same decision path, shown as a full diagram.</p>${sgTrustFlowchartSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-entity"><h3>Which business entity fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in the Tools tab. Watch for "LLC" as an answer choice on a tax-treatment question — it's a legal structure, not a tax election, and defaults to being taxed as a sole proprietorship or partnership unless it elects otherwise.</p>${sgEntityFlowchartSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-ira"><h3>Is a traditional IRA contribution deductible?</h3><p class="hint" style="margin-top:0;">Anyone can contribute to a traditional IRA — this only decides whether the contribution is deductible. Tap through this interactively in the Tools tab.</p>${sgIraFlowchartSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-roth"><h3>Roth IRA: direct, backdoor or none?</h3><p class="hint" style="margin-top:0;">Compensation first, then income, then what else is in the client's IRAs. Tap through it interactively in the Tools tab.</p>${dtOutlineHtml('roth')}</div>`);
   sections.push(`<div class="sg-section" id="sg-socialsecurity"><h3>When should Social Security be claimed?</h3><p class="hint" style="margin-top:0;">Not a single "right age" — income need, work status, spousal situation, and longevity expectations each point in different directions. Tap through this interactively in the Tools tab.</p>${sgSocialSecurityFlowchartSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-options"><h3>Options matrix</h3><p class="hint" style="margin-top:0;">Four positions, four different risk profiles — buying caps the loss at the premium; selling doesn't. Tap through each one in the Tools tab for more detail.</p>${sgOptionsMatrixSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-plans"><h3>Qualified plan family tree</h3><p class="hint" style="margin-top:0;">Where each specific plan name actually sits in the bigger picture. Tap through each branch in the Tools tab for more detail.</p>${sgQualifiedPlansTreeSvg()}</div>`);
@@ -11060,7 +11113,7 @@ function renderStudyGuide(){
     : '';
   body.innerHTML = `
     <div class="sg-meta">Generated ${today}${examCountdownText}. The same complete reference every time — built to review repeatedly, not to change day to day. <span class="no-print" role="button" tabindex="0" style="cursor:pointer;text-decoration:underline;" onclick="openScienceFromGuide()">See the research behind this approach →</span></div>
-    <nav class="sg-nav"><span class="sg-nav-label">Jump to:</span><a href="#" onclick="sgJumpTo('sg-trust'); return false;">Trust</a><a href="#" onclick="sgJumpTo('sg-entity'); return false;">Entity</a><a href="#" onclick="sgJumpTo('sg-ira'); return false;">IRA</a><a href="#" onclick="sgJumpTo('sg-socialsecurity'); return false;">Social Security</a><a href="#" onclick="sgJumpTo('sg-options'); return false;">Options</a><a href="#" onclick="sgJumpTo('sg-plans'); return false;">Plans</a><a href="#" onclick="sgJumpTo('sg-formulas'); return false;">Formulas</a><a href="#" onclick="sgJumpTo('sg-numbers'); return false;">Numbers</a><a href="#" onclick="sgJumpTo('sg-syllabus'); return false;">Syllabus</a></nav>
+    <nav class="sg-nav"><span class="sg-nav-label">Jump to:</span><a href="#" onclick="sgJumpTo('sg-trust'); return false;">Trust</a><a href="#" onclick="sgJumpTo('sg-entity'); return false;">Entity</a><a href="#" onclick="sgJumpTo('sg-ira'); return false;">IRA</a><a href="#" onclick="sgJumpTo('sg-roth'); return false;">Roth</a><a href="#" onclick="sgJumpTo('sg-socialsecurity'); return false;">Social Security</a><a href="#" onclick="sgJumpTo('sg-options'); return false;">Options</a><a href="#" onclick="sgJumpTo('sg-plans'); return false;">Plans</a><a href="#" onclick="sgJumpTo('sg-formulas'); return false;">Formulas</a><a href="#" onclick="sgJumpTo('sg-numbers'); return false;">Numbers</a><a href="#" onclick="sgJumpTo('sg-syllabus'); return false;">Syllabus</a></nav>
     ${sections.join('')}`;
 }
 
@@ -17812,6 +17865,7 @@ function startChatRevisit(){
 const RESULT_TOOL_MATCH = [
   { key:'trust', name:'Which trust fits?', re:/\b(trusts?|CRUT|CRAT|CLAT|QPRT|GRAT|ILIT|SLAT|crummey|grantor)\b/i },
   { key:'entity', name:'Which business entity fits?', re:/\b(S corporation|S corp|LLC|C corporation|C corp|sole proprietor|general partnership|business entity|pass-through entity)\b/i },
+  { key:'roth', name:'Roth IRA: direct, backdoor or none?', re:/\bbackdoor\b|\bpro-rata\b|\bRoth IRA\b[^.?]{0,80}\b(phase|income|MAGI|eligib)\w*|\b(phase|income|MAGI|eligib)\w*[^.?]{0,80}\bRoth IRA\b/i },
   { key:'ira', name:'Traditional IRA deductibility', re:/\bdeduct\w*[^.?]{0,80}\bIRA\b|\bIRA\b[^.?]{0,80}\bdeduct\w*|active participant/i },
   { key:'socialSecurity', name:'When to claim Social Security', re:/social security[^.?]{0,120}\b(claim|delay|full retirement|FRA|spousal|early)\w*|\b(claim|delay)\w*[^.?]{0,80}social security/i },
   { key:'optionsMatrix', name:'Options matrix', re:/\b(long|short) (call|put)s?\b|\b(call|put) options?\b|covered call|protective put|\boption (buyer|seller|writer|premium|holder)|\bwrit(e|ing) (a )?(call|put)/i },
@@ -18915,6 +18969,7 @@ const TUTOR_POINT_TARGETS = {
   todays_plan:    { tab:'study',      sel:'#todayPlanCard',   label:"Today's plan" },
   tool_trust:     { tab:'tools', sel:'.card:has(#dt-full-trust)',          label:'Which trust fits?' },
   tool_entity:    { tab:'tools', sel:'.card:has(#dt-full-entity)',         label:'Which business entity fits?' },
+  tool_roth:      { tab:'tools', sel:'.card:has(#dt-full-roth)',           label:'Roth IRA: direct, backdoor or none?' },
   tool_ira:       { tab:'tools', sel:'.card:has(#dt-full-ira)',            label:'Is a traditional IRA contribution deductible?' },
   tool_socialSecurity: { tab:'tools', sel:'.card:has(#dt-full-socialSecurity)', label:'When should Social Security be claimed?' },
   tool_optionsMatrix:  { tab:'tools', sel:'.card:has(#dt-full-optionsMatrix)',  label:'Options matrix' },
@@ -19011,11 +19066,11 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'open_decision_tool',
-    description: "Open one of the app's six interactive decision trees in the Tools tab and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
+    description: "Open one of the app's seven interactive decision tools in the Tools tab and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
     input_schema: {
       type: 'object',
       properties: {
-        tool: { type: 'string', enum: ['trust','entity','ira','socialSecurity','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
       },
       required: ['tool'],
     },
@@ -19163,6 +19218,7 @@ async function executeTutorTool(toolName, toolInput){
       const toolMeta = {
         trust: { anchorId: 'dt-trust', label: 'Which trust fits?' },
         entity: { anchorId: 'dt-entity', label: 'Which business entity fits?' },
+        roth: { anchorId: 'dt-roth', label: 'Roth IRA: direct, backdoor or none?' },
         ira: { anchorId: 'dt-ira', label: 'Is a traditional IRA contribution deductible?' },
         socialSecurity: { anchorId: 'dt-socialSecurity', label: 'When should Social Security be claimed?' },
         optionsMatrix: { anchorId: 'tc-optionsMatrix-host', label: 'Options matrix' },
@@ -19415,7 +19471,7 @@ function tutorLocalGuide(text){
     } else if(kind === 'guide'){
       tutorGuideBubble('Your study guide follows the official topic list and tracks what you have reviewed.', [{ label: 'Open my study guide', primary: true, run: () => openStudyGuide() }]);
     } else if(kind === 'tools'){
-      tutorGuideBubble('The Tools tab has six decision tools: trusts, business entities, IRA deductibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open the Tools tab', primary: true, run: () => showTab('tools') }]);
+      tutorGuideBubble('The Tools tab has seven decision tools: trusts, business entities, IRA deductibility, Roth IRA eligibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open the Tools tab', primary: true, run: () => showTab('tools') }]);
     } else if(kind === 'date'){
       const pd = tutorParseDate(text);
       if(pd && pd.days >= 0){
@@ -19842,7 +19898,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.150';
+const BUILD_ID = '2026-10-17.151';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
