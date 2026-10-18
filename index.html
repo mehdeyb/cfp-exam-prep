@@ -2565,80 +2565,48 @@
       <div class="more-modes" id="moreModes">
       <div class="mode-grid">
         <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
-          <div class="tag">Interleaved + spaced</div>
           <h3>Adaptive session</h3>
-          <p><span data-dyn="adaptiveQ">15</span> questions chosen live: mixed across domains, weighted toward your weak areas, with a scenario and a calculation in the mix, and only what is new or due. This is the core of today's session.</p>
-          <div class="mode-when">Use it: for a quick round without the full plan.</div>
+          <div class="mode-when"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
           <div class="mode-meta" data-mm="adaptive"></div>
         </div>
         <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
-          <div class="tag">Blocked practice</div>
           <h3>Domain drill</h3>
-          <p>Untimed, single-domain practice — best for a first pass through material that still feels unfamiliar, before switching to interleaved review.</p>
-          <div class="mode-when">Use it: when one domain is new or clearly weak.</div>
+          <div class="mode-when">One domain, at your level.</div>
           <div class="mode-meta" data-mm="drill"></div>
         </div>
-        <div class="mode-card" onclick="startMock()" tabindex="0" role="button">
-          <div class="tag">Timed checkpoint</div>
-          <h3>Timed checkpoint (<span data-dyn="mockQ">24</span> questions)</h3>
-          <p>The real exam's domain mix at the real exam's pace (about <span data-dyn="mockMin">51</span> minutes). Short enough to fit in an hour, and it counts toward your readiness score.</p>
-          <div class="mode-when">Use it: about once a week, to check where you stand.</div>
-          <div class="mode-meta" data-mm="mock"></div>
-        </div>
-        <div class="mode-card" onclick="startFullExam()" tabindex="0" role="button">
-          <div class="tag">Full simulation</div>
-          <h3>Full <span data-dyn="examQ">170</span>-question exam</h3>
-          <p>The actual exam's format: <span data-dyn="examQ">170</span> questions in two 3-hour sections with a break between them, in the real weight-proportional mix — for practicing stamina and pacing, not just knowledge.</p>
-          <div class="mode-when">Use it: once or twice in the last three weeks, on a rested day.</div>
-          <div class="mode-meta" data-mm="fullexam"></div>
+        <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
+          <h3>Practice exam</h3>
+          <div class="mode-when"><span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
+          <div class="mode-meta" data-mm="exam"></div>
         </div>
         <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
-          <div class="tag">Exam-style · multi-domain</div>
           <h3>Case studies</h3>
-          <p id="caseCardText">Work one client's full situation across several questions, with the facts in view throughout — the way the real exam presents case-based questions.</p>
-          <div class="mode-when">Use it: to practice pulling the right facts out of a long scenario.</div>
+          <div class="mode-when" id="caseCardText">One client, several questions.</div>
           <div class="mode-meta" data-mm="case"></div>
         </div>
         <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
-          <div class="tag">Review</div>
           <h3>Missed questions</h3>
-          <p id="missedCardText">Revisit only what you've gotten wrong so far.</p>
-          <div class="mode-when">Use it: after any session where you missed several.</div>
+          <div class="mode-when" id="missedCardText">What you have gotten wrong.</div>
           <div class="mode-meta" data-mm="review"></div>
         </div>
-        <div class="mode-card" onclick="openFormulaDrill()" tabindex="0" role="button" id="fdModeCard">
-          <div class="tag">Interactive · exam formulas</div>
-          <h3>Formula drills</h3>
-          <p id="fdCardText">Formulas with fresh numbers every time.</p>
-          <div class="mode-when">Use it: in short bursts, to make the math automatic.</div>
-          <div class="mode-meta" data-mm="formula"></div>
-        </div>
-        <div class="mode-card" onclick="openTvmTool()" tabindex="0" role="button">
-          <div class="tag">Interactive · financial calculator</div>
-          <h3>TVM walkthrough</h3>
-          <p id="tvmCardText">Work a real time-value-of-money problem step by step, the way you'll do it on exam day — set up the variables, solve, and see exactly how the math gets there.</p>
-          <div class="mode-when">Use it: until the HP 10bII+ keystrokes feel automatic.</div>
-          <div class="mode-meta" data-mm="tvm"></div>
+        <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
+          <h3>Calculator practice</h3>
+          <div class="mode-when">Formula drills and the HP 10bII+ steps.</div>
+          <div class="mode-meta" data-mm="calc"></div>
         </div>
         <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
-          <div class="tag">Recall · spaced review</div>
           <h3>Flashcards</h3>
-          <p id="fcCardText">Flip through terms and ideas, rate how well you knew each, and let spacing bring the shaky ones back.</p>
-          <div class="mode-when">Use it: for a few minutes anywhere, to keep definitions fresh.</div>
+          <div class="mode-when">Quick recall, spaced for you.</div>
           <div class="mode-meta" data-mm="flashcards"></div>
         </div>
         <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
-          <div class="tag">Interactive · decision trees</div>
           <h3>Decision tools</h3>
-          <p>Seven walk-through trees: trusts, business entities, IRA and Roth rules, Social Security timing, options and the qualified plan family.</p>
-          <div class="mode-when">Use it: when "which one fits?" questions keep tripping you up.</div>
+          <div class="mode-when">"Which one fits?" walk-throughs.</div>
           <div class="mode-meta" data-mm="tools"></div>
         </div>
         <div class="mode-card" onclick="openPodcastFromStudy()" tabindex="0" role="button">
-          <div class="tag">Listen · one domain at a time</div>
-          <h3>Subject Podcast</h3>
-          <p>A spoken-style episode on one domain — or personalized to your own progress — with a length you choose, read aloud by your device's own voice.</p>
-          <div class="mode-when">Use it: away from a screen, such as a commute or a walk.</div>
+          <h3>Subject podcast</h3>
+          <div class="mode-when">Listen to a domain episode.</div>
           <div class="mode-meta" data-mm="podcast"></div>
         </div>
       </div>
@@ -6853,15 +6821,13 @@ function renderAll(){
 
   renderReadinessGauge(stats);
   document.getElementById('missedCardText').textContent = DATA.missed.length
-    ? `Revisit the ${DATA.missed.length} question${DATA.missed.length===1?'':'s'} you've missed so far.`
-    : `No missed questions banked yet — get one wrong and it'll land here.`;
-  const fdCardEl = document.getElementById('fdCardText');
-  if(fdCardEl) fdCardEl.textContent = fdCardLine();
+    ? `${DATA.missed.length} to revisit.`
+    : `None yet.`;
   const caseCardEl = document.getElementById('caseCardText');
-  if(caseCardEl) caseCardEl.textContent = caseProgressLine();
-  const tvmCardEl = document.getElementById('tvmCardText');
-  if(tvmCardEl && DATA.tvmProgress){
-    tvmCardEl.textContent = `You're currently working at ${TVM_LEVEL_NAMES[DATA.tvmProgress.currentTier]} — set up the variables, solve, and see exactly how the math gets there.`;
+  if(caseCardEl){
+    const total = CASE_STUDIES.filter(c => caseQuestions(c.id).length).length;
+    const tried = CASE_STUDIES.filter(c => (DATA.caseStats || {})[c.id] && DATA.caseStats[c.id].attempts).length;
+    caseCardEl.textContent = tried ? `${tried} of ${total} cases tried.` : `${total} client cases, several questions each.`;
   }
   refreshHeaderStats();
 
@@ -8315,12 +8281,12 @@ function renderModeMeta(){
     put('adaptive', line('adaptive'));
     { const low = DOMAINS.filter(d => ((DATA.domainStats[d.key] || {}).total || 0) > 0).sort((a, b) => domainStageOf(a.key) - domainStageOf(b.key) || b.weight - a.weight)[0];
       put('drill', [line('drill'), low ? 'Try ' + low.code + ' · ' + STAGES[domainStageOf(low.key) - 1].name : ''].filter(Boolean).join(' · ')); }
-    put('mock', line('mock'));
-    { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length; put('fullexam', [line('fullexam'), 'Apply+ in ' + ap + '/' + DOMAINS.length].filter(Boolean).join(' · ')); }
+    { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
+      const lm = lastOf('mock'), lf = lastOf('fullexam'); const lastEx = (lm && lf) ? (new Date(lm.date) > new Date(lf.date) ? 'mock' : 'fullexam') : (lm ? 'mock' : (lf ? 'fullexam' : null));
+      put('exam', [lastEx ? line(lastEx) : '', 'Apply+ in ' + ap + '/' + DOMAINS.length].filter(Boolean).join(' · ')); }
     put('case', line('case') + (cueAccuracyText() ? ' · ' + cueAccuracyText() : ''));
     put('review', line('review'));
-    put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : '');
-    put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : '');
+    { const lastCalc = Math.max(DATA.formulaDrillLastAt || 0, DATA.tvmToolLastAt || 0); put('calc', lastCalc ? 'Last: ' + modeAgoText(lastCalc) : ''); }
     const pg = Object.values(DATA.podcastGeneratedAt || {}).filter(Number).sort((a, b) => b - a)[0];
     try{ const fp = computeFlashcardProgress(); put('flashcards', fp.dueCount ? fp.dueCount + ' due for review' : (fp.knownCount ? fp.knownCount + ' of ' + fp.total + ' known' : '')); }catch(e){}
     put('podcast', pg ? 'Last episode: ' + modeAgoText(pg) : '');
@@ -14052,6 +14018,41 @@ function openCasePicker(){
     list.appendChild(wrapRow);
   });
 }
+// A small chooser on the same overlay as the domain picker, for the cards that hold two related things.
+function openChoicePicker(title, hint, rows){
+  document.body.classList.add('domain-picker-active');
+  lockBodyScroll();
+  document.getElementById('dpTitle').textContent = title;
+  document.getElementById('dpHint').textContent = hint;
+  const stale = document.getElementById('caseGenBox'); if(stale) stale.remove();
+  const list = document.getElementById('dpList');
+  list.innerHTML = '';
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'dp-row'; row.tabIndex = 0; row.setAttribute('role', 'button');
+    row.setAttribute('aria-label', r.name + '. ' + r.meta);
+    const go = () => { document.body.classList.remove('domain-picker-active'); r.run(); };
+    row.onclick = go;
+    row.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } };
+    row.innerHTML = '<div><div class="dp-row-name">' + escapeHtml(r.name) + '</div><div class="dp-row-meta">' + escapeHtml(r.meta) + '</div>' + (r.note ? '<div class="dp-row-meta dp-row-plan">' + escapeHtml(r.note) + '</div>' : '') + '</div>';
+    list.appendChild(row);
+  });
+}
+function openExamPicker(){
+  const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
+  openChoicePicker('Practice exam', 'Timed, in the real exam\'s domain mix.', [
+    { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: 'Counts toward readiness. About once a week.', run: () => startMock() },
+    { name: 'Full ' + FULL_EXAM_QUESTION_COUNT + '-question exam', meta: 'Two 3-hour sections with a break', note: 'Apply+ in ' + ap + '/' + DOMAINS.length + ' domains. Best in the last three weeks, rested.', run: () => startFullExam() }
+  ]);
+}
+function openCalcPicker(){
+  const tried = FD_NAMES.filter(n => fdStats(n).attempts).length;
+  const lvl = DATA.tvmProgress ? TVM_LEVEL_NAMES[DATA.tvmProgress.currentTier] : null;
+  openChoicePicker('Calculator practice', 'Make the math automatic.', [
+    { name: 'Formula drills', meta: FD_NAMES.length + ' formulas, fresh numbers each time', note: tried ? tried + ' of ' + FD_NAMES.length + ' practised' + (fdWeakest() ? ' · shakiest: ' + fdWeakest() : '') : 'Work it, type it, see the working.', run: () => openFormulaDrill() },
+    { name: 'TVM walkthrough', meta: 'Step by step on the HP 10bII+', note: lvl ? 'You are at ' + lvl : 'Set up, solve, see the keystrokes.', run: () => openTvmTool() }
+  ]);
+}
 function closeDomainPicker(){
   document.body.classList.remove('domain-picker-active');
   unlockBodyScroll();
@@ -15761,7 +15762,8 @@ function launchDrill(domainKey, size, unseen){
       take(rest[k], why); rest.splice(k, 1);
     }
   };
-  draw(unseen, 'fresh', size);
+  const unseenNotRecent = unseen.filter(q => !recent.has(q.id)); // what the last drill just showed waits, as long as enough else is new
+  draw(unseenNotRecent.length >= size ? unseenNotRecent : unseen, 'fresh', size);
   // Only if there is still no new material (offline, or the AI could not write more): the questions that are due, least recent first.
   if(picks.length < size){
     const due = all.filter(q => !used.has(q.id) && !recent.has(q.id) && isDue(getSpacedStat(DATA.questionStats, q.id)))
@@ -20659,7 +20661,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.196';
+const BUILD_ID = '2026-10-18.197';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
