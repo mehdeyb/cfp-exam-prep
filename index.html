@@ -2335,11 +2335,14 @@
     body.quiz-active .confidence-pills{flex-wrap:nowrap;gap:5px;}
     body.quiz-active .confidence-pill{padding:10px 11px;min-height:38px;font-size:10.5px;}
     /* Slim Exit/Next bar */
-    body.quiz-active #quizView .quiz-actions{padding:6px max(14px, env(safe-area-inset-right)) max(6px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 20px)) max(14px, env(safe-area-inset-left));align-items:center;}
+    body.quiz-active #quizView .quiz-actions{padding:4px max(14px, env(safe-area-inset-right)) max(4px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 14px)) max(14px, env(safe-area-inset-left));align-items:center;background:transparent !important;border:0 !important;box-shadow:none !important;}
+    body.quiz-active #quizView .quiz-actions::before{display:none !important;}
+    body.quiz-active #quizView .quiz-actions .btn{background-color:var(--ink);}
+    body.quiz-active #quizView .quiz-actions .btn:disabled{background-color:var(--ink);}
     body.quiz-active #quizView .quiz-actions .btn{padding:9px 18px;font-size:13px;min-height:40px;}
-    body.quiz-active #quizView{padding-bottom:calc(52px + max(6px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 20px)));}
+    body.quiz-active #quizView{padding-bottom:calc(52px + max(4px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 14px)));}
     /* "More answers below" lives in the bar's empty middle, as a small round button, never over an answer */
-    #moreChoicesCue{left:50%;bottom:calc(max(6px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 20px)) + 3px);width:40px;height:40px;padding:0;border-radius:50%;font-size:0;line-height:40px;text-align:center;box-shadow:none;z-index:8;}
+    #moreChoicesCue{left:50%;bottom:calc(max(4px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 14px)) + 4px);width:40px;height:40px;padding:0;border-radius:50%;font-size:0;line-height:40px;text-align:center;box-shadow:none;z-index:8;}
     #moreChoicesCue.show{display:block;}
     #moreChoicesCue::after{content:"\2193";font-size:20px;font-weight:700;}
     /* Session tag: a slim strip docked to the tab bar, reserved in the layout, tucked away while you scroll down */
@@ -20057,7 +20060,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.165';
+const BUILD_ID = '2026-10-17.166';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
