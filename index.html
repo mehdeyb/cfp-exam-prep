@@ -10488,14 +10488,18 @@ function renderToolPracticeButtons(){
     if(!st.have) return;
     const n = Math.min(10, st.have);
     let line;
-    if(!st.tried) line = `${st.have} questions on this topic, none tried yet.`;
+    if(!st.tried) line = `${st.have} questions, none tried yet`;
     else {
       const bits = [`${st.tried} of ${st.have} tried`, `${Math.round(100 * st.right / st.tried)}% right`];
       if(st.missed) bits.push(`${st.missed} missed`);
       if(st.due) bits.push(`${st.due} due`);
       line = bits.join(' \u00b7 ');
     }
-    host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line)}</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice this topic (${n})`}</button>${DECISION_TREES[key] ? treeDrillButtonHtml(key) : ''}`;
+    const ts = DECISION_TREES[key] ? treeDrillStats(key) : null;
+    const treeLine = ts && ts.total ? (ts.tried ? `${ts.solved} of ${ts.total} routes solved${ts.weak ? ' (' + ts.weak + ' to revisit)' : ''}` : `${ts.total} client situations`) : '';
+    const qBtn = `<button type="button" class="btn ghost" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice questions (${n})`}</button>`;
+    const tBtn = ts && ts.total ? `<button type="button" class="btn ghost" onclick="startTreeDrill('${key}')">Apply the tree (${Math.min(6, ts.total)})</button>` : '';
+    host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line + (treeLine ? ' \u00b7 ' + treeLine : ''))}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${qBtn}${tBtn}</div>`;
   });
 }
 
@@ -10593,12 +10597,6 @@ function treeDrillStats(key){
   let solved = 0, tried = 0, weak = 0;
   qs.forEach(q => { const s = ts[q.id]; if(!s) return; tried++; if(s.correct > 0 && (s.miss || 0) === 0) solved++; if((s.miss || 0) > 0) weak++; });
   return { total:qs.length, tried, solved, weak };
-}
-function treeDrillButtonHtml(key){
-  const st = treeDrillStats(key); if(!st.total) return '';
-  const n = Math.min(6, st.total);
-  const line = !st.tried ? st.total + ' client situations built from this tree.' : st.solved + ' of ' + st.total + ' routes solved' + (st.weak ? ' · ' + st.weak + ' to revisit' : '');
-  return '<div class="rr-note" style="margin:14px 0 0;">' + escapeHtml(line) + '</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTreeDrill(\'' + key + '\')">Apply the tree (' + n + ' situations)</button>';
 }
 function startTreeDrill(key){
   const ts = DATA.treeStats || {};
@@ -17892,7 +17890,8 @@ function renderResultTools(){
     });
     const top = RESULT_TOOL_MATCH.filter(t => counts[t.key]).sort((a,b) => counts[b.key] - counts[a.key])[0];
     if(!top) return;
-    el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>`;
+    const drillBtn = TREE_META[top.key] ? ` <button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${top.key}')">Apply the tree</button>` : '';
+    el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>${drillBtn}`;
     el.style.display = 'block';
   }catch(e){}
 }
@@ -19898,7 +19897,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.151';
+const BUILD_ID = '2026-10-17.152';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
