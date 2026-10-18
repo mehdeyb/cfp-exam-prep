@@ -2468,12 +2468,11 @@
       </div>
       <div class="exam-countdown-card" id="examCountdownCard"></div>
       <div class="stat-strip">
-        <div class="stat" title="Questions and flashcards ready for you to study right now, including everything you haven't seen yet"><div class="num" id="statDue">0</div><div class="lbl">Due for review</div></div>
+        <div class="stat" title="Questions and flashcards you have already seen that are ready to come back"><div class="num" id="statDue">0</div><div class="lbl">Due for review</div></div>
         <div class="stat"><div class="num" id="statAnswered">0</div><div class="lbl">Answered</div></div>
         <div class="stat"><div class="num" id="statAccuracy">—</div><div class="lbl">Accuracy</div></div>
         <div class="stat"><div class="num" id="statStreak">0</div><div class="lbl">Day streak</div></div>
       </div>
-      <div class="stat-first-time-note" id="statDueFirstTimeNote" style="display:none;">Everything starts out "due" — that's just your full, fresh question and flashcard pool, ready whenever you are.</div>
     </div>
 
     <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
@@ -6642,8 +6641,6 @@ function refreshHeaderStats(){
   }
   animateStatNumber(document.getElementById('statDue'), computeDueCounts(), 'due');
   animateStatNumber(document.getElementById('statStreak'), computeStreak(), 'streak');
-  const firstTimeNote = document.getElementById('statDueFirstTimeNote');
-  if(firstTimeNote) firstTimeNote.style.display = (DATA.answerCounter === 0 && DATA.flashcardRatingCount === 0) ? 'block' : 'none';
 }
 
 let lastRenderedReadiness = null;
@@ -7834,8 +7831,8 @@ function buildStudyPlan(minutes){
       manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
   };
   const order = {
-    foundation: ['cards','pretest','weak','adaptive','newcards','missed','tutor','tool','calc','case','teach','listen'],
-    build:      ['cards','pretest','adaptive','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
+    foundation: ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
     sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
@@ -8278,13 +8275,16 @@ function renderNextStepCard(stats, refreshed){
   if(!el) return;
   const s = computeNextStep(stats);
   currentNextStep = s;
+  // When the recommendation is also a step in today's plan, say which one, so the two read as one thread.
+  let planTag = '';
+  try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && x.title === s.title); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
   el.innerHTML = `
     <div class="ns-kicker"><span class="ns-label"><span class="ns-dot"></span>Next best step</span><span class="ns-tag">${escapeHtml(s.kicker)}</span></div>
     <div class="ns-title">${escapeHtml(s.title)}</div>
     <div class="ns-why">${escapeHtml(s.why)}</div>
     <div class="ns-foot">
       <button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button>
-      <span class="ns-meta">${escapeHtml(s.meta)}</span>
+      <span class="ns-meta">${escapeHtml(planTag ? (s.meta ? s.meta + ' · ' : '') + planTag : s.meta)}</span>
       ${s.alt ? `<button type="button" class="ns-alt" onclick="${s.alt.fn}">${escapeHtml(s.alt.label)}</button>` : ''}
     </div>
     ${refreshed ? `<div class="ns-note ns-updated">Updated — your latest activity changed the best next step.</div>` : ''}
@@ -12529,8 +12529,9 @@ function dueFactorFor(stat){
 function isDue(stat){ return stat.seen===0 || Date.now() >= stat.dueAt; }
 
 function computeDueCounts(){
-  const dueQuestions = allQuestions().filter(q=>isDue(getSpacedStat(DATA.questionStats, q.id))).length;
-  const dueCards = allFlashcards().filter(f=>isDue(getSpacedStat(DATA.flashcardStats, f.id))).length;
+  // Only things you have already met can be "due" for review; the unseen pool is new material, not a backlog.
+  const dueQuestions = allQuestions().filter(q=>{ const st = getSpacedStat(DATA.questionStats, q.id); return st.seen > 0 && isDue(st); }).length;
+  const dueCards = allFlashcards().filter(f=>{ const st = getSpacedStat(DATA.flashcardStats, f.id); return st.seen > 0 && isDue(st); }).length;
   return dueQuestions + dueCards;
 }
 
@@ -20745,7 +20746,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.207';
+const BUILD_ID = '2026-10-18.208';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
