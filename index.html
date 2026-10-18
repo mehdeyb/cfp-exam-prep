@@ -8351,6 +8351,11 @@ function conductorWrapHtml(c){
     <ul class="cd-parts" style="padding:0;">${c.log.map(x => `<li><div>${escapeHtml(x.title)}<small>${escapeHtml(x.reason === 'skipped' ? 'Skipped' : x.text)}</small></div></li>`).join('')}</ul>
     <div class="cd-actions"><button type="button" class="btn" onclick="conductorClose(true)">Done for today</button></div>`;
 }
+// A long sitting (3.5 hours or more) gets one real break once about half the work is done.
+function conductorBreakDue(c){
+  try{ return c.minutes >= 200 && !c.breakTaken && conductorUsedMin(c) >= Math.min(105, c.minutes / 2.2) && c.log.length >= 3; }catch(e){ return false; }
+}
+function conductorBreakDone(){ const c = conductorState(); if(!c) return; c.breakTaken = true; persist(); clearInterval(window._cdBrk); conductorShow('between'); }
 function conductorShow(kind){
   const c = conductorState(); const o = document.getElementById('conductorOverlay'); const panel = document.getElementById('conductorPanel');
   if(!c || !o || !panel) return;
@@ -8376,6 +8381,13 @@ function conductorShow(kind){
         <p class="cd-text">${cur ? 'Go back to this part to keep working on it, or tell me it is done and I will wrap it up and move on.' : 'Ready for the next part?'}</p>
         <div class="cd-actions">${cur ? `<button type="button" class="btn" onclick="conductorGoToPart()">Go to this part</button><button type="button" class="cd-link" onclick="conductorNextPart()">This part is done, next</button>` : `<button type="button" class="btn" onclick="conductorNextPart()">Next part</button>`}
         <button type="button" class="cd-link" onclick="conductorHide()">Close</button><button type="button" class="cd-link" onclick="conductorFinishNow()">End session</button></div>`;
+    } else if(conductorBreakDue(c)){
+      html = `<div class="cd-kicker">${conductorProgress(c).done} of ${conductorTotal(c)} parts done \u00b7 halfway</div>${conductorDots(c)}
+        <h3 class="cd-title" id="cdTitle">Take a 10 minute break</h3>
+        <p class="cd-text">You have been at it for about ${Math.round(conductorUsedMin(c))} minutes. Stand up, drink water, look at something far away, and stay off the screen. Practice after a real rest sticks better than one long push.</p>
+        <div class="cd-next"><b>When you are back: ${escapeHtml(nxt.title)}</b><span>${escapeHtml(nxt.why)} About ${nxt.minutes} min.</span></div>
+        <div class="cd-actions"><button type="button" class="btn" onclick="conductorBreakDone()">I\u2019m back <span id="cdBreakT" style="opacity:.7;"></span></button><button type="button" class="cd-link" onclick="conductorBreakDone()">Skip the break</button></div>`;
+      setTimeout(() => { const t0 = Date.now(); clearInterval(window._cdBrk); window._cdBrk = setInterval(() => { const e = document.getElementById('cdBreakT'); if(!e){ clearInterval(window._cdBrk); return; } const r = Math.max(0, 600 - Math.floor((Date.now() - t0) / 1000)); e.textContent = '\u00b7 ' + Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }, 1000); }, 50);
     } else {
       html = `<div class="cd-kicker">${conductorProgress(c).done} of ${conductorTotal(c)} parts done</div>${conductorDots(c)}
         <h3 class="cd-title" id="cdTitle">${escapeHtml(last ? last.title : 'Part done')}</h3>
@@ -9984,6 +9996,7 @@ function podcastSayBack(){
 function podcastOpenTutorPick(){
   try{
     document.getElementById('podcastTypeSelect').value = 'personalized';
+    { const pm = planMinutes(); document.getElementById('podcastLengthSelect').value = pm >= 210 ? 'deep' : pm <= 100 ? 'short' : 'standard'; }
     podcastDomainChanged();
   }catch(e){}
   openPodcastFromStudy();
@@ -21812,7 +21825,7 @@ async function executeTutorTool(toolName, toolInput){
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
-      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}). ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}).${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a 10 minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'start_plan_step'){
@@ -22723,7 +22736,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.231';
+const BUILD_ID = '2026-10-18.232';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
