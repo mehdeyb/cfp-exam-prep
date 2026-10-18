@@ -2527,6 +2527,8 @@
         <div class="week-recap" id="weekRecap" style="display:none;"></div>
       </div>
       <div class="bp-legend" id="bpLegend"></div>
+      <div class="pattern-callout" id="patternCallout" style="display:none;"></div>
+      <div class="pattern-callout" id="mixupCallout" style="display:none;"></div>
       <div class="bp-fold" id="diagnosisCard">
       <div class="card-head" id="diagnosisToggle" onclick="toggleDiagnosis()" role="button" tabindex="0">
         <h2>Detailed diagnosis</h2>
@@ -2538,24 +2540,6 @@
 
       <div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div>
       <div class="source-note">Weights and the <span data-dyn="subtopicN">70</span> subtopics come from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a>. Tap a domain to drill it. A gold pulse means it is rebuilding basics; "due" means reviews are ready.</div>
-    </div>
-
-    <div class="card" id="focusCard">
-      <div class="card-head">
-        <h2>Your coach</h2>
-        <div class="note">learns from every answer</div>
-      </div>
-      <div class="focus-grid">
-        <div class="bank-stat-row">
-          <div class="bank-stat"><div class="num" id="bankCount">0</div><div class="lbl">AI questions<br>banked</div></div>
-          <div class="bank-stat"><div class="num" id="fcBankCount">0</div><div class="lbl">AI flashcards<br>banked</div></div>
-        </div>
-      </div>
-      <div class="pattern-callout" id="patternCallout" style="display:none;"></div>
-      <div class="pattern-callout" id="mixupCallout" style="display:none;"></div>
-      <div class="coach-actions">
-        <div class="gen-status" id="genStatus" role="status">Auto-expands your weakest areas roughly every 10 answers.</div>
-      </div>
     </div>
 
     <div class="panel card" id="modePanel">
@@ -3616,6 +3600,15 @@
           <h3>AI token usage</h3>
           <p class="hint" style="margin-top:0;">Counts the tokens used by this app's own AI requests. It is not your account balance, which no app can read; check billing at console.anthropic.com.</p>
           <div id="aiTokenUsageDisplay"></div>
+        </div>
+
+        <div class="settings-section" id="aiLibrarySection">
+          <h3>AI-written library</h3>
+          <div class="bank-stat-row">
+            <div class="bank-stat"><div class="num" id="bankCount">0</div><div class="lbl">questions<br>banked</div></div>
+            <div class="bank-stat"><div class="num" id="fcBankCount">0</div><div class="lbl">flashcards<br>banked</div></div>
+          </div>
+          <div class="gen-status" id="genStatus" role="status">Auto-expands your weakest areas roughly every 10 answers.</div>
         </div>
 
         <div class="settings-section">
@@ -15990,7 +15983,7 @@ function resumeInProgressSession(){
   document.getElementById('tab-study').classList.add('active');
   document.getElementById('modePanel').style.display = 'none';
   document.getElementById('blueprintCard').style.display = 'none';
-  document.getElementById('focusCard').style.display = 'none';
+  { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'none'; }
   document.getElementById('resultsView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
   document.getElementById('quizTimer').style.display = 'none';
@@ -16006,7 +15999,7 @@ function dismissInProgressSession(){
   clearInProgressSession();
   document.getElementById('modePanel').style.display = 'block';
   document.getElementById('blueprintCard').style.display = 'block';
-  document.getElementById('focusCard').style.display = 'block';
+  { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'block'; }
   try{ renderNextStepCard(computeStats()); }catch(e){}
 }
 // The half-finished session is offered once, in the Next best step card (resume, or start fresh); there is no separate banner.
@@ -16450,7 +16443,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   document.getElementById('tab-study').classList.add('active');
   document.getElementById('modePanel').style.display = 'none';
   document.getElementById('blueprintCard').style.display = 'none';
-  document.getElementById('focusCard').style.display = 'none';
+  { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'none'; }
   document.getElementById('resultsView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
   enterFullScreenQuiz();
@@ -18792,7 +18785,7 @@ function exitToMenu(){
   document.getElementById('resultsView').style.display = 'none';
   document.getElementById('modePanel').style.display = 'block';
   document.getElementById('blueprintCard').style.display = 'block';
-  document.getElementById('focusCard').style.display = 'block';
+  { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'block'; }
   showTab(DATA && DATA.lastTab ? DATA.lastTab : 'study');
   closeDomainPicker();
   closeSettings();
@@ -20727,7 +20720,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.201';
+const BUILD_ID = '2026-10-18.202';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
