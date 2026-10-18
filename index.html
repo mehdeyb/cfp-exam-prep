@@ -16533,10 +16533,11 @@ function fitQuizText(){
     const base = parseFloat(getComputedStyle(el).fontSize) || 17;
     const cs = chs[0] ? getComputedStyle(chs[0]) : null;
     const cb = cs ? parseFloat(cs.fontSize) : 15, pb = cs ? parseFloat(cs.paddingTop) : 12;
-    const cap = Math.min(23, base + 5);
+    // Growth is capped so text size stays steady from one question to the next (17 up to 19, choices 14 up to 15).
+    const cap = Math.min(19, base + 2);
     const apply = t => {
       el.style.fontSize = (base + Math.min(t, cap - base)) + 'px';
-      chs.forEach(c => { c.style.fontSize = (cb + Math.min(t * 0.4, 2)) + 'px'; c.style.paddingTop = c.style.paddingBottom = (pb + Math.min(t, 5)) + 'px'; });
+      chs.forEach(c => { c.style.fontSize = (cb + Math.min(t * 0.4, 1)) + 'px'; c.style.paddingTop = c.style.paddingBottom = (pb + Math.min(t, 4)) + 'px'; });
     };
     const ql = document.querySelector('#quizView .q-left');
     const fits = () => host.scrollHeight <= host.clientHeight && (!ql || ql.scrollHeight <= ql.clientHeight + 1);
@@ -20143,7 +20144,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.175';
+const BUILD_ID = '2026-10-17.176';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
