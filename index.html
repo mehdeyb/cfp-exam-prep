@@ -2688,6 +2688,7 @@
             </div>
             <div class="calc-steps-box" id="calcStepsBox" style="display:none;"></div>
             <div class="qcard-link" id="qCardLink" style="display:none;"></div>
+            <div class="qcard-link" id="qToolLink" style="display:none;"></div>
             <div class="simplify-row" id="simplifyRow" style="display:none;">
               <button class="btn ghost" id="simplifyBtn" onclick="requestSimplerExplanation()">Explain this more simply</button>
               <button class="btn ghost" id="qChatBtn" onclick="toggleQuestionChat()" aria-expanded="false" aria-controls="qChatBox">Ask the tutor about this</button>
@@ -5359,7 +5360,7 @@ function defaultData(){
     preferredHost1VoiceName: null,
     preferredHost2VoiceName: null,
     flashcardMnemonics: {},
-    teachStats: {}, fcShown: {},
+    teachStats: {}, fcShown: {}, treeStats: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5547,7 +5548,7 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -8526,7 +8527,7 @@ function detectMixup(q, chosenIdx){
   return null;
 }
 function recordMixup(q, chosenIdx){
-  if(q.tvmGen) return null;
+  if(isGenQ(q)) return null;
   if(!DATA.mixups || typeof DATA.mixups !== 'object') DATA.mixups = {};
   const pr = detectMixup(q, chosenIdx);
   if(!pr) return null;
@@ -10307,8 +10308,10 @@ const DECISION_TREES = {
 
 const dtState = {}; // { treeKey: { path: [nodeId,...], answers: [label,...] } }
 
+// A tree key may carry an instance suffix ("trust@q" is the copy shown inside a question) so one tree can be open in two places at once.
+function dtTreeOf(inst){ return DECISION_TREES[String(inst).split('@')[0]]; }
 function dtInit(treeKey){
-  dtState[treeKey] = { path: [DECISION_TREES[treeKey].start], answers: [] };
+  dtState[treeKey] = { path: [dtTreeOf(treeKey).start], answers: [] };
   dtRender(treeKey);
 }
 function dtChoose(treeKey, label, nextId){
@@ -10328,7 +10331,7 @@ function dtRestart(treeKey){
   dtInit(treeKey);
 }
 function dtRender(treeKey){
-  const tree = DECISION_TREES[treeKey];
+  const tree = dtTreeOf(treeKey);
   const st = dtState[treeKey];
   const currentId = st.path[st.path.length - 1];
   const node = tree.nodes[currentId];
@@ -10451,8 +10454,120 @@ function renderToolPracticeButtons(){
       if(st.due) bits.push(`${st.due} due`);
       line = bits.join(' \u00b7 ');
     }
-    host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line)}</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice this topic (${n})`}</button>`;
+    host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line)}</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice this topic (${n})`}</button>${DECISION_TREES[key] ? treeDrillButtonHtml(key) : ''}`;
   });
+}
+
+function isGenQ(q){ return !!q && (!!q.tvmGen || !!q.treeGen); }
+
+/* ===========================================================
+   DECISION TREES, WORKED THROUGH QUESTIONS
+   1) After a miss (or an unsure answer) on a topic a tool covers, the explanation offers that tool right there. A decision tree opens
+      inside the question, so the session never has to be left; the diagram tools open in the Tools tab.
+   2) "Apply the tree" turns every route through a tree into a client situation and asks where the tree lands. Routes you got wrong
+      come back more often, and the count of routes solved shows under each tool.
+=========================================================== */
+const TREE_META = {
+  trust: { name:'Which trust fits?', domain:'estate' },
+  entity: { name:'Which business entity fits?', domain:'tax' },
+  ira: { name:'Traditional IRA deductibility', domain:'retirement' },
+  socialSecurity: { name:'When to claim Social Security', domain:'retirement' }
+};
+function toolForQuestion(q){
+  for(const key of Object.keys(TOOL_PRACTICE_SETS)){ if((TOOL_PRACTICE_SETS[key] || []).includes(q.id)) return key; }
+  const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' ');
+  const hit = RESULT_TOOL_MATCH.find(t => t.re.test(hay));
+  return hit ? hit.key : null;
+}
+function showToolForQuestion(q, isCorrect){
+  const box = document.getElementById('qToolLink'); if(!box) return;
+  box.style.display = 'none'; box.innerHTML = '';
+  if(!isStudyMode() || isGenQ(q)) return;
+  if(isCorrect && session.selectedConfidence !== 'unsure') return;
+  const key = toolForQuestion(q); if(!key) return;
+  const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
+  if(DECISION_TREES[key]){
+    box.innerHTML = '<details class="qcl" ontoggle="if(this.open) qtoolOpen(\'' + key + '\')"><summary>Walk the decision tree: <b>' + escapeHtml(name) + '</b></summary><div id="dt-' + key + '@q" style="margin-top:8px;"></div><div class="qcl-note">Same tree as the Tools tab. Your session stays right here.</div></details>';
+  } else {
+    box.innerHTML = '<div class="qcl-def">This one is easier to see as a picture: <b>' + escapeHtml(name) + '</b></div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="openToolFromResults(\'' + key + '\')">Open it in the Tools tab</button><div class="qcl-note">Your place in this session is saved.</div>';
+  }
+  box.style.display = 'block';
+}
+function qtoolOpen(key){ const inst = key + '@q'; if(!dtState[inst]) dtInit(inst); }
+
+function treePaths(key){
+  const t = DECISION_TREES[key], out = [];
+  (function walk(id, steps){
+    const n = t.nodes[id];
+    if(n.result){ out.push({ steps, node:n }); return; }
+    n.options.forEach(o => walk(o.next, steps.concat([{ q:n.question, a:o.label }])));
+  })(t.start, []);
+  return out;
+}
+const TREE_STOP = new Set(['the','and','for','with','trust','claim','claiming','your','that','this','from','into','than','when','what','which','use','used','even','regardless']);
+function treeWords(title){ return new Set(String(title).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !TREE_STOP.has(w)).map(w => w.slice(0, 5))); }
+function treeTooClose(a, b){ const wa = treeWords(a), wb = treeWords(b); let n = 0; wa.forEach(w => { if(wb.has(w)) n++; }); return n >= 2; }
+function treeQuestions(key){
+  const meta = TREE_META[key]; if(!meta) return [];
+  const paths = treePaths(key);
+  const built = paths.map((p, idx) => {
+    const correctTitle = p.node.title;
+    const others = [], seen = new Set([correctTitle]);
+    paths.forEach(o => {
+      if(seen.has(o.node.title) || treeTooClose(o.node.title, correctTitle)) return;
+      seen.add(o.node.title); others.push(o);
+    });
+    // nearest outcomes first: the ones that share the longest start with this route make the sharpest wrong answers
+    const shared = o => { let n = 0; while(n < o.steps.length && n < p.steps.length && o.steps[n].a === p.steps[n].a) n++; return n; };
+    others.sort((a, b) => shared(b) - shared(a));
+    const picked = others.slice(0, 3);
+    const opts = [{ title:correctTitle, path:p, ok:true }].concat(picked.map(o => ({ title:o.node.title, path:o, ok:false })));
+    // stable order from the route number, so the same route always reads the same
+    opts.sort((a, b) => ((a.title.length * 7 + idx * 13) % 11) - ((b.title.length * 7 + idx * 13) % 11) || a.title.localeCompare(b.title));
+    const why = o => {
+      if(o.ok) return 'Correct — ' + p.node.body;
+      let n = 0; while(n < o.path.steps.length && n < p.steps.length && o.path.steps[n].a === p.steps[n].a) n++;
+      const st = o.path.steps[n]; const mine = p.steps[n];
+      if(st && mine) return 'Wrong — the tree only reaches “' + o.title + '” when the answer to “' + st.q + '” is “' + st.a + '”; here it was “' + mine.a + '”.';
+      return 'Wrong — that result sits on a different branch of the tree.';
+    };
+    return {
+      id:'dt-' + key + '-' + idx, domain:meta.domain, treeGen:true, treeKey:key,
+      q:'Following the “' + meta.name + '” decision tree with these answers, what does it recommend?',
+      scenario:p.steps.map(s => '• ' + s.q + ' — ' + s.a).join('\n'),
+      choices:opts.map(o => o.title), correct:opts.findIndex(o => o.ok), rationale:opts.map(why)
+    };
+  });
+  // A route whose outcome is nearly the same as another's cannot make a fair question, so it is left out.
+  return built.filter(q => q.choices.length >= 3);
+}
+function treeRecordOutcome(q, isCorrect){
+  DATA.treeStats = DATA.treeStats || {};
+  const prev = DATA.treeStats[q.id] || { seen:0, correct:0, miss:0 };
+  DATA.treeStats[q.id] = { seen:prev.seen + 1, correct:prev.correct + (isCorrect ? 1 : 0), miss:isCorrect ? Math.max(0, (prev.miss || 0) - 1) : (prev.miss || 0) + 1, last:Date.now() };
+}
+function treeDrillStats(key){
+  const qs = treeQuestions(key), ts = DATA.treeStats || {};
+  let solved = 0, tried = 0, weak = 0;
+  qs.forEach(q => { const s = ts[q.id]; if(!s) return; tried++; if(s.correct > 0 && (s.miss || 0) === 0) solved++; if((s.miss || 0) > 0) weak++; });
+  return { total:qs.length, tried, solved, weak };
+}
+function treeDrillButtonHtml(key){
+  const st = treeDrillStats(key); if(!st.total) return '';
+  const n = Math.min(6, st.total);
+  const line = !st.tried ? st.total + ' client situations built from this tree.' : st.solved + ' of ' + st.total + ' routes solved' + (st.weak ? ' · ' + st.weak + ' to revisit' : '');
+  return '<div class="rr-note" style="margin:14px 0 0;">' + escapeHtml(line) + '</div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="startTreeDrill(\'' + key + '\')">Apply the tree (' + n + ' situations)</button>';
+}
+function startTreeDrill(key){
+  const ts = DATA.treeStats || {};
+  const scored = treeQuestions(key).map(q => {
+    const s = ts[q.id]; let sc = 0;
+    if(!s) sc = 1.5; else { sc = (s.miss || 0) * 3 - (s.correct >= 2 && !(s.miss) ? 1 : 0); }
+    return { q, sc:sc + Math.random() * 0.9 };
+  }).sort((a, b) => b.sc - a.sc);
+  const pool = scored.slice(0, Math.min(6, scored.length)).map(x => x.q);
+  if(!pool.length) return;
+  beginSession(shuffle(pool), 'drill', null);
 }
 
 function startTopicPractice(setKey){
@@ -15104,7 +15219,7 @@ function cardForQuestion(q){
 function showCardForQuestion(q, isCorrect){
   const box = document.getElementById('qCardLink'); if(!box) return;
   box.style.display = 'none'; box.innerHTML = '';
-  if(isCorrect || !isStudyMode() || q.tvmGen) return;
+  if(isCorrect || !isStudyMode() || isGenQ(q)) return;
   const c = cardForQuestion(q); if(!c) return;
   // Skip it when the explanation above already says the same thing, so nothing is shown twice.
   const words = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length > 3));
@@ -15365,7 +15480,7 @@ function questionIsNew(q){ return getSpacedStat(DATA.questionStats, q.id).seen =
 function unseenSiblingFor(q, takenIds, members){
   const key = conceptKeyOf(q);
   if(!key) return null;
-  const pool = allQuestions().filter(c => c.id !== q.id && c.domain === q.domain && !takenIds.has(c.id) && !factExempt(c) && !c.tvmGen && questionIsNew(c) && conceptKeyOf(c) === key);
+  const pool = allQuestions().filter(c => c.id !== q.id && c.domain === q.domain && !takenIds.has(c.id) && !factExempt(c) && !isGenQ(c) && questionIsNew(c) && conceptKeyOf(c) === key);
   if(!pool.length) return null;
   const ranked = pool.map(c => { const fit = factSimilarity(q, c); return { c, fit, s: ((c.variantOf === q.id || (q.variantOf && c.variantOf === q.variantOf)) ? 1 : 0) + fit + (c.scenario ? -0.15 : 0) + Math.random() * 0.08 }; })
     .sort((a, b) => b.s - a.s);
@@ -15412,7 +15527,7 @@ function freshenQueue(queue, mode){
   const taken = new Set(queue.map(q => q.id));
   const members = queue.slice();
   members.forEach((q, i) => {
-    if(!q || factExempt(q) || q.tvmGen || questionIsNew(q)) return;
+    if(!q || factExempt(q) || isGenQ(q) || questionIsNew(q)) return;
     // A new question written after an earlier miss is already waiting: use it rather than look for another stand-in.
     if(aiOk && DATA.readyNew && DATA.readyNew[String(q.variantOf || q.id)]){ out.wantNew[q.id] = { orig: q.id, why: 'a new question on this idea is already written', wrongText: '' }; return; }
     const sib = unseenSiblingFor(q, taken, members);
@@ -15446,7 +15561,7 @@ function creditConceptRetest(origId, ok){
 
 /* How much of the bank is still new, and roughly how long that lasts at the pace of the last week. */
 function freshRunwayInfo(){
-  const all = allQuestions().filter(q => !q.tvmGen);
+  const all = allQuestions().filter(q => !isGenQ(q));
   const fresh = all.filter(questionIsNew).length;
   const cutoff = Date.now() - 7 * 86400000;
   const recent = (DATA.sessions || []).filter(s => new Date(s.date).getTime() >= cutoff);
@@ -15741,7 +15856,7 @@ function paceRecord(){
   const answeredIdx = i => session.mode==='fullexam' ? session.examAnswers[i] !== undefined : (session.answerLog || []).some(e => e.index === i);
   Object.keys(session.qTimes).forEach(k => {
     const i = +k, ms = session.qTimes[k], q = session.queue[i];
-    if(!q || q.tvmGen || ms < 3000 || ms > 300000 || !answeredIdx(i)) return;
+    if(!q || isGenQ(q) || ms < 3000 || ms > 300000 || !answeredIdx(i)) return;
     ps.n++; ps.ms += ms;
     const d = ps.byDomain[q.domain] || (ps.byDomain[q.domain] = { n:0, ms:0 }); d.n++; d.ms += ms;
     const kd = paceKind(q), kk = ps.byKind[kd] || (ps.byKind[kd] = { n:0, ms:0 }); kk.n++; kk.ms += ms;
@@ -15786,7 +15901,7 @@ function renderResultPace(){
   const rows = [];
   session.queue.forEach((q,i) => {
     const ms = session.qTimes[i];
-    if(!ms || ms < 3000 || ms > 300000 || q.tvmGen) return;
+    if(!ms || ms < 3000 || ms > 300000 || isGenQ(q)) return;
     const entry = (session.answerLog || []).find(e => e.index === i);
     if(!entry) return;
     rows.push({ q, i, sec: ms/1000, ok: !!entry.correct });
@@ -16099,11 +16214,11 @@ function toggleCueSentence(i){
 function paintScenario(q, revealed){
   const box = document.getElementById('qScenario'); if(!box) return;
   if(!q || !q.scenario){ box.style.display = 'none'; box.innerHTML = ''; const h0 = document.getElementById('csRevealHost'); if(h0) h0.innerHTML = ''; return; }
-  const text = q.scenario, study = isStudyMode(), cue = study ? cueFor(q) : null, on = cuesOn();
+  const text = q.scenario, study = isStudyMode() && !q.treeGen, cue = study ? cueFor(q) : null, on = cuesOn() && !q.treeGen;
   box.innerHTML = '';
   const label = document.createElement('span'); label.className = 'scenario-label';
   const cdef = session && session.mode === 'case' ? caseById(session.caseId) : null;
-  label.textContent = cdef ? ('Case study · ' + cdef.title) : 'Client scenario';
+  label.textContent = cdef ? ('Case study · ' + cdef.title) : (q.treeGen ? 'Answers so far' : 'Client scenario');
   box.appendChild(label);
   box.classList.toggle('cs-revealed', !!revealed);
   if(study){
@@ -16118,6 +16233,7 @@ function paintScenario(q, revealed){
   const auto = on ? cueAutoRanges(text, reserved) : [];
   const ranges = reserved.concat(auto).sort((a, b) => a.s - b.s);
   const body = document.createElement('div'); body.className = 'cs-body';
+  if(q.treeGen) body.style.whiteSpace = 'pre-line';
   if(cue){
     const sents = cueSplitSentences(text);
     const flags = ((session && session.cueFlags && session.cueFlags[session.index]) || []);
@@ -16415,6 +16531,7 @@ function renderQuestion(){
   const calcStepsBtnReset = document.getElementById('calcStepsBtn');
   if(calcStepsBtnReset) calcStepsBtnReset.textContent = 'Show calculator steps';
   { const cl = document.getElementById('qCardLink'); if(cl){ cl.style.display = 'none'; cl.innerHTML = ''; } }
+  { const tl = document.getElementById('qToolLink'); if(tl){ tl.style.display = 'none'; tl.innerHTML = ''; } }
 
   maybeSwapQuestionForVariant(q);
   saveInProgressSession();
@@ -16481,7 +16598,7 @@ function schedulePrefetch(){
     for(let i = session.index + 1; i <= session.index + PF_LOOKAHEAD && i < session.queue.length; i++){
       if(pfActive >= PF_MAX_PARALLEL || (session.pfCount || 0) >= PF_SESSION_CAP) break;
       const q = session.queue[i];
-      if(!q || q.isVariant || q.tvmGen || session.variantAttempted[q.id] || (session.pf && session.pf[q.id])) continue;
+      if(!q || q.isVariant || isGenQ(q) || session.variantAttempted[q.id] || (session.pf && session.pf[q.id])) continue;
       const stat = getSpacedStat(DATA.questionStats, q.id);
       const wantNew = (session.wantNew && session.wantNew[q.id]) || null;
       const ready = DATA.readyNew && DATA.readyNew[String(q.variantOf || q.id)];
@@ -16500,7 +16617,7 @@ function schedulePrefetch(){
 async function prefetchNewForMiss(q, pickedIdx){
   const key = String(q.variantOf || q.id);
   try{
-    if(!aiFeaturesAvailable || genBackoffActive() || q.tvmGen || !pfInScope()) return;
+    if(!aiFeaturesAvailable || genBackoffActive() || isGenQ(q) || !pfInScope()) return;
     if(!DATA.readyNew || typeof DATA.readyNew !== 'object') DATA.readyNew = {};
     if(DATA.readyNew[key] || pfMissInFlight[key] || pfActive >= PF_MAX_PARALLEL + 1) return;
     if((session.pfFail || 0) >= 2) return;
@@ -17002,7 +17119,7 @@ function selectAnswer(i){
     }
   }
   if(!DATA.hypercorrectionQueue) DATA.hypercorrectionQueue = [];
-  if(q.tvmGen){ /* generated calculation questions are not part of the saved bank, so they leave no per-question history */ }
+  if(isGenQ(q)){ /* generated calculation questions are not part of the saved bank, so they leave no per-question history */ }
   else if(session.selectedConfidence === 'confident' && !isCorrect){
     if(!DATA.hypercorrectionQueue.includes(q.id)) DATA.hypercorrectionQueue.push(q.id);
   } else if(isCorrect){
@@ -17063,17 +17180,19 @@ function selectAnswer(i){
     if(isCorrect) DATA.confidenceStats[level].correct++;
   }
 
-  if(!q.tvmGen){
+  if(!isGenQ(q)){
     const prevStat = getSpacedStat(DATA.questionStats, q.id);
     DATA.questionStats[q.id] = advanceSpacedStat(prevStat, isCorrect);
+  } else if(q.treeGen){
+    treeRecordOutcome(q, isCorrect);
   } else {
     tvmRecordQuizOutcome(q, i, isCorrect);
   }
   recordStudyDay();
-  if(!q.tvmGen && session.siblingOf && session.siblingOf[q.id]) creditConceptRetest(session.siblingOf[q.id], isCorrect);
+  if(!isGenQ(q) && session.siblingOf && session.siblingOf[q.id]) creditConceptRetest(session.siblingOf[q.id], isCorrect);
 
-  if(!q.tvmGen) recordDomainAnswer(q.domain, isCorrect);
-  const foundationChange = q.tvmGen ? null : updateFoundationMode(q.domain);
+  if(!isGenQ(q)) recordDomainAnswer(q.domain, isCorrect);
+  const foundationChange = isGenQ(q) ? null : updateFoundationMode(q.domain);
   if(foundationChange === 'entered'){
     const domainName = DOMAINS.find(d=>d.key===q.domain).name;
     setCoach(`Easing up on ${domainName} for a bit — foundational questions until it feels solid, then we'll build back up.`, false);
@@ -17083,7 +17202,7 @@ function selectAnswer(i){
   }
 
   const wasPreviouslyMissed = DATA.missed.includes(q.id);
-  if(q.tvmGen){ /* no missed-list entry: the question will not exist next time, a fresh one is generated */ }
+  if(isGenQ(q)){ /* no missed-list entry: the question will not exist next time, a fresh one is generated */ }
   else if(!isCorrect){
     if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
     prefetchNewForMiss(q, i);
@@ -17133,6 +17252,7 @@ function selectAnswer(i){
   }
 
   try{ showCardForQuestion(q, isCorrect); }catch(e){}
+  try{ showToolForQuestion(q, isCorrect); }catch(e){}
   const calcStepsRow = document.getElementById('calcStepsRow');
   const calcStepsBox = document.getElementById('calcStepsBox');
   if(calcStepsRow){
@@ -19711,7 +19831,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.148';
+const BUILD_ID = '2026-10-17.149';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
