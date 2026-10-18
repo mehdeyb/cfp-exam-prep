@@ -6857,14 +6857,8 @@ function renderBlueprint(){
   let ready = {}, focusKey = null;
   try{
     const st = computeStats();
-    let best = -1;
-    st.parts.forEach(p => {
-      const k = p.weight ? p.earned / p.weight : 0;
-      ready[p.key] = Math.round(k * 100);
-      const gap = p.weight * (1 - k);
-      if(gap > best){ best = gap; focusKey = p.key; }
-    });
-    if(!st.totalAnswered) focusKey = null;
+    st.parts.forEach(p => { ready[p.key] = Math.round((p.weight ? p.earned / p.weight : 0) * 100); });
+    focusKey = st.totalAnswered ? focusDomainKey(st.parts) : null;
   }catch(e){ ready = {}; }
   DOMAINS.forEach(d=>{
     const s = DATA.domainStats[d.key];
@@ -7568,7 +7562,8 @@ function computeNextStep(stats){
 
   // Otherwise: wherever the most readiness is being left on the table
   if(!step){
-    const top = parts.slice().sort((a,b)=>b.lost-a.lost)[0];
+    const fk = focusDomainKey(parts);
+    const top = parts.find(p => p.key === fk) || parts.slice().sort((a,b)=>b.lost-a.lost)[0];
     // Strong enough to move on to stress-testing: everything covered and the estimate high, or nothing worth a point left.
     const strongEverywhere = parts.every(p => p.attempted > 0 && p.coverage >= 0.999) && stats.readiness >= 70;
     if(top && top.lost >= 1 && !strongEverywhere){
@@ -7695,7 +7690,7 @@ function buildStudyPlan(minutes){
   const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
   const needFor = w => { let n = SUBTOPIC_DRILL_LENGTH; try{ n = Math.min(SUBTOPIC_DRILL_LENGTH, subtopicPool(w.key, w.idx).length) || SUBTOPIC_DRILL_LENGTH; }catch(e){} return n; };
   const accTxt = w => (w.st && w.st.acc !== null && w.st.attempts) ? `${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts` : 'a weak spot';
-  const weakDom = domainMasteryList().map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100))) * (1 + 0.15 * (4 - (d.total ? domainStageOf(d.key) : 1)))})).sort((a, b) => b.pr - a.pr)[0];
+  const weakDom = (() => { let fk = null; try{ fk = focusDomainKey(stats.parts); }catch(e){} const list = domainMasteryList(); return list.find(d => d.key === fk) || list.map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100))) * (1 + 0.15 * (4 - (d.total ? domainStageOf(d.key) : 1)))})).sort((a, b) => b.pr - a.pr)[0]; })();
 
   const mk = {
     cards: () => {
@@ -7756,7 +7751,8 @@ function buildStudyPlan(minutes){
       const counts = {};
       (DATA.missed || []).forEach(id => { const q = allQuestions().find(x => x.id === id); if(!q) return; const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' '); RESULT_TOOL_MATCH.forEach(t => { if(t.re.test(hay)) counts[t.key] = (counts[t.key] || 0) + 1; }); });
       const top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= 2).sort((a, b) => counts[b.key] - counts[a.key])[0];
-      const key = planTarget('toolKey', top ? top.key : null);
+      const pinned = planDayLog().targets.toolKey;
+      const key = pinned || (top ? planTarget('toolKey', top.key) : null); // pinned for the day once chosen; no pin while nothing qualifies
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
@@ -15696,6 +15692,17 @@ function shuffle(arr){
 
 // A drill is a short run on one domain, built from where you are in it: smaller bricks while the ground is new and longer runs as it firms up,
 // questions that are due, missed or confidently wrong first, the weakest subtopic given extra weight, and an easy-to-hard ramp at the early levels.
+// The one definition of "where to focus": the domain where the most exam points are still on the table (weight times how far from ready).
+// The Blueprint bar's Focus marker, the Next best step and today's plan all use it, so they always point at the same domain.
+function focusDomainKey(parts){
+  let best = null, bestPr = -1;
+  (parts || computeStats().parts).forEach(p => {
+    const k = p.weight ? p.earned / p.weight : 0;
+    const pr = p.weight * (1 - k);
+    if(pr > bestPr){ bestPr = pr; best = p.key; }
+  });
+  return best;
+}
 function drillLengthFor(domainKey){
   const n = (DATA.domainStats[domainKey] || {}).total || 0;
   if(!n) return 10;
@@ -15770,6 +15777,7 @@ async function startDrill(domainKey){
       if(unseen.length < size) note = 'review';
     }
     launchDrill(domainKey, size, unseen);
+    if(note){ try{ setCoach(aiFeaturesAvailable ? 'Not enough new questions could be written just now, so a few that are due for review are mixed in.' : 'Every question here has been seen. Connect an API key and the AI writes new ones at your level. For now, due reviews are mixed in.', false); }catch(e){} }
   } finally { drillBusy(''); _drillStarting = false; }
 }
 function launchDrill(domainKey, size, unseen){
@@ -20719,7 +20727,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.200';
+const BUILD_ID = '2026-10-18.201';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
