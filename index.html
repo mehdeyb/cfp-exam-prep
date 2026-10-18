@@ -18463,7 +18463,7 @@ function finishSession(){
       if(session.mode === 'fullexam' || session.mode === 'mock') t = (pct >= 80 ? 'Strong result' : pct >= 60 ? 'Solid result' : 'Room to build') + ' \u2014 tap a domain below to drill it';
       hl.textContent = t;
       const again = document.getElementById('resultAgainBtn');
-      if(again) again.textContent = session.treeDrill ? 'Another round' : (session.mode === 'fullexam' || session.mode === 'mock') ? 'Retake' : 'Do it again';
+      if(again) again.textContent = (session.treeDrill || session.mode === 'drill') ? 'Another round' : (session.mode === 'fullexam' || session.mode === 'mock') ? 'Retake' : 'Do it again';
     }
     const dots = document.getElementById('resultDots');
     if(dots){
@@ -19738,7 +19738,7 @@ const TUTOR_POINT_TARGETS = {
   tool_qualifiedPlans: { tab:'tools', sel:'.card:has(#dt-full-qualifiedPlans)', label:'Qualified plan family tree' },
   your_coach:     { tab:'study',      sel:'.bp-focus',        label:'Your coach and focus areas' },
   blueprint:      { tab:'study',      sel:'#blueprintCard',   label:'Exam weight vs your mastery' },
-  exam_date:      { tab:'study',      sel:'#examCountdownCard', label:'Set your exam date' },
+  exam_date:      { tab:'study',      sel:'#examCountdownCard', label:'Exam date (in Settings)' },
   progress:       { tab:'study',      sel:'#progressCard',    label:'Your trend over time' },
   diagnosis:      { tab:'study',      sel:'#diagnosisCard',   label:'Detailed diagnosis' },
   flashcard_stats:{ tab:'flashcards', sel:'#fcStatsCard',     label:'Cards due and still learning' },
@@ -20029,6 +20029,7 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'point_to'){
       const t = TUTOR_POINT_TARGETS[toolInput && toolInput.target];
       if(!t) return `Error: "${toolInput && toolInput.target}" isn't something that can be highlighted.`;
+      if(toolInput.target === 'exam_date'){ tutorPoint('exam_date'); return 'Opened Settings at the Exam date section, where the date is set.'; }
       return tutorPoint(toolInput.target, toolInput.note) ? `Took the student to the ${t.tab} tab and highlighted "${t.label}".` : `Could not find that spot on screen.`;
     }
     if(toolName === 'show_readiness_breakdown'){
@@ -20661,7 +20662,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.197';
+const BUILD_ID = '2026-10-18.198';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
