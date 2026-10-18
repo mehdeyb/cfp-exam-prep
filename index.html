@@ -1297,6 +1297,7 @@
     .choice:active:not(.locked){transform:scale(0.98);border-color:var(--gold);}
   }
   .choice{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+  .choice.tapped:not(.correct):not(.incorrect){border-color:var(--gold);background:var(--gold-tint);}
   .choice .letter{font-family:'IBM Plex Mono',monospace;color:var(--muted);flex:none;}
   .choice .choice-label{flex:1;}
   .choice .result-icon{flex:none;width:18px;height:18px;opacity:0;transform:scale(.6);transition:opacity var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);}
@@ -15896,8 +15897,12 @@ function unlockBodyScroll(){
   document.documentElement.classList.remove('scroll-locked');
   window.scrollTo && window.scrollTo(0, savedBodyScrollY);
 }
+let _tsX = 0, _tsY = 0;
+document.addEventListener('touchstart', function(e){ const t = e.touches && e.touches[0]; if(t){ _tsX = t.clientX; _tsY = t.clientY; } }, {passive:true, capture:true});
 document.addEventListener('touchmove', function(e){
   if(!bodyIsLocked()) return;
+  // A tap always wiggles a few pixels. Cancelling that wiggle makes iOS drop the tap, so only real drags are blocked.
+  { const t = e.touches && e.touches[0]; if(t && Math.abs(t.clientX - _tsX) < 10 && Math.abs(t.clientY - _tsY) < 10) return; }
   let n = e.target;
   while(n && n !== document.body && n.nodeType === 1){
     const cs = getComputedStyle(n);
@@ -17174,20 +17179,40 @@ function quizRevealFeedback(fb){
     if(!fb || !fb.isConnected || fb.style.display === 'none' || !document.body.classList.contains('quiz-active')) return;
     const host = document.getElementById('quizFullscreenHost');
     const bar = document.querySelector('#quizView .quiz-actions');
-    const hr = host.getBoundingClientRect(), fr = fb.getBoundingClientRect();
+    const q = session && session.queue && session.queue[session.index];
+    const wraps = document.querySelectorAll('#qChoices .choice-wrap');
+    const rc = document.querySelector('#qChoices .choice.correct');
+    const right = (rc && rc.closest('.choice-wrap')) || (q && wraps[q.correct]);
+    if(!host || !right) return;
+    const hr = host.getBoundingClientRect();
     const barH = bar && bar.offsetHeight < window.innerHeight * 0.6 ? bar.offsetHeight : 16;
-    const limit = hr.bottom - (bar ? barH : 60) - 10;
-    let d = fr.bottom > limit ? fr.bottom - limit : 0;
-    if(fr.top - d < hr.top + 8) d = Math.max(0, fr.top - hr.top - 8);
-    if(d > 1){
+    const limit = hr.bottom - barH - 10, topEdge = hr.top + 10;
+    const cr = right.getBoundingClientRect();
+    // Keep the correct answer (with its explanation) on screen; if the pick you made fits above it too, show both.
+    let want = cr.top;
+    const picked = document.querySelector('#qChoices .choice.incorrect');
+    if(picked){ const pw = picked.closest('.choice-wrap'); if(pw){ const pt = pw.getBoundingClientRect().top; if(cr.bottom - pt <= limit - topEdge) want = Math.min(want, pt); } }
+    let d = 0;
+    if(cr.bottom > limit) d = Math.min(cr.bottom - limit, want - topEdge);
+    if(want - d < topEdge) d = want - topEdge;
+    if(d > 1 || d < -1){
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      host.scrollBy({ top: d, behavior: reduce ? 'auto' : 'smooth' });
+      host.scrollTo({ top: Math.max(0, host.scrollTop + d), behavior: reduce ? 'auto' : 'smooth' });
     }
   }catch(e){}
 }
 function selectAnswer(i){
   if(session.locked || session.thinkGate) return;
   session.locked = true;
+  // Show the tap at once; the bookkeeping (saving, readiness, explanations) runs on the next frame so the screen never waits on it.
+  try{
+    const w = document.querySelectorAll('#qChoices .choice-wrap')[i];
+    if(w){ const b = w.querySelector('.choice'); if(b) b.classList.add('tapped'); }
+    document.querySelectorAll('#qChoices .choice').forEach(b => b.classList.add('locked'));
+  }catch(e){}
+  requestAnimationFrame(() => setTimeout(() => { try{ selectAnswerCore(i); }catch(err){ session.locked = false; throw err; } }, 0));
+}
+function selectAnswerCore(i){
   hideTutorBrief();
   { const cc = document.getElementById('calcCue'); if(cc) cc.style.display = 'none'; }
   paceTouch();
@@ -17348,7 +17373,7 @@ function selectAnswer(i){
   fb.style.display = 'flex';
   quizRevealFeedback(fb);
   // The per-choice explanations finish opening just after this, which moves the feedback; settle once more.
-  setTimeout(() => quizRevealFeedback(fb), 380);
+  [180, 420, 800].forEach(ms => setTimeout(() => quizRevealFeedback(fb), ms));
 
   const simplifyRow = document.getElementById('simplifyRow');
   const simplifiedBox = document.getElementById('simplifiedExplanation');
@@ -20032,7 +20057,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.164';
+const BUILD_ID = '2026-10-17.165';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
