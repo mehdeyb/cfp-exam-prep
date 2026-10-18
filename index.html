@@ -1612,6 +1612,16 @@
   .podcast-icon-btn-stop:hover{background:var(--surface);color:var(--paper);}
   .podcast-speed-select{width:auto;margin-top:0;}
   .podcast-status{font-size:11.5px;color:var(--muted);margin-top:10px;min-height:16px;text-align:center;}
+  .podcast-focus{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--hair);font-size:13px;line-height:1.5;}
+  .podcast-focus b.pf-h{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);font-weight:500;margin-bottom:6px;}
+  .podcast-focus .pf-row{display:flex;gap:8px;align-items:baseline;margin:3px 0;} .podcast-focus .pf-row i{flex:none;font-style:normal;color:var(--gold);}
+  .podcast-focus .pf-row span small{color:var(--muted);margin-left:4px;}
+  .podcast-focus .pf-stale{margin-top:8px;color:var(--gold);font-size:12.5px;}
+  .podcast-refine{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px;}
+  .podcast-refine button{font:inherit;font-size:12.5px;min-height:36px;padding:6px 12px;border-radius:18px;border:1px solid var(--hair-strong);background:transparent;color:var(--muted);cursor:pointer;}
+  .podcast-refine button:active{transform:scale(.97);}
+  .podcast-after{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--correct) 12%,transparent);border:1px solid color-mix(in srgb,var(--correct) 35%,transparent);}
+  .podcast-after b{display:block;margin-bottom:4px;} .podcast-after .pa-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;} .podcast-after .pa-row .btn{flex:1 1 auto;min-height:44px;}
   .podcast-generated-note{font-size:11.5px;color:var(--muted-dim);margin-top:4px;font-style:italic;}
   #podcastTranscriptWrap{background:var(--surface2);}
   .podcast-transcript{font-size:13px;line-height:1.6;color:var(--paper);}
@@ -3385,7 +3395,7 @@
           <option value="overview">Domain overview</option>
           <option value="formulas">Key formulas explained</option>
           <option value="mistakes">Common mistakes on this domain</option>
-          <option value="personalized">From your tutor — about your progress</option>
+          <option value="personalized">Your tutor's pick — what you need to hear</option>
         </select>
       </div>
       <select id="podcastLengthSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose the episode length" style="margin-top:10px;">
@@ -3393,6 +3403,7 @@
         <option value="standard" selected>Standard (~4 min)</option>
         <option value="deep">Deep dive (~7 min)</option>
       </select>
+      <div class="podcast-focus" id="podcastFocus" style="display:none;"></div>
       <div class="podcast-controls" id="podcastControls">
         <button class="btn" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Generate this episode</button>
         <button class="btn ghost" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all domains</button>
@@ -3416,6 +3427,8 @@
           <div class="podcast-status" id="podcastStatus" aria-live="polite"></div>
         </div>
         <div class="podcast-generated-note" id="podcastGeneratedNote" style="display:none;" aria-live="polite"></div>
+        <div class="podcast-refine" id="podcastRefine" style="display:none;"></div>
+        <div class="podcast-after" id="podcastAfter" style="display:none;" aria-live="polite"></div>
       </div>
       <div class="ref-scroll" id="podcastTranscriptWrap" style="display:none;"><div id="podcastTranscript" class="podcast-transcript"></div></div>
       <div class="podcast-library" id="podcastLibrary" style="display:none;">
@@ -5593,6 +5606,7 @@ function defaultData(){
     podcastEpisodes: {},
     podcastGeneratedAt: {},
     podcastPersonalized: {},
+    podcastMeta: {},
     preferredVoiceName: null,
     preferredHost1VoiceName: null,
     preferredHost2VoiceName: null,
@@ -5791,7 +5805,7 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -7919,9 +7933,11 @@ function buildStudyPlan(minutes){
     },
     listen: () => {
       if(answered < 20 || !weakDom) return null;
-      return { id:'listen', title:`Listen: ${weakDom.name}`, minutes:10,
-        why:'A spoken episode on your weakest area is a low-effort way to revisit it away from the questions.',
-        manual:true, run: () => { try{ document.getElementById('podcastDomainSelect').value = weakDom.key; podcastDomainChanged(); }catch(e){} openPodcastFromStudy(); } };
+      let b = null; try{ b = podcastBriefing(); }catch(e){}
+      const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.kind === 'topic' ? f.label : f.label).join(' and ') : weakDom.name;
+      return { id:'listen', title:`Listen: your tutor's briefing`, minutes:10,
+        why:`A spoken episode written for you today: ${top}. Low effort, and it revisits your weak spots away from the questions.`,
+        manual:true, run: () => podcastOpenTutorPick() };
     },
     case: () => {
       if(answered < 80) return null;
@@ -9668,6 +9684,7 @@ function deletePodcastFromLibrary(key){
   if(DATA.podcastEpisodes) delete DATA.podcastEpisodes[key];
   if(DATA.podcastGeneratedAt) delete DATA.podcastGeneratedAt[key];
   if(DATA.podcastPersonalized) delete DATA.podcastPersonalized[key];
+  if(DATA.podcastMeta) delete DATA.podcastMeta[key];
   persist();
   if(podcastCacheKey() === key) refreshPodcastView();
   else renderPodcastLibrary();
@@ -9709,7 +9726,7 @@ function refreshPodcastView(){
   const transcript = document.getElementById('podcastTranscript');
   const generatedNote = document.getElementById('podcastGeneratedNote');
   if(cached){
-    generateBtn.textContent = 'Regenerate this episode';
+    generateBtn.textContent = (type === 'personalized' && podcastStalePersonal(cacheKey)) ? 'Refresh with today\u2019s progress' : 'Regenerate this episode';
     player.style.display = 'block';
     transcriptWrap.style.display = 'block';
     transcript.className = 'podcast-transcript';
@@ -9730,9 +9747,133 @@ function refreshPodcastView(){
     transcriptWrap.style.display = 'none';
     generatedNote.style.display = 'none';
   }
+  try{ const af = document.getElementById('podcastAfter'); if(af && !naturalSpeechState.active) af.style.display = 'none'; renderPodcastFocus(); renderPodcastRefine(); }catch(e){}
   renderPodcastLibrary();
 }
 
+// What the tutor thinks you most need to hear right now, read from the same data the rest of the app uses.
+// Ranked by how much it is costing you: shaky official topics first, then questions you keep missing, flashcards you keep failing, shaky calculator types, then untested domains.
+function podcastBriefing(){
+  const focus = []; const lines = [];
+  let lead = null;
+  try{
+    weakSubtopics(3).forEach(w => {
+      const dm = DOMAINS.find(d => d.key === w.key);
+      focus.push({ kind:'topic', label:w.name, detail: Math.round(w.st.acc * 100) + '% over ' + w.st.attempts + ' tries', key:w.key, idx:w.idx });
+      lines.push(`Shaky official topic: "${w.name}" (${dm ? dm.name : w.key}), ${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts.`);
+      if(!lead) lead = w.key;
+    });
+  }catch(e){}
+  try{
+    const qs = allQuestions(); const byDom = {};
+    (DATA.missed || []).slice(-12).forEach(id => { const q = qs.find(x => x.id === id); if(q) (byDom[q.domain] = byDom[q.domain] || []).push(q); });
+    Object.keys(byDom).sort((a, b) => byDom[b].length - byDom[a].length).slice(0, 2).forEach(k => {
+      const dm = DOMAINS.find(d => d.key === k); const list = byDom[k];
+      focus.push({ kind:'missed', label: list.length + ' missed question' + (list.length === 1 ? '' : 's') + ' in ' + (dm ? dm.name : k), detail:'', key:k });
+      list.slice(0, 3).forEach(q => lines.push(`Missed question (${dm ? dm.name : k}): "${q.q}" -- correct reasoning: ${String(((q.rationale || [])[q.correct]) || q.choices[q.correct]).slice(0, 220)}`));
+      if(!lead) lead = k;
+    });
+  }catch(e){}
+  try{
+    const gaps = fcGapCards().slice(0, 4);
+    if(gaps.length){ focus.push({ kind:'cards', label:'Terms you keep missing', detail: gaps.slice(0, 3).map(c => c.term).join(', '), key: gaps[0].domain }); lines.push('Flashcards they keep failing: ' + gaps.map(c => c.term + ' (' + String(c.def).slice(0, 110) + ')').join('; ') + '.'); if(!lead) lead = gaps[0].domain; }
+  }catch(e){}
+  try{
+    const shaky = Object.keys(DATA.tvmTemplateStats || {}).filter(k => DATA.tvmTemplateStats[k].a >= 2 && tvmTemplateAcc(k) < 0.6).sort((a, b) => tvmTemplateAcc(a) - tvmTemplateAcc(b)).slice(0, 2);
+    if(shaky.length){ focus.push({ kind:'calc', label:'Calculator work: ' + shaky.map(k => TVM_TEMPLATE_LABELS[k] || k).join(', '), detail:'' }); lines.push('Shaky calculator problem types (HP 10bII+): ' + shaky.map(k => TVM_TEMPLATE_LABELS[k] || k).join(', ') + '.'); }
+  }catch(e){}
+  try{
+    const dl = domainMasteryList().filter(d => d.total < 4).sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
+    if(dl){ focus.push({ kind:'untested', label:dl.name, detail:'barely practiced', key:dl.key }); lines.push(`Barely practiced domain: ${dl.name}.`); if(!lead) lead = dl.key; }
+  }catch(e){}
+  if(!lead){ try{ lead = computeStats().weakestMeta.key; }catch(e){} }
+  const prior = []; try{ Object.values(DATA.podcastMeta || {}).forEach(m => { if(m && m.focus && m.at && Date.now() - m.at < 5 * 86400000) prior.push(...m.focus); }); }catch(e){}
+  const d = getDaysUntilExam();
+  return { focus, lines, lead, prior: prior.slice(-8), days: d };
+}
+function podcastBriefingPrompt(b){
+  return `Here is what you know about this student right now:\n${b.lines.map(l => '- ' + l).join('\n') || '- Not much data yet; lean on their weakest domain.'}\n${b.days !== null && b.days > 0 ? `Their exam is in ${b.days} days.\n` : ''}${b.prior.length ? `Recent episodes already covered: ${b.prior.join('; ')}. Do not repeat those; build on them or cover something new.\n` : ''}\nYou are their tutor deciding what they most need to hear today. Choose the two or three things from the list above that will cost them the most points, and blend them into one episode: open in one sentence by saying what you picked and why (using their real numbers), then for each, explain the idea plainly, name the exact trap or confusion behind their misses, and give one worked example with numbers (calculator steps for the HP 10bII+ when it is a calculation: no CPT key, interest is I/YR). Pause aloud and ask them to say the answer in their own words once, then give it. Close with the single next thing to do in the app. Be specific to them, never generic.`;
+}
+function podcastStalePersonal(key){
+  try{
+    const m = DATA.podcastMeta && DATA.podcastMeta[key]; if(!m) return false;
+    return (computeStats().totalAnswered - (m.n || 0) >= 15) || m.day !== localDayKey();
+  }catch(e){ return false; }
+}
+function renderPodcastFocus(){
+  const el = document.getElementById('podcastFocus'); if(!el) return;
+  const type = document.getElementById('podcastTypeSelect').value;
+  const key = podcastCacheKey();
+  let html = '';
+  try{
+    if(type === 'personalized'){
+      const b = podcastBriefing();
+      if(!b.focus.length){ html = `<b class="pf-h">What your tutor will cover</b>Answer a few questions first and the tutor will build this around your real gaps.`; }
+      else {
+        html = `<b class="pf-h">What your tutor will cover</b>` + b.focus.slice(0, 3).map(f => `<div class="pf-row"><i>●</i><span>${escapeHtml(f.label)}${f.detail ? `<small>${escapeHtml(f.detail)}</small>` : ''}</span></div>`).join('')
+          + (DATA.podcastEpisodes && DATA.podcastEpisodes[key] && podcastStalePersonal(key) ? `<div class="pf-stale">Your answers have changed since this was written. Refresh it to match today.</div>` : '');
+      }
+    } else {
+      const dk = document.getElementById('podcastDomainSelect').value, st = DATA.domainStats && DATA.domainStats[dk];
+      const dm = DOMAINS.find(d => d.key === dk);
+      const miss = (DATA.missed || []).filter(id => { const q = allQuestions().find(x => x.id === id); return q && q.domain === dk; }).length;
+      if(st && st.total >= 4){
+        const stg = STAGES[domainStageOf(dk) - 1];
+        const what = type === 'mistakes' ? (miss ? `built from your ${miss} missed question${miss === 1 ? '' : 's'} here` : 'general traps, since you have not missed any here yet') : type === 'formulas' ? 'worked with numbers' : 'pitched to your level';
+        html = `<b class="pf-h">Tailored to you</b>${escapeHtml(dm ? dm.name : '')}: ${Math.round(100 * st.correct / st.total)}% over ${st.total} answered, ${escapeHtml(stg ? stg.name : '')} stage. ${escapeHtml(what.charAt(0).toUpperCase() + what.slice(1))}.`;
+      } else html = `<b class="pf-h">Tailored to you</b>You have not practiced this domain much yet, so the episode starts from the basics. It adapts as you answer.`;
+    }
+  }catch(e){ html = ''; }
+  el.innerHTML = html; el.style.display = html ? 'block' : 'none';
+}
+const PODCAST_REFINE = { simpler:'Make it simpler: plainer words, define every term, one idea at a time, a gentler pace.', harder:'Make it harder: skip the basics, go straight to exam traps, close distinctions and multi-step reasoning.', examples:'Add more worked examples with real numbers, and walk each calculation step by step.' };
+function renderPodcastRefine(){
+  const el = document.getElementById('podcastRefine'); if(!el) return;
+  el.innerHTML = '<button type="button" onclick="podcastRefine(\'simpler\')">Simpler</button><button type="button" onclick="podcastRefine(\'harder\')">Tougher</button><button type="button" onclick="podcastRefine(\'examples\')">More examples</button>';
+  el.style.display = (typeof aiFeaturesAvailable !== 'undefined' && aiFeaturesAvailable) ? 'flex' : 'none';
+}
+function podcastRefine(kind){ generatePodcastEpisode(true, PODCAST_REFINE[kind]); }
+// When an episode ends, say so and carry on: quiz on what it covered, say it back, or the next plan step.
+function podcastShowAfter(){
+  const el = document.getElementById('podcastAfter'); if(!el) return;
+  try{ planMarkManualDone('listen'); }catch(e){}
+  let b = null, focus = null; try{ b = podcastBriefing(); }catch(e){}
+  const type = document.getElementById('podcastTypeSelect').value, dk = document.getElementById('podcastDomainSelect').value;
+  if(type === 'personalized' && b) focus = b.focus.find(f => f.kind === 'topic') || null;
+  const quizBtn = focus && focus.idx !== undefined ? `<button type="button" class="btn" onclick="startSubtopicDrill('${focus.key}', ${focus.idx})">Quiz me on ${escapeHtml(focus.label.length > 28 ? focus.label.slice(0, 26) + '…' : focus.label)}</button>`
+    : `<button type="button" class="btn" onclick="podcastQuizNow()">Quiz me on this</button>`;
+  let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){}
+  el.innerHTML = `<b>Episode done ✓</b><div style="font-size:13px;color:var(--muted);">Lock it in while it is fresh.</div><div class="pa-row">${quizBtn}<button type="button" class="btn ghost" onclick="podcastSayBack()">Say it back</button></div>`
+    + (nx ? `<div class="pa-row"><button type="button" class="btn ghost" onclick="planGoNext('${nx.id}')">Next on today’s plan: ${escapeHtml(nx.title)} →</button></div>` : '');
+  el.style.display = 'block';
+}
+function podcastQuizNow(){
+  const dk = document.getElementById('podcastDomainSelect').value;
+  try{ const b = podcastBriefing(); const k = document.getElementById('podcastTypeSelect').value === 'personalized' ? b.lead : dk; const dm = DOMAINS.find(d => d.key === k); showTab('study'); if(dm && typeof launchDrill === 'function') startDrill(dm.key); else startAdaptive(); }catch(e){ startAdaptive(); }
+}
+function podcastSayBack(){
+  try{
+    const type = document.getElementById('podcastTypeSelect').value;
+    const b = podcastBriefing(); const f = b.focus.find(x => x.kind === 'topic');
+    const k = type === 'personalized' ? (f ? f.key : b.lead) : document.getElementById('podcastDomainSelect').value;
+    const wk = (type === 'personalized' && f) ? { key:f.key, idx:f.idx } : null;
+    const dm = DOMAINS.find(d => d.key === k);
+    ebOpenForTopic(wk, dm || null);
+  }catch(e){}
+}
+// From today's plan: set the tutor's pick, write it fresh if it is missing or out of date, and start it.
+function podcastOpenTutorPick(){
+  try{
+    document.getElementById('podcastTypeSelect').value = 'personalized';
+    podcastDomainChanged();
+  }catch(e){}
+  openPodcastFromStudy();
+  try{
+    const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
+    if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ togglePodcastPlayback(); }catch(e){} }); }
+    else togglePodcastPlayback();
+  }catch(e){}
+}
 function podcastDomainPersonalizationContext(domainKey){
   const stat = DATA.domainStats && DATA.domainStats[domainKey];
   const inFoundation = !!(DATA.domainFoundationMode && DATA.domainFoundationMode[domainKey]);
@@ -9771,7 +9912,7 @@ function offlinePodcastScript(domainMeta, episodeType, episodeLength){
     return 'This episode is read from your flashcards. Connect an API key in Settings for a full conversational version. Here are ' + pool.length + ' ' + kind + ' for ' + topic + '. ' + body + ' That is the end of this episode.';
   }catch(e){ return ''; }
 }
-async function generatePodcastEpisode(forceNew){
+async function generatePodcastEpisode(forceNew, refine){
   const select = document.getElementById('podcastDomainSelect');
   const domainKey = select.value;
   const domainMeta = DOMAINS.find(d => d.key === domainKey);
@@ -9821,6 +9962,7 @@ async function generatePodcastEpisode(forceNew){
       DATA.podcastEpisodes[cacheKey] = script;
       DATA.podcastGeneratedAt[cacheKey] = Date.now();
       DATA.podcastPersonalized[cacheKey] = false;
+      try{ DATA.podcastMeta[cacheKey] = { focus:[episodeType === 'personalized' ? 'your weakest ideas' : domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey() }; }catch(e){}
       persist();
       podcastDomainChanged();
       return;
@@ -9846,11 +9988,13 @@ async function generatePodcastEpisode(forceNew){
   const dialogueStyleInstruction = `Write this as a natural, back-and-forth conversation between two study partners prepping for the exam together -- not a script read by one person. Label every line with either "HOST1:" or "HOST2:" at the very start of the line, nothing before it. One host can drive most of the explaining while the other asks genuine questions, pushes back, or reacts ("right," "huh, that makes sense," "wait, so...") -- but both should genuinely contribute rather than one person monologuing with occasional "mmhmm"s from the other. Keep each turn short, a sentence or two before handing back, so it genuinely sounds like two people talking rather than two alternating speeches. Write numbers, dollar amounts, and percentages the way you'd say them out loud (for example "five hundred thousand dollars," not "$500,000"; "seven percent," not "7%"). Use contractions and genuinely casual phrasing, and use dashes or ellipses where a speaker would naturally pause or trail off. No bullet points, no headers, no "welcome to the podcast" preamble. Aim for roughly ${lengthConfig.words} words total across both speakers. Return only the script itself, every line starting with "HOST1:" or "HOST2:".`;
   const monologueStyleInstruction = `Write it as if you're talking directly to someone studying for the exam -- natural spoken language, short sentences, no bullet points, no headers, no "welcome to the podcast" preamble, since this will be read aloud, not read visually. Write numbers, dollar amounts, and percentages the way you'd say them out loud (for example "five hundred thousand dollars," not "$500,000"; "seven percent," not "7%"). Use dashes or ellipses where you'd naturally pause. Use paragraph breaks between distinct ideas. Aim for roughly ${lengthConfig.words} words. Return only the script itself.`;
   let prompt, systemPrompt;
+  let podcastFocusNow = null;
   let wasPersonalized = false; // did this specific episode genuinely draw on this student's own data, and so can go stale as that data changes?
   if(episodeType === 'personalized'){
     wasPersonalized = true;
     systemPrompt = buildTutorSystemPrompt();
-    prompt = `Using everything you know about this student's actual progress, weak spots, and recurring mistakes, write a short podcast-style episode in your own voice as their tutor -- as if you're talking directly to them about where they genuinely stand right now. Name specifics: their weakest domain, a mistake pattern you've actually noticed, what to focus on next. Don't be generic or motivational-poster vague -- reference their real situation the way only their tutor would know it. This is a spoken episode, not a live chat: do not wait for answers or run the one-question quiz routine; if you pose a question, ask it aloud, pause a beat, and answer it yourself. ${monologueStyleInstruction}`;
+    const brief = podcastBriefing(); podcastFocusNow = brief.focus.slice(0, 3).map(f => f.label);
+    prompt = podcastBriefingPrompt(brief) + ' ' + monologueStyleInstruction;
   } else if(episodeType === 'formulas'){
     const personalizationContext = podcastDomainPersonalizationContext(domainKey);
     wasPersonalized = personalizationContext !== '';
@@ -9884,6 +10028,7 @@ async function generatePodcastEpisode(forceNew){
   generateBtn.disabled = true;
   generateBtn.textContent = 'Writing…';
   try{
+    if(refine) prompt += '\n\nRevision brief from the student: ' + refine;
     const requestArgs = { messages: [{role:'user', content: prompt}], maxTokens: lengthConfig.maxTokens };
     if(systemPrompt) requestArgs.system = systemPrompt;
     const reply = (await anthropicMessagesRequest(requestArgs)).trim();
@@ -9898,6 +10043,7 @@ async function generatePodcastEpisode(forceNew){
     DATA.podcastGeneratedAt[cacheKey] = Date.now();
     if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
     DATA.podcastPersonalized[cacheKey] = wasPersonalized;
+    try{ DATA.podcastMeta[cacheKey] = { focus: podcastFocusNow || [domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey() }; }catch(e){}
     persist();
     if(!stillOnSameSelection()) return;
     podcastDomainChanged();
@@ -9969,14 +10115,13 @@ function setPodcastPlayButtonState(state){
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
-    onDone: () => { setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); },
-    onChunkStart: (index) => { setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); },
+    onDone: () => { setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
+    onChunkStart: (index) => { setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
   };
 }
 
 function togglePodcastPlayback(){
   if(!hasSpeechSupport()) return;
-  try{ if(!naturalSpeechState.active) planMarkManualDone('listen'); }catch(e){} // starting an episode counts as today's listening step
   const status = document.getElementById('podcastStatus');
   if(naturalSpeechState.active && !naturalSpeechState.paused){
     pauseSpeechSequence();
@@ -20745,6 +20890,7 @@ async function restoreFromBackup(){
   if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
   if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
   if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
+  if(!DATA.podcastMeta) DATA.podcastMeta = {};
   if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
   if(!DATA.flashcardMnemonics) DATA.flashcardMnemonics = {};
   if(!DATA.hypercorrectionQueue) DATA.hypercorrectionQueue = [];
@@ -21019,6 +21165,7 @@ Guidelines:
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
+- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
 - Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing.
@@ -21203,6 +21350,11 @@ const TUTOR_TOOLS = [
     name: 'open_tvm_calculator',
     description: "Open the app's HP 10bII+ calculator walkthrough. It has two modes: time value of money (N, I/YR, PV, PMT, FV: loans, annuities, bonds, loan balances) and cash flows (CFj, Nj, NPV, IRR). Use this when the student asks to practice a calculator problem or wants to work through a calculation hands-on. Set mode to 'cashflow' for NPV, IRR or uneven-cash-flow work.",
     input_schema: { type: 'object', properties: { mode: { type: 'string', enum: ['tvm', 'cashflow'], description: 'Which mode to open; omit for time value of money.' } } },
+  },
+  {
+    name: 'play_podcast',
+    description: "Write and play a spoken study episode for the student. Use type 'tutor_pick' (default) to blend what you judge they most need to hear from their own weak topics, missed questions and failing flashcards; or 'overview', 'formulas' or 'mistakes' for one domain. Put anything they asked to hear, or anything you want stressed, in 'request' (for example 'the difference between a Roth conversion and a recharacterization, with a worked example'). The episode is written from their real data, saved, and starts playing.",
+    input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['tutor_pick','overview','formulas','mistakes'] }, domain: { type: 'string', description: 'Domain key for the non-tutor_pick types; omit to use their weakest.' }, request: { type: 'string', description: 'What to emphasize or what they asked to hear.' } } },
   },
   {
     name: 'open_formula_drill',
@@ -21406,6 +21558,20 @@ async function executeTutorTool(toolName, toolInput){
       tvmMode = 'tvm';
       openTvmTool();
       return `Opened the TVM calculator tool.`;
+    }
+    if(toolName === 'play_podcast'){
+      const t = (toolInput && toolInput.type) || 'tutor_pick';
+      showTab('reference');
+      try{
+        const ts = document.getElementById('podcastTypeSelect'), ds = document.getElementById('podcastDomainSelect');
+        ts.value = t === 'tutor_pick' ? 'personalized' : t;
+        if(t !== 'tutor_pick'){ const dk = (toolInput && toolInput.domain && DOMAINS.some(d => d.key === toolInput.domain)) ? toolInput.domain : (computeStats().weakestMeta || {}).key; if(dk) ds.value = dk; }
+        podcastDomainChanged();
+      }catch(e){}
+      openPodcastFromStudy();
+      const ask = toolInput && toolInput.request ? 'The student asked for this episode specifically; make sure it covers: ' + String(toolInput.request).slice(0, 400) : undefined;
+      generatePodcastEpisode(true, ask).then(() => { try{ togglePodcastPlayback(); }catch(e){} });
+      return 'Started writing the episode; it will appear in the Reference tab podcast card and begin playing in a few seconds.';
     }
     if(toolName === 'open_formula_drill'){
       showTab('study');
@@ -22373,7 +22539,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.227';
+const BUILD_ID = '2026-10-18.228';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
