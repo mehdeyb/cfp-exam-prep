@@ -20087,7 +20087,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.170';
+const BUILD_ID = '2026-10-17.171';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -20228,12 +20228,12 @@ requestDurableStorage();
       let el = document.getElementById('diagLine');
       const on = document.body.classList.contains('quiz-active');
       if(!on){ if(el) el.style.display = 'none'; return; }
-      if(!el){ el = document.createElement('div'); el.id = 'diagLine'; el.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 2px);z-index:9999;font:9px/1.2 monospace;color:#f5c542;pointer-events:none;text-align:center;'; document.body.appendChild(el); }
+      if(!el){ el = document.createElement('div'); el.id = 'diagLine'; el.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 2px);z-index:9999;font:9px/1.2 monospace;color:#f5c542;pointer-events:none;text-align:center;white-space:pre-line;background:rgba(0,0,0,.55);'; document.body.appendChild(el); }
       el.style.display = 'block';
       const bar = document.querySelector('#quizView .quiz-actions'), host = document.getElementById('quizFullscreenHost');
       const br = bar ? bar.getBoundingClientRect() : {bottom:0}, hr = host ? host.getBoundingClientRect() : {bottom:0};
       const sp = window._screenProfile || {};
-      el.textContent = ['in ' + innerHeight, 'doc ' + document.documentElement.clientHeight, 'vv ' + (window.visualViewport ? Math.round(visualViewport.height) : '-'), 'scr ' + screen.height, 'host ' + Math.round(hr.bottom), 'bar ' + Math.round(br.bottom), 'sab ' + (document.documentElement.style.getPropertyValue('--sab') || '-'), 'inset ' + sp.insetB, 'gap ' + sp.gap].join(' · ');
+      el.textContent = ['in ' + innerHeight, 'doc ' + document.documentElement.clientHeight, 'vv ' + (window.visualViewport ? Math.round(visualViewport.height) : '-'), 'scr ' + screen.height, 'host ' + Math.round(hr.bottom), 'bar ' + Math.round(br.bottom), 'sab ' + (document.documentElement.style.getPropertyValue('--sab') || '-'), 'inset ' + sp.insetB, 'gap ' + sp.gap, 'b' + BUILD_ID.split('.').pop(), 'cls ' + document.documentElement.className.replace(/vh-\w+|vp-gap/g,'').trim(), 'pos ' + getComputedStyle(document.body).position].join(' · ') + '\n' + (window._vpHist || []).slice(-6).join(' → ');
     }catch(e){}
   }
   setInterval(diag, 700);
