@@ -10825,7 +10825,9 @@ function treeQuestions(key){
     // nearest outcomes first: the ones that share the longest start with this route make the sharpest wrong answers
     const shared = o => { let n = 0; while(n < o.steps.length && n < p.steps.length && o.steps[n].a === p.steps[n].a) n++; return n; };
     others.sort((a, b) => shared(b) - shared(a));
-    const picked = others.slice(0, 3);
+    // The two nearest wrong outcomes always appear (they make the sharpest test); the third varies between attempts,
+    // so a route that comes back is not answered from memory of the same four options.
+    const picked = others.slice(0, 2).concat(shuffle(others.slice(2, 5)).slice(0, 1));
     const opts = [{ title:correctTitle, path:p, ok:true }].concat(picked.map(o => ({ title:o.node.title, path:o, ok:false })));
     // stable order from the route number, so the same route always reads the same
     opts.sort((a, b) => ((a.title.length * 7 + idx * 13) % 11) - ((b.title.length * 7 + idx * 13) % 11) || a.title.localeCompare(b.title));
@@ -20864,7 +20866,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.214';
+const BUILD_ID = '2026-10-18.215';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
