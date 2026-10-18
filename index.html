@@ -1916,11 +1916,8 @@
   .pt-more > summary::-webkit-details-marker{display:none;}
   .pt-more > summary::after{content:" ▾";}
   .pt-more[open] > summary::after{content:" ▴";}
-  /* Study tab order: what to do now comes first (next step, today's plan, start a session);
-     the big mastery chart and coach summary follow it. */
+  /* Study tab order: score, next step, today's plan, then the Blueprint bar, and the ways to practice under it. */
   #tab-study.active{display:flex;flex-direction:column;}
-  #focusCard.fc-empty{display:none !important;}
-  #tab-study > #blueprintCard,#tab-study > #focusCard,#tab-study > #modePanel ~ *{order:1;}
   /* Phones: the session picker keeps each option to a title, a "use it when" line and its status;
      the long descriptions stay on larger screens. */
   @media (max-width:640px){
@@ -20720,7 +20717,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.202';
+const BUILD_ID = '2026-10-18.203';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
