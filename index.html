@@ -6200,6 +6200,24 @@ function hasMediaSessionSupport(){
 // right now. Each action handler is registered individually in its own
 // try/catch: some browsers support the API but not every action, and one
 // unsupported action shouldn't stop the others from working.
+// iPhone and iPad quietly mute speech when the side switch is on silent, and can drop it when the audio session is not "playback".
+// Playing a silent looping <audio> clip while speech runs moves the page onto the media channel, so voices are heard either way.
+let _silentAudioEl = null;
+function speechAudioPrime(){
+  try{
+    if(!_silentAudioEl){
+      const n = 4000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+      const w = (o, t) => { for(let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0,'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+      v.setUint32(24,8000,true); v.setUint32(28,16000,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40, n * 2, true);
+      const url = URL.createObjectURL(new Blob([buf], { type:'audio/wav' }));
+      const a = document.createElement('audio'); a.src = url; a.loop = true; a.setAttribute('playsinline',''); a.volume = 0.01; a.setAttribute('aria-hidden','true');
+      _silentAudioEl = a;
+    }
+    const pr = _silentAudioEl.play(); if(pr && pr.catch) pr.catch(() => {});
+  }catch(e){}
+}
+function speechAudioRelease(){ try{ if(_silentAudioEl) _silentAudioEl.pause(); }catch(e){} }
 function setupMediaSession(opts){
   if(!hasMediaSessionSupport()) return;
   const ms = navigator.mediaSession;
@@ -6230,6 +6248,7 @@ function clearMediaSession(){
 
 function speakChunkedSequence(text, btn, onDone, onChunkStart, speed, startIndex, mediaSessionOpts){
   if(!hasSpeechSupport() || !text) return;
+  speechAudioPrime();
   window.speechSynthesis.cancel();
   naturalSpeechState.chunks = splitIntoSpeechChunks(text);
   naturalSpeechState.index = (typeof startIndex === 'number' && startIndex >= 0 && startIndex < naturalSpeechState.chunks.length) ? startIndex : 0;
@@ -6339,6 +6358,19 @@ function playNextSpeechChunk(){
     if(state.active) finishSpeechSequence();
   };
   if(state.onChunkStart) state.onChunkStart(state.index);
+  // Some voices are listed but not installed, and speak() then plays nothing without an error. If nothing starts, retry once with the default voice.
+  let started = false; utter.onstart = () => { started = true; };
+  setTimeout(() => {
+    if(started || myGeneration !== state.generation || !state.active || state.paused) return;
+    try{
+      window.speechSynthesis.cancel();
+      const u2 = new SpeechSynthesisUtterance(applyPronunciationDictionary(chunk.text)); u2.rate = utter.rate; u2.pitch = 1;
+      u2.onend = utter.onend; u2.onerror = utter.onerror;
+      let st2 = false; u2.onstart = () => { st2 = true; };
+      window.speechSynthesis.speak(u2);
+      setTimeout(() => { if(!st2 && myGeneration === state.generation && state.active){ const el = document.getElementById('podcastStatus'); if(el) el.textContent = 'No sound? Switch the side switch off silent, raise the volume, and check Settings for the voice.'; } }, 2500);
+    }catch(e){}
+  }, 2500);
   window.speechSynthesis.speak(utter);
 }
 
@@ -6374,6 +6406,7 @@ function finishSpeechSequence(){
   state.voicePair = null;
   if(state.btn) state.btn.classList.remove('speaking');
   clearMediaSession();
+  speechAudioRelease();
   if(state.onDone) state.onDone();
 }
 
@@ -6386,6 +6419,7 @@ function stopSpeechSequence(){
   if(hasSpeechSupport()) window.speechSynthesis.cancel();
   if(state.btn) state.btn.classList.remove('speaking');
   clearMediaSession();
+  speechAudioRelease();
 }
 
 function speakTextNow(text, btn){
@@ -9922,7 +9956,7 @@ function podcastOpenTutorPick(){
   openPodcastFromStudy();
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
-    if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ togglePodcastPlayback(); }catch(e){} }); }
+    if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
     else togglePodcastPlayback();
   }catch(e){}
 }
@@ -14880,6 +14914,7 @@ function previewVoiceFromSelect(selectId){
   stopPodcastPlayback(); // an active podcast would otherwise be silently orphaned mid-utterance, stuck claiming to still be playing
   const utter = new SpeechSynthesisUtterance("Hi, this is a preview of how this voice sounds when it reads your study material aloud.");
   utter.voice = voice;
+  speechAudioPrime(); utter.onend = () => { speechAudioRelease(); }; utter.onerror = utter.onend;
   window.speechSynthesis.speak(utter);
 }
 
@@ -21622,8 +21657,8 @@ async function executeTutorTool(toolName, toolInput){
       }catch(e){}
       openPodcastFromStudy();
       const ask = toolInput && toolInput.request ? 'The student asked for this episode specifically; make sure it covers: ' + String(toolInput.request).slice(0, 400) : undefined;
-      generatePodcastEpisode(true, ask).then(() => { try{ togglePodcastPlayback(); }catch(e){} });
-      return 'Started writing the episode; it will appear in the Reference tab podcast card and begin playing in a few seconds.';
+      generatePodcastEpisode(true, ask).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} });
+      return 'Started writing the episode; it will appear in the Reference tab podcast card in a few seconds; the student taps play (the phone only allows sound after a tap).';
     }
     if(toolName === 'open_formula_drill'){
       showTab('study');
@@ -22591,7 +22626,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.229';
+const BUILD_ID = '2026-10-18.230';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
