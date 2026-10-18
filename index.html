@@ -1107,6 +1107,7 @@
   .plan-result{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border-left:3px solid var(--gold);font-size:13px;line-height:1.5;color:var(--paper);}
   .plan-result.done{border-left-color:var(--correct);}
   .plan-result .pr-why{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
+  .pt-break{margin:6px 0 8px;padding:8px 12px;border-radius:12px;border:1px dashed var(--hair-strong);font-size:12.5px;color:var(--muted);line-height:1.45;} .pt-break b{color:var(--paper);margin-right:6px;}
   .pt-adv{margin:10px 0 4px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--good,#2e9b5e) 12%,transparent);border:1px solid color-mix(in srgb,var(--good,#2e9b5e) 35%,transparent);}
   .pt-adv-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .pt-adv-x{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;min-width:32px;min-height:32px;}
@@ -7720,7 +7721,7 @@ function computeNextStep(stats){
    The tutor reads and runs the same plan.
 =========================================================== */
 // With the exam days away, short days no longer make sense: the plan is built for a real study block.
-const PLAN_MINUTE_CHOICES = [120, 150, 180];
+const PLAN_MINUTE_CHOICES = [120, 150, 180, 210, 240];
 function planMinuteLabel(m){ return paceHrs(m); }
 function planMinutesChosen(){ const m = DATA && DATA.planMinutes; return (m >= 60 && m <= 360) ? Math.round(m) : 0; }
 // Until they pick a length, the plan follows how long they have really been studying: the average of their
@@ -7979,6 +7980,41 @@ function buildStudyPlan(minutes){
     weak3: () => { const t = wkAt(2); if(!t) return null;
       return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+    // Long days (3.5 to 4 hours) get a third and fourth block of the same kind of work, never just longer versions of the same thing.
+    weak4: () => { const t = wkAt(3); if(!t) return null;
+      return { id:'weak4', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fourth on your list of weak topics (${accTxt(t)}). A long day has room to give it a proper turn.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+    calc2: () => {
+      if(answered < 30) return null;
+      const f2 = planTarget('calcFormula2', FD_NAMES.slice().sort((a, b) => fdStats(a).attempts - fdStats(b).attempts)[1] || FD_NAMES[0]);
+      return { id:'calc2', title:`Formula practice: ${f2}`, minutes:6, need:4, have: Math.max(0, Math.min(act.formula - 4, 4)), unit:'problems',
+        why:'A second formula for the day. Numbers change every time, so it is real recall, and the exam wants several of these to be automatic.', run: () => { showTab('study'); openFormulaDrill(f2); } };
+    },
+    cards2: () => {
+      let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
+      const first = L.targets.newcards || 0;
+      if(!L.targets.cards2 && unseen - first < 8) return null;
+      const n = planTarget('cards2', Math.min(Math.max(0, unseen - first), 15));
+      if(!n) return null;
+      return { id:'cards2', title:`Learn ${n} more new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have: Math.max(0, Math.min(act.cards - first, n)), unit:'cards',
+        why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => showTab('flashcards') };
+    },
+    read: () => {
+      if(!weakDom || answered >= 150) return null;
+      return { id:'read', title:`Read the topic notes: ${weakDom.name}`, minutes:25,
+        why:`${weakDom.name} carries the most weight you have not yet earned. Read each topic's "what to know" note, check off the ones you could now explain, and let the questions test the rest.`,
+        manual:true, run: () => { showTab('reference'); setTimeout(() => { const e = document.getElementById('syllabusList'); if(e) e.scrollIntoView({block:'start', behavior:'smooth'}); }, 120); } };
+    },
+    case2: () => {
+      if(answered < 80) return null;
+      const first = L.targets.caseId;
+      const pickId = planTarget('caseId2', (nextCaseToTry(first) || {}).id || null);
+      const pick = pickId ? caseById(pickId) : null;
+      if(!pick || pick.id === first) return null;
+      const caseN = Math.max(1, caseQuestions(pick.id).length);
+      return { id:'case2', title:`Second case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(Math.max(0, (cnt.case || 0) - ((L.snap.case || {}).need || 0)), caseN), unit:'questions',
+        why:'Two cases in a day builds the reading stamina the real exam asks for. Flag the deciding facts again with fresh eyes.', run: () => { showTab('study'); startCase(pick.id); } };
+    },
     newcards: () => {
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
       if(!(unseen >= 8 && dueCards < 5 && !L.targets.newcards) && !L.targets.newcards) return null;
@@ -8052,6 +8088,21 @@ function buildStudyPlan(minutes){
       steps.push(st); used += st.minutes;
     });
   }
+  // A long day: once the first pass is placed and time is left, add more of what helps most, still within the budget.
+  if(minutes >= 200 && phase.key !== 'taper' && phase.key !== 'rest'){
+    ['read','weak4','cards2','calc2','case2'].forEach(k => {
+      const st = finish(k, mk[k]()); if(!st) return;
+      const worked = st.done || (st.have || 0) > 0;
+      if(!worked && used + st.minutes > minutes) return;
+      steps.push(st); used += st.minutes;
+    });
+  }
+  // From 3.5 hours, one real break near the middle. Spaced rounds after a rest beat one unbroken push.
+  let breakAfter = null;
+  if(minutes >= 200 && steps.length >= 5 && used >= 150){
+    let cum = 0; const half = Math.min(105, used / 2);
+    for(let i = 0; i < steps.length - 1; i++){ cum += steps[i].minutes; if(cum >= half){ breakAfter = steps[i].id; break; } }
+  }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -8060,7 +8111,7 @@ function buildStudyPlan(minutes){
       why:'Sitting the whole exam once shows where stamina and pacing slip. Pick a day with six free hours, then spend the next day on what it exposed.',
       run: () => { showTab('study'); startFullExam(); } });
   }
-  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN };
+  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter };
 }
 
 function setPlanMinutes(m){
@@ -8473,11 +8524,12 @@ function renderTodayPlan(){
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
-    </div>`; });
+    </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, 10 min</b> Stand up, water, no screen. The second half sticks better after it.</div>` : ''); });
   const rows = stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
+    ${(plan.phase.key === 'taper' || plan.phase.key === 'rest') && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     <p class="pt-sub">${escapeHtml(sub)}${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${paceLine}
@@ -8656,14 +8708,14 @@ function planRefForSession(sess){
   let st = null;
   if(sess.mode === 'adaptive'){ const a = byId('adaptive'), b = byId('adaptive2'); st = (a && !a.done) ? a : ((b && !b.done) ? b : (a || b)); }
   else if(sess.mode === 'review') st = byId('missed');
-  else if(sess.mode === 'case') st = byId('case');
+  else if(sess.mode === 'case'){ const a = byId('case'), b = byId('case2'); st = (a && !a.done) ? a : ((b && !b.done) ? b : (a || b)); }
   else if(sess.mode === 'mock') st = byId('checkpoint');
   else if(sess.mode === 'drill'){
     let want = null;
     try{
       if(sess.drillTopic){ const m = planDayLog().meta[sess.drillTopic]; if(m) want = 'Drill: ' + m.name; }
     }catch(e){}
-    const weak = ['weak','weak2','weak3'].map(byId).filter(Boolean);
+    const weak = ['weak','weak2','weak3','weak4'].map(byId).filter(Boolean);
     st = (want && weak.find(x => x.title === want)) || weak.find(x => !x.done) || weak[0] || null;
   }
   if(!st) return null;
@@ -8706,7 +8758,7 @@ function planNextHtml(nxt){
 function planGoNext(id){
   try{
     const inQuiz = document.body.classList.contains('quiz-active');
-    const sessionIds = ['adaptive','adaptive2','weak','weak2','weak3','missed','case','checkpoint'];
+    const sessionIds = ['adaptive','adaptive2','weak','weak2','weak3','weak4','missed','case','case2','checkpoint'];
     if(inQuiz && !sessionIds.includes(id)) exitToMenu();
     runPlanStep(id);
   }catch(e){}
@@ -22539,7 +22591,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.228';
+const BUILD_ID = '2026-10-18.229';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
