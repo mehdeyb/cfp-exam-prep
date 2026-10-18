@@ -1297,6 +1297,24 @@
   .pace-chip{flex:none;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.02em;color:var(--muted);border:1px solid var(--hair);padding:5px 10px;border-radius:20px;margin-right:6px;white-space:nowrap;}
   .pace-chip.ahead{color:var(--correct);border-color:var(--correct);}
   .pace-chip.behind{color:var(--incorrect);border-color:var(--incorrect);}
+  .pace-strip{margin:0 0 10px;padding:8px 12px 9px;border:1px solid var(--hair);border-radius:12px;background:var(--surface);}
+  .ps-row{display:flex;align-items:baseline;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .ps-now{font-size:17px;font-weight:600;color:var(--paper);font-variant-numeric:tabular-nums;}
+  .ps-now.over{color:var(--gold);}
+  .ps-of{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ps-bank{flex:none;font-weight:600;color:var(--muted);}
+  .ps-bank.ahead{color:var(--correct);}
+  .ps-bank.late{color:var(--gold);}
+  .ps-bank.behind{color:var(--incorrect);}
+  .ps-bar{position:relative;height:4px;border-radius:2px;background:var(--hair);margin:6px 0 0;overflow:visible;}
+  .ps-bar i{position:absolute;top:0;bottom:0;border-radius:2px;}
+  .ps-fill{left:0;background:var(--teal);transition:width .9s linear;}
+  .ps-over{background:var(--gold);transition:width .9s linear;}
+  .ps-over.way{background:var(--incorrect);}
+  .ps-tick{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--paper);opacity:.55;border-radius:1px;}
+  .ps-note{margin-top:6px;font-size:12px;line-height:1.4;color:var(--muted);}
+  @media (prefers-reduced-motion:reduce){.ps-fill,.ps-over{transition:none}}
+  @media (max-height:520px) and (orientation:landscape){.pace-strip{padding:5px 10px 6px;margin-bottom:6px}.ps-note{display:none}}
   .pace-marks{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin:10px 0 12px;}
   .pace-marks div{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;}
   .pace-marks b{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);font-weight:500;}
@@ -2783,6 +2801,7 @@
             <span class="plan-chip" id="planChip" style="display:none;" role="status" aria-live="polite"></span>
             <div class="timer" id="quizTimer" style="display:none;">35:00</div>
           </div>
+          <div class="pace-strip" id="paceStrip" style="display:none;" role="status" aria-live="off"></div>
           <div class="tutor-brief" id="tutorBrief" style="display:none;" role="note"></div>
           <div class="q-card">
             <div class="q-left">
@@ -14391,7 +14410,7 @@ function openChoicePicker(title, hint, rows){
 function openExamPicker(){
   const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
   openChoicePicker('Practice exam', 'Timed, in the real exam\'s domain mix.', [
-    { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: 'Counts toward readiness. About once a week.', run: () => startMock() },
+    { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: 'Real-exam conditions: no feedback until you submit. Counts toward readiness.', run: () => startMock() },
     { name: 'Full ' + FULL_EXAM_QUESTION_COUNT + '-question exam', meta: 'Two 3-hour sections with a break', note: 'Apply+ in ' + ap + '/' + DOMAINS.length + ' domains. Best in the last three weeks, rested.', run: () => startFullExam() }
   ]);
 }
@@ -16822,24 +16841,40 @@ function launchDrill(domainKey, size, unseen){
   beginSession(queue, 'drill', null, reasons);
 }
 
+// How much a question looks like the real exam's. The CFP exam is application-level: stand-alone items
+// of two or three sentences, short client scenarios and case studies, with figures to work from. A bare
+// definition-recall item says little about exam readiness, so the checkpoint is built from the rest.
+function examLevelScore(q){
+  let sc = 0;
+  if(q.scenario) sc += 3;
+  if(q.calcType || q.calcSteps) sc += 3;
+  if(/\$\s?\d|\d,\d{3}|\d+(\.\d+)?%/.test(q.q)) sc += 1;
+  if(/\b(client|clients|couple|husband|wife|Mr\.|Mrs\.|Ms\.|age \d+|years old|retire[sd]?|his|her|their)\b/i.test(q.q)) sc += 1;
+  if(q.q.length >= 150) sc += 1;
+  return sc;
+}
+function isExamLevel(q){ return examLevelScore(q) >= 2; }
 function startMock(){
-  let queue = [];
+  let queue = [], examLevelN = 0;
   DOMAINS.forEach(d=>{
     const domainPool = QUESTIONS.filter(q=>q.domain===d.key);
-    const withStats = domainPool.map(q=>({ q, stat: getSpacedStat(DATA.questionStats, q.id) }));
-    // Never-seen questions first (randomized among themselves so it's not
-    // always the same ones), then least-recently-seen — so repeated mock
-    // attempts cover fresh material before ever repeating a question.
+    const withStats = domainPool.map(q=>({ q, stat: getSpacedStat(DATA.questionStats, q.id), ex: isExamLevel(q) ? 0 : 1 }));
+    // Exam-level questions first, then never-seen ones (randomized among themselves so it's not always the
+    // same ones), then least-recently-seen, so repeated checkpoints cover fresh material before repeating.
     withStats.sort((a,b)=>{
+      if(a.ex !== b.ex) return a.ex - b.ex;
       if(a.stat.seen===0 && b.stat.seen===0) return Math.random()-0.5;
       if(a.stat.seen===0) return -1;
       if(b.stat.seen===0) return 1;
       return a.stat.lastSeenAt - b.stat.lastSeenAt;
     });
-    queue = queue.concat(withStats.slice(0, d.mockCount).map(x=>x.q));
+    const pick = withStats.slice(0, d.mockCount);
+    examLevelN += pick.filter(x => x.ex === 0).length;
+    queue = queue.concat(pick.map(x=>x.q));
   });
   queue = shuffle(queue);
   beginSession(queue, 'mock', MOCK_MINUTES*60);
+  if(session) session.examLevelN = examLevelN;
   applyExamSimSkin();
 }
 
@@ -16948,6 +16983,14 @@ function startAdaptive(){
 // the app was closed?), so those are left to simply restart clean.
 const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case'];
 const STUDY_MODES = ['adaptive', 'drill', 'review', 'case'];
+function examLike(){ return !!session && (session.mode === 'fullexam' || session.mode === 'mock'); }
+// The stretch of questions the student is working in: one 3-hour section of the full exam, or the whole checkpoint.
+function examBounds(idx){
+  const n = session.queue.length, br = session.sectionBreakIndex;
+  if(session.mode !== 'fullexam' || !br) return { start:0, end:n, section:1, sections:1 };
+  const s2 = (idx === undefined ? session.index : idx) >= br;
+  return s2 ? { start:br, end:n, section:2, sections:2 } : { start:0, end:br, section:1, sections:2 };
+}
 function isStudyMode(){ return !!session && STUDY_MODES.includes(session.mode); }
 function saveInProgressSession(){
   if(!session || !RESUMABLE_MODES.includes(session.mode)) return;
@@ -17569,7 +17612,7 @@ function paceRecord(){
   if(!session.qTimes) return;
   if(!DATA.paceStats) DATA.paceStats = { n:0, ms:0, byDomain:{}, byKind:{} };
   const ps = DATA.paceStats;
-  const answeredIdx = i => session.mode==='fullexam' ? session.examAnswers[i] !== undefined : (session.answerLog || []).some(e => e.index === i);
+  const answeredIdx = i => examLike() ? session.examAnswers[i] !== undefined : (session.answerLog || []).some(e => e.index === i);
   Object.keys(session.qTimes).forEach(k => {
     const i = +k, ms = session.qTimes[k], q = session.queue[i];
     if(!q || isGenQ(q) || ms < 3000 || ms > 300000 || !answeredIdx(i)) return;
@@ -17584,29 +17627,56 @@ function paceSectionInfo(){
   if(!session) return null;
   if(session.mode === 'mock') return { total: MOCK_MINUTES*60, count: session.queue.length, start: 0, end: session.queue.length };
   if(session.mode === 'fullexam'){
-    const s2 = session.index >= session.sectionBreakIndex;
-    const start = s2 ? session.sectionBreakIndex : 0, end = s2 ? session.queue.length : session.sectionBreakIndex;
-    return { total: FULL_EXAM_SECTION_MINUTES*60, count: end - start, start, end };
+    const b = examBounds();
+    return { total: FULL_EXAM_SECTION_MINUTES*60, count: b.end - b.start, start: b.start, end: b.end };
   }
   return null;
 }
+// Where you stand against the clock: the allowance for this question, the time banked (or owed) against an even
+// pace, and what that pace means for finishing. All of it counts only questions you have answered in this stretch.
+function paceModel(){
+  const info = paceSectionInfo();
+  if(!info || session.onSectionBreak || typeof session.timerSeconds !== 'number') return null;
+  const allow = info.total / info.count;
+  const elapsed = info.total - session.timerSeconds;
+  let done = 0;
+  for(let i = info.start; i < info.end; i++) if(session.examAnswers && session.examAnswers[i] !== undefined) done++;
+  const cur = ((session.qTimes && session.qTimes[session.index]) || 0)/1000 + (session.qShownIdx === session.index ? (Date.now() - session.qShownAt)/1000 : 0);
+  const doneElsewhere = done - (session.examAnswers && session.examAnswers[session.index] !== undefined ? 1 : 0);
+  const spentElsewhere = Math.max(0, elapsed - cur);
+  const bank = doneElsewhere * allow - spentElsewhere;
+  const m = { info, allow, elapsed, done, cur, bank, left:session.timerSeconds, remaining:info.count - done };
+  if(doneElsewhere >= 3 && spentElsewhere > 120){
+    const avg = spentElsewhere / doneElsewhere;
+    m.avg = avg;
+    m.spare = info.total - avg * info.count;
+    m.restEach = m.remaining > 0 ? m.left / m.remaining : null;
+  }
+  return m;
+}
+function paceClock(sec){ sec = Math.round(Math.abs(sec)); return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
+function paceMinutes(sec){ const m = Math.round(Math.abs(sec)/60); return m < 1 ? 'under a minute' : m + ' min'; }
 function updatePaceChip(){
   const chip = document.getElementById('paceChip');
-  if(!chip) return;
-  const info = paceSectionInfo();
-  if(!info || session.onSectionBreak || typeof session.timerSeconds !== 'number'){ chip.style.display = 'none'; return; }
-  const elapsed = info.total - session.timerSeconds;
-  if(elapsed < 120){ chip.style.display = 'none'; return; }
-  let done = 0;
-  if(session.mode === 'fullexam'){ for(let i = info.start; i < info.end; i++) if(session.examAnswers[i] !== undefined) done++; }
-  else done = (session.answerLog || []).length;
-  const expected = elapsed/info.total*info.count;
-  const diff = Math.round(done - expected);
-  chip.className = 'pace-chip' + (diff <= -2 ? ' behind' : diff >= 2 ? ' ahead' : '');
-  chip.textContent = Math.abs(diff) < 2 ? 'On pace' : diff > 0 ? `${diff} ahead` : `${-diff} behind`;
-  const per = Math.round(info.total/info.count);
-  chip.title = `About ${Math.floor(per/60)}:${String(per%60).padStart(2,'0')} per question. By now you would be around question ${Math.round(expected)}; you have answered ${done}.`;
-  chip.style.display = 'inline-block';
+  if(chip) chip.style.display = 'none';
+  const el = document.getElementById('paceStrip');
+  if(!el) return;
+  const m = examLike() ? paceModel() : null;
+  if(!m){ el.style.display = 'none'; return; }
+  const over = m.cur > m.allow, way = m.cur > m.allow * 1.5;
+  const frac = Math.min(1, m.cur / (m.allow * 1.5)), base = Math.min(frac, 2/3), extra = Math.max(0, frac - 2/3);
+  const bankTxt = Math.abs(m.bank) < 15 ? 'on pace' : m.bank > 0 ? '+' + paceClock(m.bank) + ' banked' : paceClock(m.bank) + ' behind';
+  const bankCls = Math.abs(m.bank) < 15 ? '' : m.bank > 0 ? 'ahead' : (m.bank < -120 ? 'behind' : 'late');
+  let note = '';
+  if(m.spare !== undefined){
+    if(m.spare >= 0) note = `At your pace you finish with ${paceMinutes(m.spare)} to spare.`;
+    else note = `At your pace you run ${paceMinutes(m.spare)} over.` + (m.restEach ? ` About ${paceClock(m.restEach)} each on the rest closes it.` : '');
+  } else if(m.done < 3) note = 'Every minute you save is banked for the questions you flag.';
+  el.innerHTML = `<div class="ps-row"><span class="ps-now${over ? ' over' : ''}">${paceClock(m.cur)}</span><span class="ps-of">of ${paceClock(m.allow)} for this question</span><span class="ps-bank ${bankCls}">${bankTxt}</span></div>` +
+    `<div class="ps-bar" role="img" aria-label="${paceClock(m.cur)} on this question; the allowance is ${paceClock(m.allow)}"><i class="ps-fill" style="width:${(base*100).toFixed(1)}%"></i><i class="ps-over${way ? ' way' : ''}" style="left:66.67%;width:${(extra*100).toFixed(1)}%"></i><span class="ps-tick" style="left:66.67%"></span></div>` +
+    (note ? `<div class="ps-note">${note}</div>` : '');
+  el.title = `The real exam allows about ${paceClock(m.allow)} a question on average (${Math.round(m.info.total/60)} minutes for ${m.info.count}). Time you save is yours to spend on the hard ones.`;
+  el.style.display = 'block';
 }
 function paceFmt(sec){ sec = Math.round(sec); return sec >= 60 ? `${Math.floor(sec/60)}m ${String(sec%60).padStart(2,'0')}s` : `${sec}s`; }
 function renderResultPace(){
@@ -17636,6 +17706,23 @@ function renderResultPace(){
   else if(avg < budget*0.6 && timed) line += ' That is comfortably fast; there is room to read each question once more before answering.';
   note.innerHTML = line;
   el.appendChild(note);
+  if(timed){
+    try{
+      const info = paceSectionInfo() || { total: MOCK_MINUTES*60, count: session.queue.length };
+      const left = session.timedOut ? 0 : Math.max(0, session.timerSeconds || 0);
+      const inRows = rows.filter(r => r.sec <= budget), outRows = rows.filter(r => r.sec > budget);
+      const acc = a => a.length ? Math.round(a.filter(r => r.ok).length / a.length * 100) : null;
+      const bits = [];
+      bits.push(session.timedOut ? 'The clock ran out before you finished.' : `You submitted with <b>${paceFmt(left)}</b> left of ${Math.round(info.total/60)} minutes.` + (left < info.total*0.05 ? ' A small cushion leaves no time to revisit flagged questions; the aim is roughly a tenth of the clock free for them.' : left > info.total*0.3 ? ' That is a lot unused. Use some of it to read each question twice.' : ' That is a healthy cushion for flagged questions.'));
+      if(inRows.length >= 4 && outRows.length >= 3){
+        const a1 = acc(inRows), a2 = acc(outRows);
+        bits.push(`Inside the allowance you got ${inRows.filter(r=>r.ok).length} of ${inRows.length} right (${a1}%); on the ${outRows.length} that ran over it, ${outRows.filter(r=>r.ok).length} (${a2}%).` + (a2 + 10 < a1 ? ' The long ones were right less often, so extra minutes there rarely bought points. Flag them, move on and come back with the time you bank.' : a2 >= a1 ? ' The extra time on those did pay off, so banked time is worth spending on the hard ones.' : '') + ' (A small sample, so read it as a hint.)');
+      }
+      if(session.mode === 'mock') bits.push(`${session.queue.length} questions give a rough read, not a precise one: your true level could sit 15 to 20 points either side of this score. The trend across several checkpoints is the number to trust.`);
+      const b = document.createElement('div'); b.className = 'rr-note'; b.style.margin = '0 0 10px'; b.innerHTML = bits.join(' ');
+      el.appendChild(b);
+    }catch(e){}
+  }
   const head = document.createElement('div'); head.className = 'rr-note'; head.style.cssText = 'margin:0 0 6px;font-size:12.5px;';
   head.textContent = `Your three slowest took ${slowShare}% of your time and you got ${slowRight} of 3 right:`;
   el.appendChild(head);
@@ -17657,7 +17744,7 @@ function renderPaceCard(){
   const ps = DATA.paceStats;
   const per = PACE_REAL_SECONDS;
   const marks = [30,60,90,120,150,180].map(m => ({ m, q: Math.round(m/FULL_EXAM_SECTION_MINUTES*FULL_EXAM_SECTION_SIZE) }));
-  let html = `<p class="hint" style="margin-top:0;">Each 3-hour section holds about ${FULL_EXAM_SECTION_SIZE} questions, which works out to roughly <b>${paceFmt(per)} per question</b>, with no time carried over between sections. A simple rule: if you are not at these question numbers by these minutes, speed up.</p>`;
+  let html = `<p class="hint" style="margin-top:0;">Each 3-hour section holds about ${FULL_EXAM_SECTION_SIZE} questions, which works out to roughly <b>${paceFmt(per)} per question</b>. Each section has its own three-hour clock, so plan to use the time in each. The clock is pooled across the section, so a quick question gives time to a harder one. A simple rule: if you are not at these question numbers by these minutes, speed up.</p>`;
   html += `<div class="pace-marks">${marks.map(x => `<div><b>${x.m} min</b><span>question ${x.q}</span></div>`).join('')}</div>`;
   if(ps && ps.n >= 15){
     const avg = ps.ms/ps.n/1000;
@@ -17670,10 +17757,16 @@ function renderPaceCard(){
   } else {
     html += `<p class="hint"><b>Your pace:</b> not enough timed answers yet. Answer a few sessions, or take a timed mock, and your own average will appear here.</p>`;
   }
-  html += `<p class="hint" style="margin-bottom:0;">Timed mocks show a live on-pace chip next to the clock, and the results screen lists the questions that ate the most time.</p>`;
+  html += `<p class="hint" style="margin-bottom:0;">The timed checkpoint shows the allowance for the question you are on, the time you have banked and how much spare time you are heading for. The results screen lists the questions that ate the most time and how you scored on those.</p>`;
   el.innerHTML = html;
 }
 
+// The clock ran out in an exam-like sitting: whatever is answered in the unsubmitted stretch is scored, the rest is left unanswered.
+function examTimeUp(){
+  try{ const eb = examBounds(); scoreExamAnswers(eb.start, eb.end, true); }catch(e){}
+  session.timedOut = true;
+  finishSession();
+}
 function startTimer(){
   session.timerEndAt = Date.now() + session.timerSeconds * 1000;
   updateTimerDisplay();
@@ -17681,7 +17774,7 @@ function startTimer(){
     session.timerSeconds = Math.max(0, Math.round((session.timerEndAt - Date.now())/1000));
     if(session.timerSeconds<=0){
       clearInterval(session.timerHandle);
-      finishSession();
+      if(examLike()) examTimeUp(); else finishSession();
       return;
     }
     updateTimerDisplay();
@@ -18115,7 +18208,7 @@ window.addEventListener('orientationchange', () => setTimeout(scheduleQuizFit, 3
 function renderQuestion(){
   paceTouch(); paceBegin(); updatePaceChip();
   const q = session.queue[session.index];
-  const isExam = session.mode==='fullexam';
+  const isExam = examLike();
   session.locked = false;
   session.thinkGate = false; clearThinkGate();
   updateLiveReadiness();
@@ -18160,14 +18253,12 @@ function renderQuestion(){
   document.getElementById('nextBtn').style.display = isExam ? 'none' : 'inline-block';
   document.getElementById('examNavGrid').style.display = 'none';
   if(isExam){
-    document.getElementById('examSectionTag').textContent =
-      session.index < session.sectionBreakIndex ? 'Section 1 of 2' : 'Section 2 of 2';
+    const eb = examBounds();
+    document.getElementById('examSectionTag').textContent = eb.sections === 1 ? 'Timed checkpoint' : 'Section ' + eb.section + ' of 2';
     document.getElementById('flagBtn').classList.toggle('active', session.flagged.has(session.index));
     const prevBtn = document.getElementById('prevBtn');
-    const sectionStart = session.index < session.sectionBreakIndex ? 0 : session.sectionBreakIndex;
-    prevBtn.disabled = (session.index === sectionStart);
-    const sectionEnd = session.index < session.sectionBreakIndex ? session.sectionBreakIndex : session.queue.length;
-    document.getElementById('examNextBtn').textContent = (session.index === sectionEnd-1) ? 'Review & submit' : 'Next';
+    prevBtn.disabled = (session.index === eb.start);
+    document.getElementById('examNextBtn').textContent = (session.index === eb.end-1) ? 'Review & submit' : 'Next';
   }
 
   const qCard = document.querySelector('.q-card');
@@ -18663,8 +18754,7 @@ function toggleExamNav(){
 function renderExamNavGrid(){
   const grid = document.getElementById('examNavGrid');
   grid.innerHTML = '';
-  const sectionStart = session.index < session.sectionBreakIndex ? 0 : session.sectionBreakIndex;
-  const sectionEnd = session.index < session.sectionBreakIndex ? session.sectionBreakIndex : session.queue.length;
+  const { start:sectionStart, end:sectionEnd } = examBounds();
   for(let i=sectionStart; i<sectionEnd; i++){
     const btn = document.createElement('button');
     btn.className = 'exam-nav-btn';
@@ -18685,7 +18775,7 @@ function jumpToQuestion(idx){
 }
 
 function prevQuestion(){
-  const sectionStart = session.index < session.sectionBreakIndex ? 0 : session.sectionBreakIndex;
+  const sectionStart = examBounds().start;
   if(session.index > sectionStart){
     session.index--;
     renderQuestion();
@@ -18693,7 +18783,7 @@ function prevQuestion(){
 }
 
 function examNextOrReview(){
-  const sectionEnd = session.index < session.sectionBreakIndex ? session.sectionBreakIndex : session.queue.length;
+  const sectionEnd = examBounds().end;
   if(session.index < sectionEnd-1){
     session.index++;
     renderQuestion();
@@ -18708,11 +18798,10 @@ function openExamReview(){
   document.getElementById('examReviewView').style.display = 'block';
   const host = document.getElementById('quizFullscreenHost');
   if(host) host.scrollTop = 0;
-  const sectionStart = session.index < session.sectionBreakIndex ? 0 : session.sectionBreakIndex;
-  const sectionEnd = session.index < session.sectionBreakIndex ? session.sectionBreakIndex : session.queue.length;
+  const eb = examBounds(), sectionStart = eb.start, sectionEnd = eb.end;
   const isSection2 = sectionStart > 0;
-  document.getElementById('reviewTitle').textContent = isSection2 ? 'Review Section 2 before submitting' : 'Review Section 1 before submitting';
-  document.getElementById('submitSectionBtn').textContent = isSection2 ? 'Submit exam' : 'Submit Section 1';
+  document.getElementById('reviewTitle').textContent = eb.sections === 1 ? 'Review before submitting' : isSection2 ? 'Review Section 2 before submitting' : 'Review Section 1 before submitting';
+  document.getElementById('submitSectionBtn').textContent = eb.sections === 1 ? 'Submit checkpoint' : isSection2 ? 'Submit exam' : 'Submit Section 1';
 
   let answeredCount=0, flaggedCount=0;
   const list = document.getElementById('examReviewList');
@@ -18745,8 +18834,15 @@ function closeExamReview(){
 }
 
 function confirmSubmitSection(){
-  const sectionStart = session.index < session.sectionBreakIndex ? 0 : session.sectionBreakIndex;
+  const eb = examBounds(), sectionStart = eb.start;
   const isSection2 = sectionStart > 0;
+  if(eb.sections === 1){
+    const left = eb.end - eb.start - Object.keys(session.examAnswers).length;
+    if(!confirm((left > 0 ? left + ' question' + (left === 1 ? ' is' : 's are') + ' unanswered. ' : '') + 'Submit the checkpoint? Once submitted you cannot return to any question, exactly like the real exam.')) return;
+    scoreExamAnswers(eb.start, eb.end);
+    finishSession();
+    return;
+  }
   const msg = isSection2
     ? 'Submit the exam? Once submitted, you cannot return to any question in either section — exactly like the real exam.'
     : 'Submit Section 1? Once submitted, you cannot return to any question in this section — exactly like the real exam.';
@@ -18760,13 +18856,14 @@ function confirmSubmitSection(){
   }
 }
 
-function scoreExamAnswers(fromIndex, toIndex){
+function scoreExamAnswers(fromIndex, toIndex, answeredOnly){
   // Deferred, bulk scoring for the exam simulation — nothing is graded
   // question-by-question the way study modes do, matching how a real
   // exam withholds all feedback until after a section is submitted.
   for(let i=fromIndex; i<toIndex; i++){
     const q = session.queue[i];
     const chosen = session.examAnswers[i];
+    if(answeredOnly && chosen === undefined) continue;
     const isCorrect = chosen === q.correct;
     const dt = session.domainTally[q.domain];
     dt.total++;
@@ -18782,10 +18879,19 @@ function scoreExamAnswers(fromIndex, toIndex){
     planLogAnswer(session.mode);
     try{ updatePlanChip(); }catch(e){}
 
+    try{ recordDomainAnswer(q.domain, isCorrect, q); }catch(e){}
     if(!isCorrect){
       if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
+      try{
+        if(chosen !== undefined && !q.isVariant){
+          if(!DATA.wrongChoiceHistory[q.id]) DATA.wrongChoiceHistory[q.id] = {};
+          DATA.wrongChoiceHistory[q.id][chosen] = (DATA.wrongChoiceHistory[q.id][chosen] || 0) + 1;
+          recordMixup(q, chosen);
+        }
+      }catch(e){}
     } else {
       DATA.missed = DATA.missed.filter(id=>id!==q.id);
+      try{ easeMixupOnCorrect(q); }catch(e){}
     }
   }
   recordStudyDay();
@@ -19466,7 +19572,7 @@ function finishSession(){
   if(host){ try{ host.scrollTo({top:0,left:0,behavior:'instant'}); }catch(e){ host.scrollTop = 0; } }
 
   const ansN = (session.answerLog || []).length;
-  const early = ansN > 0 && ansN < session.queue.length;
+  const early = ansN > 0 && ansN < session.queue.length && !(session.timedOut && examLike());
   const denomN = early ? ansN : session.queue.length;
   document.getElementById('resultScore').textContent = `${session.correct}/${denomN}`;
   const pct = Math.round((session.correct/denomN)*100);
@@ -19489,7 +19595,7 @@ function finishSession(){
     : session.mode==='adaptive' ? 'Adaptive session'
     : session.treeDrill ? 'Decision-tree drill'
     : 'Domain drill';
-  document.getElementById('resultLabel').textContent = `${modeLabel} · ${pct}% this session` + (early ? ` · you answered ${ansN} of ${session.queue.length}` : '');
+  document.getElementById('resultLabel').textContent = `${modeLabel} · ${pct}% this session` + (early ? ` · you answered ${ansN} of ${session.queue.length}` : (session.timedOut && examLike() ? ` · time ran out with ${ansN} of ${session.queue.length} answered` : ''));
   try{
     const missedN = (session.answerLog || []).filter(e => !e.correct).length;
     const hl = document.getElementById('resultHeadline');
@@ -21098,7 +21204,7 @@ async function executeTutorTool(toolName, toolInput){
       }
       if(toolInput.mode === 'checkpoint'){
         startMock();
-        return `Started the timed checkpoint: 24 questions in the real exam's domain mix, timed at the real pace (51 minutes). Its score counts toward their readiness.`;
+        return `Started the timed checkpoint: 24 questions in the real exam's domain mix, timed at the real pace (51 minutes), with application-level questions and no feedback until they submit, like the real exam. A live strip shows the allowance for each question and the time they have banked. Its score counts toward their readiness.`;
       }
       startAdaptive();
       return `Started an adaptive practice session.`;
@@ -22075,7 +22181,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.223';
+const BUILD_ID = '2026-10-18.224';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
