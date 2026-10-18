@@ -5202,7 +5202,7 @@ function renderApiKeyUI(){
 
   const chipsDisabled = aiMode === 'none';
   // Without a key the tutor still answers "what should I do next" from the app's own data, so the box stays usable.
-  if(tutorInput){ tutorInput.disabled = false; tutorInput.placeholder = chipsDisabled ? 'Ask what to do next, or look up a term' : 'Ask about any CFP topic…'; }
+  if(tutorInput){ tutorInput.disabled = false; tutorInput.placeholder = chipsDisabled ? 'Ask what to do next…' : 'Ask about any CFP topic…'; }
   if(tutorSendBtn){ tutorSendBtn.disabled = false; }
   if(tutorChips){ Array.from(tutorChips.children).forEach(b=>{ if(b.tagName==='BUTTON') b.disabled = false; }); }
 
@@ -7003,11 +7003,14 @@ function renderProgressChart(){
   if(!emptyEl || !wrapEl) return;
 
   const sessions = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0).slice(-30); // most recent 30, so a long history doesn't overcrowd the chart
+  const pc = document.getElementById('progressCard');
   if(sessions.length === 0){
-    emptyEl.style.display = 'block';
+    emptyEl.style.display = 'none';
     wrapEl.style.display = 'none';
+    if(pc) pc.style.display = 'none'; // nothing to chart yet; the pace line above already says when it will appear
     return;
   }
+  if(pc) pc.style.display = '';
   emptyEl.style.display = 'none';
   wrapEl.style.display = 'block';
 
@@ -7832,7 +7835,7 @@ function buildStudyPlan(minutes){
   };
   const order = {
     foundation: ['cards','pretest','weak','adaptive','newcards','missed','tutor','tool','calc','case','teach','listen'],
-    build:      ['cards','adaptive','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
+    build:      ['cards','pretest','adaptive','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
     sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
@@ -9168,7 +9171,7 @@ function renderExamDayCallout(){
   } else {
     const weakName = stats.weakestMeta.name;
     const weakPct = stats.weakestMastery===null ? 'untested' : stats.weakestMastery+'%';
-    el.innerHTML = `You've answered <b>${stats.totalAnswered}</b> practice questions at <b>${stats.accuracy}%</b> overall, with your lightest coverage in <b>${weakName}</b> (${weakPct}). Practice accuracy isn't on the same scale as CFP Board's official passing score, but even, consistent performance across all eight domains — not just the ones you enjoy — is what tends to correlate with passing. Worth looping back to ${weakName} in the Study tab before exam day.`;
+    el.innerHTML = `You've answered <b>${stats.totalAnswered}</b> practice question${stats.totalAnswered === 1 ? '' : 's'} at <b>${stats.accuracy}%</b> overall, with your lightest coverage in <b>${weakName}</b> (${weakPct}). Practice accuracy isn't on the same scale as CFP Board's official passing score, but even, consistent performance across all eight domains — not just the ones you enjoy — is what tends to correlate with passing. Worth looping back to ${weakName} in the Study tab before exam day.`;
   }
 
   const countdownEl = document.getElementById('edCountdown');
@@ -20742,7 +20745,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.206';
+const BUILD_ID = '2026-10-18.207';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
