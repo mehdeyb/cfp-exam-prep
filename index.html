@@ -1107,6 +1107,12 @@
   .plan-result{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border-left:3px solid var(--gold);font-size:13px;line-height:1.5;color:var(--paper);}
   .plan-result.done{border-left-color:var(--correct);}
   .plan-result .pr-why{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
+  .pt-adv{margin:10px 0 4px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--good,#2e9b5e) 12%,transparent);border:1px solid color-mix(in srgb,var(--good,#2e9b5e) 35%,transparent);}
+  .pt-adv-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .pt-adv-x{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;min-width:32px;min-height:32px;}
+  .pt-adv-next{margin-top:2px;font-size:13px;color:var(--muted);}
+  .pt-adv-go{display:block;width:100%;margin-top:10px;min-height:44px;}
+  .pt-step.next{background:color-mix(in srgb,var(--accent,#3b82f6) 8%,transparent);border-radius:12px;}
   .plan-result .pr-go{display:block;width:100%;margin-top:8px;min-height:44px;text-align:center;}
   .fc-plan-next{background:none;border:0;color:var(--gold);font:inherit;text-decoration:underline;padding:6px 4px;min-height:32px;cursor:pointer;}
   .plan-result .pr-next{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
@@ -8366,12 +8372,42 @@ function runPlanStep(id){
   _planLaunchId = id; clearTimeout(_planLaunchTimer); _planLaunchTimer = setTimeout(() => { _planLaunchId = null; }, 1500);
   if(st && typeof st.run === 'function') st.run();
 }
+let _planSeen = null, _planSeenDay = '', _planAdv = null;
+// Any plan step that flips to done, from a quiz, a tool, cards or a manual tick, raises one strip at the top of Today's plan:
+// what you just finished, what comes next, one tap to go.
+function planAdvanceUpdate(plan){
+  const day = localDayKey();
+  const ids = plan.steps.filter(x => x.done).map(x => x.id);
+  if(_planSeen && _planSeenDay === day){
+    const fresh = plan.steps.filter(x => x.done && !_planSeen.includes(x.id));
+    if(fresh.length){ _planAdv = { titles: fresh.map(x => x.title), at: Date.now(), day }; }
+  } else { _planAdv = null; }
+  _planSeen = ids; _planSeenDay = day;
+  if(_planAdv && (_planAdv.day !== day || Date.now() - _planAdv.at > 45 * 60000)) _planAdv = null;
+}
+function planAdvanceHtml(plan){
+  if(!_planAdv) return '';
+  if(typeof conductorState === 'function' && conductorState()) return '';
+  const nxt = plan.steps.find(x => !x.done);
+  const t = _planAdv.titles;
+  const head = t.length === 1 ? t[0] + ' done' : t.length + ' steps done';
+  return `<div class="pt-adv" id="ptAdv" role="status"><div class="pt-adv-top"><b>\u2713 ${escapeHtml(head)}</b><button type="button" class="pt-adv-x" aria-label="Dismiss" onclick="planAdvanceDismiss()">\u00d7</button></div>`
+    + (nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
+      : `<div class="pt-adv-next">That is everything on today's plan. Rest, or take an adaptive session if you still have energy.</div>`)
+    + '</div>';
+}
+function planAdvanceDismiss(){ _planAdv = null; try{ renderTodayPlan(); }catch(e){} }
+// After a tool closes, bring the strip into view so the next step is the first thing you see.
+function planAdvanceReveal(){
+  setTimeout(() => { try{ renderTodayPlan(); const e = document.getElementById('ptAdv'); if(e && document.getElementById('tab-study') && document.getElementById('tab-study').offsetParent !== null) e.scrollIntoView({behavior:'smooth', block:'center'}); }catch(_){} }, 120);
+}
 function renderTodayPlan(){
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   let plan;
   try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; return; } // never let the plan break the Study tab
   const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
+  try{ planAdvanceUpdate(plan); }catch(e){}
   const doneN = plan.steps.filter(x => x.done).length;
   const leftMin = Math.round(plan.steps.filter(x => !x.done).reduce((a, x) => a + x.minutes * (x.need > 0 ? Math.max(0, 1 - (x.have || 0) / x.need) : 1), 0));
   const leftTxt = plan.steps.length && leftMin > 0 ? ` · about ${leftMin >= 90 ? (Math.round(leftMin / 6) / 10) + ' hrs' : leftMin + ' min'} left` : '';
@@ -8391,12 +8427,13 @@ function renderTodayPlan(){
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
   const stepRows = plan.steps.map((st, i) => {
     const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
+    const isNext = !st.done && plan.steps.findIndex(x => !x.done) === i;
     const pct = st.need > 0 ? Math.round(100 * Math.min(1, (st.have || 0) / st.need)) : 0;
     const pr = progTxt(st);
     const btn = st.done ? '' : (st.manual
       ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button><button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button></span>`
       : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
-    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}">
+    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext && doneN > 0 ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
@@ -8404,6 +8441,7 @@ function renderTodayPlan(){
   const rows = stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+    ${planAdvanceHtml(plan)}
     <p class="pt-sub">${escapeHtml(sub)}${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${paceLine}
@@ -15553,7 +15591,7 @@ function closeFormulaDrill(){
   const host = document.getElementById('fdHost');
   if(host && fd.home && host.parentElement === document.body){ fd.home.appendChild(host); }
   unlockBodyScroll();
-  if(was){ renderAll(); renderReference(); }
+  if(was){ renderAll(); renderReference(); try{ planAdvanceReveal(); }catch(e){} }
   if(was && fd.opener && document.contains(fd.opener) && typeof fd.opener.focus === 'function'){ try{ fd.opener.focus({ preventScroll:true }); }catch(e){} }
   fd.opener = null;
 }
@@ -15731,6 +15769,7 @@ function closeTvmTool(){
   unlockBodyScroll();
   renderAll();
   restoreFocus();
+  try{ planAdvanceReveal(); }catch(e){}
 }
 
 function tvmPickProblem(){
@@ -22231,7 +22270,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.225';
+const BUILD_ID = '2026-10-18.226';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
