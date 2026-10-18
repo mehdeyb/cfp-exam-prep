@@ -2737,13 +2737,7 @@
       </div>
     </div>
 
-    <div class="card" id="planCard" style="display:none;">
-      <div class="card-head">
-        <h2>Study plan</h2>
-        <div class="note" id="planNote">built around your exam date</div>
-      </div>
-      <div id="planBody" style="display:none;"></div>
-    </div>
+
 
 
 
@@ -3621,6 +3615,7 @@
         </div>
         <div id="examWindowPick" class="ewp"></div>
       </div>
+          <div id="planBody" style="display:none;"></div>
         </div>
 
         <div class="settings-section">
@@ -7214,8 +7209,6 @@ function renderStudyPlan(){
   if(!setup || !body) return;
   try{ renderExamWindowPick(); }catch(e){}
 
-  const planCard = document.getElementById('planCard');
-  if(planCard) planCard.style.display = DATA.examDate ? '' : 'none';
   if(!DATA.examDate){
     body.style.display = 'none';
     if(clearBtn) clearBtn.style.display = 'none';
@@ -20578,7 +20571,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.191';
+const BUILD_ID = '2026-10-18.192';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
