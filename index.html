@@ -401,6 +401,24 @@
   .dt-option{font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.4;text-align:left;padding:13px 16px;border-radius:11px;border:1px solid var(--hair);background:var(--surface);color:var(--paper);cursor:pointer;transition:all var(--t-fast) var(--ease);}
   .dt-option:hover{border-color:var(--gold);background:var(--surface2);}
   .dt-option:active{transform:scale(0.98);}
+  .dtw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .dtw-count{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.02em;}
+  .dt-seg{display:inline-flex;background:var(--surface);border:1px solid var(--hair);border-radius:999px;padding:2px;}
+  .dt-seg button{font:inherit;font-size:12px;font-weight:600;color:var(--muted);background:none;border:none;border-radius:999px;padding:7px 14px;min-height:34px;cursor:pointer;}
+  .dt-seg button.on{background:var(--gold);color:var(--ink);}
+  .dtw-facts{background:var(--surface);border:1px solid var(--hair);border-left:3px solid var(--gold);border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.55;color:var(--paper);margin-bottom:14px;}
+  .dtw-lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:4px;}
+  .dtw-log{border-left:2px solid var(--correct);padding:2px 0 2px 11px;margin:0 0 12px;}
+  .dtw-lq{font-size:12px;color:var(--muted);line-height:1.4;}
+  .dtw-la{font-size:13px;color:var(--paper);margin-top:2px;}
+  .dtw-ok{color:var(--correct);font-weight:700;}
+  .dtw-why{font-size:12.5px;line-height:1.5;color:var(--muted);margin-top:3px;}
+  .dt-option.dtw-bad{border-color:var(--wrong,#C9803A);background:color-mix(in srgb,var(--wrong,#C9803A) 12%,var(--surface));opacity:.85;cursor:default;}
+  .dt-option.dtw-reveal{border-color:var(--correct);background:color-mix(in srgb,var(--correct) 14%,var(--surface));}
+  .dtw-msg{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--paper);background:var(--surface);border-radius:10px;padding:10px 12px;}
+  .dtw-score{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .dtw-score.clean{color:var(--correct);}
+  .dtw-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
   .dt-result{background:var(--teal);background:color-mix(in srgb, var(--teal) 12%, var(--surface));border:1.5px solid var(--teal);border-radius:12px;padding:16px;}
   .dt-result-title{font-family:'Fraunces',serif;font-size:17px;font-weight:600;color:var(--paper);margin-bottom:8px;}
   .dt-result-body{font-size:13px;line-height:1.55;color:var(--paper);}
@@ -3195,7 +3213,7 @@
         <button type="button" class="chip" onclick="askTutorAbout('I am not sure which decision tool fits my situation. Ask me a couple of quick questions and point me to the right one.')">Not sure which tool? Ask the tutor</button>
         <button type="button" class="chip" onclick="askTutorAbout('Walk me through a time value of money problem on my HP 10bII+, one step at a time, and check my setup as we go.')">Practice a TVM problem</button>
       </div>
-      <p class="hint">Seven tools built from the study guide's own knowledge — five walk you through one question at a time to a recommendation, two are built for exploring rather than following a single path.</p>
+      <p class="hint">Five trees give you a client scenario to walk: read the facts, choose the branch at each question, and get told right or wrong at every turn. Switch any tree to Explore to tap through without a scenario. The options matrix and plan tree are for exploring.</p>
     </div>
 
     <div class="card">
@@ -5543,7 +5561,7 @@ function defaultData(){
     domainStage: {},
     domainTierLog: {},
     fcRetell: {},
-    teachStats: {}, fcShown: {}, treeStats: {},
+    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5733,7 +5751,7 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -7857,7 +7875,7 @@ function buildStudyPlan(minutes){
       if(!t) return null;
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
         why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. Working through the choices yourself teaches which one fits.`,
-        manual:true, run: () => { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing'); } };
+        manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing'); } } };
     },
     listen: () => {
       if(answered < 20 || !weakDom) return null;
@@ -10665,6 +10683,7 @@ function dtRestart(treeKey){
   dtInit(treeKey);
 }
 function dtRender(treeKey){
+  if(dtHasWalk(treeKey) && dtModeOf(treeKey) === 'walk'){ dtwRender(treeKey); return; }
   const tree = dtTreeOf(treeKey);
   const st = dtState[treeKey];
   const currentId = st.path[st.path.length - 1];
@@ -10688,6 +10707,7 @@ function dtRender(treeKey){
 
   host.innerHTML = `
     <div class="dt-widget">
+      ${dtHasWalk(treeKey) ? `<div class="dtw-top">${dtModeSwitch(treeKey, 'explore')}<span class="dtw-count">Tap through the branches</span></div>` : ''}
       <div class="dt-breadcrumb">${crumb}</div>
       ${bodyHtml}
       <div class="dt-actions">
@@ -10703,6 +10723,183 @@ function dtRender(treeKey){
   if(stepEl && stepEl.focus) stepEl.focus({preventScroll: true});
 }
 
+/* ===========================================================
+   DECISION TREES, WALK A CLIENT SCENARIO
+   Each tree has a short client fact pattern for every outcome. You read the facts and choose the branch at each
+   question; a right turn is confirmed with the fact that decides it, a wrong turn is marked and you try again, and a
+   second miss at the same question shows the reasoning. At the end you see the result and how clean the walk was.
+   The same widget runs in Decision tools and inline in the tutor chat. Explore mode is the plain tap-through.
+=========================================================== */
+const TREE_SCENARIOS = {
+  trust: [
+    { to:'r_revocable_a', facts:"Maria, 58, owns her home and a brokerage account worth $1.4M. She wants her two children to inherit without probate. Her estate is far below the federal exemption, and she wants to keep full control and be free to change her mind.",
+      why:["Her estate is far below the exemption, so getting assets out of the taxable estate is not the goal."] },
+    { to:'r_revocable_b', facts:"Dev, 66, has a $32M estate, well above the exemption, and would like it out of his taxable estate. But he says he will not give up the right to revoke or to take assets back if he needs them.",
+      why:["A $32M estate above the exemption makes removing assets from the taxable estate a real goal.","He refuses to give up control, and removing assets requires doing exactly that, so an irrevocable structure cannot work."] },
+    { to:'r_qtip', facts:"Tom, 71, has a $20M estate and is remarried. He wants his wife to receive income for life, but he wants his children from his first marriage to be the ones who receive the principal afterward. He is willing to put the assets in an irrevocable trust.",
+      why:["A $20M estate calls for taking assets out of the taxable estate.","He is willing to give up control permanently.","He, not his wife, decides who gets the principal after she dies, which is the QTIP feature."] },
+    { to:'r_a', facts:"Raj, 69, has a $19M estate. After his death he wants his wife to receive income and to hold the power to decide who ultimately receives what is left, including changing her mind later. He accepts an irrevocable trust.",
+      why:["The estate is large enough that taxable-estate removal matters.","He accepts permanent loss of control.","The surviving spouse, not the deceased, controls the final beneficiaries: the reverse of a QTIP."] },
+    { to:'r_credit', facts:"Ellen and Mark have $26M combined and each has a full exemption. They want the first spouse's exemption used so that growth on those assets stays out of the survivor's estate. They accept an irrevocable structure.",
+      why:["Combined assets exceed what one exemption covers.","They accept giving up control permanently.","Using both spouses' exemptions and sheltering future growth is the credit shelter (bypass) goal."] },
+    { to:'r_ilit', facts:"Priya, 62, owns a $5M life insurance policy on her own life. If she owns it at death the proceeds would be added to her estate, which is already over the exemption. She is willing to give up ownership of the policy.",
+      why:["Her estate is over the exemption, so removing assets matters.","She will give up ownership, so an irrevocable structure is available.","The goal is keeping the insurance proceeds out of her taxable estate: an ILIT."] },
+    { to:'r_grat', facts:"Hal, 60, owns a stake in a private company expected to appreciate quickly. He wants to keep an income stream for the next 10 years and pass the growth above the IRS assumed rate to his children while using little or none of his lifetime exemption.",
+      why:["Expected appreciation on a large asset makes estate removal worthwhile.","He is willing to transfer the asset irrevocably.","Keeping an annuity now and shifting future appreciation at a discount is a GRAT."] },
+    { to:'r_sns', facts:"Cara, 64, has an adult son with a developmental disability. He receives SSI and Medicaid. She wants to leave him money for extras without disqualifying him from those benefits. She accepts an irrevocable trust.",
+      why:["Her estate planning needs to move assets out of her own name.","She will give up control permanently.","Support for a person with a disability without losing means-tested benefits is a special needs trust."] },
+    { to:'r_qdot', facts:"Jun, a U.S. citizen with a $14M estate, is married to a spouse who is not a U.S. citizen. He wants to defer estate tax on what passes to her at his death, and accepts an irrevocable trust with a U.S. trustee.",
+      why:["A $14M estate makes estate tax planning relevant.","He accepts giving up control permanently.","A non-citizen surviving spouse does not get the unlimited marital deduction directly; a QDOT defers the tax."] },
+  ],
+  entity: [
+    { to:'r_sole', facts:"Lena freelances as a graphic designer, working alone from home. She has no employees, her clients are small, and she wants the simplest setup with no filings.",
+      why:["She is the only owner.","Her risk is low and she does not want formalities, so liability protection is not a priority."] },
+    { to:'r_smllc', facts:"Omar is the only owner of a landscaping company with trucks and crews. If a client or a worker were injured, he does not want a claim to reach his house or savings.",
+      why:["He is the only owner.","Shielding his personal assets from business claims is the point, which means liability protection."] },
+    { to:'r_gp', facts:"Two friends plan to run a weekend farmers market stand together and split the profits. The risk is small and they do not want to pay for any legal filings.",
+      why:["There are two owners.","They are not looking for liability protection and want no filings."] },
+    { to:'r_ccorp', facts:"Three founders are building a software company. They will raise venture capital, and the investors will require preferred stock. All three want personal liability protection.",
+      why:["There are multiple owners.","They want liability protection.","Venture investors and preferred stock mean more than one class of stock, which only a C corporation supports."] },
+    { to:'r_scorp', facts:"Four siblings, all U.S. citizens, run a family bakery. They want liability protection, have no outside investors, and are happy with a single class of stock. They would like profits to pass through to their personal returns.",
+      why:["There are four owners.","They want liability protection.","No outside investors and one class of stock are fine.","Four U.S. individuals with one class of stock meet the S-corp rules."] },
+    { to:'r_llcpartner', facts:"Three co-owners run a consulting firm. They want liability protection and have no outside investors or need for different stock classes. One owner is a nonresident alien who lives in Canada.",
+      why:["There are three owners.","They want liability protection.","No outside investors and no extra stock classes.","A nonresident alien owner disqualifies S-corp status, so the choice is an LLC taxed as a partnership or a C corporation."] },
+  ],
+  ira: [
+    { to:'r_spousal', facts:"Nina, 44, is married filing jointly and freelances with no employer plan. Her husband is covered by his employer's 401(k). She wants to know how her traditional IRA deduction is limited.",
+      why:["Nina has no employer plan.","Her husband is covered, and that alone brings in a phase-out, a more generous one than for a covered taxpayer."] },
+    { to:'r_full', facts:"Sam and Alex, both 39, file jointly and are both self-employed with no employer retirement plan. Their combined income is $400,000. Sam wants to deduct a traditional IRA contribution.",
+      why:["Sam has no employer plan.","Neither spouse is covered, so no phase-out applies at any income and the contribution is fully deductible."] },
+    { to:'r_phaseout', facts:"Kai, 52, is single and participates in his employer's 401(k). His modified AGI is $85,000. He wants to know whether his traditional IRA contribution is deductible.",
+      why:["Participating in an employer plan makes him a covered taxpayer, so the covered-taxpayer income phase-outs apply."] },
+  ],
+  roth: [
+    { to:'r_none', facts:"Gail, 67, is retired. She lives on a pension, Social Security and dividends and has no wages or self-employment income. She wants to put money into a Roth IRA this year.",
+      why:["Pensions, Social Security and dividends are not taxable compensation, and an IRA contribution needs compensation."] },
+    { to:'r_direct', facts:"Ben, 34, is single with wages of $96,000 and modified AGI of about $98,000. He wants to fund a Roth IRA directly.",
+      why:["His wages are taxable compensation.","$98,000 is well below the 2026 single phase-out range of $153,000 to $168,000."] },
+    { to:'r_reduced', facts:"Tia, 41, is single with wages and a modified AGI of $160,000. She wants to contribute to a Roth IRA directly.",
+      why:["Her wages are taxable compensation.","$160,000 sits inside the 2026 single range of $153,000 to $168,000, so her limit is reduced."] },
+    { to:'r_backdoor', facts:"Victor, 45, is single with a modified AGI of $310,000. His only retirement account is his employer 401(k). He has no traditional, SEP or SIMPLE IRAs.",
+      why:["His wages are taxable compensation.","$310,000 is far above the single phase-out range.","With no pretax IRA money, converting a nondeductible contribution is generally tax-free."] },
+    { to:'r_prorata', facts:"Alma, 48, files jointly with a modified AGI of $390,000, above the joint range. She holds a $180,000 traditional IRA rolled over from an old job and wants to do a backdoor Roth.",
+      why:["She has taxable compensation.","$390,000 is above the 2026 joint range of $242,000 to $252,000.","The $180,000 of pretax IRA money means the pro-rata rule makes part of any conversion taxable."] },
+  ],
+  socialSecurity: [
+    { to:'r_need', facts:"Walt, 62, was laid off and has little savings. He has a mortgage and monthly bills he cannot cover without Social Security.",
+      why:["He needs the income now to cover living expenses, which outweighs the optimization math."] },
+    { to:'r_earnings', facts:"Joan, 63, still works full time earning $95,000. Her full retirement age is 67 and she does not need the benefit to pay her bills.",
+      why:["She does not need the income now.","She is working full time before full retirement age, so the earnings test would withhold benefits if she claimed."] },
+    { to:'r_survivor', facts:"Dale, 64, is retired and does not need the income yet. He was the higher earner. His wife Pat earned far less and would rely on his record for a survivor benefit if he dies first.",
+      why:["He does not need the income now.","He is not working full time.","Pat's survivor benefit rests on Dale's record, so every year he delays raises what she receives as a widow."] },
+    { to:'r_longevity', facts:"Ruth, 65, is single and retired. She does not need the income, has no dependent spouse, and is in excellent health; her parents both lived into their 90s.",
+      why:["She does not need the income now.","She is retired, so no earnings test.","She is single, so there is no survivor to plan for.","Strong longevity makes the larger delayed benefit worth waiting for."] },
+    { to:'r_fra', facts:"Carl, 66, is single and retired. He does not need the income right now, has no spouse, and has average health with no family history of unusual longevity.",
+      why:["He does not need the income now.","He is retired, so no earnings test.","He has no spouse to protect.","No longevity edge either way makes full retirement age the balanced choice."] },
+  ],
+};
+const dtwState = {}, dtModeMap = {};
+function dtKeyOf(inst){ return String(inst).split('@')[0]; }
+function dtHasWalk(inst){ const sfx = String(inst).split('@')[1] || ''; return !!TREE_SCENARIOS[dtKeyOf(inst)] && sfx !== 'q'; }
+function dtwRoute(key, to){
+  const t = DECISION_TREES[key]; let found = null;
+  (function walk(id, steps){
+    if(found) return; const n = t.nodes[id];
+    if(n.result){ if(id === to) found = steps; return; }
+    n.options.forEach((o, i) => walk(o.next, steps.concat([{ id, node:n, pick:i }])));
+  })(t.start, []);
+  return found;
+}
+function dtwList(key){ return (TREE_SCENARIOS[key] || []).map(s => ({ s, route: dtwRoute(key, s.to), id: key + ':' + s.to })).filter(x => x.route && x.route.length === x.s.why.length); }
+function dtwStatOf(id){ return (DATA.treeWalk || {})[id] || null; }
+function dtwStats(key){
+  const l = dtwList(key); let tried = 0, clean = 0, weak = 0;
+  l.forEach(x => { const st = dtwStatOf(x.id); if(!st) return; tried++; if(st.lastClean) clean++; else weak++; });
+  return { total: l.length, tried, clean, weak };
+}
+function dtModeOf(inst){
+  if(dtModeMap[inst]) return dtModeMap[inst];
+  if(!dtHasWalk(inst)) return 'explore';
+  const sfx = String(inst).split('@')[1];
+  return (!sfx && dtwStats(dtKeyOf(inst)).clean < 2) ? 'walk' : 'explore'; // new to this tree: start with practice
+}
+function dtSetMode(inst, mode){ dtModeMap[inst] = mode; if(mode === 'explore') dtInit(inst); else dtRender(inst); }
+function dtwPick(key, avoidId){
+  const l = dtwList(key); if(!l.length) return null;
+  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
+  return scored[0].x;
+}
+function dtwStart(inst, avoidId){
+  const key = dtKeyOf(inst), pick = dtwPick(key, avoidId); if(!pick) return false;
+  dtwState[inst] = { id: pick.id, s: pick.s, route: pick.route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwList(key).length, n: dtwList(key).findIndex(x => x.id === pick.id) + 1, shown: false };
+  return true;
+}
+function dtwChoose(inst, i){
+  const w = dtwState[inst]; if(!w || w.done) return;
+  const st = w.route[w.step]; if(w.wrongHere.indexOf(i) >= 0) return;
+  if(i === st.pick){
+    w.log.push({ q: st.node.question, a: st.node.options[i].label, why: w.s.why[w.step], hinted: w.wrongHere.length >= 2 });
+    w.step++; w.wrongHere = [];
+    if(w.step >= w.route.length) dtwFinish(inst);
+  } else { w.wrong++; w.wrongHere.push(i); }
+  dtwRender(inst);
+}
+function dtwFinish(inst){
+  const w = dtwState[inst]; w.done = true;
+  try{
+    DATA.treeWalk = DATA.treeWalk || {};
+    const prev = DATA.treeWalk[w.id] || { seen: 0, clean: 0, miss: 0 };
+    DATA.treeWalk[w.id] = { seen: prev.seen + 1, clean: prev.clean + (w.wrong ? 0 : 1), miss: prev.miss + w.wrong, lastClean: w.wrong === 0, lastAt: Date.now() };
+    recordStudyDay(); persist();
+    try{ renderToolPracticeButtons(); }catch(e){}
+  }catch(e){}
+}
+function dtwNext(inst){ const w = dtwState[inst]; dtwStart(inst, w && w.id); dtwRender(inst); }
+function dtwReplay(inst){ const w = dtwState[inst]; if(!w) return; const s = w.s, route = w.route; dtwState[inst] = Object.assign({}, w, { step: 0, wrong: 0, wrongHere: [], log: [], done: false }); dtwRender(inst); }
+function dtwAskTutor(inst){
+  const w = dtwState[inst]; if(!w) return;
+  const key = dtKeyOf(inst); const meta = TREE_META[key] || {};
+  const res = DECISION_TREES[key].nodes[w.s.to];
+  askTutorAbout(`I just walked a client scenario on the "${meta.name || key}" decision tree and landed on "${res.title}". The facts were: ${w.s.facts} I had ${w.wrong} wrong turn${w.wrong === 1 ? '' : 's'}. Ask me one new scenario that looks similar but lands somewhere different, and check whether I can tell why.`);
+}
+function dtModeSwitch(inst, mode){
+  return `<div class="dt-seg" role="tablist" aria-label="How to use this tool"><button type="button" role="tab" aria-selected="${mode === 'walk'}" class="${mode === 'walk' ? 'on' : ''}" onclick="dtSetMode('${inst}','walk')">Practice</button><button type="button" role="tab" aria-selected="${mode === 'explore'}" class="${mode === 'explore' ? 'on' : ''}" onclick="dtSetMode('${inst}','explore')">Explore</button></div>`;
+}
+function dtwRender(inst){
+  const host = document.getElementById('dt-' + inst); if(!host) return;
+  if(!dtwState[inst] && !dtwStart(inst)){ dtModeMap[inst] = 'explore'; dtInit(inst); return; }
+  const w = dtwState[inst], key = dtKeyOf(inst), tree = DECISION_TREES[key];
+  const logHtml = w.log.map(l => `<div class="dtw-log"><div class="dtw-lq">${escapeHtml(l.q)}</div><div class="dtw-la"><span class="dtw-ok">✓</span> <b>${escapeHtml(l.a)}</b></div><div class="dtw-why">${escapeHtml(l.why)}</div></div>`).join('');
+  let body;
+  if(w.done){
+    const res = tree.nodes[w.s.to];
+    const clean = w.wrong === 0;
+    body = `<div class="dt-result"><div class="dtw-score ${clean ? 'clean' : ''}">${clean ? 'Clean walk, no wrong turns' : w.wrong + ' wrong turn' + (w.wrong === 1 ? '' : 's')}</div><div class="dt-result-title">${res.title}</div><div class="dt-result-body">${res.body}</div></div>
+      <div class="dtw-actions"><button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario</button><button type="button" class="btn ghost" onclick="dtwReplay('${inst}')">Walk it again</button><button type="button" class="btn ghost" onclick="dtwAskTutor('${inst}')">Ask the tutor</button></div>`;
+  } else {
+    const st = w.route[w.step], node = st.node, hint = w.wrongHere.length >= 2 || w.wrongHere.length >= node.options.length - 1; // a second miss, or only the right answer left
+    const opts = node.options.map((o, i) => {
+      const wrong = w.wrongHere.indexOf(i) >= 0, reveal = hint && i === st.pick;
+      return `<button type="button" class="dt-option${wrong ? ' dtw-bad' : ''}${reveal ? ' dtw-reveal' : ''}" ${wrong ? 'disabled' : ''} onclick="dtwChoose('${inst}',${i})">${wrong ? '✕ ' : ''}${o.label}</button>`;
+    }).join('');
+    const msg = !w.wrongHere.length ? '' : hint
+      ? `<div class="dtw-msg">Here is how the facts point: ${escapeHtml(w.s.why[w.step])}</div>`
+      : `<div class="dtw-msg">Not quite. Look at the facts again and try another answer.</div>`;
+    body = `<div class="dt-question">${node.question}</div><div class="dt-options">${opts}</div>${msg}`;
+  }
+  host.innerHTML = `<div class="dt-widget dtw">
+    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${dtwStats(key).clean} of ${w.total} walked clean</span></div>
+    <div class="dtw-facts"><div class="dtw-lab">Client facts</div>${escapeHtml(w.s.facts)}</div>
+    ${logHtml}${body}</div>`;
+  if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } }
+}
+
+function openTreeWalk(key){
+  showTab('tools'); dtModeMap[key] = 'walk'; delete dtwState[key];
+  try{ dtRender(key); }catch(e){}
+  const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
+  if(card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
 function dtToggleFull(treeKey){
   const tree = document.getElementById('dt-full-' + treeKey);
   const btn = document.getElementById('dt-toggle-' + treeKey);
@@ -10792,7 +10989,8 @@ function renderToolPracticeButtons(){
       line = bits.join(' \u00b7 ');
     }
     const ts = DECISION_TREES[key] ? treeDrillStats(key) : null;
-    const treeLine = ts && ts.total ? (ts.tried ? `${ts.solved} of ${ts.total} routes solved${ts.weak ? ' (' + ts.weak + ' to revisit)' : ''}` : `${ts.total} client situations`) : '';
+    const ws = DECISION_TREES[key] ? dtwStats(key) : null;
+    const treeLine = ts && ts.total ? ((ws && ws.total ? (ws.tried ? `${ws.clean} of ${ws.total} scenarios walked clean` : `${ws.total} client scenarios to walk`) : '') + (ts.tried ? (ws && ws.total ? ' \u00b7 ' : '') + `${ts.solved} of ${ts.total} routes solved${ts.weak ? ' (' + ts.weak + ' to revisit)' : ''}` : '')) : '';
     const qBtn = `<button type="button" class="btn ghost" onclick="startTopicPractice('${key}')">${st.tried ? `Practice what I need most (${n})` : `Practice questions (${n})`}</button>`;
     const tBtn = ts && ts.total ? `<button type="button" class="btn ghost" onclick="startTreeDrill('${key}')">Apply the tree (${Math.min(6, ts.total)})</button>` : '';
     host.innerHTML = `<div class="rr-note" style="margin:12px 0 0;">${escapeHtml(line + (treeLine ? ' \u00b7 ' + treeLine : ''))}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${qBtn}${tBtn}</div>`;
@@ -18818,7 +19016,8 @@ function renderResultTools(){
     });
     const top = RESULT_TOOL_MATCH.filter(t => counts[t.key]).sort((a,b) => counts[b.key] - counts[a.key])[0];
     if(!top) return;
-    const drillBtn = TREE_META[top.key] ? ` <button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${top.key}')">Apply the tree</button>` : '';
+    const walkBtn = TREE_SCENARIOS[top.key] ? ` <button type="button" class="btn" onclick="exitToMenu();openTreeWalk('${top.key}')">Walk a client scenario</button>` : '';
+    const drillBtn = walkBtn + (TREE_META[top.key] ? ` <button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${top.key}')">Apply the tree</button>` : '');
     el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>${drillBtn}`;
     el.style.display = 'block';
   }catch(e){}
@@ -19745,6 +19944,7 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
   timeContext += tnPromptBlock();
+  try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
@@ -19867,7 +20067,7 @@ Guidelines:
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
-- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -19923,14 +20123,15 @@ function tutorLockChoices(){ document.querySelectorAll('#tutorThread .tutor-choi
 // A decision tree shown right in the conversation: the student walks it without leaving the chat. Diagram tools
 // (options matrix, plan family tree) cannot run inline, so they get a button to the Tools tab instead.
 let _tutorTreeN = 0, _tutorTreeShown = {};
-function tutorTreeRow(key){
+function tutorTreeRow(key, practice){
   const thread = document.getElementById('tutorThread'); if(!thread) return null;
   const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
   const row = document.createElement('div'); row.className = 'tutor-msg tutor-msg-bot tutor-tree-row';
   const box = document.createElement('div'); box.className = 'qcard-link tutor-tree';
   if(DECISION_TREES[key]){
     const inst = key + '@t' + (++_tutorTreeN);
-    box.innerHTML = '<details class="qcl" open><summary>Walk the decision tree: <b>' + escapeHtml(name) + '</b></summary><div id="dt-' + inst + '" style="margin-top:8px;"></div><div class="qcl-note">Same tree as in Decision tools.</div></details>';
+    if(practice) dtModeMap[inst] = 'walk';
+    box.innerHTML = '<details class="qcl" open><summary>' + (practice ? 'Practice with a client: ' : 'Walk the decision tree: ') + '<b>' + escapeHtml(name) + '</b></summary><div id="dt-' + inst + '" style="margin-top:8px;"></div><div class="qcl-note">Same tree as in Decision tools.</div></details>';
     row.appendChild(box); thread.appendChild(row);
     try{ dtInit(inst); }catch(e){}
   } else {
@@ -20083,6 +20284,7 @@ const TUTOR_TOOLS = [
       type: 'object',
       properties: {
         tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        practice: { type: 'boolean', description: 'True when the student wants to practice, be quizzed or test themselves on this tool: it shows a short client scenario they walk, with right and wrong feedback at every question. Leave false to just explore the branches.' },
       },
       required: ['tool'],
     },
@@ -20267,8 +20469,8 @@ async function executeTutorTool(toolName, toolInput){
       if(!meta) return `Error: "${toolInput.tool}" isn't a valid decision tool.`;
       if(DECISION_TREES[toolInput.tool]){
         _tutorTreeShown[toolInput.tool] = tutorConversationId;
-        tutorTreeRow(toolInput.tool);
-        return `Showed the "${meta.label}" tool right in the chat so the student can walk it without leaving the conversation. Tell them to tap through it, then ask what they chose and why.`;
+        tutorTreeRow(toolInput.tool, !!toolInput.practice && !!TREE_SCENARIOS[toolInput.tool]);
+        return toolInput.practice && TREE_SCENARIOS[toolInput.tool] ? `Showed a client scenario for "${meta.label}" right in the chat. They read the facts and tap a choice at each question; the app tells them right or wrong at every step, so do not repeat the answers. Afterwards ask what tripped them up, if anything.` : `Showed the "${meta.label}" tool right in the chat so the student can walk it without leaving the conversation. Tell them to tap through it, then ask what they chose and why.`;
       }
       showTab('tools');
       const anchorEl = document.getElementById(meta.anchorId);
@@ -21138,7 +21340,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.218';
+const BUILD_ID = '2026-10-18.220';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
