@@ -1613,6 +1613,22 @@
   .podcast-icon-btn-stop:hover{background:var(--surface);color:var(--paper);}
   .podcast-speed-select{width:auto;margin-top:0;}
   .podcast-status{font-size:11.5px;color:var(--muted);margin-top:10px;min-height:16px;text-align:center;}
+  .pod-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;}
+  .pod-hero{margin-top:10px;padding:16px;border-radius:18px;background:linear-gradient(160deg,var(--gold-soft),var(--surface2));border:1px solid var(--hair);}
+  .pod-hero-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);}
+  .pod-hero-title{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.25;margin:4px 0 4px;color:var(--paper);}
+  .pod-hero-sub{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:12px;}
+  .pod-hero-btn{width:100%;min-height:48px;font-size:15px;}
+  .pod-seg{display:flex;gap:6px;margin-top:12px;}
+  .pod-seg button{flex:1 1 0;min-width:0;font:inherit;font-size:12.5px;min-height:40px;padding:6px 4px;border-radius:20px;border:1px solid var(--hair);background:var(--surface2);color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .pod-seg button.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600;}
+  .pod-opts{margin-top:10px;display:grid;grid-template-columns:1.3fr 1fr;gap:10px;align-items:center;}
+  .pod-opts.nodom{grid-template-columns:1fr;} .pod-opts .pod-len{margin-top:0;}
+  .pp-cap{min-height:42px;font-size:14px;line-height:1.45;color:var(--paper);text-align:center;margin:0 0 10px;}
+  .pp-cap small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+  .pp-prog{margin:0 0 12px;} .pp-prog input[type=range]{width:100%;accent-color:var(--gold);height:28px;margin:0;}
+  .pp-time{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pp-more{display:flex;justify-content:center;gap:18px;margin-top:8px;} .pp-more .linklike{font-size:12.5px;min-height:36px;}
   .podcast-focus{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--hair);font-size:13px;line-height:1.5;}
   .podcast-focus b.pf-h{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);font-weight:500;margin-bottom:6px;}
   .podcast-focus .pf-row{display:flex;gap:8px;align-items:baseline;margin:3px 0;} .podcast-focus .pf-row i{flex:none;font-style:normal;color:var(--gold);}
@@ -3388,29 +3404,43 @@
       <div class="ref-scroll"><div id="formulasList"></div></div>
     </div>
     <div class="card">
-      <div class="card-head"><h2>Subject Podcast</h2><div class="note">a spoken-style episode, by domain or personalized to you</div></div>
-      <p class="hint">A spoken-style study episode on a domain overview, formulas or common mistakes, written as a conversation between two study partners and read aloud by your device's voices. Depth adjusts to your accuracy in that domain, or choose the personalized option for an episode built from your own progress. Lengths run from 2 to 7 minutes, and each episode is saved after it's written, so replaying is instant.</p>
-      <div class="podcast-selector-grid">
-        <select id="podcastDomainSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose a domain for the podcast episode"></select>
-        <select id="podcastTypeSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose the kind of podcast episode">
-          <option value="overview">Domain overview</option>
-          <option value="formulas">Key formulas explained</option>
-          <option value="mistakes">Common mistakes on this domain</option>
-          <option value="personalized">Your tutor's pick — what you need to hear</option>
-        </select>
+      <div class="card-head"><h2>Subject Podcast</h2><div class="note">written for you, read aloud</div></div>
+      <div class="pod-hero" id="podcastHero">
+        <div class="pod-hero-kicker" id="podHeroKicker"></div>
+        <div class="pod-hero-title" id="podHeroTitle"></div>
+        <div class="pod-hero-sub" id="podHeroSub"></div>
+        <button type="button" class="btn pod-hero-btn" id="podcastHeroBtn" onclick="podcastHeroAction()"></button>
       </div>
-      <select id="podcastLengthSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose the episode length" style="margin-top:10px;">
+      <div class="pod-seg" id="podcastTypeSeg" role="group" aria-label="Kind of episode">
+        <button type="button" data-v="personalized" onclick="podcastSetType('personalized')">For you</button>
+        <button type="button" data-v="overview" onclick="podcastSetType('overview')">Overview</button>
+        <button type="button" data-v="formulas" onclick="podcastSetType('formulas')">Formulas</button>
+        <button type="button" data-v="mistakes" onclick="podcastSetType('mistakes')">Mistakes</button>
+      </div>
+      <div class="podcast-selector-grid pod-opts">
+        <select id="podcastDomainSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose a domain for the podcast episode"></select>
+        <div class="pod-seg pod-len" id="podcastLenSeg" role="group" aria-label="Episode length">
+          <button type="button" data-v="short" onclick="podcastSetLength('short')">2 min</button>
+          <button type="button" data-v="standard" onclick="podcastSetLength('standard')">4 min</button>
+          <button type="button" data-v="deep" onclick="podcastSetLength('deep')">7 min</button>
+        </div>
+      </div>
+      <select id="podcastTypeSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
+        <option value="overview">Domain overview</option>
+        <option value="formulas">Key formulas explained</option>
+        <option value="mistakes">Common mistakes on this domain</option>
+        <option value="personalized" selected>Your tutor's pick</option>
+      </select>
+      <select id="podcastLengthSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
         <option value="short">Short (~2 min)</option>
         <option value="standard" selected>Standard (~4 min)</option>
         <option value="deep">Deep dive (~7 min)</option>
       </select>
       <div class="podcast-focus" id="podcastFocus" style="display:none;"></div>
-      <div class="podcast-controls" id="podcastControls">
-        <button class="btn" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Generate this episode</button>
-        <button class="btn ghost" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all domains</button>
-      </div>
       <div class="podcast-player" id="podcastPlayer" style="display:none;">
         <div class="podcast-player-panel">
+          <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
+          <div class="pp-prog"><input type="range" id="podcastSeek" min="0" max="0" value="0" step="1" aria-label="Position in episode" oninput="podcastSeekPreview(this.value)" onchange="podcastSeekCommit(this.value)"><div class="pp-time"><span id="podcastElapsed">0:00</span><span id="podcastLeft"></span></div></div>
           <div class="podcast-player-controls">
             <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipBackBtn" onclick="podcastSkip(-1)" title="Previous sentence" aria-label="Previous sentence"></button>
             <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
@@ -3418,6 +3448,7 @@
           </div>
           <div class="podcast-player-secondary-row">
             <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastStopBtn" onclick="stopPodcastPlayback()" aria-label="Stop"><span></span><span>Stop</span></button>
+            <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Follow along</span></button>
             <select id="podcastSpeedSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSpeedChanged()" aria-label="Playback speed">
               <option value="0.75">0.75×</option>
               <option value="1" selected>1×</option>
@@ -3426,6 +3457,7 @@
             </select>
           </div>
           <div class="podcast-status" id="podcastStatus" aria-live="polite"></div>
+          <div class="pp-more"><button type="button" class="linklike" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Rewrite this episode</button><button type="button" class="linklike" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all domains</button></div>
         </div>
         <div class="podcast-generated-note" id="podcastGeneratedNote" style="display:none;" aria-live="polite"></div>
         <div class="podcast-refine" id="podcastRefine" style="display:none;"></div>
@@ -9617,6 +9649,7 @@ function initPodcastDomainOptions(){
     opt.textContent = d.code + ' — ' + d.name;
     select.appendChild(opt);
   });
+  try{ if(computeStats().totalAnswered >= 10){ document.getElementById('podcastTypeSelect').value = 'personalized'; } else { document.getElementById('podcastTypeSelect').value = 'overview'; const wk = (computeStats().weakestMeta || {}).key; if(wk) select.value = wk; } }catch(e){}
   podcastDomainChanged();
   const skipBackBtn = document.getElementById('podcastSkipBackBtn');
   const skipForwardBtn = document.getElementById('podcastSkipForwardBtn');
@@ -9812,9 +9845,9 @@ function refreshPodcastView(){
   const transcript = document.getElementById('podcastTranscript');
   const generatedNote = document.getElementById('podcastGeneratedNote');
   if(cached){
-    generateBtn.textContent = (type === 'personalized' && podcastStalePersonal(cacheKey)) ? 'Refresh with today\u2019s progress' : 'Regenerate this episode';
+    generateBtn.textContent = 'Rewrite this episode'; generateBtn.style.display = '';
     player.style.display = 'block';
-    transcriptWrap.style.display = 'block';
+    transcriptWrap.style.display = podcastTranscriptOpen ? 'block' : 'none';
     transcript.className = 'podcast-transcript';
     renderPodcastTranscript(transcript, cached);
     setPodcastPlayButtonState('Play');
@@ -9828,12 +9861,12 @@ function refreshPodcastView(){
       generatedNote.style.display = 'none';
     }
   } else {
-    generateBtn.textContent = 'Generate this episode';
+    generateBtn.textContent = 'Generate this episode'; generateBtn.style.display = 'none';
     player.style.display = 'none';
     transcriptWrap.style.display = 'none';
     generatedNote.style.display = 'none';
   }
-  try{ const af = document.getElementById('podcastAfter'); if(af && !naturalSpeechState.active) af.style.display = 'none'; renderPodcastFocus(); renderPodcastRefine(); }catch(e){}
+  try{ const af = document.getElementById('podcastAfter'); if(af && !naturalSpeechState.active) af.style.display = 'none'; renderPodcastFocus(); renderPodcastRefine(); renderPodcastHero(); podcastUpdateProgress(0); const tt = document.getElementById('podcastTranscriptToggle'); if(tt){ tt.setAttribute('aria-expanded', podcastTranscriptOpen); tt.querySelector('span').textContent = podcastTranscriptOpen ? 'Hide transcript' : 'Follow along'; } const cp = document.getElementById('podcastCaption'); if(cp && !naturalSpeechState.active) cp.innerHTML = '<small>Ready</small>Tap play to start.'; }catch(e){}
   renderPodcastLibrary();
 }
 
@@ -9959,6 +9992,69 @@ function podcastOpenTutorPick(){
     if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
     else togglePodcastPlayback();
   }catch(e){}
+}
+
+// ---- Podcast card: one clear start, a live caption, and a scrubber with time left ----
+let podcastTranscriptOpen = false;
+function podcastSetType(v){ const t = document.getElementById('podcastTypeSelect'); if(t){ t.value = v; podcastSelectionChanged(); } }
+function podcastSetLength(v){ const t = document.getElementById('podcastLengthSelect'); if(t){ t.value = v; podcastSelectionChanged(); } }
+function podcastToggleTranscript(){ podcastTranscriptOpen = !podcastTranscriptOpen; refreshPodcastView(); if(podcastTranscriptOpen){ try{ document.getElementById('podcastTranscriptWrap').scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){} } }
+function podcastEpisodeMinutes(text, speed){
+  try{ const w = splitIntoSpeechChunks(text).reduce((a, c) => a + String(c.text).split(/\s+/).length, 0); return w / 150 / (speed || 1); }catch(e){ return 0; }
+}
+function podcastFmt(min){ const t = Math.max(0, Math.round(min * 60)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+function podcastUpdateProgress(index){
+  const seek = document.getElementById('podcastSeek'); if(!seek) return;
+  const text = DATA.podcastEpisodes && DATA.podcastEpisodes[podcastCacheKey()];
+  if(!text){ return; }
+  let chunks = naturalSpeechState.active && naturalSpeechState.chunks.length ? naturalSpeechState.chunks : splitIntoSpeechChunks(text);
+  const n = chunks.length, i = Math.max(0, Math.min(index || 0, n - 1));
+  seek.max = Math.max(0, n - 1); seek.value = i;
+  const sp = podcastSpeedValue(); const wc = c => String(c.text).split(/\s+/).length;
+  const total = chunks.reduce((a, c) => a + wc(c), 0) || 1, before = chunks.slice(0, i).reduce((a, c) => a + wc(c), 0);
+  const el = document.getElementById('podcastElapsed'), left = document.getElementById('podcastLeft');
+  if(el) el.textContent = podcastFmt(before / 150 / sp);
+  if(left) left.textContent = '-' + podcastFmt((total - before) / 150 / sp);
+}
+function podcastSetCaption(index){
+  const cap = document.getElementById('podcastCaption'); if(!cap) return;
+  const c = naturalSpeechState.chunks[index]; if(!c){ return; }
+  cap.innerHTML = (c.speaker ? `<small>${c.speaker === 'HOST1' ? 'Host 1' : 'Host 2'}</small>` : '') + escapeHtml(String(c.text).replace(/^HOST[12]:\s*/, ''));
+}
+function podcastSeekPreview(v){ podcastUpdateProgress(parseInt(v, 10)); }
+function podcastSeekCommit(v){ try{ podcastJumpToSentence(parseInt(v, 10)); }catch(e){} }
+function renderPodcastHero(busy){
+  const type = document.getElementById('podcastTypeSelect').value, dk = document.getElementById('podcastDomainSelect').value;
+  const len = document.getElementById('podcastLengthSelect').value, key = podcastCacheKey();
+  const text = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
+  const dm = DOMAINS.find(d => d.key === dk);
+  const mins = { short:2, standard:4, deep:7 }[len] || 4;
+  const set = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
+  set('podHeroKicker', type === 'personalized' ? 'Written for you today' : 'Domain episode');
+  set('podHeroTitle', type === 'personalized' ? 'Your tutor’s pick' : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
+  let sub;
+  if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
+  else sub = (aiFeaturesAvailable ? 'About ' + mins + ' min. Written fresh from your progress, then saved.' : 'Read from your flashcards. Connect an API key in Settings for a full conversation.');
+  set('podHeroSub', sub);
+  const b = document.getElementById('podcastHeroBtn'); if(!b) return;
+  b.disabled = !!busy;
+  b.textContent = busy ? 'Writing…' : text ? ((type === 'personalized' && podcastStalePersonal(key)) ? 'Write a fresh one' : '▶  Play') : 'Write this episode';
+  document.querySelectorAll('#podcastTypeSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === type));
+  document.querySelectorAll('#podcastLenSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === len));
+  const opts = document.querySelector('.pod-opts'); const ds = document.getElementById('podcastDomainSelect');
+  if(opts) opts.classList.toggle('nodom', type === 'personalized');
+  if(ds) ds.style.display = type === 'personalized' ? 'none' : '';
+}
+// One tap: play if it exists, otherwise write it and be ready to play (the phone only allows sound after a tap).
+function podcastHeroAction(){
+  const key = podcastCacheKey(), type = document.getElementById('podcastTypeSelect').value;
+  const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
+  if(have && !(type === 'personalized' && podcastStalePersonal(key))){
+    if(naturalSpeechState.active) togglePodcastPlayback(); else togglePodcastPlayback();
+    return;
+  }
+  renderPodcastHero(true);
+  generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} });
 }
 function podcastDomainPersonalizationContext(domainKey){
   const stat = DATA.domainStats && DATA.domainStats[domainKey];
@@ -10136,7 +10232,7 @@ async function generatePodcastEpisode(forceNew, refine){
   }catch(e){
     if(!stillOnSameSelection()) return;
     generateBtn.disabled = false;
-    generateBtn.textContent = (DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]) ? 'Regenerate this episode' : 'Generate this episode';
+    generateBtn.textContent = (DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]) ? 'Rewrite this episode' : 'Generate this episode'; try{ renderPodcastHero(); }catch(_){}
     transcript.className = 'podcast-transcript';
     transcript.innerHTML = '';
     const errSpan = document.createElement('span');
@@ -10170,7 +10266,8 @@ function podcastSpeedValue(){
   return select ? parseFloat(select.value) : 1;
 }
 
-function podcastSpeedChanged(){
+function podcastSpeedChanged(){ try{ setTimeout(() => { podcastUpdateProgress(naturalSpeechState.active ? naturalSpeechState.index : 0); renderPodcastHero(); }, 0); }catch(e){}
+
   if(naturalSpeechState.active){
     naturalSpeechState.speed = podcastSpeedValue();
   }
@@ -10201,8 +10298,8 @@ function setPodcastPlayButtonState(state){
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
-    onDone: () => { setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
-    onChunkStart: (index) => { setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
+    onDone: () => { setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
+    onChunkStart: (index) => { setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ podcastSetCaption(index); podcastUpdateProgress(index); }catch(e){} try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
   };
 }
 
@@ -22626,7 +22723,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.230';
+const BUILD_ID = '2026-10-18.231';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -23051,7 +23148,6 @@ requestDurableStorage();
   const byTitle = (tab, titles) => Array.from(document.querySelectorAll('#' + tab + ' > .card')).filter(c => { const h = c.querySelector(':scope > .card-head h2'); return h && titles.indexOf(h.textContent.trim()) >= 0; });
   Array.from(document.querySelectorAll('#tab-tools > .card')).slice(1).forEach(ccMake);
   byTitle('tab-examday', ['Exam format', 'Calculator policy', 'What to bring']).forEach(ccMake);
-  byTitle('tab-reference', ['Subject Podcast']).forEach(ccMake);
   window.ccSet = ccSet;
 })();
 
