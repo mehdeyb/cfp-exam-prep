@@ -1108,6 +1108,7 @@
   .plan-result.done{border-left-color:var(--correct);}
   .plan-result .pr-why{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
   .scenario-next{font-size:12.5px;color:var(--teal);margin:2px 0 8px;font-weight:600;}
+  .cd-parts li.cd-brk{opacity:.75;font-style:italic;}
   .pt-break{margin:6px 0 8px;padding:8px 12px;border-radius:12px;border:1px dashed var(--hair-strong);font-size:12.5px;color:var(--muted);line-height:1.45;} .pt-break b{color:var(--paper);margin-right:6px;}
   .pt-adv{margin:10px 0 4px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--good,#2e9b5e) 12%,transparent);border:1px solid color-mix(in srgb,var(--good,#2e9b5e) 35%,transparent);}
   .pt-adv-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -6170,11 +6171,11 @@ function splitIntoSpeechChunks(text){
       if(!trimmed) return;
       chunks.push({
         text: trimmed,
-        pauseAfterMs: (sIdx === sentences.length - 1 && pIdx < paragraphs.length - 1) ? 450 : 180,
+        pauseAfterMs: (sIdx === sentences.length - 1 && pIdx < paragraphs.length - 1) ? 450 : 110,
       });
     });
   });
-  return chunks.length ? chunks : [{ text: text.trim(), pauseAfterMs: 0 }];
+  return chunks.length ? mergeSpeechChunks(chunks) : [{ text: text.trim(), pauseAfterMs: 0 }];
 }
 
 // Parses a two-host script into speaker-tagged chunks. Groups consecutive
@@ -6185,6 +6186,19 @@ function splitIntoSpeechChunks(text){
 // narrator. A change of speaker gets a longer pause than an ordinary
 // sentence break -- someone else picking up the thread -- but shorter than
 // a full paragraph/topic break.
+// Speech sounds best in phrases, not one sentence at a time: each new utterance restarts the voice's intonation, so short sentences
+// from the same speaker are joined (up to about two sentences) and the pause is kept only where a person would really pause.
+function mergeSpeechChunks(chunks){
+  const out = [];
+  chunks.forEach(c => {
+    const last = out[out.length - 1];
+    if(last && last.speaker === c.speaker && last.pauseAfterMs < 300 && (last.text.length + c.text.length) <= 200 && !/[?]$/.test(last.text)){
+      last.text += ' ' + c.text; last.pauseAfterMs = c.pauseAfterMs;
+    } else out.push({ text:c.text, speaker:c.speaker, pauseAfterMs:c.pauseAfterMs });
+  });
+  out.forEach(c => { if(c.speaker === undefined) delete c.speaker; });
+  return out;
+}
 function splitDialogueIntoSpeechChunks(text){
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const turns = [];
@@ -6212,11 +6226,11 @@ function splitDialogueIntoSpeechChunks(text){
       chunks.push({
         text: trimmed,
         speaker: turn.speaker,
-        pauseAfterMs: (isLastInTurn && tIdx < turns.length - 1) ? 400 : 180,
+        pauseAfterMs: (isLastInTurn && tIdx < turns.length - 1) ? 380 : 110,
       });
     });
   });
-  return chunks.length ? chunks : [{ text: text.trim(), pauseAfterMs: 0 }];
+  return chunks.length ? mergeSpeechChunks(chunks) : [{ text: text.trim(), pauseAfterMs: 0 }];
 }
 
 // Shared playback state -- one active sequence at a time, since only one
@@ -6344,9 +6358,17 @@ const PARENTHETICAL_PATTERN = new RegExp(
   'gi'
 );
 function applyPronunciationDictionary(text){
+  text = String(text)
+    .replace(/[*_#`]+/g, '')                       // stray markdown is never said aloud
+    .replace(/\s*(?:--|\u2014|\u2013)\s*/g, ', ')         // dashes become a natural breath
+    .replace(/\be\.g\.,?/gi, 'for example,').replace(/\bi\.e\.,?/gi, 'that is,')
+    .replace(/\bvs\.?(?=\s)/gi, 'versus').replace(/\betc\./gi, 'and so on')
+    .replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ');
   return text
     .replace(PRONUNCIATION_PATTERN, match => PRONUNCIATION_DICTIONARY[match.toUpperCase()] || match)
-    .replace(PARENTHETICAL_PATTERN, match => PARENTHETICAL_DICTIONARY[match.toUpperCase()] || match);
+    .replace(PARENTHETICAL_PATTERN, match => PARENTHETICAL_DICTIONARY[match.toUpperCase()] || match)
+    .replace(/(?<![\w])\(([^)]{1,40})\)/g, ', $1,')   // a short aside reads as a lilt
+    .replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/,\s*([.!?])/g, '$1').replace(/\s{2,}/g, ' ');
 }
 
 function playNextSpeechChunk(){
@@ -6366,8 +6388,8 @@ function playNextSpeechChunk(){
   if(trimmedText.endsWith('?')) pitchBias = 0.05; // questions naturally lift in pitch
   else if(trimmedText.endsWith('!')) { pitchBias = 0.04; rateBias = 0.02; } // a touch more energy
   else if(/(\.\.\.|--)$/.test(trimmedText)) rateBias = -0.04; // trailing off, not rushing to the next thought
-  utter.rate = (0.95 + rateBias + (Math.random() * 0.06 - 0.03)) * state.speed;
-  utter.pitch = 1 + pitchBias + (Math.random() * 0.08 - 0.04);
+  utter.rate = (0.96 + rateBias + (Math.random() * 0.03 - 0.015)) * state.speed;
+  utter.pitch = 1 + pitchBias + (Math.random() * 0.04 - 0.02);
   let voice = null;
   if(state.voicePair && chunk.speaker === 'HOST1') voice = state.voicePair.host1;
   else if(state.voicePair && chunk.speaker === 'HOST2') voice = state.voicePair.host2;
@@ -8366,9 +8388,13 @@ function conductorShow(kind){
     const plan = buildStudyPlan(); const fake = { ran: [], skipped: [], log: [] };
     const parts = conductorFit(conductorCandidates(fake, plan), 0, c.minutes);
     const tot = parts.reduce((a, x) => a + x.minutes, 0);
+    const withBreak = c.minutes >= 200 && parts.length >= 5 && tot >= 150;
+    let cum = 0, brkAt = -1; if(withBreak){ for(let i = 0; i < parts.length - 1; i++){ cum += parts[i].minutes; if(cum >= Math.min(105, tot / 2)){ brkAt = i; break; } } }
+    const endAt = new Date(Date.now() + (tot + (brkAt >= 0 ? 10 : 0)) * 60000); const endTxt = endAt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+    let focusTxt = ''; try{ const bf = podcastBriefing().focus.slice(0, 2).map(f => f.label); if(bf.length) focusTxt = 'Focus today: ' + bf.join('; ') + '. '; }catch(e){}
     html = `<div class="cd-kicker">Today's session · ${escapeHtml(plan.phase.label)}</div><h3 class="cd-title" id="cdTitle">${parts.length} part${parts.length === 1 ? '' : 's'}, about ${tot} minutes</h3>
-      <p class="cd-text">I will take you through these in order. After each one I will check how it went and adjust what comes next. You can skip a part or stop whenever you like.</p>
-      <ol class="cd-parts">${parts.map(x => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>`).join('')}</ol>
+      <p class="cd-text">${escapeHtml(focusTxt)}Done around ${escapeHtml(endTxt)}${brkAt >= 0 ? ', with one 10 minute break' : ''}.${(endAt.getHours() >= 23 && endAt.getMinutes() >= 30) || endAt.getHours() < 5 ? ' That runs late: stopping after the break and finishing tomorrow protects your sleep, which is when practice settles.' : ''} After each part I check how it went and adjust what comes next. Skip a part or stop whenever you like.</p>
+      <ol class="cd-parts">${parts.map((x, i) => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>` + (i === brkAt ? `<li class="cd-brk"><div>Break<small>10 min, away from the screen</small></div></li>` : '')).join('')}</ol>
       <div class="cd-next"><b>Starting with: ${escapeHtml(parts[0].title)}</b><span>${escapeHtml(CONDUCTOR_CUES[parts[0].id] || 'Take it one question at a time.')}</span></div>
       <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">Begin</button><button type="button" class="cd-link" onclick="conductorClose(false)">Not now</button></div>`;
   } else if(kind === 'between' || kind === 'menu'){
@@ -22799,7 +22825,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.237';
+const BUILD_ID = '2026-10-18.239';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
