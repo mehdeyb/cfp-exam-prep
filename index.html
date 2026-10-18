@@ -1674,6 +1674,14 @@
   .tutor-action-indicator{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0;font-size:11.5px;color:var(--teal);font-weight:600;}
   .tutor-msg-bot .tutor-bubble.tutor-bubble-err{background:var(--incorrect-tint);border-color:var(--incorrect);color:var(--paper);}
   .tutor-bubble.typing{color:var(--muted);}
+  .tutor-bubble:has(.tutor-choices){max-width:92%;}
+  .tutor-choices{display:flex;flex-direction:column;gap:8px;margin:10px 0 2px;white-space:normal;}
+  .tutor-choice{display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);font:inherit;font-size:13px;line-height:1.45;cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease);}
+  .tutor-choice:active:not(:disabled){transform:scale(.985);border-color:var(--gold);}
+  .tutor-choice:disabled{cursor:default;opacity:.55;}
+  .tutor-choice.picked{opacity:1;border-color:var(--gold);background:var(--gold-soft);}
+  .tc-l{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--gold-bright);flex:none;width:14px;}
+  .tutor-choice.tc-unsure{justify-content:center;min-height:40px;color:var(--muted);font-weight:600;border-style:dashed;}
   /* One shared waiting treatment for AI answers: a slim moving bar, and a "still working" line that
      appears by itself (pure CSS, no timers to leak) if the wait runs past ten seconds. */
   .simplified-explanation.loading,.glossary-example.loading,.fc-mnemonic-box.loading,.podcast-transcript-loading{position:relative;overflow:hidden;color:var(--muted);}
@@ -19856,7 +19864,7 @@ Guidelines:
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
-- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails, in a few short lines. Ask one question at a time.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -19872,6 +19880,41 @@ function renderTutorMessage(role, text){
   thread.scrollTop = thread.scrollHeight;
   return bubble;
 }
+
+// When the tutor poses a multiple-choice question in chat (options on their own lines as "A) ...", "B) ..."),
+// the options become tappable buttons. A tap sends that answer as the student's reply, so the tutor reacts to it
+// in context exactly as if it had been typed. Anything that is not clearly a lettered list stays plain text.
+function tutorParseChoices(text){
+  const lines = String(text).split('\n'); const re = /^\s*\(?([A-E])[\)\.:]\s+(\S.*)$/;
+  for(let i = 0; i < lines.length; i++){
+    const m = lines[i].match(re); if(!m || m[1] !== 'A') continue;
+    const opts = [{ L: 'A', t: m[2].trim() }];
+    let j = i + 1;
+    while(j < lines.length){ const k = lines[j].match(re); if(!k || k[1] !== String.fromCharCode(65 + opts.length)) break; opts.push({ L: k[1], t: k[2].trim() }); j++; }
+    if(opts.length >= 3) return { before: lines.slice(0, i).join('\n').trim(), opts, after: lines.slice(j).join('\n').trim() };
+  }
+  return null;
+}
+function tutorRenderReply(bubble, reply){
+  const parsed = tutorParseChoices(reply);
+  if(!parsed){ bubble.textContent = reply; return; }
+  bubble.textContent = '';
+  if(parsed.before){ const d = document.createElement('div'); d.textContent = parsed.before; bubble.appendChild(d); }
+  const box = document.createElement('div'); box.className = 'tutor-choices'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Answer choices');
+  const lock = (picked) => box.querySelectorAll('button').forEach(b => { b.disabled = true; if(b === picked) b.classList.add('picked'); });
+  parsed.opts.forEach(o => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-choice';
+    b.innerHTML = '<span class="tc-l">' + o.L + '</span><span class="tc-t"></span>'; b.querySelector('.tc-t').textContent = o.t;
+    b.onclick = () => { if(tutorBusy) return; lock(b); sendTutorMessage(o.L + ') ' + o.t); };
+    box.appendChild(b);
+  });
+  const u = document.createElement('button'); u.type = 'button'; u.className = 'tutor-choice tc-unsure'; u.textContent = "I'm not sure";
+  u.onclick = () => { if(tutorBusy) return; lock(u); sendTutorMessage("I'm not sure. Give me a hint, not the answer."); };
+  box.appendChild(u);
+  bubble.appendChild(box);
+  if(parsed.after){ const d = document.createElement('div'); d.textContent = parsed.after; bubble.appendChild(d); }
+}
+function tutorLockChoices(){ document.querySelectorAll('#tutorThread .tutor-choices button').forEach(b => { b.disabled = true; }); }
 
 // A decision tree shown right in the conversation: the student walks it without leaving the chat. Diagram tools
 // (options matrix, plan family tree) cannot run inline, so they get a button to the Tools tab instead.
@@ -20546,6 +20589,7 @@ async function sendTutorMessage(presetText){
   }
   input.value = '';
 
+  tutorLockChoices(); // an earlier question's buttons are history once you move on
   renderTutorMessage('user', text);
   tutorMessages.push({role:'user', content:text});
   const conversationIdAtRequestTime = tutorConversationId;
@@ -20594,7 +20638,7 @@ async function sendTutorMessage(presetText){
 
     const reply = finalTextBlocks.join('').trim() || "Sorry, I didn't quite get a response there — could you try asking again?";
     typingBubble.classList.remove('typing');
-    typingBubble.textContent = reply;
+    tutorRenderReply(typingBubble, reply);
     status.textContent = '';
     tutorMaybeOfferTree(text, reply);
     if(presetText === undefined) tutorRemember(text, 'tutor');
@@ -21090,7 +21134,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.216';
+const BUILD_ID = '2026-10-18.217';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
