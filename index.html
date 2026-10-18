@@ -3194,7 +3194,7 @@
 
   <!-- ================= TOOLS TAB ================= -->
   <div class="tab-panel" id="tab-tools">
-    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Practice</button>
+    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span class="sb-l">Practice</span></button>
     <div class="card">
       <div class="card-head"><h2>Decision tools</h2><div class="note">tap through, or see the whole map at once</div></div>
       <div class="tutor-chips" id="toolsTutorChips" style="margin:0 0 12px;">
@@ -3357,7 +3357,7 @@
 
   <!-- ================= FLASHCARDS TAB ================= -->
   <div class="tab-panel" id="tab-flashcards">
-    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Practice</button>
+    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span class="sb-l">Practice</span></button>
     <div class="card" id="fcTopCard">
       <div id="fcTopCardContent">
         <div class="card-head"><h2>Flashcards</h2><div class="note">tap the card to flip</div></div>
@@ -3754,9 +3754,20 @@ function _scrollPageTo(y){
   try{ window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }catch(e){ window.scrollTo(0, y); }
 }
 // Flashcards and the decision tools are sub-screens of Study (Practice a specific way), so the Study tab stays lit while they are open.
+// The back link returns to wherever you came from (Study, Reference, Tutor...) and says so.
+const SUB_SCREENS = ['flashcards', 'tools'];
+const SUB_ORIGIN_LABEL = { study: 'Practice', reference: 'Reference', tutor: 'Tutor', examday: 'Exam Day' };
+let _subOrigin = 'study';
+function updateSubBack(){
+  const lbl = SUB_ORIGIN_LABEL[_subOrigin] || 'Practice';
+  document.querySelectorAll('.sub-back .sb-l').forEach(el => { el.textContent = lbl; });
+}
 function backToPractice(){
-  showTab('study');
-  requestAnimationFrame(() => { const p = document.getElementById('modePanel'); if(p) p.scrollIntoView({block:'start'}); });
+  const to = SUB_ORIGIN_LABEL[_subOrigin] ? _subOrigin : 'study';
+  showTab(to);
+  if(to === 'study' && !(_tabScroll && _tabScroll.study)){
+    requestAnimationFrame(() => { const p = document.getElementById('modePanel'); if(p) p.scrollIntoView({block:'start'}); });
+  }
 }
 function showTab(name, opts){
   opts = opts || {};
@@ -3769,6 +3780,7 @@ function showTab(name, opts){
   if(curName && !same){
     _tabScroll[curName] = window.scrollY || 0;
   }
+  if(SUB_SCREENS.includes(name) && curName && !SUB_SCREENS.includes(curName)){ _subOrigin = curName; try{ updateSubBack(); }catch(e){} }
   document.querySelectorAll('.tab-panel').forEach(el=>{ el.classList.remove('active'); el.classList.remove('tab-enter'); });
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -20181,7 +20193,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.179';
+const BUILD_ID = '2026-10-18.180';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
