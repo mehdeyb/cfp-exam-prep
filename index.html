@@ -3585,7 +3585,8 @@
             <div class="tutor-status" id="apiKeyStatus" role="alert"></div>
           </div>
           <div class="api-key-connected" id="apiKeyConnected" style="display:none;">
-            <span>✓ API key connected — AI features are active on this device.</span>
+            <span id="aiHealthText">✓ API key connected — AI features are active on this device.</span>
+            <button class="linklike" onclick="testAiConnection()">Test</button>
             <button class="linklike" onclick="handleClearApiKey()">Disconnect</button>
           </div>
         </div>
@@ -5067,7 +5068,7 @@ const API_KEY_STORAGE = 'cfp-blueprint-api-key';
 const ARTIFACT_MODEL = 'claude-sonnet-4-6'; // used only via the in-artifact proxy
 // Used for direct calls with a real API key. The newest ID goes first; if the
 // API says it does not know a model, the next one is tried and remembered.
-const DIRECT_MODELS = ['claude-sonnet-5-5', 'claude-sonnet-5'];
+const DIRECT_MODELS = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-6'];
 let directModelIdx = 0;
 let directThinkingRejected = false;
 
@@ -5152,6 +5153,7 @@ async function checkAIAvailability(){
   }
   renderApiKeyUI();
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
+  if(aiMode === 'direct') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
 }
 
 function renderApiKeyUI(){
@@ -5182,6 +5184,26 @@ function renderApiKeyUI(){
     if(genStatus){ genStatus.textContent = 'Connect an API key in Settings to turn on AI-generated questions.'; }
   }
   updateTutorContextNote();
+}
+
+// Pings the AI once and says plainly whether it works. Runs on its own at launch (direct key) and from Settings > Test.
+let aiHealth = null;
+async function testAiConnection(){
+  const el = document.getElementById('aiHealthText');
+  if(aiMode === 'none'){ aiHealth = { ok:false, msg:'No AI key connected.' }; return aiHealth; }
+  if(el) el.textContent = 'Testing the connection…';
+  const t0 = Date.now();
+  try{
+    const r = await anthropicMessagesRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 });
+    const txt = aiReplyText(r) || (typeof r === 'string' ? r : '');
+    if(!/\S/.test(String(txt))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' });
+    const model = aiMode === 'direct' ? DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)] : ARTIFACT_MODEL;
+    aiHealth = { ok:true, msg:'✓ Working · ' + model + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's' };
+  }catch(e){
+    aiHealth = { ok:false, msg:'⚠ Not working: ' + describeAiError(e) };
+  }
+  const el2 = document.getElementById('aiHealthText'); if(el2) el2.textContent = aiHealth.msg;
+  return aiHealth;
 }
 
 async function handleSaveApiKey(){
@@ -12762,6 +12784,7 @@ function aiReplyText(r){
 
 function describeAiError(err){
   const status = err && err.status;
+  if(err && err.code === 'NO_API_KEY') return 'no AI key is connected. Add one in Settings to turn on the tutor and generated questions.';
   if(err && err.code === 'TIMEOUT') return "the request took too long and timed out, likely a network hiccup — try again.";
   if(err && err.code === 'NETWORK') return "check your internet connection and try again.";
   if(err && err.code === 'BAD_REPLY') return "this is usually a one-off — try again in a moment.";
@@ -20089,7 +20112,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.173';
+const BUILD_ID = '2026-10-17.174';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
