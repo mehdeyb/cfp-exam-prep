@@ -7917,7 +7917,7 @@ function buildStudyPlan(minutes){
       const since = lastT ? (Date.now() - new Date(lastT.date).getTime()) / ONE_DAY_MS : Infinity;
       if(since < 6 && !act.modes.includes('mock')) return null;
       return { id:'checkpoint', title:`Timed checkpoint (${MOCK_QUESTION_COUNT} questions)`, minutes:MOCK_MINUTES,
-        why:'The real exam mix at the real pace shows where you actually stand and how you handle the clock. Its score feeds your readiness number.',
+        why:(() => { const st = sittingClockStatus(lastSitting()); return st === 'tight' ? 'Your last checkpoint left almost no time at the end. Run it again and bank minutes on the easy questions so there is room for the ones you flag.' : st === 'roomy' ? 'Your last checkpoint finished with plenty of clock left. Another one will show whether you can use that time to get more right.' : 'The real exam mix at the real pace shows where you actually stand and how you handle the clock. Its score feeds your readiness number.'; })(),
         need:MOCK_QUESTION_COUNT, have: Math.min(cnt.mock || 0, MOCK_QUESTION_COUNT), unit:'questions', run: () => { showTab('study'); startMock(); } };
     },
     teach: () => {
@@ -14410,7 +14410,7 @@ function openChoicePicker(title, hint, rows){
 function openExamPicker(){
   const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
   openChoicePicker('Practice exam', 'Timed, in the real exam\'s domain mix.', [
-    { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: 'Real-exam conditions: no feedback until you submit. Counts toward readiness.', run: () => startMock() },
+    { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: (() => { const x = lastSitting(); return x ? 'Last: ' + sittingClockLine(x) + '. Exam conditions, no feedback until you submit.' : 'Exam conditions: no feedback until you submit. Counts toward readiness.'; })(), run: () => startMock() },
     { name: 'Full ' + FULL_EXAM_QUESTION_COUNT + '-question exam', meta: 'Two 3-hour sections with a break', note: 'Apply+ in ' + ap + '/' + DOMAINS.length + ' domains. Best in the last three weeks, rested.', run: () => startFullExam() }
   ]);
 }
@@ -16983,6 +16983,22 @@ function startAdaptive(){
 // the app was closed?), so those are left to simply restart clean.
 const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case'];
 const STUDY_MODES = ['adaptive', 'drill', 'review', 'case'];
+// The most recent timed sitting (checkpoint or full exam) and how it went against the clock.
+function lastSitting(){ return (DATA.sessions || []).filter(x => (x.mode === 'mock' || x.mode === 'fullexam') && x.total >= 20).pop() || null; }
+function sittingClockLine(x){
+  if(!x) return '';
+  const pct = x.total ? Math.round(x.correct / x.total * 100) : 0;
+  let t = `${x.correct} of ${x.total} (${pct}%)`;
+  if(x.timedOut) t += ', ran out of time';
+  else if(typeof x.spare === 'number' && x.clock) t += `, ${Math.round(x.spare/60)} of ${Math.round(x.clock/60)} min left at submit`;
+  return t;
+}
+function sittingClockStatus(x){
+  if(!x || typeof x.spare !== 'number' || !x.clock) return null;
+  if(x.timedOut || x.spare < x.clock*0.05) return 'tight';
+  if(x.spare > x.clock*0.3) return 'roomy';
+  return 'healthy';
+}
 function examLike(){ return !!session && (session.mode === 'fullexam' || session.mode === 'mock'); }
 // The stretch of questions the student is working in: one 3-hour section of the full exam, or the whole checkpoint.
 function examBounds(idx){
@@ -17757,6 +17773,7 @@ function renderPaceCard(){
   } else {
     html += `<p class="hint"><b>Your pace:</b> not enough timed answers yet. Answer a few sessions, or take a timed mock, and your own average will appear here.</p>`;
   }
+  try{ const x = lastSitting(); if(x) html += `<p class="hint"><b>Last timed ${x.mode === 'mock' ? 'checkpoint' : 'exam'}:</b> ${sittingClockLine(x)}.</p>`; }catch(e){}
   html += `<p class="hint" style="margin-bottom:0;">The timed checkpoint shows the allowance for the question you are on, the time you have banked and how much spare time you are heading for. The results screen lists the questions that ate the most time and how you scored on those.</p>`;
   el.innerHTML = html;
 }
@@ -19555,7 +19572,9 @@ function finishSession(){
     const qs = (idxs.length ? idxs.map(i => session.queue[i]) : []).filter(q => q && q.q);
     if(qs.length) sessDiff = Math.round(10 * qs.reduce((a,q)=>a+questionDifficulty(q),0) / qs.length) / 10;
   }catch(e){ sessDiff = null; }
-  DATA.sessions.push({date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, diff:sessDiff, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, minutes: Math.round(creditedMin)});
+  const rec = {date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, diff:sessDiff, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, minutes: Math.round(creditedMin)};
+  if(examLike()){ try{ const pi = paceSectionInfo() || { total: MOCK_MINUTES*60 }; rec.spare = session.timedOut ? 0 : Math.max(0, Math.round(session.timerSeconds || 0)); rec.clock = pi.total; if(session.timedOut) rec.timedOut = true; }catch(e){} }
+  DATA.sessions.push(rec);
   if(DATA.sessions.length > 300) DATA.sessions = DATA.sessions.slice(-300);
   persist();
   // Auto-backup (a silent file download after every so many questions)
@@ -19774,7 +19793,20 @@ function renderResultTools(){
   if(!el) return;
   el.style.display = 'none'; el.innerHTML = '';
   try{
-    if(!session || session.mode === 'fullexam' || session.mode === 'mock') return;
+    if(session && examLike()){
+      // No feedback came during the sitting, so the explanations are the next step: go through the misses (and anything left unanswered) now.
+      const miss = (session.answerLog || []).filter(e => !e.correct).map(e => session.queue[e.index]).filter(Boolean);
+      const answeredIdx = new Set((session.answerLog || []).map(e => e.index));
+      const blank = session.queue.filter((q, i) => !answeredIdx.has(i) && session.timedOut);
+      const n = miss.length + blank.length;
+      session.reviewPool = miss.concat(blank);
+      if(n){
+        el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">There was no feedback during the sitting, as on the real exam. The learning is in the ${n === 1 ? 'one' : n} you ${blank.length ? 'missed or left blank' : 'missed'}: go through them with the explanations while they are fresh.</div><button type="button" class="btn" onclick="startSessionMisses()">Go through the ${n === 1 ? 'one' : n}</button>`;
+        el.style.display = 'block';
+      }
+      return;
+    }
+    if(!session) return;
     if(session.treeDrill && TREE_META[session.treeDrill]){
       const key = session.treeDrill, st = treeDrillStats(key);
       el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;"><b>${escapeHtml(TREE_META[key].name)}</b>: ${st.solved} of ${st.total} routes solved${st.weak ? ', ' + st.weak + ' to revisit' : ''}. ${st.weak ? 'The routes you missed come back first next time.' : 'Every route you have tried is solid.'}</div><button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${key}')">Apply the tree again</button> <button type="button" class="btn ghost" onclick="openToolFromResults('${key}')">Open it in Decision tools</button>`;
@@ -19795,6 +19827,12 @@ function renderResultTools(){
     el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>${drillBtn}`;
     el.style.display = 'block';
   }catch(e){}
+}
+function startSessionMisses(){
+  const pool = session && session.reviewPool ? session.reviewPool.slice() : [];
+  if(!pool.length) return;
+  exitToMenu();
+  beginSession(shuffle(pool), 'review', null);
 }
 function openToolFromResults(key){
   exitToMenu();
@@ -20717,6 +20755,7 @@ function buildTutorSystemPrompt(){
     if(mem.length) timeContext += ' Things they have brought to you in earlier conversations, oldest first: ' + mem.map(m => `"${m.q}" (${modeAgoText(m.t)})`).join('; ') + '. Use this for continuity, the way a tutor who remembers last week would: connect to an earlier topic when it genuinely helps, check whether it stuck, but never recite the list.';
   }catch(e){}
   try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
+  try{ const x = lastSitting(); if(x) timeContext += ` Their last timed ${x.mode === 'mock' ? 'checkpoint' : 'full exam'} (${modeAgoText(new Date(x.date).getTime())}): ${sittingClockLine(x)}. Checkpoints run under exam conditions with no feedback until submitting, and the app shows the allowance per question (about 2 minutes) with the time they have banked against an even pace. Use this when they ask about pacing or time management; never push speed at the cost of accuracy.`; }catch(e){}
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
@@ -21787,8 +21826,8 @@ function tutorOpeningLine(stats){
    expires on its own, is limited to one new note a day, and never appears mid-session. Things that already have a
    callout (mix-ups, miss patterns, streaks, score milestones) are deliberately not repeated here.
 =========================================================== */
-const TN_PRIORITY = { checkin: 0, countdown: 1, gap: 2, pace: 3, fade: 4 };
-const TN_EXPIRE = { checkin: 7 * 86400000, countdown: 2 * 86400000, gap: 2 * 86400000, pace: 3 * 86400000, fade: 3 * 86400000 };
+const TN_PRIORITY = { checkin: 0, countdown: 1, clock: 2, gap: 2, pace: 3, fade: 4 };
+const TN_EXPIRE = { checkin: 7 * 86400000, countdown: 2 * 86400000, gap: 2 * 86400000, pace: 3 * 86400000, fade: 3 * 86400000, clock: 3 * 86400000 };
 function tnList(){ if(!Array.isArray(DATA.tutorNotes)) DATA.tutorNotes = []; return DATA.tutorNotes; }
 function tnEnabled(){ return !(DATA && DATA.tutorNotesOff); }
 function tnKind(n){ return n.key === 'checkin' ? 'checkin' : String(n.key).split(':')[0].replace(/^cd.*/, 'countdown'); }
@@ -21823,6 +21862,17 @@ const TN_RULES = [
       return { key: 'cd' + tier, text: txt, act, once: true };
     },
     still(n){ const d = getDaysUntilExam(); return d !== null && d >= 1; } },
+  { kind: 'clock',
+    make(){
+      const x = lastSitting(); if(!x) return null;
+      const age = Date.now() - new Date(x.date).getTime(); if(age > 2 * 86400000) return null;
+      const st = sittingClockStatus(x); if(st !== 'tight' && st !== 'roomy') return null;
+      const text = st === 'tight'
+        ? (x.timedOut ? 'Your last checkpoint ran out of clock. Next time, flag anything that passes two minutes and move on.' : 'Your last checkpoint finished with almost no time left. Bank minutes on the quick ones so flagged questions get a second look.')
+        : 'Your last checkpoint finished with a lot of clock left. You can afford to read each question twice.';
+      return { key: 'clock:' + x.date, cool: 2, text, act: { kind: 'ask', label: 'Talk pacing', arg: `Look at my last checkpoint: ${sittingClockLine(x)}. Give me a concrete pacing plan for the real exam: how long to spend, when to flag and move on, and how to use banked time. Keep it practical.` } };
+    },
+    still(n){ const x = lastSitting(); return !!x && ('clock:' + x.date) === n.key; } },
   { kind: 'gap',
     make(){
       const g = tnGapDays(); if(g === null || g < 3) return null;
@@ -22181,7 +22231,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.224';
+const BUILD_ID = '2026-10-18.225';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
