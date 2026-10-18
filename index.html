@@ -2483,8 +2483,7 @@
     </div>
 
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
-    <div class="tech-today" id="techToday" style="display:none;"></div>
-
+    
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
 
     <div class="card" id="blueprintCard">
@@ -8315,7 +8314,7 @@ function refreshCoachSurfaces(){
   lastCoachRefreshDay = new Date().toDateString();
   const stats = computeStats();
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
-  try{ renderTechToday(); renderStudyTechniques(); }catch(e){}
+  try{ renderStudyTechniques(); }catch(e){}
   renderReadinessExtras(stats);
   renderNextStepCard(stats);
   renderTodayPlan();
@@ -10131,13 +10130,6 @@ function studyTechniquePick(){
   if(st && st.totalAnswered >= 20 && st.accuracy !== null && st.accuracy < 65) return { t: by('explain'), why: 'Your accuracy is ' + st.accuracy + '%. Explaining ideas in your own words finds the gaps that rereading hides.' };
   if(st && st.totalAnswered < 10) return { t: by('pretest'), why: 'You are just getting started. Trying questions first shows you what to study.' };
   return { t: by('recall'), why: 'A three-minute blank-page recall on ' + dom + ' is the best single move for your weakest area.' };
-}
-function renderTechToday(){
-  const el = document.getElementById('techToday'); if(!el) return;
-  const p = studyTechniquePick();
-  el.style.display = 'flex';
-  el.innerHTML = '<div class="tt-text" title="' + p.why.replace(/"/g,'&quot;') + '"><span class="tt-label">Technique for today</span><b>' + p.t.name + '</b></div><button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + p.t.id + '\')">' + (p.t.cta ? 'Try it' : 'See how') + '</button>';
-  const btn = el.querySelector('button'); if(!p.t.cta) btn.onclick = () => { showTab('reference'); setTimeout(() => { try{ document.getElementById('techCard').scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }, 80); };
 }
 function studyTechniqueRun(id){
   const t = STUDY_TECHNIQUES.find(x => x.id === id); if(!t) return;
@@ -20720,7 +20712,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.204';
+const BUILD_ID = '2026-10-18.205';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
