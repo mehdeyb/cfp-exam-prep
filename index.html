@@ -5382,7 +5382,7 @@ function defaultData(){
     lastGapCardGenAt: 0,
     conductor: null,
     dayLog: null,
-    simplifiedExplanations: {},
+    simplifiedExplanations: {}, calcStepsCache: {},
     speechOptimizedText: {},
     glossaryExamples: {},
     podcastEpisodes: {},
@@ -5580,7 +5580,7 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj);
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -5699,6 +5699,7 @@ async function loadData(){
       if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
       if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
       if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
+      if(!DATA.calcStepsCache) DATA.calcStepsCache = {};
       if(!DATA.speechOptimizedText) DATA.speechOptimizedText = {};
       if(!DATA.glossaryExamples) DATA.glossaryExamples = {};
       if(!DATA.flashcardMnemonics) DATA.flashcardMnemonics = {};
@@ -17325,6 +17326,7 @@ function selectAnswer(i){
   const calcStepsRow = document.getElementById('calcStepsRow');
   const calcStepsBox = document.getElementById('calcStepsBox');
   if(calcStepsRow){
+    hydrateCalcSteps(q);
     const showCalcSteps = isStudyMode() && calcStepsEligible(q);
     calcStepsRow.style.display = showCalcSteps ? 'flex' : 'none';
     const calcStepsBtn = document.getElementById('calcStepsBtn');
@@ -17345,6 +17347,12 @@ function selectAnswer(i){
   saveInProgressSession();
 }
 
+function hydrateCalcSteps(q){
+  try{
+    const c = q && !q.calcSteps && DATA.calcStepsCache && DATA.calcStepsCache[q.id];
+    if(c && Array.isArray(c.steps) && c.steps.length){ q.calcSteps = c.steps.slice(); q.calcType = c.type; }
+  }catch(e){}
+}
 function calcStepsEligible(q){
   if(!q) return false;
   if(Array.isArray(q.calcSteps) && q.calcSteps.length) return true;
@@ -17365,7 +17373,7 @@ async function fetchCalcSteps(q){
   const steps = (o.calcSteps||[]).map(x => String(x)).filter(Boolean).slice(0,10);
   if(steps.length < 2 || steps.some(x => usesWrongCalculatorConventionInProse(x) || /\bCPT\b|\bI\/Y\b/.test(x))) throw new Error('bad steps');
   q.calcSteps = steps; q.calcType = o.calcType === 'tvm' ? 'tvm' : 'general';
-  try{ persist(); }catch(e){}
+  try{ DATA.calcStepsCache = DATA.calcStepsCache || {}; if(q.id && !q.treeGen) DATA.calcStepsCache[q.id] = { steps:steps, type:q.calcType }; persist(); }catch(e){}
 }
 async function toggleCalcSteps(){
   const q = session.queue[session.index];
@@ -17414,7 +17422,8 @@ function qChatSuggestions(q, wasCorrect){
   const out = [];
   if(!wasCorrect) out.push(['Why is my pick wrong?', 'Why is my answer wrong? What was the trap?']);
   out.push([wasCorrect ? 'Why are the others wrong?' : 'Why is the right one right?', wasCorrect ? 'Why are each of the other three choices wrong?' : 'Walk me through why the correct answer is right.']);
-  if(q.calcSteps) out.push(['Walk me through the keys', 'Walk me through the calculator key presses for this one, step by step, and tell me what to watch for.']);
+  hydrateCalcSteps(q);
+  if(q.calcSteps || calcStepsEligible(q)) out.push(['Walk me through the keys', 'Walk me through the calculator key presses for this one, step by step, and tell me what to watch for.']);
   if(cueFor(q) && q.scenario) out.push(['Which facts mattered?', 'Which facts in the case decide this question, and which ones are distractors? Ask me what I noticed first, then check me.']);
   out.push(['Give me an example', 'Give me a short, concrete real-world example of this concept.']);
   out.push(['Quiz me on this', 'Test me on this idea again. If a new question written for me would help, write one and put it next. If not, ask me one quick follow-up with the details changed and wait for my answer.']);
@@ -19982,7 +19991,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.158';
+const BUILD_ID = '2026-10-17.159';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
