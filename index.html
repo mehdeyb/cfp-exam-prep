@@ -2359,6 +2359,12 @@
     .cd-pill.cd-tuck{transform:translateY(120%);opacity:0;pointer-events:none;}
     body.cd-pill-on .wrap::after{height:40px;}
   }
+
+  /* Flashcards and Decision tools live under Study > Practice a specific way; this returns there */
+  .sub-back{display:inline-flex;align-items:center;gap:4px;margin:0 0 10px;padding:8px 12px 8px 8px;min-height:36px;font:inherit;font-size:13px;font-weight:600;color:var(--gold);background:transparent;border:0;border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .sub-back:active{background:var(--surface2);}
+  body.flashcard-fullscreen .sub-back{display:none;}
+  @media (max-width:640px){ #modePanel .mode-grid .mode-card:last-child:nth-child(odd){grid-column:1 / -1;} }
 </style>
 </head>
 <body>
@@ -2386,9 +2392,7 @@
 
   <div class="tabbar" id="appTabbar">
     <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Study</span></button>
-    <button class="tab-btn" data-tab="tools" onclick="showTab('tools',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 7.5v9M6 12h10"/></svg><span>Tools</span></button>
     <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Reference</span></button>
-    <button class="tab-btn" data-tab="flashcards" onclick="showTab('flashcards',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l8.5 4.6-8.5 4.6-8.5-4.6L12 3.5z"/><path d="M3.5 13.1l8.5 4.6 8.5-4.6"/></svg><span>Flashcards</span></button>
     <button class="tab-btn" data-tab="examday" onclick="showTab('examday',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
     <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
   </div>
@@ -2586,6 +2590,20 @@
           <p id="tvmCardText">Work a real time-value-of-money problem step by step, the way you'll do it on exam day — set up the variables, solve, and see exactly how the math gets there.</p>
           <div class="mode-when">Use it: until the HP 10bII+ keystrokes feel automatic.</div>
           <div class="mode-meta" data-mm="tvm"></div>
+        </div>
+        <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
+          <div class="tag">Recall · spaced review</div>
+          <h3>Flashcards</h3>
+          <p id="fcCardText">Flip through terms and ideas, rate how well you knew each, and let spacing bring the shaky ones back.</p>
+          <div class="mode-when">Use it: for a few minutes anywhere, to keep definitions fresh.</div>
+          <div class="mode-meta" data-mm="flashcards"></div>
+        </div>
+        <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
+          <div class="tag">Interactive · decision trees</div>
+          <h3>Decision tools</h3>
+          <p>Seven walk-through trees: trusts, business entities, IRA and Roth rules, Social Security timing, options and the qualified plan family.</p>
+          <div class="mode-when">Use it: when "which one fits?" questions keep tripping you up.</div>
+          <div class="mode-meta" data-mm="tools"></div>
         </div>
         <div class="mode-card" onclick="openPodcastFromStudy()" tabindex="0" role="button">
           <div class="tag">Listen · one domain at a time</div>
@@ -3036,7 +3054,7 @@
         <div class="science-item"><b>The tutor's own suggested questions never once mentioned the thing it had just learned to do</b>Went through every screen in dark mode specifically, since nearly all of this session's checking had happened in light mode by default, and a theme swap can surface things a single-theme check wouldn't catch. The screens themselves held up cleanly. What turned up instead was the same shape of gap found twice already: the row of ready-made suggestions on the tutor's own opening screen -- the buttons meant to show someone what they can ask for without having to guess -- still had no button for the decision tools, even after the tutor itself had already been taught to navigate there. It's arguably the most visible version of this same oversight yet, since it's the very first thing anyone sees opening that tab. Added a ninth suggestion alongside the existing eight, confirmed it fires the same way every other one already does. Two other things looked like problems along the way and weren't: the light/dark toggle briefly appeared to show both its sun and moon icons visible at once, which turned out to be two icons stacked in the same place with one faded out rather than hidden, confirmed correct once actually reading the opacity instead of just whether each one existed on the page; and a moment later, the same icon looked like it had failed to switch at all, which was nothing more than checking it before its own quarter-second fade had finished playing out.</div>
         <div class="science-item"><b>An odd number in a two-column row</b>Adding a ninth suggestion to an eight-item, two-column grid left it sitting alone with an empty gap beside it -- correct, but visibly unfinished. Had it span the full row instead of sitting in half of one, the standard fix for exactly this shape of layout problem, and confirmed its rendered width now genuinely matches the row rather than just looking close.</div>
         <div class="science-item"><b>A guide telling people not to read it where they already were</b>Asked to make sure the study guide and its material didn't feel hidden. The card that opens it had its own line working directly against that: "meant to be printed or saved, not read in-app," sitting on a guide that has its own tap-to-expand sections and its own jump-to navigation -- features that only mean anything if someone's reading it right there in the app. Reworded it to invite both, rather than steering people away from the one way most people would actually first encounter it. Found a second, quieter version of the same problem: the guide's own copy points to the live formulas, numbers, and syllabus sitting in the Reference tab, but nothing pointed back the other way -- someone starting from Reference, never having scrolled far enough down Study to find the guide's own entry point, would have had no way to know it existed. Added the missing line in the other direction, on the three cards it's most relevant to, worth doing anyway since two of those three cards had no descriptive text of any kind before this.</div>
-        <div class="science-item"><b>A sentence written for someone who remembered where things used to be</b>The line pointing to the decision tools read "looking for X instead? those live in the Tools tab now" -- phrasing that made sense while that move was still recent, but reads as a small, pointless mystery to anyone opening the app fresh, who never knew there was anywhere else those tools could have been. Reworded to state plainly where they are, with nothing left implying a past they wouldn't recognize.</div>
+        <div class="science-item"><b>A sentence written for someone who remembered where things used to be</b>The line pointing to the decision tools read "looking for X instead? those live under Study › Practice a specific way › Decision tools now" -- phrasing that made sense while that move was still recent, but reads as a small, pointless mystery to anyone opening the app fresh, who never knew there was anywhere else those tools could have been. Reworded to state plainly where they are, with nothing left implying a past they wouldn't recognize.</div>
         <div class="science-item"><b>A question with no explanation to have led to it</b>Went back through the qualified plans material once more looking for anything a question already tests but the guide itself never actually teaches. Found exactly that: a real practice question already exists on top-heavy plan status -- key employees holding more than 60% of total account balances, triggering a minimum contribution for everyone else -- but nothing in the guide's own explanations ever taught that rule in the first place. Someone missing that question would have had it flagged as worth reviewing, with nowhere in the guide that actually explains it. Added the explanation alongside the existing rules on nondiscrimination and vesting it's closely related to, and added a flashcard for the term itself, since it had none. A quick note on my own process: a check afterward briefly suggested the new explanation wasn't actually there, which turned out to be nothing more than checking the wrong position in a list of many separate topic summaries — confirmed genuinely present once looking in the right place.</div>
         <div class="science-item"><b>A genuinely new source document, and a domain that had been thinner than the others</b>A new file arrived -- an investment planning one-pager from the same source as several documents already worked through. Its text layer held almost nothing usable despite having embedded fonts, a common trait of pages designed and exported visually rather than written as plain text, so reading it meant rendering the page as an image and reading it directly rather than extracting text that wasn't really there. What it held was substantial: portfolio theory lines rarely covered elsewhere (the security market line, capital market line, and efficient frontier, each distinct from the others despite sounding similar), the statistical building blocks behind them (covariance, correlation, R-squared, both flavors of mean return), the three forms of the efficient market hypothesis, a full page of investment strategy names, the fixed ordering of bond yields on a discount versus premium bond, and an entire real estate section -- cap rate, net operating income, passive losses -- that hadn't existed anywhere in the guide before. Investment planning had genuinely been a thinner domain than retirement, tax, or estate up to this point, each of which had already been through several dedicated passes; this one document closed a meaningful share of that gap in a single pass. Checked the newly-added terms against the flashcard system the same way as every other addition this session, and found the same pattern again -- fourteen of the most distinct new terms had no card at all. Added all fourteen, confirmed each one landed in the glossary and the review rotation the same as everything else.</div>
         <div class="science-item"><b>Sixteen of twenty-one new concepts had never once been asked about</b>With the new investment material added to the guide and its terms added as flashcards, checked the same thing checked after every other major content addition this session: whether any of it was actually being tested. Sixteen of twenty-one concepts checked came back with zero questions anywhere in the bank -- the security market line, the capital market line, all three forms of the efficient market hypothesis, the fixed yield ordering on a discount bond, convexity, tax-equivalent yield, phantom income on a zero-coupon bond, and the entire real estate section among them. Wrote twelve new questions covering the ones most worth prioritizing, each built as a short scenario a planner would actually run into -- reading a security market line plot, comparing a taxable yield to a municipal one, sizing a cap rate from a property's own numbers -- rather than a bare definition to recall. Checked each one's own answer choices for balanced length and for absolute wording creeping into a correct answer before finishing this time, the same discipline established earlier this session, and found the choices needed real rebalancing on several of them before they were done -- one set of four numeric choices differed in length by nearly thirty times before being brought back in line with the others.</div>
@@ -3176,6 +3194,7 @@
 
   <!-- ================= TOOLS TAB ================= -->
   <div class="tab-panel" id="tab-tools">
+    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Practice</button>
     <div class="card">
       <div class="card-head"><h2>Decision tools</h2><div class="note">tap through, or see the whole map at once</div></div>
       <div class="tutor-chips" id="toolsTutorChips" style="margin:0 0 12px;">
@@ -3338,6 +3357,7 @@
 
   <!-- ================= FLASHCARDS TAB ================= -->
   <div class="tab-panel" id="tab-flashcards">
+    <button type="button" class="sub-back" onclick="backToPractice()"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Practice</button>
     <div class="card" id="fcTopCard">
       <div id="fcTopCardContent">
         <div class="card-head"><h2>Flashcards</h2><div class="note">tap the card to flip</div></div>
@@ -3733,6 +3753,11 @@ function _scrollPageTo(y){
   if(bodyIsLocked()) savedBodyScrollY = y;
   try{ window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }catch(e){ window.scrollTo(0, y); }
 }
+// Flashcards and the decision tools are sub-screens of Study (Practice a specific way), so the Study tab stays lit while they are open.
+function backToPractice(){
+  showTab('study');
+  requestAnimationFrame(() => { const p = document.getElementById('modePanel'); if(p) p.scrollIntoView({block:'start'}); });
+}
 function showTab(name, opts){
   opts = opts || {};
   const curEl = document.querySelector('.tab-panel.active');
@@ -3748,7 +3773,7 @@ function showTab(name, opts){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if(!same){ const _p = document.getElementById('tab-'+name); _p.classList.add('tab-enter'); setTimeout(() => _p.classList.remove('tab-enter'), 600); }
-  document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add('active');
+  { const btnName = (name === 'tools' || name === 'flashcards') ? 'study' : name; const b = document.querySelector(`.tab-btn[data-tab="${btnName}"]`); if(b) b.classList.add('active'); }
   const hero = document.getElementById('heroIntro');
   if(hero) hero.style.display = (name === 'study') ? 'block' : 'none';
   try{ conductorRefreshPill(); }catch(e){}
@@ -8249,6 +8274,7 @@ function renderModeMeta(){
     put('formula', DATA.formulaDrillLastAt ? 'Last: ' + modeAgoText(DATA.formulaDrillLastAt) : '');
     put('tvm', DATA.tvmToolLastAt ? 'Last: ' + modeAgoText(DATA.tvmToolLastAt) : '');
     const pg = Object.values(DATA.podcastGeneratedAt || {}).filter(Number).sort((a, b) => b - a)[0];
+    try{ const fp = computeFlashcardProgress(); put('flashcards', fp.dueCount ? fp.dueCount + ' due for review' : (fp.knownCount ? fp.knownCount + ' of ' + fp.total + ' known' : '')); }catch(e){}
     put('podcast', pg ? 'Last episode: ' + modeAgoText(pg) : '');
   }catch(e){ /* a status line is never worth breaking the screen */ }
 }
@@ -10634,9 +10660,9 @@ function showToolForQuestion(q, isCorrect){
   const key = q.treeGen ? q.treeKey : toolForQuestion(q); if(!key) return;
   const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
   if(DECISION_TREES[key]){
-    box.innerHTML = '<details class="qcl" ontoggle="if(this.open) qtoolOpen(\'' + key + '\')"><summary>' + (q.treeGen ? 'Retrace it on the tree: ' : 'Walk the decision tree: ') + '<b>' + escapeHtml(name) + '</b></summary><div id="dt-' + key + '@q" style="margin-top:8px;"></div><div class="qcl-note">Same tree as the Tools tab. Your session stays right here.</div></details>';
+    box.innerHTML = '<details class="qcl" ontoggle="if(this.open) qtoolOpen(\'' + key + '\')"><summary>' + (q.treeGen ? 'Retrace it on the tree: ' : 'Walk the decision tree: ') + '<b>' + escapeHtml(name) + '</b></summary><div id="dt-' + key + '@q" style="margin-top:8px;"></div><div class="qcl-note">Same tree as in Decision tools. Your session stays right here.</div></details>';
   } else {
-    box.innerHTML = '<div class="qcl-def">This one is easier to see as a picture: <b>' + escapeHtml(name) + '</b></div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="openToolFromResults(\'' + key + '\')">Open it in the Tools tab</button><div class="qcl-note">Your place in this session is saved.</div>';
+    box.innerHTML = '<div class="qcl-def">This one is easier to see as a picture: <b>' + escapeHtml(name) + '</b></div><button type="button" class="btn ghost" style="margin-top:8px;" onclick="openToolFromResults(\'' + key + '\')">Open it in Decision tools</button><div class="qcl-note">Your place in this session is saved.</div>';
   }
   box.style.display = 'block';
 }
@@ -11191,13 +11217,13 @@ function renderStudyGuide(){
     .slice(0, 3);
 
   const sections = [];
-  sections.push(`<div class="sg-section" id="sg-trust"><h3>Which trust fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in the Tools tab — this is the same decision path, shown as a full diagram.</p>${sgTrustFlowchartSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-entity"><h3>Which business entity fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in the Tools tab. Watch for "LLC" as an answer choice on a tax-treatment question — it's a legal structure, not a tax election, and defaults to being taxed as a sole proprietorship or partnership unless it elects otherwise.</p>${sgEntityFlowchartSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-ira"><h3>Is a traditional IRA contribution deductible?</h3><p class="hint" style="margin-top:0;">Anyone can contribute to a traditional IRA — this only decides whether the contribution is deductible. Tap through this interactively in the Tools tab.</p>${sgIraFlowchartSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-roth"><h3>Roth IRA: direct, backdoor or none?</h3><p class="hint" style="margin-top:0;">Compensation first, then income, then what else is in the client's IRAs. Tap through it interactively in the Tools tab.</p>${dtOutlineHtml('roth')}</div>`);
-  sections.push(`<div class="sg-section" id="sg-socialsecurity"><h3>When should Social Security be claimed?</h3><p class="hint" style="margin-top:0;">Not a single "right age" — income need, work status, spousal situation, and longevity expectations each point in different directions. Tap through this interactively in the Tools tab.</p>${sgSocialSecurityFlowchartSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-options"><h3>Options matrix</h3><p class="hint" style="margin-top:0;">Four positions, four different risk profiles — buying caps the loss at the premium; selling doesn't. Tap through each one in the Tools tab for more detail.</p>${sgOptionsMatrixSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-plans"><h3>Qualified plan family tree</h3><p class="hint" style="margin-top:0;">Where each specific plan name actually sits in the bigger picture. Tap through each branch in the Tools tab for more detail.</p>${sgQualifiedPlansTreeSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-trust"><h3>Which trust fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in Decision tools — this is the same decision path, shown as a full diagram.</p>${sgTrustFlowchartSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-entity"><h3>Which business entity fits?</h3><p class="hint" style="margin-top:0;">Tap through this interactively in Decision tools. Watch for "LLC" as an answer choice on a tax-treatment question — it's a legal structure, not a tax election, and defaults to being taxed as a sole proprietorship or partnership unless it elects otherwise.</p>${sgEntityFlowchartSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-ira"><h3>Is a traditional IRA contribution deductible?</h3><p class="hint" style="margin-top:0;">Anyone can contribute to a traditional IRA — this only decides whether the contribution is deductible. Tap through this interactively in Decision tools.</p>${sgIraFlowchartSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-roth"><h3>Roth IRA: direct, backdoor or none?</h3><p class="hint" style="margin-top:0;">Compensation first, then income, then what else is in the client's IRAs. Tap through it interactively in Decision tools.</p>${dtOutlineHtml('roth')}</div>`);
+  sections.push(`<div class="sg-section" id="sg-socialsecurity"><h3>When should Social Security be claimed?</h3><p class="hint" style="margin-top:0;">Not a single "right age" — income need, work status, spousal situation, and longevity expectations each point in different directions. Tap through this interactively in Decision tools.</p>${sgSocialSecurityFlowchartSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-options"><h3>Options matrix</h3><p class="hint" style="margin-top:0;">Four positions, four different risk profiles — buying caps the loss at the premium; selling doesn't. Tap through each one in Decision tools for more detail.</p>${sgOptionsMatrixSvg()}</div>`);
+  sections.push(`<div class="sg-section" id="sg-plans"><h3>Qualified plan family tree</h3><p class="hint" style="margin-top:0;">Where each specific plan name actually sits in the bigger picture. Tap through each branch in Decision tools for more detail.</p>${sgQualifiedPlansTreeSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-formulas"><h3>Formulas you'll need</h3><p class="hint" style="margin-top:0;">Know what each variable means, not just the shape of the equation. This is a fixed snapshot for printing — the Reference tab has the same formulas live, on screen.</p>${formulasHtml}</div>`);
   sections.push(`<div class="sg-section" id="sg-numbers"><h3>Key numbers to know cold</h3><p class="hint" style="margin-top:0;">All ${KEY_NUMBERS.length}, organized by domain — try answering before your eye reaches the number. This is a fixed snapshot for printing — the Reference tab has these reordered live around your own weak spots.</p>${numbersHtml}</div>`);
   sections.push(`<div class="sg-section" id="sg-syllabus"><h3>Full syllabus, explained</h3><p class="hint" style="margin-top:0;">Every topic across all 8 domains, with what it actually covers. Read the explanation, then cover it and see if you can recite it back. This is a fixed snapshot for printing — the Reference tab has a live checklist version, sorted weakest-first, with its own recall test.</p>${subtopicsHtml}</div>`);
@@ -18128,7 +18154,7 @@ function renderResultTools(){
     if(!session || session.mode === 'fullexam' || session.mode === 'mock') return;
     if(session.treeDrill && TREE_META[session.treeDrill]){
       const key = session.treeDrill, st = treeDrillStats(key);
-      el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;"><b>${escapeHtml(TREE_META[key].name)}</b>: ${st.solved} of ${st.total} routes solved${st.weak ? ', ' + st.weak + ' to revisit' : ''}. ${st.weak ? 'The routes you missed come back first next time.' : 'Every route you have tried is solid.'}</div><button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${key}')">Apply the tree again</button> <button type="button" class="btn ghost" onclick="openToolFromResults('${key}')">Open it in the Tools tab</button>`;
+      el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;"><b>${escapeHtml(TREE_META[key].name)}</b>: ${st.solved} of ${st.total} routes solved${st.weak ? ', ' + st.weak + ' to revisit' : ''}. ${st.weak ? 'The routes you missed come back first next time.' : 'Every route you have tried is solid.'}</div><button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${key}')">Apply the tree again</button> <button type="button" class="btn ghost" onclick="openToolFromResults('${key}')">Open it in Decision tools</button>`;
       el.style.display = 'block';
       return;
     }
@@ -19248,7 +19274,7 @@ const TUTOR_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        tab: { type: 'string', enum: ['study','tools','reference','flashcards','examday'], description: 'Which tab to switch to.' },
+        tab: { type: 'string', enum: ['study','tools','reference','flashcards','examday'], description: 'Which tab to switch to. flashcards and tools are sub-screens under Practice a specific way on the Study tab.' },
       },
       required: ['tab'],
     },
@@ -19323,7 +19349,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'open_decision_tool',
-    description: "Open one of the app's seven interactive decision tools in the Tools tab and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
+    description: "Open one of the app's seven interactive decision tools (Decision tools, under Study) and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
     input_schema: {
       type: 'object',
       properties: {
@@ -19412,7 +19438,7 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'start_flashcards'){
       if(toolInput.focus === 'gaps'){
         const n = Math.min(20, fcGapCards().length);
-        return startGapFlashcards() ? `Started ${n} flashcards tied to questions the student missed. They are on the Flashcards tab now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
+        return startGapFlashcards() ? `Started ${n} flashcards tied to questions the student missed. They are in Flashcards now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
       }
       if(toolInput.focus === 'domain'){
         if(!DOMAINS.some(d => d.key === toolInput.domain)) return 'Error: say which exam domain.';
@@ -19421,7 +19447,7 @@ async function executeTutorTool(toolName, toolInput){
       }
       if(fcCustomQueue){ try{ rebuildFlashcardQueue(); }catch(e){} } // drop any leftover custom set so the deck really is the regular, need-ordered one
       showTab('flashcards');
-      return 'Opened the Flashcards tab; the deck is ordered by what the student needs most.';
+      return 'Opened Flashcards; the deck is ordered by what the student needs most.';
     }
     if(toolName === 'navigate_to_tab'){
       const validTabs = ['study','tools','reference','flashcards','examday'];
@@ -19487,7 +19513,7 @@ async function executeTutorTool(toolName, toolInput){
       const anchorEl = document.getElementById(meta.anchorId);
       const card = anchorEl ? anchorEl.closest('.card') : null;
       if(card) requestAnimationFrame(() => card.scrollIntoView({behavior:'smooth', block:'start'}));
-      return `Opened the "${meta.label}" tool in the Tools tab.`;
+      return `Opened the "${meta.label}" tool in Decision tools.`;
     }
     if(toolName === 'lookup_term'){
       if(!toolInput.term) return `Error: no term given to look up.`;
@@ -19728,7 +19754,7 @@ function tutorLocalGuide(text){
     } else if(kind === 'guide'){
       tutorGuideBubble('Your study guide follows the official topic list and tracks what you have reviewed.', [{ label: 'Open my study guide', primary: true, run: () => openStudyGuide() }]);
     } else if(kind === 'tools'){
-      tutorGuideBubble('The Tools tab has seven decision tools: trusts, business entities, IRA deductibility, Roth IRA eligibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open the Tools tab', primary: true, run: () => showTab('tools') }]);
+      tutorGuideBubble('Decision tools (under Practice a specific way on the Study tab) has seven tools: trusts, business entities, IRA deductibility, Roth IRA eligibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open Decision tools', primary: true, run: () => showTab('tools') }]);
     } else if(kind === 'date'){
       const pd = tutorParseDate(text);
       if(pd && pd.days >= 0){
@@ -20155,7 +20181,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-17.177';
+const BUILD_ID = '2026-10-18.179';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
