@@ -1249,6 +1249,21 @@
   .eb-title{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.28;margin:0;color:var(--paper);}
   .eb-x{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--hair);background:var(--surface2);color:var(--muted);font-size:16px;cursor:pointer;}
   .eb-prompt{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 10px;}
+  .eb-steps{display:flex;gap:14px;margin:0 0 12px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
+  .eb-steps span{display:flex;align-items:center;gap:6px;}
+  .eb-steps i{font-style:normal;width:18px;height:18px;border-radius:50%;border:1px solid var(--hair-strong);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .eb-steps .on{color:var(--paper);} .eb-steps .on i{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  .eb-steps .past i{background:var(--correct);border-color:var(--correct);color:var(--ink);}
+  .eb-cues{margin:0 0 10px;}
+  .eb-cues-h{font-size:12px;color:var(--muted);margin:0 0 6px;}
+  .eb-cue{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;text-align:left;font:inherit;padding:6px 12px;margin:0 0 6px;border-radius:12px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;}
+  .eb-cue .ck{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--hair-strong);}
+  .eb-cue .cl{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .eb-cue .cl b{font-size:13.5px;font-weight:600;} .eb-cue .cl small{font-size:11.5px;color:var(--muted);line-height:1.35;}
+  .eb-cue .add{flex:none;color:var(--muted);font-size:18px;}
+  .eb-cue.done{border-color:var(--correct);background:var(--correct-tint);}
+  .eb-cue.done .ck{background:var(--correct);border-color:var(--correct);box-shadow:inset 0 0 0 3px var(--correct-tint);} .eb-cue.done .add{visibility:hidden;}
+  .eb-nudge{font-size:13px;line-height:1.45;color:var(--paper);background:var(--gold-soft);border-radius:10px;padding:8px 12px;margin:0 0 10px;}
   .eb-ta{width:100%;box-sizing:border-box;min-height:132px;resize:vertical;font:inherit;font-size:16px;line-height:1.5;color:var(--paper);background:var(--surface2);border:1px solid var(--hair-strong);border-radius:14px;padding:12px 14px;}
   .eb-ta:focus{outline:2px solid var(--gold);outline-offset:1px;}
   .eb-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 2px 12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
@@ -1283,6 +1298,11 @@
     .eb-ta{min-height:72px;}
     .eb-write{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);column-gap:18px;align-items:start;}
     .eb-write .eb-prompt{grid-column:1 / -1;margin-bottom:6px;}
+    .eb-write .eb-nudge{grid-column:1 / -1;}
+    .eb-write .eb-cues{grid-column:2;grid-row:2;margin:0 0 6px;}
+    .eb-write .eb-ca{grid-column:1;grid-row:2 / span 2;}
+    .eb-write .eb-cb{grid-column:2;grid-row:3;}
+    .eb-cue{min-height:38px;padding:4px 10px;margin-bottom:4px;}
   }
   /* Ghost scrolling: while a quiz or fullscreen card is up, the study page underneath must not move at all. iOS ignores
      overflow:hidden on the body for touch drags, so the page is pinned and scroll never chains to it. */
@@ -9128,6 +9148,70 @@ function ebCover(userText, points){
   });
 }
 function ebWordCount(t){ return String(t||'').trim().split(/\s+/).filter(Boolean).length; }
+function ebHintWords(point, n){
+  const seen = new Set(), out = [];
+  ebTokens(point).filter(w => !EB_STOP.has(w) && w.length >= 5 && !/^\d/.test(w)).sort((a, b) => b.length - a.length).forEach(w => { const k = ebStem(w); if(!seen.has(k) && out.length < (n || 1)){ seen.add(k); out.push(w); } });
+  return out;
+}
+// The nearest look-alike in the same domain: the idea this one is most often mixed up with.
+function ebContrastCard(card){
+  try{
+    if(!card || !card.def) return null;
+    const mine = new Set(ebKeywords(card.term + ' ' + card.def));
+    let best = null, bs = 0;
+    allFlashcards().forEach(c => {
+      if(c.id === card.id || c.domain !== card.domain || c.term === card.term) return;
+      const o = ebKeywords(c.term + ' ' + c.def); const hit = o.filter(k => mine.has(k)).length;
+      const sc = hit / Math.sqrt(o.length * mine.size || 1);
+      if(hit >= 3 && sc > bs){ bs = sc; best = c; }
+    });
+    return best;
+  }catch(e){ return null; }
+}
+// What to talk about, shaped by your history with this idea. Each cue is a structure prompt (it never gives the answer away), and ticks itself
+// once your words contain that kind of thing, so you see what a complete explanation still lacks while you write.
+function ebBuildCues(st){
+  const full = String(st.full || st.points.join(' '));
+  const hasNum = /\d/.test(full);
+  const ts = (DATA.teachStats || {})[st.key];
+  const tier = !ts ? 'new' : (ts.grade === 'nailed' ? 'strong' : 'building');
+  const cons = st.kind === 'card' ? ebContrastCard(st.card) : null;
+  const C = {
+    what:{ label: st.kind === 'question' ? 'The rule' : 'What it is', hint: st.kind === 'question' ? 'The principle that makes it right.' : 'In plain words, no jargon.', starter:'In plain words, ', test: t => ebWordCount(t) >= 10 },
+    when:{ label: st.kind === 'question' ? 'Why it fits here' : 'When it matters', hint: st.kind === 'question' ? 'Tie the rule to the facts given.' : 'The situation where a client needs it.', starter:' It matters when ', test: t => /\b(when|if|because|since|so that|matters|applies|used|use)\b/i.test(t) },
+    num:{ label:'The figures', hint:'Any limits, rates, ages or dates.', starter:' The numbers are ', test: t => /\d/.test(t) },
+    ex:{ label:'A quick example', hint:'One client situation, with details.', starter:' For example, a client who ', test: t => /for example|e\.g\.|for instance|suppose|such as|a client|say a|imagine/i.test(t) },
+    trap:{ label: st.kind === 'question' ? 'Why a wrong choice tempts' : 'The exam twist', hint: st.kind === 'question' ? 'Name one wrong answer and why it fails.' : 'The detail the exam likes to flip.', starter: st.kind === 'question' ? ' A tempting wrong answer is ' : ' The catch is ', test: t => /\b(catch|trap|tempting|wrong|instead|except|unless|only|not|never|rather than|unlike)\b/i.test(t) }
+  };
+  if(cons){
+    const cs = ebKeywords(cons.term).slice(0, 2);
+    C.contrast = { label:'Not the same as ' + cons.term, hint:'How the two differ.', starter:' Unlike ' + cons.term + ', ', test: t => /\b(unlike|differs?|different|whereas|versus|vs|rather than|instead of|not the same)\b/i.test(t) || (cs.length && cs.every(k => ebTokens(t).map(ebStem).includes(k))) };
+  }
+  let order = tier === 'strong' ? ['ex','contrast','trap','num'] : tier === 'building' ? ['what','when','num','contrast'] : ['what','when','num'];
+  if(st.kind === 'question') order = tier === 'strong' ? ['trap','num','when'] : ['what','when','num','trap'];
+  const cues = order.filter(k => C[k] && (k !== 'num' || hasNum)).slice(0, 4).map(k => Object.assign({ k }, C[k]));
+  return { cues, tier, contrast: cons };
+}
+function ebCuesHtml(){
+  const st = ebState; if(!st || !st.cues || !st.cues.length) return '';
+  const intro = st.tier === 'strong' ? 'You know the basics. Go further:' : st.tier === 'building' ? 'Touch on these as you go:' : 'A good answer touches on:';
+  return `<div class="eb-cues" role="group" aria-label="Things to cover"><div class="eb-cues-h">${intro}</div>` + st.cues.map(c =>
+    `<button type="button" class="eb-cue" data-k="${c.k}" onclick="ebCue('${c.k}')"><span class="ck" aria-hidden="true"></span><span class="cl"><b>${escapeHtml(c.label)}</b><small>${escapeHtml(c.hint)}</small></span><span class="add" aria-hidden="true">+</span></button>`).join('') + '</div>';
+}
+function ebCue(k){
+  const st = ebState; const ta = document.getElementById('ebTa'); if(!st || !ta) return;
+  const c = (st.cues || []).find(x => x.k === k); if(!c) return;
+  const cur = ta.value.replace(/\s+$/, '');
+  if(!c.test(cur)){ ta.value = (cur ? cur + (/[.!?]$/.test(cur) ? '' : '.') + ' ' : '') + c.starter.replace(/^\s+/, ''); }
+  ebOnInput(); try{ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }catch(e){}
+}
+function ebUpdateCues(){
+  const st = ebState; if(!st || !st.cues) return;
+  const t = st.text || '';
+  let done = 0;
+  st.cues.forEach(c => { const el = document.querySelector('.eb-cue[data-k="' + c.k + '"]'); const ok = c.test(t); if(ok) done++; if(el) el.classList.toggle('done', ok); });
+  const h = document.querySelector('.eb-cues-h'); if(h && st.cues.length){ h.dataset.n = done; }
+}
 function ebEnsureDom(){
   let o = document.getElementById('ebOverlay'); if(o) return o;
   o = document.createElement('div'); o.id = 'ebOverlay'; o.className = 'eb-overlay'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true'); o.setAttribute('aria-labelledby','ebTitle');
@@ -9142,6 +9226,7 @@ function ebOpen(spec){
   if(!spec || !spec.points || !spec.points.length) return false;
   const o = ebEnsureDom();
   ebState = Object.assign({ phase:'write', text:'' }, spec);
+  try{ const b = ebBuildCues(ebState); ebState.cues = b.cues; ebState.tier = b.tier; }catch(e){ ebState.cues = []; }
   document.getElementById('ebTitle').textContent = spec.title;
   document.getElementById('ebKicker').textContent = spec.kind === 'question' ? 'Explain your answer' : 'Explain it back';
   try{ if(!bodyIsLocked()){ lockBodyScroll(); ebLocked = true; } }catch(e){}
@@ -9158,16 +9243,21 @@ function ebClose(){
   try{ if(typeof st.onClose === 'function') st.onClose(st); }catch(e){}
   if(st.graded){ try{ updateFcPlanLine(); renderFlashcardStats(); renderTodayPlan(); }catch(e){} }
 }
+function ebStepper(n){
+  return '<div class="eb-steps" aria-label="Step ' + n + ' of 3">' + ['Explain','Check','Rate'].map((t, i) => `<span class="${i + 1 === n ? 'on' : i + 1 < n ? 'past' : ''}"><i>${i + 1 < n ? '✓' : i + 1}</i>${t}</span>`).join('') + '</div>';
+}
 function ebRenderWrite(){
   const st = ebState; if(!st) return;
   const n = st.points.length;
   const hasMic = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  document.getElementById('ebBody').innerHTML =
-    `<div class="eb-write"><p class="eb-prompt">${escapeHtml(st.prompt)}</p><div><textarea class="eb-ta" id="ebTa" rows="5" placeholder="Start with the main idea, then add when it matters or what people confuse it with." aria-label="Your explanation" autocapitalize="sentences" oninput="ebOnInput()"></textarea>
+  const redo = st.result ? st.result.filter(r => !r.ok) : [];
+  const nudge = redo.length ? `<div class="eb-nudge"><b>Still to add:</b> think about ${redo.map(r => ebHintWords(r.text, 1)[0]).filter(Boolean).map(w => '\u201c' + escapeHtml(w) + '\u201d').join(', ') || 'the part you left out'}.</div>` : '';
+  document.getElementById('ebBody').innerHTML = ebStepper(1) +
+    `<div class="eb-write"><p class="eb-prompt">${escapeHtml(st.prompt)}</p>${nudge}${ebCuesHtml()}<div class="eb-ca"><textarea class="eb-ta" id="ebTa" rows="5" placeholder="Say it the way you would to a client. Tap a prompt above if you get stuck." aria-label="Your explanation" autocapitalize="sentences" oninput="ebOnInput()"></textarea>
     <div class="eb-meta"><span id="ebCount">0 words</span><span>A full answer has ${n} key idea${n === 1 ? '' : 's'}</span></div></div>
-    <div><div class="eb-row">${hasMic ? '<button type="button" class="eb-mic" id="ebMic" aria-label="Dictate" onclick="ebToggleMic()">🎤</button>' : ''}<button type="button" class="btn" id="ebCheck" onclick="ebCheck()" disabled>Check my explanation</button></div>
+    <div class="eb-cb"><div class="eb-row">${hasMic ? '<button type="button" class="eb-mic" id="ebMic" aria-label="Dictate" onclick="ebToggleMic()">🎤</button>' : ''}<button type="button" class="btn" id="ebCheck" onclick="ebCheck()" disabled>Check my explanation</button></div>
     <div class="eb-note" id="ebHint">Aim for two or three sentences. Nothing is graded until you choose how it went.</div></div></div>`;
-  const ta = document.getElementById('ebTa'); ta.value = st.text || ''; ebOnInput();
+  const ta = document.getElementById('ebTa'); ta.value = st.text || ''; ebOnInput(); ebUpdateCues();
   if(!(window.matchMedia && matchMedia('(pointer:coarse)').matches)) try{ ta.focus({ preventScroll:true }); }catch(e){}
 }
 function ebOnInput(){
@@ -9176,6 +9266,7 @@ function ebOnInput(){
   const w = ebWordCount(ta.value);
   document.getElementById('ebCount').textContent = w + ' word' + (w === 1 ? '' : 's');
   const b = document.getElementById('ebCheck'); if(b) b.disabled = w < 6;
+  try{ ebUpdateCues(); }catch(e){}
   const h = document.getElementById('ebHint'); if(h) h.textContent = w < 6 ? 'A few more words, then check it. Two or three sentences is plenty.' : 'Nothing is graded until you choose how it went.';
 }
 function ebToggleMic(){
@@ -9204,18 +9295,20 @@ function ebCheck(){
   const bar = st.result.map(r => `<i class="${r.ok ? 'on' : ''}"></i>`).join('');
   const pts = st.result.map(r => `<div class="eb-pt ${r.ok ? 'ok' : 'miss'}"><span class="mk" aria-hidden="true">${r.ok ? '✓' : '+'}</span><div><small>${r.ok ? 'You covered' : 'Add this'}</small>${escapeHtml(r.text)}</div></div>`).join('');
   const canAI = (typeof aiFeaturesAvailable !== 'undefined') && aiFeaturesAvailable;
-  document.getElementById('ebBody').innerHTML =
+  document.getElementById('ebBody').innerHTML = ebStepper(3) +
     `<div class="eb-verdict"><b>${verdict}</b><span>${got} of ${n} key idea${n === 1 ? '' : 's'}</span></div><div class="eb-bar" aria-hidden="true">${bar}</div>${pts}
      <div class="eb-yours">${escapeHtml(st.text.trim())}</div>
-     <div class="eb-note">This compares your words with the key ideas, so a correct idea in very different wording can show as missing. You are the judge: how did it really go?</div>
+     <div class="eb-note">Matching is by wording, so a right idea in different words can show as missing. You are the judge: how did it go?</div>
      <div class="eb-grade" role="group" aria-label="How did it go">
        <button type="button" data-g="missed" class="${st.suggest === 'missed' ? 'sug' : ''}" onclick="ebGrade('missed')">Missed it</button>
        <button type="button" data-g="partly" class="${st.suggest === 'partly' ? 'sug' : ''}" onclick="ebGrade('partly')">Partly</button>
        <button type="button" data-g="nailed" class="${st.suggest === 'nailed' ? 'sug' : ''}" onclick="ebGrade('nailed')">Nailed it</button>
      </div>
-     <div class="eb-row"><button type="button" class="btn ghost" onclick="ebRetry()">Try again</button>${canAI ? '<button type="button" class="btn ghost" onclick="ebAskTutor()">Have the tutor check it</button>' : ''}</div>`;
+     <div class="eb-row"><button type="button" class="btn ghost" onclick="ebRetry()">${got < n ? 'Add what\u2019s missing' : 'Try again'}</button>${canAI ? '<button type="button" class="btn ghost" onclick="ebAskTutor()">Have the tutor check it</button>' : ''}</div>`;
   const o = document.getElementById('ebOverlay'); if(o) o.scrollTop = 0;
 }
+function ebCloseThen(id){ ebClose(); setTimeout(() => { try{ planGoNext(id); }catch(e){} }, 60); }
+function ebAgain(){ const st = ebState; if(!st || typeof st.again !== 'function') return; const f = st.again; ebClose(); setTimeout(() => { try{ f(); }catch(e){} }, 60); }
 function ebRetry(){ if(!ebState) return; ebState.phase = 'write'; ebRenderWrite(); }
 function ebAskTutor(){
   const st = ebState; if(!st) return;
@@ -9229,7 +9322,7 @@ function ebGrade(g){
     DATA.teachStats = DATA.teachStats || {};
     const prev = DATA.teachStats[st.key] || { n:0, best:0 };
     const got = (st.result || []).filter(r => r.ok).length, n = (st.result || []).length || 1;
-    DATA.teachStats[st.key] = { n: prev.n + 1, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)), missN: n - got };
+    DATA.teachStats[st.key] = { n: prev.n + 1, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)), missN: n - got, hints: (st.result || []).filter(r => !r.ok).map(r => ebHintWords(r.text, 1)[0]).filter(Boolean).slice(0, 3) };
     const keys = Object.keys(DATA.teachStats);
     if(keys.length > 400){ keys.sort((a, b) => DATA.teachStats[a].last - DATA.teachStats[b].last).slice(0, keys.length - 400).forEach(k => delete DATA.teachStats[k]); }
     if(st.kind === 'card'){
@@ -9246,7 +9339,15 @@ function ebGrade(g){
   }catch(e){}
   const b = document.getElementById('ebBody');
   const msg = g === 'nailed' ? 'Nice. This one will come back later than the rest.' : g === 'partly' ? 'Good start. It stays in your rotation.' : 'That is useful to know. It will come back sooner.';
-  if(b){ b.innerHTML = `<div class="eb-verdict"><b>Saved</b><span>${escapeHtml(msg)}</span></div><div class="eb-saved">${(DATA.teachStats[st.key] || {}).n || 1} time${((DATA.teachStats[st.key] || {}).n || 1) === 1 ? '' : 's'} explained back</div><div class="eb-row"><button type="button" class="btn" onclick="ebClose()">${st.kind === 'card' ? 'Continue' : 'Done'}</button></div>`; }
+  if(b){
+    const ts2 = DATA.teachStats[st.key] || {}; const nn = ts2.n || 1;
+    let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('teach'); }catch(e){}
+    const again = typeof st.again === 'function';
+    const hint = g === 'nailed' ? '' : ((ts2.hints || []).length ? `<div class="eb-note">Next time, make sure you cover: ${ts2.hints.map(w => '“' + escapeHtml(w) + '”').join(', ')}.</div>` : '');
+    b.innerHTML = ebStepper(4) + `<div class="eb-verdict"><b>Saved</b><span>${escapeHtml(msg)}</span></div><div class="eb-saved">${nn} time${nn === 1 ? '' : 's'} explained back</div>${hint}`
+      + (st.kind === 'card' && st.onClose ? `<div class="eb-row"><button type="button" class="btn" onclick="ebClose()">Continue</button></div>`
+        : `<div class="eb-row">${nx ? `<button type="button" class="btn" onclick="ebCloseThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}${again ? `<button type="button" class="btn ${nx ? 'ghost' : ''}" onclick="ebAgain()">Explain another</button>` : ''}<button type="button" class="btn ghost" onclick="ebClose()">Done</button></div>${nx ? `<div class="eb-note">Next on today's plan, about ${nx.minutes || 10} min.</div>` : '<div class="eb-note">That is everything on today’s plan.</div>'}`);
+  }
   if(st.afterGrade) try{ st.afterGrade(g, st); }catch(e){}
 }
 // ---- entry points ----
@@ -9258,14 +9359,15 @@ function ebPromptFor(card){
   if(!ts) return lvl === 'strong' ? 'You know this one. Say it in your own words, then add the detail the exam is most likely to twist.' : 'Without looking, say what this means and when it matters, as if a client asked you.';
   if(ts.grade === 'nailed') return 'You covered this before. Go one step further: give a quick example, or say what people most often confuse it with.';
   const n = ts.missN || 0;
-  return 'Last time ' + (n ? n + ' key idea' + (n === 1 ? ' was' : 's were') + ' missing' : 'it fell a little short') + '. Start with the main idea, then fill in the rest.';
+  const hw = (ts.hints || []).length ? ' (think ' + ts.hints.map(w => '\u201c' + w + '\u201d').join(', ') + ')' : '';
+  return 'Last time ' + (n ? n + ' key idea' + (n === 1 ? ' was' : 's were') + ' missing' + hw : 'it fell a little short') + '. Start with the main idea, then fill in the rest.';
 }
 function ebOpenCard(card, opts){
   if(!card) return false;
   return ebOpen(Object.assign({
     key:'c:' + card.id, kind:'card', title: card.term,
     prompt: ebPromptFor(card),
-    points: ebSplitPoints(card.def), full: card.def,
+    points: ebSplitPoints(card.def), full: card.def, card,
   }, opts || {}));
 }
 function ebOpenQuestion(q, opts){
@@ -9297,7 +9399,8 @@ function ebOpenForTopic(wk, weakDom){
   const recentNailed = c => { const t = (DATA.teachStats || {})['c:' + c.id]; return t && t.grade === 'nailed' && Date.now() - t.last < 3*86400000; };
   const pool = cards.filter(c => !recentNailed(c)); if(pool.length >= 4) cards = pool;
   const ranked = cards.slice().sort((a, b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, 6);
-  return ebOpenCard(ranked[Math.floor(Math.random() * ranked.length)]);
+  const pick = ranked[Math.floor(Math.random() * ranked.length)];
+  return ebOpenCard(pick, { again: () => ebOpenForTopic(wk, weakDom) });
 }
 
 function askTutorAbout(text){
@@ -22270,7 +22373,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.226';
+const BUILD_ID = '2026-10-18.227';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
