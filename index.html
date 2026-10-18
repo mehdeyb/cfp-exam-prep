@@ -1434,6 +1434,7 @@
   .syl-drill:hover{border-color:var(--gold);transform:scale(1.04);}
   .syl-drill:active{transform:scale(.97);}
   .plan-today .pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .plan-today .pt-alldone{font-size:12.5px;font-weight:600;color:var(--green,#34c759);margin:2px 0 10px;}
   .plan-today .pt-sub{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
   .plan-today .pt-mins{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;}
   .plan-today .pt-min{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 14px;min-height:44px;border-radius:22px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease);}
@@ -7797,16 +7798,44 @@ function buildStudyPlan(minutes){
     weak3: () => { const t = wkAt(2); if(!t) return null;
       return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
+    newcards: () => {
+      let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
+      if(!(unseen >= 8 && dueCards < 5 && !L.targets.newcards) && !L.targets.newcards) return null;
+      const n = planTarget('newcards', Math.min(unseen, 15));
+      if(!n) return null;
+      return { id:'newcards', title:`Learn ${n} new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have:act.cards, unit:'cards',
+        why:'Meeting new cards in small batches, then letting them come back on a schedule, builds the facts the questions lean on.',
+        run: () => showTab('flashcards') };
+    },
+    pretest: () => {
+      if(answered >= 20 || !weakDom) return null;
+      return { id:'pretest', title:`Pretest: ${weakDom.name}`, minutes:10, need:8, have: Math.min(cnt.drill || 0, 8), unit:'questions',
+        why:'Trying questions before you study a topic, even getting them wrong, shows what to read closely and makes the later review stick.',
+        run: () => { showTab('study'); startDrill(weakDom.key); } };
+    },
+    tutor: () => {
+      if(missedN < 3 && !L.targets.tutorMiss) return null;
+      planTarget('tutorMiss', 1);
+      return { id:'tutor', title:'Have the tutor walk through your misses', minutes:8,
+        why:'Hearing why each wrong answer is wrong, then explaining the right one back, fixes the reasoning behind a miss, not just the answer.',
+        manual:true, run: () => {
+          const qq = (DATA.missed || []).slice(-4).map(id => allQuestions().find(x => x.id === id)).filter(Boolean).map(q => '- ' + String(q.q).slice(0, 220));
+          askTutorAbout('Walk me through the questions I keep missing, one at a time, starting with the one that matters most for the exam. Ask me to explain my reasoning first, then show where it went wrong and give me a fresh variation to try.' + (qq.length ? '\n\nRecent misses:\n' + qq.join('\n') : ''));
+        } };
+    },
+    logistics: () => ({ id:'logistics', title:'Check your exam-day plan', minutes:5,
+      why:'Knowing the route, timing, ID and calculator rules removes avoidable stress. Do it once, calmly, before the day.',
+      manual:true, run: () => showTab('examday') }),
     keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
       why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
       manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
   };
   const order = {
-    foundation: ['cards','weak','adaptive','missed','tool','calc','case','teach','listen'],
-    build:      ['cards','adaptive','weak','missed','tool','calc','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','tool','adaptive','calc','checkpoint','teach'],
-    taper:      ['cards','missed','keys','listen'],
-    rest:       ['keys','cards']
+    foundation: ['cards','pretest','weak','adaptive','newcards','missed','tutor','tool','calc','case','teach','listen'],
+    build:      ['cards','adaptive','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','checkpoint','teach','newcards'],
+    taper:      ['cards','missed','calc','keys','logistics','listen'],
+    rest:       ['keys','logistics','cards']
   }[phase.key];
   const steps = [];
   let used = 0;
@@ -8235,6 +8264,7 @@ function renderTodayPlan(){
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${left ? ' · ' + escapeHtml(left) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     <p class="pt-sub">${escapeHtml(sub)}${runwayTxt ? ' ' + escapeHtml(runwayTxt) : ''}${lateNote}</p>
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
+    ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
   try{ conductorRefreshPill(); }catch(e){}
@@ -20712,7 +20742,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.205';
+const BUILD_ID = '2026-10-18.206';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
