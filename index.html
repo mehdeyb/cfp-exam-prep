@@ -2039,10 +2039,12 @@
   /* Landscape phones, fullscreen flashcards: the two rating buttons sit in the side margins, left for
      "still learning" and right for "I know this" (the same sides as the swipe), so a thumb reaches them. */
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
-    body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, var(--sab, env(safe-area-inset-bottom, 0px)));min-width:124px;height:58px;padding:0 18px;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
+    body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, var(--sab, env(safe-area-inset-bottom, 0px)));min-width:104px;height:58px;padding:0 14px;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
     /* Use the width: a wider card, with the contrast note beside the definition instead of under it. */
-    body.flashcard-fullscreen .fc-fullscreen-inner{max-width:min(1100px, calc(100vw - 280px));padding-top:0;}
-    body.flashcard-fullscreen .fc-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:26px;align-content:start;text-align:center;padding:14px 26px;min-height:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner{max-width:min(1100px, calc(100vw - 236px));padding-top:0;}
+    body.flashcard-fullscreen .fc-card{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:26px;align-content:start;text-align:center;padding:8px 24px 10px;min-height:0;}
+    body.flashcard-fullscreen .fc-card .fc-domain{margin-bottom:4px;}
+    body.flashcard-fullscreen .fc-progress{margin-bottom:0;}
     body.flashcard-fullscreen .fc-card > *{grid-column:1 / -1;}
     body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]), body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcRetell[style*="block"]){grid-column:1;}
     body.flashcard-fullscreen .fc-card > #fcBack:has(~ #fcContrast[style*="block"]):has(~ #fcRetell[style*="block"]){grid-row:1 / span 2;}
@@ -2052,8 +2054,11 @@
     body.flashcard-fullscreen .fc-front{margin:4px 0;}
     body.flashcard-fullscreen .fc-progress{margin-bottom:4px;}
     body.flashcard-fullscreen .fc-actions{margin-top:8px;}
-    body.flashcard-fullscreen #fcActions .btn.learning{left:16px;}
-    body.flashcard-fullscreen #fcActions .btn.know{right:16px;}
+    body.flashcard-fullscreen #fcActions .btn.learning{left:12px;}
+    body.flashcard-fullscreen #fcActions .btn.know{right:12px;}
+    /* The extra-help button joins the second column instead of adding a row, so the answer fits without scrolling. */
+    body.flashcard-fullscreen .fc-card:has(> #fcRetell[style*="block"]) > #fcEbBtn, body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]) > #fcEbBtn{grid-column:2;margin-top:8px;}
+    body.flashcard-fullscreen .fc-card > #fcRetell[style*="block"], body.flashcard-fullscreen .fc-card > #fcContrast[style*="block"]{font-size:13.5px;line-height:1.5;}
   }
   @media (orientation:portrait) and (max-width:640px){
     h1{font-size:28px;line-height:1.12;}
@@ -11965,7 +11970,7 @@ function renderFlashcard(){
       + ' <button type="button" class="btn ghost" style="margin-top:8px;" onclick="fcShowAllCards()">Show all cards</button>';
     return;
   }
-  document.getElementById('fcCard').style.display = 'flex';
+  document.getElementById('fcCard').style.display = '';
   { const rc = document.getElementById('fcRecap'); if(rc && rc.style.display !== 'none' && fcRound.total === 0){ rc.style.display = 'none'; rc.innerHTML = ''; } }
   if(fcIndex >= fcQueue.length) fcIndex = 0;
   const card = fcQueue[fcIndex];
@@ -20578,7 +20583,7 @@ async function requestDurableStorage(){
   }catch(e){}
 }
 // Keeps an installed copy current: when you open or return to the app, it checks for a newer build and refreshes itself between sessions.
-const BUILD_ID = '2026-10-18.187';
+const BUILD_ID = '2026-10-18.188';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
