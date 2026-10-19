@@ -2642,6 +2642,7 @@
   .pt-lead-txt b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;font-weight:600;}
   .pt-lead-txt span{display:block;font-size:14px;line-height:1.5;color:var(--paper);}
   .pt-lead-foot{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;}
+  #conductorOverlay,#conductorPanel,.cd-panel{overscroll-behavior:contain;}
 </style>
 </head>
 <body>
@@ -8223,13 +8224,18 @@ function conductorEndPart(reason){
   return entry;
 }
 let _cdHideTimer = null;
+// The briefing and between-parts screens cover the page, so the page behind must not scroll under a swipe.
+// Unlock only when no other full-screen view has taken over (a part that is starting locks the page itself).
+function cdUnlockIfIdle(){
+  try{ if(!document.body.className.split(/\s+/).some(c => ['quiz-active','flashcard-fullscreen','tvm-active','fd-active','settings-active','focus-mode'].includes(c))) unlockBodyScroll(); }catch(e){}
+}
 function conductorHide(){
   const o = document.getElementById('conductorOverlay'); if(!o) return;
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(reduce || o.style.display !== 'flex'){ o.style.display = 'none'; return; }
+  if(reduce || o.style.display !== 'flex'){ o.style.display = 'none'; cdUnlockIfIdle(); return; }
   o.classList.add('cd-out');
   clearTimeout(_cdHideTimer);
-  _cdHideTimer = setTimeout(() => { o.classList.remove('cd-out'); o.style.display = 'none'; try{ conductorRefreshPill(); }catch(e){} }, 155);
+  _cdHideTimer = setTimeout(() => { o.classList.remove('cd-out'); o.style.display = 'none'; cdUnlockIfIdle(); try{ conductorRefreshPill(); }catch(e){} }, 155);
   try{ conductorRefreshPill(); }catch(e){}
 }
 function conductorDots(c, asId){
@@ -8317,6 +8323,7 @@ function conductorShow(kind){
     panel.innerHTML = html;
     panel.scrollTop = 0;
     o.style.display = 'flex';
+    lockBodyScroll();
     const b = panel.querySelector('button.btn'); if(b) b.focus({ preventScroll: true });
   }
   conductorRefreshPill();
@@ -23709,7 +23716,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.289';
+const BUILD_ID = '2026-10-19.290';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
