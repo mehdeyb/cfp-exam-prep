@@ -419,6 +419,13 @@
   .dtw-why{font-size:12.5px;line-height:1.5;color:var(--muted);margin-top:3px;}
   .dt-option.dtw-bad{border-color:var(--wrong,#C9803A);background:color-mix(in srgb,var(--wrong,#C9803A) 12%,var(--surface));opacity:.85;cursor:default;}
   .dt-option.dtw-reveal{border-color:var(--correct);background:color-mix(in srgb,var(--correct) 14%,var(--surface));}
+  .dtw-coach{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:12px;color:var(--muted);margin:0 0 10px;}
+  .dtw-coach b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-bright);font-weight:600;}
+  .dtw-plan{font-size:12.5px;line-height:1.5;color:var(--paper);background:var(--surface);border-radius:10px;padding:9px 12px;margin:0 0 10px;}
+  .dtw-cue{font-size:12.5px;color:var(--gold-bright);margin:-4px 0 10px;}
+  .dtw-after{font-size:13px;line-height:1.5;color:var(--paper);background:var(--surface);border-left:3px solid var(--hair);border-radius:10px;padding:9px 12px;margin:10px 0;}
+  .dtw-after b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;font-weight:600;}
+  .dtw-loading{display:flex;align-items:center;gap:10px;padding:22px 6px;font-size:13px;color:var(--muted);}
   .dtw-msg{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--paper);background:var(--surface);border-radius:10px;padding:10px 12px;}
   .dtw-score{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
   .dtw-score.clean{color:var(--correct);}
@@ -11488,9 +11495,121 @@ function dtwPick(key, avoidId){
   const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
   return scored[0].x;
 }
+
+/* ---------- Adaptive client scenarios ----------
+   The same decision, told through new clients, at a difficulty that follows you. A level per tree (1 Build, 2 Apply,
+   3 Tell apart, 4 Transfer) moves up on clean walks and back down on wrong turns, so you build one skill at a time and
+   cannot get by on remembering a client's facts. With a connection the tutor writes each scenario for the weakest
+   concept; without one the saved bank is used. The answer is always the tree's own, so the facts are checked against it. */
+const DTW_LEVELS = [null,
+  { name:'Build', intent:'One plain fact decides each fork. Find it, then choose.' },
+  { name:'Apply', intent:'The facts come as a short story, with one detail that does not matter.' },
+  { name:'Tell apart', intent:'One detail tempts you toward the wrong answer. Hold the line.' },
+  { name:'Transfer', intent:'A realistic client with the deciding fact left implied. No cues.' }];
+const DTW_STYLE = [null,
+  'Level 1 (Build): 2 to 3 short sentences. State, in the same order as the questions, one plain fact that decides each question. No irrelevant details.',
+  'Level 2 (Apply): 3 to 4 sentences told as a short story. Every deciding fact is present but not in question order. Add exactly one realistic detail that does NOT affect any answer.',
+  'Level 3 (Tell apart): 4 to 5 sentences. Include one specific detail that would tempt a student toward the closest wrong result even though the real facts rule it out, plus one irrelevant detail.',
+  'Level 4 (Transfer): 5 to 6 sentences, realistic and a little messy. The deciding facts are implied rather than stated outright, so the student must infer them. Include two irrelevant details and one tempting-but-wrong detail.'];
+const dtwLoading = {}, dtwPre = {};
+function dtwAiOn(){ try{ return !!aiFeaturesAvailable && navigator.onLine !== false; }catch(e){ return false; } }
+function dtwLevelRec(key){
+  DATA.treeLevel = DATA.treeLevel || {};
+  let l = DATA.treeLevel[key];
+  if(!l){ let c = 0; try{ c = dtwStats(key).clean; }catch(e){} l = DATA.treeLevel[key] = { lvl: c >= 5 ? 3 : c >= 2 ? 2 : 1, streak: 0 }; }
+  return l;
+}
+function dtwBump(key, wrong){
+  const l = dtwLevelRec(key), from = l.lvl;
+  if(wrong === 0){ l.streak = (l.streak || 0) + 1; if(l.streak >= (l.lvl === 1 ? 1 : 2) && l.lvl < 4){ l.lvl++; l.streak = 0; } }
+  else if(wrong >= 2){ l.lvl = Math.max(1, l.lvl - 1); l.streak = 0; }
+  else l.streak = 0;
+  return { from, to: l.lvl };
+}
+function dtwResultIds(key){ const t = DECISION_TREES[key]; return Object.keys(t.nodes).filter(id => t.nodes[id].result && dtwRoute(key, id)); }
+function dtwConceptStats(key){
+  const ids = dtwResultIds(key); let tried = 0, clean = 0;
+  ids.forEach(id => { const st = dtwStatOf(key + ':' + id); if(!st) return; tried++; if(st.lastClean) clean++; });
+  return { total: ids.length, tried, clean };
+}
+function dtwPickTarget(key, avoidId){
+  const seen = (dtwRun && dtwRun.key === key) ? dtwRun.seen : [];
+  const l = dtwResultIds(key).map(id => ({ to:id, id: key + ':' + id, route: dtwRoute(key, id) }));
+  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
+  return scored[0] ? scored[0].x : null;
+}
+function dtwSiblingResult(key, route){
+  const t = DECISION_TREES[key], last = route[route.length - 1]; if(!last) return null;
+  const first = id => { let n = t.nodes[id], g = 0; while(n && !n.result && g++ < 20) n = t.nodes[n.options[0].next]; return n && n.result ? n : null; };
+  const alts = last.node.options.map((o, i) => i === last.pick ? null : first(o.next)).filter(Boolean);
+  return alts.length ? alts[Math.floor(Math.random() * alts.length)] : null;
+}
+async function dtwGenerate(key, to, level, route){
+  try{
+    const t = DECISION_TREES[key], meta = (typeof TREE_META !== 'undefined' && TREE_META[key]) || {}, res = t.nodes[to], alt = dtwSiblingResult(key, route);
+    const steps = route.map((st, i) => `${i + 1}. Question: ${st.node.question}\n   Choices: ${st.node.options.map(o => o.label).join(' | ')}\n   Correct choice: ${st.node.options[st.pick].label}`).join('\n');
+    const recent = ((DATA.dtwGen || {})[key] || []).slice(-4).map(x => String(x.facts).slice(0, 70)).join(' / ');
+    const prompt = `You write one client scenario for a CFP exam student practising the decision tool "${meta.name || key}". The student reads your client facts and must answer each question below correctly, in order.\n\nQuestions and the correct choice for each:\n${steps}\n\nThe tool ends at: ${String(res.title).replace(/<[^>]+>/g, '')}.${alt ? ` The closest wrong ending is: ${String(alt.title).replace(/<[^>]+>/g, '')}.` : ''}\n\n${DTW_STYLE[level]}\n\nRules:\n- Invent a new client (first name, age, occupation). Do not use these recent clients: ${recent || 'none'}.\n- Never name the ending or any structure that gives it away, and never say which choice to pick.\n- Only include facts that are true under current U.S. rules; do not state tax figures or limits unless they are in the questions above.\n- Every correct choice must follow clearly from the facts, and no wrong choice may also fit.\n\nReply with JSON only, no markdown: {"facts":"the client facts","why":["one sentence per question, in order, starting with the fact that decides it"],"cues":["one short phrase per question saying what to look for in the facts, without giving the choice away"],"contrast":"one sentence on why ${alt ? 'the closest wrong ending' : 'a tempting alternative'} does not fit this client"}\nThe why and cues arrays must each have exactly ${route.length} items.`;
+    const txt = await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 900 });
+    const m = String(txt || '').match(/\{[\s\S]*\}/); if(!m) return null;
+    const o = JSON.parse(m[0]);
+    const str = (v, a, b) => typeof v === 'string' && v.trim().length >= a && v.trim().length <= b;
+    if(!str(o.facts, 30, 900) || !Array.isArray(o.why) || o.why.length !== route.length || !o.why.every(w => str(w, 5, 280))) return null;
+    const title = String(res.title).replace(/<[^>]+>/g, '');
+    const acr = (title.match(/\(([^)]+)\)/) || [])[1];
+    if(o.facts.toLowerCase().indexOf(title.toLowerCase()) >= 0 || (acr && new RegExp('\\b' + acr.replace(/[^A-Za-z0-9]/g, '') + '\\b').test(o.facts))) return null;
+    const cues = (Array.isArray(o.cues) && o.cues.length === route.length && o.cues.every(c => str(c, 3, 120))) ? o.cues.map(c => c.trim()) : [];
+    const sc = { to, facts: o.facts.trim(), why: o.why.map(w => w.trim()), cues, contrast: str(o.contrast, 10, 300) ? o.contrast.trim() : '', level, gen: true };
+    try{ DATA.dtwGen = DATA.dtwGen || {}; const arr = DATA.dtwGen[key] = (DATA.dtwGen[key] || []).concat([{ to, level, facts: sc.facts, why: sc.why, cues: sc.cues, contrast: sc.contrast, at: Date.now() }]).slice(-10); persist(); }catch(e){}
+    return sc;
+  }catch(e){ return null; }
+}
+function dtwSetState(inst, sc, lvl){
+  const key = dtKeyOf(inst), route = dtwRoute(key, sc.to); if(!route) return false;
+  dtwState[inst] = { id: key + ':' + sc.to, s: sc, route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwConceptStats(key).total, n: 0, shown: false, level: lvl, gen: !!sc.gen };
+  return true;
+}
+async function dtwBegin(inst, avoidId){
+  if(dtwLoading[inst]) return; dtwLoading[inst] = true;
+  const key = dtKeyOf(inst);
+  try{
+    const lvl = dtwLevelRec(key).lvl; let sc = null;
+    const pre = dtwPre[inst]; delete dtwPre[inst];
+    if(pre && pre.level === lvl){ try{ sc = await pre.p; }catch(e){} }
+    if(!sc){
+      const tgt = dtwPickTarget(key, avoidId);
+      if(tgt){
+        const host = document.getElementById('dt-' + inst);
+        if(host) host.innerHTML = `<div class="dt-widget dtw"><div class="dtw-loading" role="status"><span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span> Your tutor is writing a Level ${lvl} scenario for you…</div></div>`;
+        sc = await dtwGenerate(key, tgt.to, lvl, tgt.route);
+        if(sc && !sc.gen) sc = null;
+      }
+    }
+    if(!(sc && dtwSetState(inst, sc, lvl))){ if(!dtwStart(inst, avoidId)) dtModeMap[inst] = 'explore'; }
+  }catch(e){ try{ if(!dtwStart(inst, avoidId)) dtModeMap[inst] = 'explore'; }catch(_){} }
+  dtwLoading[inst] = false;
+  if(dtModeMap[inst] === 'explore'){ try{ dtInit(inst); }catch(e){} } else dtwRender(inst);
+}
+function dtwPrefetch(inst){
+  try{
+    if(!dtwAiOn()) return;
+    const key = dtKeyOf(inst), w = dtwState[inst];
+    if(dtwRun && dtwRun.key === key && dtwRun.n >= dtwRun.goal) return;
+    const tgt = dtwPickTarget(key, w && w.id); if(!tgt) return;
+    const lvl = dtwLevelRec(key).lvl;
+    dtwPre[inst] = { level: lvl, p: dtwGenerate(key, tgt.to, lvl, tgt.route).then(x => (x && x.gen) ? x : null).catch(() => null) };
+  }catch(e){}
+}
+function dtwAfterMsg(w){
+  const c = w.lvlChange; if(!c || !w.gen) return '';
+  const nm = n => DTW_LEVELS[n].name;
+  if(w.wrong === 0) return c.to > c.from ? `Clean walk. The next client moves up to Level ${c.to}: ${nm(c.to)}.` : (c.to === 4 ? 'Clean walk at the top level. Keep it sharp with new clients.' : `Clean walk. One more at Level ${c.to} locks it in.`);
+  if(w.wrong >= 2) return c.to < c.from ? `${w.wrong} wrong turns. The next client steps back to Level ${c.to} to rebuild the base, with cues.` : `${w.wrong} wrong turns. Next client stays at Level 1, with cues at each fork.`;
+  return `One wrong turn. Same level again with a new client.`;
+}
 function dtwStart(inst, avoidId){
   const key = dtKeyOf(inst), pick = dtwPick(key, avoidId); if(!pick) return false;
-  dtwState[inst] = { id: pick.id, s: pick.s, route: pick.route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwList(key).length, n: dtwList(key).findIndex(x => x.id === pick.id) + 1, shown: false };
+  dtwState[inst] = { id: pick.id, s: pick.s, route: pick.route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwList(key).length, n: dtwList(key).findIndex(x => x.id === pick.id) + 1, shown: false, level: 0, gen: false };
   return true;
 }
 function dtwChoose(inst, i){
@@ -11510,13 +11629,14 @@ function dtwFinish(inst){
     const prev = DATA.treeWalk[w.id] || { seen: 0, clean: 0, miss: 0 };
     DATA.treeWalk[w.id] = { seen: prev.seen + 1, clean: prev.clean + (w.wrong ? 0 : 1), miss: prev.miss + w.wrong, lastClean: w.wrong === 0, lastAt: Date.now() };
     { const L = planDayLog(); L.trees = L.trees || []; L.trees.push(dtKeyOf(inst)); }
+    if(w.gen){ w.lvlChange = dtwBump(dtKeyOf(inst), w.wrong); setTimeout(() => dtwPrefetch(inst), 50); }
     if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); }
     recordStudyDay(); persist();
     try{ renderToolPracticeButtons(); }catch(e){}
     try{ renderTodayPlan(); }catch(e){}
   }catch(e){}
 }
-function dtwNext(inst){ const w = dtwState[inst]; dtwStart(inst, w && w.id); dtwRender(inst); }
+function dtwNext(inst){ const w = dtwState[inst]; const av = w && w.id; delete dtwState[inst]; if(dtwAiOn()){ dtwBegin(inst, av); return; } dtwStart(inst, av); dtwRender(inst); }
 function dtwReplay(inst){ const w = dtwState[inst]; if(!w) return; const s = w.s, route = w.route; dtwState[inst] = Object.assign({}, w, { step: 0, wrong: 0, wrongHere: [], log: [], done: false }); dtwRender(inst); }
 function dtwAskTutor(inst){
   const w = dtwState[inst]; if(!w) return;
@@ -11529,14 +11649,20 @@ function dtModeSwitch(inst, mode){
 }
 function dtwRender(inst){
   const host = document.getElementById('dt-' + inst); if(!host) return;
-  if(!dtwState[inst] && !dtwStart(inst)){ dtModeMap[inst] = 'explore'; dtInit(inst); return; }
+  if(!dtwState[inst]){
+    if(dtwLoading[inst]) return;
+    if(dtwAiOn() && dtwResultIds(dtKeyOf(inst)).length){ dtwBegin(inst); return; }
+    if(!dtwStart(inst)){ dtModeMap[inst] = 'explore'; dtInit(inst); return; }
+  }
   const w = dtwState[inst], key = dtKeyOf(inst), tree = DECISION_TREES[key];
   const logHtml = w.log.map(l => `<div class="dtw-log"><div class="dtw-lq">${escapeHtml(l.q)}</div><div class="dtw-la"><span class="dtw-ok">✓</span> <b>${escapeHtml(l.a)}</b></div><div class="dtw-why">${escapeHtml(l.why)}</div></div>`).join('');
   let body;
   if(w.done){
     const res = tree.nodes[w.s.to];
     const clean = w.wrong === 0;
+    const am = dtwAfterMsg(w);
     body = `<div class="dt-result"><div class="dtw-score ${clean ? 'clean' : ''}">${clean ? 'Clean walk, no wrong turns' : w.wrong + ' wrong turn' + (w.wrong === 1 ? '' : 's')}</div><div class="dt-result-title">${res.title}</div><div class="dt-result-body">${res.body}</div></div>
+      ${w.s.contrast ? `<div class="dtw-after"><b>Why not the tempting one</b>${escapeHtml(w.s.contrast)}</div>` : ''}${am ? `<div class="dtw-after"><b>Where you go next</b>${escapeHtml(am)}</div>` : ''}
       <div class="dtw-actions">${(dtwRun && dtwRun.key === key) ? (dtwRun.n >= dtwRun.goal ? `<button type="button" class="btn" onclick="dtwRunDone()">Finish this part</button><button type="button" class="btn ghost" onclick="dtwNext('${inst}')">One more</button>` : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario, ${dtwRun.n + 1} of ${dtwRun.goal}</button>`) : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario</button>`}<button type="button" class="btn ghost" onclick="dtwReplay('${inst}')">Walk it again</button><button type="button" class="btn ghost" onclick="dtwAskTutor('${inst}')">Ask the tutor</button></div>`;
   } else {
     const st = w.route[w.step], node = st.node, hint = w.wrongHere.length >= 2 || w.wrongHere.length >= node.options.length - 1; // a second miss, or only the right answer left
@@ -11546,11 +11672,14 @@ function dtwRender(inst){
     }).join('');
     const msg = !w.wrongHere.length ? '' : hint
       ? `<div class="dtw-msg">Here is how the facts point: ${escapeHtml(w.s.why[w.step])}</div>`
-      : `<div class="dtw-msg">Not quite. Look at the facts again and try another answer.</div>`;
-    body = `<div class="dt-question">${node.question}</div><div class="dt-options">${opts}</div>${msg}`;
+      : `<div class="dtw-msg">Not quite. ${(w.s.cues && w.s.cues[w.step]) ? 'Look for: ' + escapeHtml(w.s.cues[w.step]) + '.' : 'Look at the facts again and try another answer.'}</div>`;
+    const cue = (w.gen && w.s.cues && w.s.cues[w.step] && !w.wrongHere.length && (w.level === 1 || (w.level === 2 && w.step === 0))) ? `<div class="dtw-cue">Look for: ${escapeHtml(w.s.cues[w.step])}</div>` : '';
+    body = `<div class="dt-question">${node.question}</div>${cue}<div class="dt-options">${opts}</div>${msg}`;
   }
   host.innerHTML = `<div class="dt-widget dtw">
-    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : `${dtwStats(key).clean} of ${w.total} walked clean`}</span></div>
+    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span></div>
+    ${w.gen ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
+    ${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
     <div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
     ${logHtml}${body}</div>`;
   if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } }
@@ -24252,7 +24381,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.300';
+const BUILD_ID = '2026-10-19.301';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
