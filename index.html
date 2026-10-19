@@ -18454,17 +18454,21 @@ function paintScenario(q, revealed){
     }
   }catch(e){}
   box.classList.toggle('cs-revealed', !!revealed);
-  if(study){
-    const bar = document.createElement('div'); bar.className = 'cue-bar';
-    if(on) bar.innerHTML = Object.keys(CUE_LABELS).map(k => `<span class="cue-chip cue-${k}">${CUE_LABELS[k]}</span>`).join('');
-    const tg = document.createElement('button'); tg.type = 'button'; tg.className = 'cue-toggle'; tg.setAttribute('aria-pressed', String(on));
-    tg.textContent = on ? 'Cues on' : 'Cues off'; tg.onclick = toggleCues; bar.appendChild(tg);
-    box.appendChild(bar);
-  }
   const reserved = [];
   if(revealed && cue){ cueFindRanges(text, cue.ev, 'ev').forEach(r => reserved.push(r)); cueFindRanges(text, cue.noise, 'noise').forEach(r => reserved.push(r)); }
   const auto = on ? cueAutoRanges(text, reserved) : [];
   const ranges = reserved.concat(auto).sort((a, b) => a.s - b.s);
+  if(study){
+    // The legend and switch only appear when this scenario actually has something highlighted, so there is never a key for colours that are not there.
+    const present = Object.keys(CUE_LABELS).filter(k => ranges.some(r => r.k === k));
+    if(!on || present.length){
+      const bar = document.createElement('div'); bar.className = 'cue-bar';
+      if(on) bar.innerHTML = present.map(k => `<span class="cue-chip cue-${k}">${CUE_LABELS[k]}</span>`).join('');
+      const tg = document.createElement('button'); tg.type = 'button'; tg.className = 'cue-toggle'; tg.setAttribute('aria-pressed', String(on));
+      tg.textContent = on ? 'Cues on' : 'Cues off'; tg.onclick = toggleCues; bar.appendChild(tg);
+      box.appendChild(bar);
+    }
+  }
   const body = document.createElement('div'); body.className = 'cs-body';
   if(q.treeGen) body.style.whiteSpace = 'pre-line';
   if(cue){
@@ -22707,7 +22711,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.261';
+const BUILD_ID = '2026-10-19.262';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
