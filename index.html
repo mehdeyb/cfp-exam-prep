@@ -8072,6 +8072,12 @@ function buildStudyPlan(minutes){
     let cum = 0; const half = Math.min(105, used / 2);
     for(let i = 0; i < steps.length - 1; i++){ cum += steps[i].minutes; if(cum >= half){ breakAfter = steps[i].id; break; } }
   }
+  // One activity can only count toward one step. Flashcards seen today, formula problems and the like are shared out in plan order,
+  // so a finished review of 25 cards does not also tick off "learn 15 new cards" a few rows down.
+  { const pool = { cards: act.cards || 0, tvm: act.tvm || 0, formula: act.formula || 0, drill: cnt.drill || 0 };
+    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : st.id === 'calc' ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.id === 'calc2' ? 'formula' : st.id === 'pretest' ? 'drill' : null;
+    steps.forEach(st => { const k = poolOf(st); if(!k || st.kept || !(st.need > 0)) { if(k && st.kept) pool[k] = Math.max(0, pool[k] - (st.need || 0)); return; }
+      const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }); }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -23703,7 +23709,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.288';
+const BUILD_ID = '2026-10-19.289';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
