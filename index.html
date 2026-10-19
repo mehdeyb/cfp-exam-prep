@@ -8450,6 +8450,8 @@ function planAdvanceUpdate(plan){
   _planSeen = ids; _planSeenDay = day;
   if(_planAdv && (_planAdv.day !== day || Date.now() - _planAdv.at > 45 * 60000)) _planAdv = null;
 }
+// When the Next best step card is already offering today's session, the advance strip only reports progress; one Start, not two.
+function nsOwnsNext(){ return !!(currentNextStep && /^Today's session/.test(currentNextStep.kicker || '')); }
 function planAdvanceHtml(plan){
   if(!_planAdv) return '';
   if(typeof conductorState === 'function' && conductorState()) return '';
@@ -8457,7 +8459,8 @@ function planAdvanceHtml(plan){
   const t = _planAdv.titles;
   const head = t.length === 1 ? t[0] + ' done' : t.length + ' steps done';
   return `<div class="pt-adv" id="ptAdv" role="status"><div class="pt-adv-top"><b>\u2713 ${escapeHtml(head)}</b><button type="button" class="pt-adv-x" aria-label="Dismiss" onclick="planAdvanceDismiss()">\u00d7</button></div>`
-    + (nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
+    + (nxt && nsOwnsNext() ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min. Start it from Next best step above.</div>`
+    : nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
       : `<div class="pt-adv-next">That is everything on today's plan. Rest, or take an adaptive session if you still have energy.</div>`)
     + '</div>';
 }
@@ -8521,7 +8524,9 @@ function renderNextStepCard(stats, refreshed){
   const el = document.getElementById('nextStepCard');
   if(!el) return;
   const s = computeNextStep(stats);
+  const _nsBefore = nsOwnsNext();
   currentNextStep = s;
+  if(_nsBefore !== nsOwnsNext()){ try{ if(_planAdv) renderTodayPlan(); }catch(e){} }
   // When the recommendation is also a step in today's plan, say which one, so the two read as one thread.
   let planTag = '';
   try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && x.title === s.title); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
@@ -23678,7 +23683,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.283';
+const BUILD_ID = '2026-10-19.284';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
