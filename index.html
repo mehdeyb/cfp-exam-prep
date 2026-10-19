@@ -3020,7 +3020,7 @@
         </div>
 
         <div class="tvm-actions">
-          <button class="btn ghost" id="tvmMultiStageEntryBtn" onclick="startTvmMultiStage()">Two-part problem</button>
+          <button class="btn ghost" id="tvmMultiStageEntryBtn" onclick="startTvmMultiStage()">Multi-part problem</button>
           <button class="btn" id="tvmContinueStageBtn" onclick="tvmContinueToStage2()" style="display:none;">Continue to Part 2</button>
           <button class="btn ghost" id="tvmNextBtn" onclick="loadTvmProblem()" style="display:none;">Try another problem</button>
         </div>
@@ -16009,6 +16009,7 @@ let tvmMultiStageActive = false;
 let tvmMultiStageProblem = null;
 let tvmMultiStageIndex = 0;
 let tvmMultiStageCarriedValue = null;
+let tvmMultiStageResults = [];
 
 function tvmToggleBeginEnd(){
   if(tvmSolved || !tvmCurrent) return;
@@ -16970,7 +16971,7 @@ function loadTvmProblem(){
   tvmMultiStageActive = false;
   tvmMultiStageProblem = null;
   tvmMultiStageIndex = 0;
-  tvmMultiStageCarriedValue = null;
+  tvmMultiStageCarriedValue = null; tvmMultiStageResults = [];
   const entryBtn = document.getElementById('tvmMultiStageEntryBtn');
   if(entryBtn) entryBtn.style.display = 'inline-block';
   document.getElementById('tvmContinueStageBtn').style.display = 'none';
@@ -17061,44 +17062,82 @@ function tvmRenderStatusCore(){
   el.innerHTML = chips.join('');
 }
 
+// Capital-needs chains the way the exam asks them: each part's answer feeds the next. The numbers are fresh every time and the
+// answers come from the same exact solver as every other problem, so the key cannot be wrong.
+function tvmMsStages(p){ return p.stages || [p.stage1, p.stage2].filter(Boolean); }
+function tvmMakeMultiStage(){
+  const P = tvmGPick, R = tvmGRange, M = tvmGMoney;
+  const kind = P(['retire','retire','educ','educ','save','mortgage']);
+  tvmGenCounter++;
+  const id = 'msg-' + kind + '-' + tvmGenCounter;
+  if(kind === 'retire'){
+    const E = P([50000,60000,70000,80000,90000,100000]), n = P([15,20,25,30]), inf = P([2.5,3,3.5]), m = P([20,25,30]), r = P([5,6,7]), rs = P([6,7,8]);
+    return { id, title:'Retirement needs: inflate, fund, then save', stages:[
+      { scenario:`A client wants ${M(E)} a year in today's dollars once she retires in ${n} years. If prices rise ${inf}% a year, what will that first year's spending be in her retirement year?`, solveFor:'FV', known:{ n, iy:inf, pv:-E, pmt:0 }, hint:'Inflation grows a lump sum, so this is a future value.' },
+      { scenarioTemplate:`That first-year amount is {carriedValue}, carried over from Part 1. She will withdraw it at the start of each year for ${m} years (hold the amount level to keep this simple), and the account earns ${r}% a year while she spends it. How much must she have saved on the day she retires?`, solveFor:'PV', known:{ n:m, iy:r, fv:0 }, carryInto:'pmt', carrySignFlip:false, begin:true, hint:'Payments at the start of each period: switch the calculator to BEGIN.' },
+      { scenarioTemplate:`She needs {carriedValue} on retirement day, carried over from Part 2. She starts from zero and saves at the end of each year for ${n} years, earning ${rs}% a year. How much must she save each year?`, solveFor:'PMT', known:{ n, iy:rs, pv:0 }, carryInto:'fv', carrySignFlip:true, begin:false, hint:'Back to END mode for end-of-year deposits.' } ] };
+  }
+  if(kind === 'educ'){
+    const T = P([20000,25000,30000,40000,50000]), n = P([8,10,12,15,18]), inf = P([4,5,6]), r = P([5,6,7]), rs = P([6,7,8]);
+    return { id, title:'Education funding: inflate, fund, then save', stages:[
+      { scenario:`College costs ${M(T)} a year today and rises ${inf}% a year. A parent's child starts in ${n} years. What will the first year cost?`, solveFor:'FV', known:{ n, iy:inf, pv:-T, pmt:0 }, hint:'Tuition inflation grows a lump sum.' },
+      { scenarioTemplate:`The first year costs {carriedValue}, carried over from Part 1. Pay it at the start of each of 4 years (hold it level to keep this simple), with the fund earning ${r}% a year. How much must be in the fund when the child starts?`, solveFor:'PV', known:{ n:4, iy:r, fv:0 }, carryInto:'pmt', carrySignFlip:false, begin:true, hint:'Tuition is paid at the start of each year: BEGIN mode.' },
+      { scenarioTemplate:`The fund needs {carriedValue} at enrolment, carried over from Part 2. The parent starts from zero and saves at the end of each year for ${n} years, earning ${rs}% a year. How much per year?`, solveFor:'PMT', known:{ n, iy:rs, pv:0 }, carryInto:'fv', carrySignFlip:true, begin:false, hint:'Back to END mode for end-of-year deposits.' } ] };
+  }
+  if(kind === 'mortgage'){
+    const y = P([15,30]), k = P([5,7,10]), L = P([200000,250000,300000,350000,400000]), r = P([4,4.5,5,6]);
+    const per = { name:'month', m:12 };
+    return { id, title:'Mortgage: payment, then balance', stages:[
+      { scenario:`A client borrows ${M(L)} at ${r}% compounded monthly for ${y} years, paying at the end of each month. What is the monthly payment?`, solveFor:'PMT', known:{ n:y*12, iy:r/12, pv:L, fv:0 }, per, hint:'Convert N and I/YR to months.' },
+      { scenarioTemplate:`The payment is {carriedValue} a month, carried over from Part 1. After ${k} years of payments, what does the client still owe?`, solveFor:'FV', known:{ n:k*12, iy:r/12, pv:L }, carryInto:'pmt', carrySignFlip:false, per, hint:'N is the payments made so far. The balance is the FV left over.' } ] };
+  }
+  // save, then spend it down
+  const A = P([6000,8000,10000,12000,15000]), n = P([15,20,25,30]), r = P([5,6,7,8]), m = P([20,25,30]), due = P([true,false]);
+  return { id, title:'Save, then spend it down', stages:[
+    { scenario:`A client saves ${M(A)} at the ${due ? 'start' : 'end'} of each year for ${n} years, earning ${r}% a year. How much will she have at the end?`, solveFor:'FV', known:{ n, iy:r, pv:0, pmt:-A }, begin:due, hint: due ? 'Deposits at the start of each year: BEGIN mode.' : 'Deposits at the end of each year: END mode.' },
+    { scenarioTemplate:`She has {carriedValue}, carried over from Part 1. She withdraws a level amount at the end of each year for ${m} years, fully using the account, with it still earning ${r}% a year. How much can she withdraw each year?`, solveFor:'PMT', known:{ n:m, iy:r, fv:0 }, carryInto:'pv', carrySignFlip:true, begin:false, hint:'Withdrawals at the end of each year: END mode.' } ] };
+}
 function startTvmMultiStage(){
-  const problem = TVM_MULTISTAGE_PROBLEMS[Math.floor(Math.random()*TVM_MULTISTAGE_PROBLEMS.length)];
+  let problem = null;
+  try{ problem = tvmMakeMultiStage(); }catch(e){}
+  if(!problem) problem = TVM_MULTISTAGE_PROBLEMS[Math.floor(Math.random()*TVM_MULTISTAGE_PROBLEMS.length)];
   tvmMultiStageActive = true;
   tvmMultiStageProblem = problem;
   tvmMultiStageIndex = 0;
-  tvmMultiStageCarriedValue = null;
+  tvmMultiStageCarriedValue = null; tvmMultiStageResults = [];
   const entryBtn = document.getElementById('tvmMultiStageEntryBtn');
   if(entryBtn) entryBtn.style.display = 'none';
   loadTvmMultiStageCurrent();
 }
 
 function loadTvmMultiStageCurrent(){
-  const problem = tvmMultiStageProblem;
-  const stageData = tvmMultiStageIndex === 0 ? problem.stage1 : problem.stage2;
-  const scenarioText = tvmMultiStageIndex === 0
+  const problem = tvmMultiStageProblem, stages = tvmMsStages(problem), idx = tvmMultiStageIndex;
+  const stageData = stages[idx];
+  const scenarioText = idx === 0
     ? stageData.scenario
-    : stageData.scenarioTemplate.replace('{carriedValue}', tvmFormatCurrency(tvmMultiStageCarriedValue));
-  const partLabel = tvmMultiStageIndex === 0 ? 'Part 1 of 2 — ' : 'Part 2 of 2 — ';
+    : stageData.scenarioTemplate.replace('{carriedValue}', tvmFormatCurrency(Math.abs(tvmMultiStageCarriedValue)));
+  const partLabel = 'Part ' + (idx + 1) + ' of ' + stages.length + ' — ';
 
   const known = Object.assign({}, stageData.known);
-  if(tvmMultiStageIndex === 1){
+  if(idx > 0 && stageData.carryInto){
     const carriedVal = stageData.carrySignFlip ? -tvmMultiStageCarriedValue : tvmMultiStageCarriedValue;
     known[stageData.carryInto] = carriedVal;
   }
 
-  tvmCurrent = { id: problem.id+'_s'+(tvmMultiStageIndex+1), solveFor: stageData.solveFor, known: known, difficulty: 2 };
+  tvmCurrent = { id: problem.id+'_s'+(idx+1), solveFor: stageData.solveFor, known: known, difficulty: stageData.per ? 3 : 2 };
+  if(typeof stageData.begin === 'boolean') tvmCurrent.isBeginMode = stageData.begin;
+  if(stageData.per) tvmCurrent.per = stageData.per;
   tvmDisplay = '0';
   tvmRegisters = { n:null, iy:null, pv:null, pmt:null, fv:null };
   tvmRegisterStatus = { n:null, iy:null, pv:null, pmt:null, fv:null };
-  if(tvmMultiStageIndex === 1){
+  if(idx > 0 && stageData.carryInto){
     const carryKey = stageData.carryInto;
     tvmRegisters[carryKey] = known[carryKey];
     tvmRegisterStatus[carryKey] = 'correct';
   }
   tvmErrorsThisProblem = 0;
   tvmSolved = false;
-
-  document.getElementById('tvmScenario').textContent = partLabel + scenarioText;
+  document.getElementById('tvmScenario').textContent = partLabel + scenarioText + (stageData.hint ? ' (' + stageData.hint + ')' : '');
   document.getElementById('tvmLevelBadge').textContent = problem.title;
   document.getElementById('tvmFeedback').textContent = '';
   document.getElementById('tvmFeedback').className = 'tvm-feedback';
@@ -17114,10 +17153,12 @@ function loadTvmMultiStageCurrent(){
 }
 
 function tvmContinueToStage2(){
-  if(!tvmMultiStageActive || tvmMultiStageIndex !== 0) return;
+  if(!tvmMultiStageActive) return;
+  const stages = tvmMsStages(tvmMultiStageProblem);
+  if(tvmMultiStageIndex >= stages.length - 1) return;
   const solveKey = tvmCurrent.solveFor.toLowerCase();
   tvmMultiStageCarriedValue = tvmRegisters[solveKey];
-  tvmMultiStageIndex = 1;
+  tvmMultiStageIndex++;
   loadTvmMultiStageCurrent();
 }
 
@@ -17300,9 +17341,14 @@ function tvmCalculateAndShow(){
     solutionHtml += `<div class="tvm-solution-step"><b>Annual yield:</b> ${result.toFixed(4)}% × ${m} = ${(result*m).toFixed(2)}%.</div>`;
   }
 
-  if(tvmMultiStageActive && tvmMultiStageIndex === 1){
-    const s1 = tvmMultiStageProblem.stage1;
-    solutionHtml += `<div class="tvm-solution-step" style="margin-top:10px;border-top:1px solid var(--hair);padding-top:10px;"><b>Full picture:</b> Part 1 grew to ${fmt(tvmMultiStageCarriedValue)}, which Part 2 then used as the starting point to find ${solveFor.toLowerCase()==='pmt' ? 'the yearly amount that can be drawn down' : 'the answer above'}.</div>`;
+  if(tvmMultiStageActive){
+    tvmMultiStageResults[tvmMultiStageIndex] = result;
+    const stages = tvmMsStages(tvmMultiStageProblem);
+    if(tvmMultiStageIndex === stages.length - 1 && stages.length > 1){
+      const names = { FV:'future value', PV:'amount needed', PMT:'payment', N:'time', IY:'rate' };
+      const line = stages.map((st, i) => `Part ${i + 1}: ${names[st.solveFor] || st.solveFor.toLowerCase()} ${fmt(Math.abs(tvmMultiStageResults[i] != null ? tvmMultiStageResults[i] : 0))}`).join(' \u2192 ');
+      solutionHtml += `<div class="tvm-solution-step" style="margin-top:10px;border-top:1px solid var(--hair);padding-top:10px;"><b>Full picture:</b> ${line}. Each answer became the next part's starting number.</div>`;
+    }
   }
 
   const solEl = document.getElementById('tvmSolution');
@@ -17320,13 +17366,14 @@ function tvmCalculateAndShow(){
   feedback.textContent = 'Solved. The worked solution is below.';
   feedback.className = 'tvm-feedback';
 
-  if(tvmMultiStageActive && tvmMultiStageIndex === 0){
-    document.getElementById('tvmContinueStageBtn').style.display = 'inline-block';
+  if(tvmMultiStageActive && tvmMultiStageIndex < tvmMsStages(tvmMultiStageProblem).length - 1){
+    const cb = document.getElementById('tvmContinueStageBtn'); cb.textContent = 'Continue to Part ' + (tvmMultiStageIndex + 2);
+    cb.style.display = 'inline-block';
     document.getElementById('tvmNextBtn').style.display = 'none';
   } else {
     document.getElementById('tvmContinueStageBtn').style.display = 'none';
     document.getElementById('tvmNextBtn').style.display = 'inline-block';
-    if(tvmMultiStageActive && tvmMultiStageIndex === 1){
+    if(tvmMultiStageActive){
       tvmMultiStageActive = false;
       const entryBtn = document.getElementById('tvmMultiStageEntryBtn');
       if(entryBtn) entryBtn.style.display = 'inline-block';
@@ -24394,7 +24441,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.306';
+const BUILD_ID = '2026-10-19.307';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
