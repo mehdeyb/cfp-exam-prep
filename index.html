@@ -1801,6 +1801,10 @@
   .tutor-guide .tg-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
   .tutor-guide .tg-t{font-size:14px;line-height:1.45;color:var(--paper);}
   .tutor-guide.pending .tg-t{min-height:20px;}
+  .tutor-guide .tg-next{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;padding:11px 14px;min-height:44px;border-radius:12px;border:1px solid var(--gold);background:var(--gold);color:var(--ink);font:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer;}
+  .tutor-guide .tg-next .tg-next-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;flex:none;}
+  .tutor-guide .tg-next .tg-next-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tutor-guide .tg-next:active{transform:scale(.99);}
   .tutor-guide .tg-row{display:flex;gap:10px;align-items:center;margin-top:10px;}
   .tutor-guide .tg-back{margin-left:0;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:8px 6px;cursor:pointer;}
@@ -21325,7 +21329,7 @@ Guidelines:
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
-- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
+- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -21419,6 +21423,42 @@ function tutorTreeRow(key, practice){
 // with a way back to the conversation; if a quiz is open, just light the Tutor tab so the note waits.
 let tutorUnread = false;
 function tutorGuideDismiss(){ document.querySelectorAll('.tutor-guide').forEach(e => e.remove()); }
+// The next stop on the tutor's route. The tutor can queue one (queue_next_stop); otherwise it is the next unfinished step of today's plan.
+let tutorNextStop = null;
+const TUTOR_NEXT_TOOLS = ['start_plan_step','point_to','start_flashcards','start_quiz_session','open_formula_drill','open_tvm_calculator','open_study_guide','navigate_to_tab','open_decision_tool'];
+function tutorNextChoice(){
+  if(tutorNextStop) return tutorNextStop;
+  try{
+    const plan = buildStudyPlan();
+    const st = plan.steps.find(x => !x.done && x.id !== _tutorLastStepId);
+    if(st) return { label: String(st.title).replace(/\s+/g, ' ').slice(0, 60), tool: 'start_plan_step', input: { step_id: st.id } };
+  }catch(e){}
+  return null;
+}
+let _tutorLastStepId = null;
+async function tutorGoNext(){
+  const nx = tutorNextChoice(); if(!nx) return;
+  tutorGuideDismiss(); clearTutorPoint(); tutorNextStop = null;
+  if(nx.tool === 'start_plan_step') _tutorLastStepId = nx.input && nx.input.step_id;
+  let res = '';
+  try{ res = String(await executeTutorTool(nx.tool, nx.input || {})); }catch(e){ res = 'Error'; }
+  // Say where they are and offer the stop after this one, unless a session took over the screen.
+  if(session) return;
+  const panel = document.querySelector('.tab-panel.active'); if(!panel || panel.id === 'tab-tutor') return;
+  const box = tutorGuideBox(); if(!box) return;
+  box.querySelector('.tg-t').textContent = /^Error/.test(res) ? 'That one would not open. Head back to the chat and I will find another way.' : (nx.label ? 'Here: ' + nx.label + '.' : 'Here you go.');
+  tutorGuideNextButton(box);
+  tutorGuideShow(box);
+}
+function tutorGuideNextButton(box){
+  const old = box.querySelector('.tg-next'); if(old) old.remove();
+  const nx = tutorNextChoice(); if(!nx) return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'tg-next';
+  b.innerHTML = '<span class="tg-next-k">Next</span><span class="tg-next-t"></span><span aria-hidden="true">\u2192</span>';
+  b.querySelector('.tg-next-t').textContent = nx.label;
+  b.onclick = tutorGoNext;
+  box.querySelector('.tg-row').insertAdjacentElement('beforebegin', b);
+}
 function tutorGuideBox(){
   let box = document.querySelector('.tutor-guide');
   if(box) return box;
@@ -21457,6 +21497,7 @@ function tutorGuideAfterMove(reply){
   const box = tutorGuideBox(); if(!box) return;
   box.classList.remove('pending');
   box.querySelector('.tg-t').textContent = txt.trim();
+  tutorGuideNextButton(box);
   if(!had) tutorGuideShow(box);
 }
 
@@ -21499,6 +21540,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_tvm_calculator') return 'Opened the calculator walkthrough' + (inp.mode === 'cashflow' ? ' (cash flows)' : '');
     if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
     if(name === 'open_study_guide') return 'Opened your study guide';
+    if(name === 'queue_next_stop') return /^Error/.test(r) ? '' : 'Lined up next: ' + String(inp.label || '').slice(0, 48);
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return 'Opened your detailed progress (Study tab)';
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
@@ -21733,6 +21775,19 @@ const TUTOR_TOOLS = [
     input_schema: { type: 'object', properties: { step_id: { type: 'string', description: 'The id of the step to start.' } }, required: ['step_id'] },
   },
   {
+    name: 'queue_next_stop',
+    description: "Line up where to take the student next, after the place you are sending them now. When what you just showed or started has an obvious follow-on (look at the key numbers, then do a drill on them), queue it: a Next button appears on the note on the screen they land on, and one tap takes them there. Give it a short label for the button (under 40 characters, like 'Drill the retirement limits'). Use the same tool and input you would use to take them there directly. Queue only one, only when it is clearly the right next thing.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'Short button label, under 40 characters.' },
+        tool: { type: 'string', enum: TUTOR_NEXT_TOOLS, description: 'Which of your tools to run when they tap Next.' },
+        input: { type: 'object', description: "That tool's input, for example {\"step_id\":\"cards\"} for start_plan_step or {\"target\":\"ref_formulas\"} for point_to." },
+      },
+      required: ['label','tool'],
+    },
+  },
+  {
     name: 'point_to',
     description: "Take the student to a specific spot in the app and highlight it with a pulsing outline and a short note, so they can see exactly where to look or what to do next. Use it when they ask to be shown something, or when you recommend a concrete next step and want to direct their eye to it. It navigates away from the chat, so use it when they have asked to be shown, or after you have finished explaining.",
     input_schema: {
@@ -21912,6 +21967,14 @@ async function executeTutorTool(toolName, toolInput){
       return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}).${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a 10 minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
+    if(toolName === 'queue_next_stop'){
+      const tl = toolInput && toolInput.tool;
+      if(!TUTOR_NEXT_TOOLS.includes(tl)) return `Error: "${tl}" cannot be queued. Use one of: ${TUTOR_NEXT_TOOLS.join(', ')}.`;
+      const label = String((toolInput && toolInput.label) || '').replace(/\s+/g, ' ').trim().slice(0, 48);
+      if(!label) return 'Error: give the button a short label.';
+      tutorNextStop = { label, tool: tl, input: (toolInput && toolInput.input && typeof toolInput.input === 'object') ? toolInput.input : {} };
+      return `Queued. The student will see a Next button labelled "${label}" on the note.`;
+    }
     if(toolName === 'start_plan_step'){
       // Look first in the plan the student is actually looking at (the ids the tutor was given), then in a longer one, so any step that applies today can be started even if it did not fit the time budget.
       const planNow = buildStudyPlan(), planLong = buildStudyPlan(240), planMax = buildStudyPlan(360);
@@ -21920,6 +21983,7 @@ async function executeTutorTool(toolName, toolInput){
       const plan = planNow;
       if(!st) return `Error: "${toolInput && toolInput.step_id}" is not a step in today's plan. Valid ids: ${[...new Set(planNow.steps.concat(planNow.blocks).map(x => x.id))].join(', ') || 'none'}.`;
       if(st.id === 'teach') return `Do this one right here in the chat: ask the first question now (before explaining anything), one question at a time, wait for their answer, and give a small hint before the answer if they are stuck.`;
+      _tutorLastStepId = st.id;
       st.run();
       return `Started: ${st.title}.`;
     }
@@ -22213,6 +22277,7 @@ async function sendTutorMessage(presetText){
   tutorMessages.push({role:'user', content:text});
   const conversationIdAtRequestTime = tutorConversationId;
 
+  tutorNextStop = null; _tutorLastStepId = null;
   tutorBusy = true;
   document.getElementById('tutorSendBtn').disabled = true;
   input.disabled = true;
@@ -22838,7 +22903,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.267';
+const BUILD_ID = '2026-10-19.268';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
