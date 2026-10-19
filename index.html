@@ -11661,7 +11661,7 @@ function dtwRender(inst){
   const host = document.getElementById('dt-' + inst); if(!host) return;
   if(!dtwState[inst]){
     if(dtwLoading[inst]) return;
-    if(dtwAiOn() && dtwResultIds(dtKeyOf(inst)).length){ dtwBegin(inst); return; }
+    if(dtwAiOn() && host.offsetParent !== null && dtwResultIds(dtKeyOf(inst)).length){ dtwBegin(inst); return; } // hidden cards start with the saved bank, so opening the tab never spends a request per tool
     if(!dtwStart(inst)){ dtModeMap[inst] = 'explore'; dtInit(inst); return; }
   }
   const w = dtwState[inst], key = dtKeyOf(inst), tree = DECISION_TREES[key];
@@ -23871,6 +23871,7 @@ function focusExit(o){
 let _lastFocusStep = null;
 function tutorStepDonePrompt(title){
   if(session || _focus) return;
+  try{ if(conductorState()) return; }catch(e){} // a guided session already shows the finished part and the next one (card and pill)
   const panel = document.querySelector('.tab-panel.active'); if(!panel || panel.id === 'tab-tutor') return;
   const nx = tutorNextChoice();
   const old = document.querySelector('.tutor-guide'); if(old) old.remove();
@@ -24392,7 +24393,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.303';
+const BUILD_ID = '2026-10-19.305';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
