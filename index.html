@@ -1836,6 +1836,7 @@
   .focus-bar .fb-l{flex:1;min-width:0;}
   .focus-bar .fb-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
   .focus-bar .fb-t{font-size:14px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .focus-bar .fb-n{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3;}
   body.focus-mode .focus-target .ref-scroll,body.focus-mode .focus-target.ref-scroll{max-height:none;overflow:visible;}
   .focus-bar button{flex:none;min-height:40px;padding:0 14px;border-radius:11px;border:1px solid var(--hair);background:none;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .focus-bar button.fb-done{background:var(--gold);border-color:var(--gold);color:#1b1608;}
@@ -22203,7 +22204,7 @@ Guidelines:
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
 - Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); show_chart draws one small chart in the chat when a picture teaches faster than words (compounding, loan principal versus interest, bond price against yield, a cash-flow timeline, risk against return, a few numbers compared), so use it sparingly, once per idea, never as decoration, and always say in a line or two what to notice; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
-- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
+- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way. When you take the student to a decision tool as part of working through today's plan, use open_decision_tool with isolate:true and a short note (add practice:true and scenarios:2 to 4 for a counted run of client scenarios): it opens that one tool alone, and when they finish you can offer the next plan step.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
@@ -22433,7 +22434,7 @@ function tutorActionText(name, input, result){
     if(name === 'start_my_session') return 'Opened today\'s guided session';
     if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
     if(name === 'lookup_term') return 'Looked up “' + String(inp.term || '').slice(0, 40) + '” in the glossary (Reference tab)';
-    if(name === 'open_decision_tool') return 'Opened a decision tool (Decision tools)';
+    if(name === 'open_decision_tool') return inp.isolate || inp.scenarios ? 'Opened a decision tool on its own' : 'Opened a decision tool (Decision tools)';
     if(name === 'play_podcast' || name === 'open_podcast') return 'Opened your podcast episode (Reference tab)';
     if(name === 'generate_practice') return /^(Error|Can't|Already)/.test(r) ? you(r).replace(/\.$/, '') : 'Writing new practice questions for you';
     if(name === 'mark_subtopic_reviewed') return /^Error|^Could not|^No /.test(r) ? you(r).replace(/\.$/, '') : 'Marked as reviewed in your syllabus checklist';
@@ -22813,6 +22814,8 @@ const TUTOR_TOOLS = [
       type: 'object',
       properties: {
         tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        isolate: { type: 'boolean', description: 'True to pull this one tool into its own focus view with everything else hidden (works for all seven, with or without practice). Use it when you are walking the student through a step of today\'s plan with this tool, so nothing else competes for attention. They leave with Done or Back to chat, and get a note pointing to the next step.' },
+        note: { type: 'string', description: 'With isolate: one short line (under 70 characters) shown at the top of the focus view saying what to do here, for example "Pick the trust that fits each client".' },
         scenarios: { type: 'integer', minimum: 1, maximum: 6, description: 'With practice true on trust, entity, ira, roth or socialSecurity: opens a focused run of exactly this many client scenarios, picked from the weakest and newest first, and prompts the student to move on when they are done. Use 2 to 4. Leave it out to show one scenario in the chat.' },
         practice: { type: 'boolean', description: 'True when the student wants to practice, be quizzed or test themselves on this tool: it shows a short client scenario they walk, with right and wrong feedback at every question. Leave false to just explore the branches.' },
       },
@@ -23077,6 +23080,16 @@ async function executeTutorTool(toolName, toolInput){
       if(toolInput.practice && toolInput.scenarios && TREE_SCENARIOS[toolInput.tool] && openTreeRun(toolInput.tool, { goal: Math.round(Number(toolInput.scenarios)) || 3, title: meta.label })){
         const g = dtwRun ? dtwRun.goal : 3;
         return `Opened "${meta.label}" on its own in a focus view with ${g} client scenarios, weakest and newest first. The app counts them, tells the student right or wrong at each step, and offers "Finish this part" and the next stop after scenario ${g}. Do not repeat the answers.`;
+      }
+      if(toolInput.isolate){
+        dtwRun = null;
+        showTab('tools');
+        const k = toolInput.tool;
+        if(DECISION_TREES[k]){ dtModeMap[k] = (toolInput.practice && TREE_SCENARIOS[k]) ? 'walk' : 'explore'; delete dtwState[k]; try{ if(dtModeMap[k] === 'walk') dtRender(k); else dtInit(k); }catch(e){} }
+        const host = document.getElementById(meta.anchorId), card = host ? host.closest('.card') : null;
+        if(card && focusEnter({ tab:'tools', el:card, title:meta.label, note:String(toolInput.note || '').slice(0, 70) })){
+          return `Opened "${meta.label}" by itself in a focus view${toolInput.practice && TREE_SCENARIOS[k] ? ' in practice mode' : ''}. Everything else is hidden. They leave with Done or Back to chat${tutorNextChoice() ? ', or go on with Next' : ''}.`;
+        }
       }
       if(DECISION_TREES[toolInput.tool]){
         _tutorTreeShown[toolInput.tool] = tutorConversationId;
@@ -23596,10 +23609,11 @@ function focusEnter(o){
   const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
   const fromChat = _focus.origin === 'tutor';
   const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
-  bar.innerHTML = '<div class="fb-l"><div class="fb-k">Focus</div><div class="fb-t"></div></div>' +
+  bar.innerHTML = '<div class="fb-l"><div class="fb-k">Focus</div><div class="fb-t"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
     (nx ? '<button type="button" class="fb-next">Next</button>' : '') +
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
+  { const fn = bar.querySelector('.fb-n'); if(fn) fn.textContent = String(o.note).replace(/\s+/g, ' ').trim().slice(0, 70); }
   bar.querySelector('.fb-done').onclick = () => focusExit({ done:true });
   const nb = bar.querySelector('.fb-next'); if(nb && nx) nb.setAttribute('aria-label', 'Next: ' + nx.label);
   if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
@@ -24162,7 +24176,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.298';
+const BUILD_ID = '2026-10-19.299';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
