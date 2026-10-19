@@ -21407,6 +21407,19 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
   try{ const x = lastSitting(); if(x) timeContext += ` Their last timed ${x.mode === 'mock' ? 'checkpoint' : 'full exam'} (${modeAgoText(new Date(x.date).getTime())}): ${sittingClockLine(x)}. Checkpoints run under exam conditions with no feedback until submitting, and the app shows the allowance per question (about 2 minutes) with the time they have banked against an even pace. Use this when they ask about pacing or time management; never push speed at the cost of accuracy.`; }catch(e){}
+  try{
+    // Today's plan, live, so the tutor never has to guess where the student is in it or contradict the Study tab.
+    const pl = buildStudyPlan();
+    if(pl && pl.steps && pl.steps.length){
+      const done = pl.steps.filter(x => x.done).length, nxt = pl.steps.find(x => !x.done);
+      const cs = conductorState();
+      timeContext += ` TODAY'S PLAN (the same one shown on the Study tab): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
+        pl.steps.map(x => `[${x.id}] ${x.title}${x.done ? ' (done)' : (x.need > 0 && (x.have || 0) > 0 ? ` (${x.have}/${x.need})` : '')}`).join('; ') + '.' +
+        (nxt ? ` Next part: [${nxt.id}] ${nxt.title}. Point them to it, or start it with start_plan_step, rather than inventing a different task.` : ' Every part is done: acknowledge it and suggest only light review or rest.') +
+        (cs ? ' A guided session is running right now, so keep replies short and let it lead.' : '') +
+        ' If they say they have more or less time, use plan_my_study with the new minutes so the plan on screen changes to match.';
+    }
+  }catch(e){}
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
@@ -22931,7 +22944,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.247';
+const BUILD_ID = '2026-10-18.248';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
