@@ -22264,6 +22264,7 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
+  try{ const lv = DATA.treeLevel || {}; const ks = Object.keys(lv).filter(k => DECISION_TREES[k]); if(ks.length) timeContext += ' Decision-tool scenario levels (1 Build, 2 Apply, 3 Tell apart, 4 Transfer; new clients are written at that level): ' + ks.map(k => k + ' L' + lv[k].lvl).join(', ') + '. When you open a tool for them, match your coaching to the level.'; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
@@ -24391,7 +24392,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.302';
+const BUILD_ID = '2026-10-19.303';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -24469,6 +24470,7 @@ function syncMergeVal(a, b, an, key){
 }
 function syncMergeObj(a, b, an, key){
   if(SYNC_WHOLE.indexOf(key) >= 0) return an ? a : b;
+  if(key === 'dayLog' && a.day !== b.day) return String(a.day) > String(b.day) ? a : b; // never mix two different days' counts
   const ta = typeof a.lastSeenAt === 'number' ? a.lastSeenAt : a.lastAt, tb = typeof b.lastSeenAt === 'number' ? b.lastSeenAt : b.lastAt;
   if(typeof ta === 'number' && typeof tb === 'number' && (ta || tb)){
     if(ta !== tb) return ta > tb ? a : b;
@@ -24482,6 +24484,7 @@ function syncMergeObj(a, b, an, key){
 function syncMergeArr(a, b, an, key){
   const prim = x => x === null || typeof x !== 'object';
   if(a.every(prim) && b.every(prim)){
+    if(key === 'trees' || key === 'explains') return a.length >= b.length ? a : b; // today's counts of scenarios and ideas: keep the device that did more
     if(SYNC_UNION_ARRAYS.indexOf(key) >= 0){ const s = new Set(a); b.forEach(x => s.add(x)); return Array.from(s).sort(); }
     return an ? a : b;
   }
