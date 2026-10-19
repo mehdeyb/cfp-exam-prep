@@ -1782,6 +1782,14 @@
   .tutor-bubble{max-width:82%;padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;}
   .tutor-msg-bot .tutor-bubble{background:var(--surface2);border:1px solid var(--hair);color:var(--paper);border-bottom-left-radius:4px;}
   .tutor-msg-user .tutor-bubble{background:var(--gold-tint);border:1px solid var(--gold);color:var(--paper);border-bottom-right-radius:4px;}
+  .tutor-guide{margin:0 0 14px;padding:12px 14px;border:1px solid var(--gold);border-left-width:3px;border-radius:14px;background:var(--gold-soft);animation:tgIn .28s var(--ease);}
+  .tutor-guide .tg-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+  .tutor-guide .tg-t{font-size:14px;line-height:1.45;color:var(--paper);}
+  .tutor-guide .tg-row{display:flex;gap:10px;align-items:center;margin-top:10px;}
+  .tutor-guide .tg-back{margin-left:0;}
+  .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:8px 6px;cursor:pointer;}
+  @keyframes tgIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.tutor-guide{animation:none}}
   .tutor-action-indicator{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0;font-size:11.5px;color:var(--teal);font-weight:600;}
   .tutor-msg-bot .tutor-bubble.tutor-bubble-err{background:var(--incorrect-tint);border-color:var(--incorrect);color:var(--paper);}
   .tutor-bubble.typing{color:var(--muted);}
@@ -3931,6 +3939,7 @@ function showTab(name, opts){
     _tabScroll[curName] = window.scrollY || 0;
   }
   if(SUB_SCREENS.includes(name) && curName && !SUB_SCREENS.includes(curName)){ _subOrigin = curName; try{ updateSubBack(); }catch(e){} }
+  if(!same) { try{ tutorGuideDismiss(); }catch(e){} }
   document.querySelectorAll('.tab-panel').forEach(el=>{ el.classList.remove('active'); el.classList.remove('tab-enter'); });
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
@@ -21519,7 +21528,7 @@ Guidelines:
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
-- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
+- When a tool takes them to another screen, your reply appears on that screen as a short note with a way back to the chat. So write it for where they now are: one line on what they are looking at, then one clear next action, in two or three short sentences. Do not stack several moves in one turn.\n- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
 - Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing.
@@ -21602,6 +21611,28 @@ function tutorTreeRow(key, practice){
   thread.scrollTop = thread.scrollHeight;
   return row;
 }
+// When a tool carried the student to another screen while the reply was still being written, the reply would land
+// in a chat they are no longer looking at. Put its first lines right where they now are, in the page flow (not floating),
+// with a way back to the conversation; if a quiz is open, just light the Tutor tab so the note waits.
+let tutorUnread = false;
+function tutorGuideDismiss(){ document.querySelectorAll('.tutor-guide').forEach(e => e.remove()); }
+function tutorGuideAfterMove(reply){
+  const panel = document.querySelector('.tab-panel.active');
+  if(!panel || panel.id === 'tab-tutor' || !reply) return;
+  if(session){ tutorUnread = true; tnRenderDot(); return; }
+  tutorGuideDismiss();
+  const sentences = String(reply).replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+/g) || [String(reply)];
+  let txt = ''; for(const t of sentences){ if((txt + t).length > 230 && txt) break; txt += t; }
+  const box = document.createElement('div'); box.className = 'tutor-guide'; box.setAttribute('role', 'status');
+  box.innerHTML = '<div class="tg-k">From your tutor</div><div class="tg-t"></div><div class="tg-row"><button type="button" class="tutor-show tg-back">Back to chat</button><button type="button" class="tg-x">Got it</button></div>';
+  box.querySelector('.tg-t').textContent = txt.trim();
+  box.querySelector('.tg-back').onclick = () => { tutorGuideDismiss(); showTab('tutor'); };
+  box.querySelector('.tg-x').onclick = tutorGuideDismiss;
+  panel.insertBefore(box, panel.firstChild);
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!tutorPointEl){ try{ box.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' }); }catch(e){} }
+}
+
 // After a tutor reply, offer the matching tool when the question (or what the tutor explained) is one a tool covers.
 function tutorMaybeOfferTree(userText, replyText){
   try{
@@ -22334,6 +22365,7 @@ async function sendTutorMessage(presetText){
     typingBubble.classList.remove('typing');
     tutorRenderReply(typingBubble, reply, text);
     status.textContent = '';
+    try{ tutorGuideAfterMove(reply); }catch(e){}
     tutorMaybeOfferTree(text, reply);
     if(presetText === undefined) tutorRemember(text, 'tutor');
   }catch(e){
@@ -22632,11 +22664,12 @@ function tnRenderCard(){
 }
 function tnRenderDot(){
   const b = document.querySelector('.tab-btn[data-tab="tutor"]'); if(!b) return;
-  const on = tnEnabled() && !session && tnActive().length > 0 && !b.classList.contains('active');
+  const on = !session && !b.classList.contains('active') && ((tnEnabled() && tnActive().length > 0) || tutorUnread);
   b.classList.toggle('has-note', on);
 }
 // Opening the Tutor tab reads the waiting notes aloud in the thread, so the Study card steps aside.
 function tnOnTutorOpen(){
+  tutorUnread = false; tutorGuideDismiss();
   try{
     if(!tnEnabled()) return;
     const pend = tnActive();
@@ -22898,7 +22931,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.246';
+const BUILD_ID = '2026-10-18.247';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
