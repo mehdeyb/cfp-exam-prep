@@ -6600,7 +6600,7 @@ const READINESS_FLOOR = 0.25;      // chance of a right answer by guessing on a 
 const READINESS_TRANSFER = 0.5;    // for flashcards: how much of what tried cards show is assumed to carry to untried ones
 const READINESS_PRIOR_WEIGHT = 8;  // how many guessing-level answers each domain's first-attempt record is pulled toward
 const READINESS_BOX_P = [0.25, 0.70, 0.80, 0.88, 0.94, 0.98]; // chance of a right answer by review-schedule step
-const READINESS_VERSION = 3;       // bump whenever the model changes, so old saved scores are not compared with new ones
+const READINESS_VERSION = 4;       // bump whenever the model changes, so old saved scores are not compared with new ones
 
 // The chance you would get this item right now. It starts from the review step reached, blends in the
 // item's lifetime record, and fades toward guessing the longer the item has been overdue.
@@ -6709,7 +6709,12 @@ function computeStats(){
     const unseenP = READINESS_FLOOR + (firstAcc - READINESS_FLOOR) * keep * (0.6 + 0.4*coverageFactor);
     // Thin evidence is pulled toward the untried estimate: a handful of tried items says less than a lot.
     const Qs = attemptedN ? (attemptedN*Q + 3*unseenP)/(attemptedN + 3) : READINESS_FLOOR;
-    let E = attemptedN ? frac*Qs + (1-frac)*unseenP : READINESS_FLOOR;
+    // What you have already tried counts two ways: how well each item is retained (Qs), and what your
+    // first attempts say about your ability on questions like it (unseenP). Exam questions are new to you,
+    // so ability matters as much as retention; blending the two stops a domain that is fully tried with
+    // strong first attempts from being capped by how few reviews each item has had so far.
+    const triedP = 0.5*Qs + 0.5*Math.max(Qs*0.9, unseenP);
+    let E = attemptedN ? frac*triedP + (1-frac)*unseenP : READINESS_FLOOR;
 
     // Flashcards: term and definition recall in this domain, a lighter second source of evidence.
     const cards = allCards.filter(f=>f.domain===d.key);
@@ -7412,8 +7417,10 @@ function examPhaseLabel(daysLeft){
    READINESS GAUGE + COACH: explain the score, show the trend,
    and say what to do next
 =========================================================== */
-function readinessBandLabel(score, totalAnswered){
+function readinessBandLabel(score, totalAnswered, margin){
   if(!totalAnswered) return 'Not started yet';
+  // A high score built on little evidence is not called strong: wait until the likely range is tight.
+  if(score >= 55 && typeof margin === 'number' && margin >= 12) return 'Promising, still early';
   if(score < 15) return 'Just getting started';
   if(score < 35) return 'Building a base';
   if(score < 55) return 'Making real progress';
@@ -7503,7 +7510,7 @@ function renderPaceBlock(stats){
 function renderReadinessExtras(stats){
   const bandEl = document.getElementById('readinessBand');
   const trendEl = document.getElementById('readinessTrend');
-  if(bandEl) bandEl.textContent = readinessBandLabel(stats.readiness, stats.totalAnswered);
+  if(bandEl) bandEl.textContent = readinessBandLabel(stats.readiness, stats.totalAnswered, stats.accuracyMargin);
   const estEl = document.getElementById('readinessEst');
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
@@ -9616,7 +9623,7 @@ function renderExamDayCallout(){
       const trend = dl ? (dl.delta > 0 ? ` · ▲ ${dl.delta} ${dl.windowLabel}` : (dl.delta < 0 ? ` · ▼ ${Math.abs(dl.delta)} ${dl.windowLabel}` : ` · steady ${dl.windowLabel}`)) : '';
       const gap = stats.parts.slice().sort((a,b)=>b.lost-a.lost)[0];
       rdEl.innerHTML = `
-        <div class="ed-rd-top"><span class="ed-rd-score">${stats.readiness}<small>/100</small></span><span class="ed-rd-band"><b>${escapeHtml(readinessBandLabel(stats.readiness, stats.totalAnswered))}</b>${trend}</span></div>
+        <div class="ed-rd-top"><span class="ed-rd-score">${stats.readiness}<small>/100</small></span><span class="ed-rd-band"><b>${escapeHtml(readinessBandLabel(stats.readiness, stats.totalAnswered, stats.accuracyMargin))}</b>${trend}</span></div>
         ${stats.totalAnswered >= 10 && stats.accuracyMargin !== null ? `<div class="ed-rd-gap">Estimated accuracy on exam-style questions: about <b>${stats.expectedAccuracy}%</b> (give or take ${stats.accuracyMargin}).</div>` : ''}
         <div class="ed-rd-gap">Most room to grow: <b>${escapeHtml(gap.name)}</b> (${gap.earned.toFixed(1)} of ${gap.weight} points).</div>
         ${(()=>{ const ps = paceSummary(stats); return ps ? `<div class="ed-rd-gap">${escapeHtml(ps.text)}</div>` : ''; })()}
@@ -22825,7 +22832,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.239';
+const BUILD_ID = '2026-10-18.240';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
