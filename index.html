@@ -1613,11 +1613,17 @@
   .podcast-icon-btn-play{width:64px;height:64px;border-color:var(--gold);background:var(--gold);color:var(--ink);}
   .podcast-icon-btn-play svg{width:26px;height:26px;}
   .podcast-icon-btn-play:hover{box-shadow:var(--shadow-gold);transform:translateY(-1px);}
-  .podcast-player-secondary-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
+  .podcast-player-secondary-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;}
+  .podcast-player-secondary-row > *{min-width:0;width:100%;}
+  .podcast-player-secondary-row .podcast-icon-btn-stop{padding:9px 6px;white-space:nowrap;}
+  .podcast-player-controls{position:relative;gap:10px;}
+  .podcast-status:empty{display:none;}
+  .podcast-stop-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);}
+  .podcast-stop-btn[hidden]{display:none;}
   .podcast-icon-btn-stop{width:auto;min-height:44px;border-radius:20px;padding:9px 16px;gap:6px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;}
   .podcast-icon-btn-stop svg{width:15px;height:15px;}
   .podcast-icon-btn-stop:hover{background:var(--surface);color:var(--paper);}
-  .podcast-speed-select{width:auto;margin-top:0;}
+  .podcast-speed-select{width:100%;margin-top:0;}
   .podcast-status{font-size:11.5px;color:var(--muted);margin-top:10px;min-height:16px;text-align:center;}
   .pod-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;}
   .pod-hero{margin-top:10px;padding:16px;border-radius:18px;background:linear-gradient(160deg,var(--gold-soft),var(--surface2));border:1px solid var(--hair);}
@@ -3154,15 +3160,15 @@
             <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipBackBtn" onclick="podcastSkip(-1)" title="Previous sentence" aria-label="Previous sentence"></button>
             <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
             <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipForwardBtn" onclick="podcastSkip(1)" title="Next sentence" aria-label="Next sentence"></button>
+            <button class="podcast-icon-btn podcast-icon-btn-skip podcast-stop-btn" id="podcastStopBtn" onclick="stopPodcastPlayback()" title="Stop" aria-label="Stop" hidden><span></span></button>
           </div>
           <div class="podcast-player-secondary-row">
-            <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastStopBtn" onclick="stopPodcastPlayback()" aria-label="Stop"><span></span><span>Stop</span></button>
             <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Follow along</span></button>
             <select id="podcastSleepSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSleepChanged()" aria-label="Sleep timer">
-              <option value="0" selected>Sleep: off</option>
-              <option value="10">10 min</option>
-              <option value="20">20 min</option>
-              <option value="30">30 min</option>
+              <option value="0" selected>Sleep</option>
+              <option value="10">Sleep 10m</option>
+              <option value="20">Sleep 20m</option>
+              <option value="30">Sleep 30m</option>
             </select>
             <select id="podcastSpeedSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSpeedChanged()" aria-label="Playback speed">
               <option value="0.75">0.75×</option>
@@ -10096,6 +10102,7 @@ function podcastMediaSessionOpts(){
 function setPodcastPlayButtonState(state){
   const btn = document.getElementById('podcastPlayPauseBtn');
   if(!btn) return;
+  { const sb = document.getElementById('podcastStopBtn'); if(sb) sb.hidden = (state === 'Play'); } // Stop only matters once audio has started
   if(state === 'Pause'){
     btn.innerHTML = PAUSE_SVG;
     btn.setAttribute('aria-label', 'Pause');
@@ -22688,7 +22695,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.259';
+const BUILD_ID = '2026-10-18.260';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
