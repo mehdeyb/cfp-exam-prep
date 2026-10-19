@@ -2643,6 +2643,54 @@
   .pt-lead-txt span{display:block;font-size:14px;line-height:1.5;color:var(--paper);}
   .pt-lead-foot{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;}
   #conductorOverlay,#conductorPanel,.cd-panel{overscroll-behavior:contain;}
+
+  /* ---------- Walk through your misses: a guided, tutor-led review ---------- */
+  #mwHost{ display:none; }
+  body.mw-active #mwHost{
+    display:flex;z-index:200;position:fixed;inset:0;
+    background-color:var(--ink);
+    background-image:radial-gradient(ellipse 800px 500px at 10% -10%, var(--bg-glow-1), transparent 60%),radial-gradient(ellipse 800px 500px at 100% 0%, var(--bg-glow-2), transparent 60%);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    padding:max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(96px, calc(86px + env(safe-area-inset-bottom,0px))) max(20px, env(safe-area-inset-left));
+    animation:quizIn .32s var(--ease);
+  }
+  .mw-dots{display:flex;gap:6px;margin:2px 0 12px;}
+  .mw-dot{flex:1;height:4px;border-radius:2px;background:var(--hair);transition:background .25s var(--ease);}
+  .mw-dot.done{background:var(--teal);} .mw-dot.cur{background:var(--gold);}
+  .mw-kicker{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin:6px 0 8px;}
+  .mw-scn{background:var(--surface2);border:1px solid var(--hair);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.55;color:var(--paper);margin:0 0 10px;}
+  .mw-q{font-family:'Fraunces',serif;font-size:19px;line-height:1.45;font-weight:600;margin:6px 0 14px;color:var(--paper);}
+  .mw-q.sm{font-size:16px;margin-bottom:10px;}
+  .mw-choices{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;}
+  .mw-c{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;font:inherit;font-size:14.5px;line-height:1.5;color:var(--paper);background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;box-sizing:border-box;}
+  button.mw-c{cursor:pointer;min-height:48px;}
+  button.mw-c:active{transform:scale(.985);}
+  .mw-c > b{flex:0 0 20px;font-family:'IBM Plex Mono',monospace;color:var(--muted);font-weight:600;}
+  .mw-c.pick{border-color:var(--incorrect);background:var(--incorrect-tint);}
+  .mw-c.right{border-color:var(--correct);background:var(--correct-tint);}
+  .mw-c.dim{opacity:.5;}
+  .mw-c small{display:block;font-size:13px;line-height:1.5;color:var(--muted);margin-top:4px;}
+  .mw-tagline{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;color:var(--muted);}
+  .mw-c.pick .mw-tagline{color:var(--incorrect);} .mw-c.right .mw-tagline{color:var(--correct);}
+  .mw-ask > b{display:block;font-size:16px;margin:2px 0 10px;color:var(--paper);}
+  .mw-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .mw-chip{min-height:44px;padding:10px 16px;border-radius:22px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);font:inherit;font-size:14px;cursor:pointer;}
+  .mw-chip:active{transform:scale(.97);border-color:var(--gold);}
+  .mw-skip{background:none;border:0;color:var(--muted);font:inherit;font-size:13px;padding:12px 4px;min-height:44px;cursor:pointer;text-decoration:underline;}
+  .mw-tip,.mw-note{margin:10px 0 0;padding:10px 12px;border-left:2px solid var(--gold);background:var(--gold-soft);border-radius:0 8px 8px 0;font-size:14px;line-height:1.55;color:var(--paper);}
+  .mw-note{border-left-color:var(--teal);background:var(--teal-tint);}
+  .mw-tip > b,.mw-note > b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
+  .mw-note > b{color:var(--teal);}
+  .mw-note.loading{color:var(--muted);}
+  .mw-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
+  .mw-verdict{font-weight:600;font-size:16px;margin:2px 0 10px;color:var(--paper);}
+  .mw-verdict.ok{color:var(--correct);} .mw-verdict.no{color:var(--incorrect);}
+  .mw-sum{display:flex;gap:10px;margin:8px 0 14px;}
+  .mw-sum > div{flex:1;background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:12px 8px;text-align:center;}
+  .mw-sum b{display:block;font-family:'IBM Plex Mono',monospace;font-size:24px;color:var(--paper);}
+  .mw-sum span{font-size:11.5px;color:var(--muted);}
+  .mw-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;font-size:13.5px;color:var(--paper);}
+  .mw-list li{display:flex;gap:8px;line-height:1.45;} .mw-list li i{font-style:normal;flex:0 0 18px;color:var(--correct);} .mw-list li i.no{color:var(--muted);}
 </style>
 </head>
 <body>
@@ -2851,6 +2899,19 @@
       </div>
     </div>
 
+
+    <div id="mwHost" role="dialog" aria-modal="true" aria-label="Walk through your misses">
+      <div class="dp-inner">
+        <div class="dp-header">
+          <h2 id="mwTitle">Your misses</h2>
+          <button class="dp-close" onclick="mwClose()" aria-label="Close" title="Close">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="mw-dots" id="mwDots" aria-hidden="true"></div>
+        <div id="mwBody" aria-live="polite"></div>
+      </div>
+    </div>
 
     <div id="fdHost" role="dialog" aria-modal="true" aria-label="Formula drills">
       <div class="dp-inner">
@@ -7515,7 +7576,7 @@ function computeNextStep(stats){
     } else if(DATA.missed.length > 0){
       step = { kicker:`${daysLeft} day${daysLeft===1?'':'s'} to go`, title:'Clear your missed questions',
         why:'In the final days, consolidating what you have already seen beats chasing new material.',
-        cta:'Review misses', meta:`${DATA.missed.length} question${DATA.missed.length===1?'':'s'}`, run: () => startMissedReview() };
+        cta:'Review misses', meta:`${DATA.missed.length} question${DATA.missed.length===1?'':'s'}`, alt:{ label:'Talk through them', fn:'mwOpen()' }, run: () => startMissedReview() };
     }
   }
 
@@ -8003,12 +8064,10 @@ function buildStudyPlan(minutes){
     tutor: () => {
       if(missedN < 3 && !L.targets.tutorMiss) return null;
       planTarget('tutorMiss', 1);
-      return { id:'tutor', title:'Have the tutor walk through your misses', minutes:8,
-        why:'Hearing why each wrong answer is wrong, then explaining the right one back, fixes the reasoning behind a miss, not just the answer.',
-        manual:true, run: () => {
-          const qq = (DATA.missed || []).slice(-4).map(id => allQuestions().find(x => x.id === id)).filter(Boolean).map(q => '- ' + String(q.q).slice(0, 220));
-          askTutorAbout('Walk me through the questions I keep missing, one at a time, starting with the one that matters most for the exam. Ask me to explain my reasoning first, then show where it went wrong and give me a fresh variation to try.' + (qq.length ? '\n\nRecent misses:\n' + qq.join('\n') : ''));
-        } };
+      const n = Math.max(3, Math.min(5, missedN));
+      return { id:'tutor', title:`Walk through ${n} of your misses`, minutes: 8,
+        why:'One miss at a time: say why the wrong answer looked right, see the fix, then try a similar question. Understanding the pull of the wrong answer fixes the reasoning, not just the answer.',
+        manual:true, run: () => { mwOpen(5); } };
     },
     logistics: () => ({ id:'logistics', title:'Check your exam-day plan', minutes:5,
       why:'Knowing the route, timing, ID and calculator rules removes avoidable stress. Do it once, calmly, before the day.',
@@ -8227,7 +8286,7 @@ let _cdHideTimer = null;
 // The briefing and between-parts screens cover the page, so the page behind must not scroll under a swipe.
 // Unlock only when no other full-screen view has taken over (a part that is starting locks the page itself).
 function cdUnlockIfIdle(){
-  try{ if(!document.body.className.split(/\s+/).some(c => ['quiz-active','flashcard-fullscreen','tvm-active','fd-active','settings-active','focus-mode'].includes(c))) unlockBodyScroll(); }catch(e){}
+  try{ if(!document.body.className.split(/\s+/).some(c => ['quiz-active','flashcard-fullscreen','tvm-active','fd-active','mw-active','settings-active','focus-mode'].includes(c))) unlockBodyScroll(); }catch(e){}
 }
 function conductorHide(){
   const o = document.getElementById('conductorOverlay'); if(!o) return;
@@ -17562,6 +17621,243 @@ function startFullExam(){
   applyExamSimSkin();
 }
 
+
+// ---- Walk through your misses -------------------------------------------------------------------------------------
+// A guided review, one miss at a time: what you picked, why it looked right, the fix with the reason it fooled you, then a fresh
+// question on the same idea. What you say about each miss shapes the wrap-up, and finishing it completes the plan step.
+let mw = null;
+const MW_REASONS = [
+  { k:'read',  label:'I misread it',            tip:'Reading slips fix fast: circle qualifiers such as NOT, EXCEPT and LEAST, then read all four choices before you lock one in.' },
+  { k:'know',  label:"I didn't know it",         tip:'Then the work is the idea itself: say the rule in one sentence out loud, then try the similar question.' },
+  { k:'mix',   label:'Two ideas looked alike',   tip:'Mix-ups are fixed by contrast: name the one fact that separates the two ideas, and the choice that looks right stops looking right.' },
+  { k:'calc',  label:'A calculation slip',       tip:'Write what is given and what is asked, redo it one step at a time, and check that the size of the answer makes sense.' },
+  { k:'guess', label:'I guessed',                tip:'A miss on a guess says the topic is not secure yet. A flashcard on it will help more than rereading the explanation.' }
+];
+function mwLetter(i){ return 'ABCD'.charAt(i) || '?'; }
+function mwClean(t){ return String(t || '').replace(/^\s*(Wrong|Correct|Incorrect)\s*[—–-]\s*/i, '').trim(); }
+function mwYourPick(q){
+  const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; let best = -1, bn = 0;
+  Object.keys(picks).forEach(k => { const i = +k; if(i !== q.correct && i >= 0 && i < 4 && picks[k] >= bn){ bn = picks[k]; best = i; } });
+  return best;
+}
+function mwPick(n){
+  const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
+  const now = Date.now(), done = DATA.mwDone || {};
+  const acc = {}, wt = {};
+  DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; acc[d.key] = st.total ? st.correct / st.total : 0.5; wt[d.key] = d.weight || 10; });
+  const scored = (DATA.missed || []).map(id => byId[id]).filter(q => q && !isGenQ(q) && Array.isArray(q.choices) && q.choices.length === 4).map(q => {
+    const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; const stuck = Math.max(0, ...Object.values(picks).map(Number));
+    const d = done[q.id]; const recent = d && now - d.t < 86400000 ? 1 : 0;
+    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 6 };
+  }).sort((a, b) => b.s - a.s);
+  const out = [], rest = scored.slice();
+  while(out.length < n && rest.length){
+    const last = out.length ? out[out.length - 1].domain : null;
+    let i = rest.findIndex(x => x.q.domain !== last); if(i < 0) i = 0;
+    out.push(rest.splice(i, 1)[0].q);
+  }
+  return out;
+}
+function mwWords(t){ return new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 4)); }
+function mwSibling(q, used){
+  const base = mwWords(q.q + ' ' + q.choices[q.correct] + ' ' + (q.rationale || []).join(' '));
+  const missed = new Set(DATA.missed || []);
+  let best = null, bs = 0;
+  allQuestions().forEach(c => {
+    if(c.id === q.id || c.domain !== q.domain || isGenQ(c) || !Array.isArray(c.choices) || c.choices.length !== 4 || missed.has(c.id) || (used && used.has(c.id))) return;
+    const w = mwWords(c.q + ' ' + c.choices[c.correct] + ' ' + (c.rationale || []).join(' '));
+    let inter = 0; base.forEach(x => { if(w.has(x)) inter++; });
+    const st = (DATA.questionStats || {})[c.id];
+    const sc = inter / ((base.size + w.size - inter) || 1) + (!st || !st.seen ? 0.03 : 0);
+    if(sc > bs){ bs = sc; best = c; }
+  });
+  return bs >= 0.08 ? best : null;
+}
+function mwOpen(n){
+  const host = document.getElementById('mwHost'); if(!host) return false;
+  const qs = mwPick(n || 5);
+  if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
+  try{ conductorHide(); }catch(e){}
+  mw = { items: qs.map(q => ({ q, pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
+  if(host.parentElement !== document.body){ mw.home = host.parentElement; document.body.appendChild(host); }
+  mw.opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+  document.body.classList.add('mw-active');
+  lockBodyScroll();
+  mwRender();
+  host.scrollTop = 0;
+  const c = host.querySelector('.dp-close'); if(c) c.focus({ preventScroll:true });
+  return true;
+}
+function mwClose(){
+  const was = document.body.classList.contains('mw-active');
+  document.body.classList.remove('mw-active');
+  const host = document.getElementById('mwHost');
+  if(mw && mw.home && host && host.parentElement === document.body) mw.home.appendChild(host);
+  const opener = mw && mw.opener; mw = null;
+  cdUnlockIfIdle();
+  if(was){ try{ renderAll(); }catch(e){} try{ planAdvanceReveal(); }catch(e){} }
+  if(was && opener && document.contains(opener) && typeof opener.focus === 'function'){ try{ opener.focus({ preventScroll:true }); }catch(e){} }
+}
+function mwHead(it, extra){
+  const d = DOMAINS.find(x => x.key === it.q.domain) || {};
+  const times = Math.max(0, ...Object.values((DATA.wrongChoiceHistory || {})[it.q.id] || {}).map(Number));
+  return `<div class="mw-kicker">Miss ${mw.i + 1} of ${mw.items.length} · ${escapeHtml(d.code || '')}${extra ? ' · ' + extra : (times >= 2 ? ' · same wrong pick ' + times + '×' : '')}</div>`;
+}
+function mwDots(){
+  const el = document.getElementById('mwDots'); if(!el || !mw) return;
+  el.innerHTML = mw.items.map((it, k) => `<i class="mw-dot${it.stage === 'done' ? ' done' : (k === mw.i && mw.stage !== 'wrap' ? ' cur' : '')}"></i>`).join('');
+  el.style.display = '';
+}
+function mwRender(){
+  if(!mw) return;
+  const body = document.getElementById('mwBody'), title = document.getElementById('mwTitle'); if(!body) return;
+  const it = mw.items[mw.i];
+  mwDots();
+  if(mw.stage === 'wrap' || !it){ title.textContent = 'What to take from this'; body.innerHTML = mwWrapHtml(); return; }
+  const q = it.q;
+  const scn = q.scenario ? `<div class="mw-scn">${escapeHtml(q.scenario)}</div>` : '';
+  if(it.stage === 'why'){
+    title.textContent = 'Your misses';
+    const hasPick = it.pick >= 0;
+    const choices = q.choices.map((c, k) => hasPick
+      ? `<li class="mw-c${k === it.pick ? ' pick' : ''}"><b>${mwLetter(k)}</b><span>${k === it.pick ? '<span class="mw-tagline">You chose</span><br>' : ''}${escapeHtml(c)}</span></li>`
+      : `<li><button type="button" class="mw-c" onclick="mwChoose(${k})"><b>${mwLetter(k)}</b><span>${escapeHtml(c)}</span></button></li>`).join('');
+    let reasons = MW_REASONS.filter(r => r.k !== 'calc' || q.calcSteps || q.calcType || stemLooksComputational(q));
+    if(!TRAP_RE.test(q.q || '')) reasons = reasons.filter(r => r.k !== 'read').concat(reasons.filter(r => r.k === 'read'));
+    body.innerHTML = mwHead(it) + scn + `<div class="mw-q">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
+      + (hasPick ? `<div class="mw-ask"><b>What made ${mwLetter(it.pick)} look right?</b><div class="mw-chips">${reasons.map(r => `<button type="button" class="mw-chip" onclick="mwReason('${r.k}')">${escapeHtml(r.label)}</button>`).join('')}</div><button type="button" class="mw-skip" onclick="mwReason('')">Skip, just show me</button></div>`
+        : `<p class="hint" style="margin:0;">You missed this one before. Tap the answer you would choose now.</p>`);
+    return;
+  }
+  if(it.stage === 'fix'){
+    title.textContent = 'The fix';
+    const r = MW_REASONS.find(x => x.k === it.reason);
+    const pickRat = it.pick >= 0 ? mwClean((q.rationale || [])[it.pick]) : '';
+    const choices = q.choices.map((c, k) => {
+      if(k === q.correct) return `<li class="mw-c right"><b>${mwLetter(k)}</b><span><span class="mw-tagline">${it.nowRight ? 'Right: that is your answer now' : 'Correct'}</span><br>${escapeHtml(c)}<small>${escapeHtml(mwClean((q.rationale || [])[k]))}</small></span></li>`;
+      if(k === it.pick) return `<li class="mw-c pick"><b>${mwLetter(k)}</b><span><span class="mw-tagline">You chose</span><br>${escapeHtml(c)}<small>${escapeHtml(pickRat)}</small></span></li>`;
+      return '';
+    }).join('');
+    let tip = '';
+    if(it.reason === 'mix' && it.pick >= 0){ const pr = detectMixup(q, it.pick); if(pr) tip = `<b>${escapeHtml(pr.a)} vs ${escapeHtml(pr.b)}</b>${escapeHtml(pr.a)}: ${escapeHtml(pr.da)} ${escapeHtml(pr.b)}: ${escapeHtml(pr.db)}`; }
+    if(!tip && r) tip = `<b>${escapeHtml(r.label)}</b>${escapeHtml(r.tip)}`;
+    if(it.reason === 'read'){ const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|PRIMARY)\b/); if(m) tip = `<b>${escapeHtml(r.label)}</b>The word that decided it: ${escapeHtml(m[1])}. ${escapeHtml(r.tip)}`; }
+    const canNote = aiFeaturesAvailable && !q.calcSteps && !q.calcType && it.pick >= 0;
+    body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
+      + (tip ? `<div class="mw-tip">${tip}</div>` : '')
+      + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Thinking about why that one is tempting…</div>` : '')
+      + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button></div>`;
+    if(canNote) mwFetchNote(it);
+    return;
+  }
+  if(it.stage === 'try'){
+    title.textContent = 'Now you try';
+    const s = it.sib, answered = it.sibPick !== null;
+    const choices = s.choices.map((c, k) => {
+      if(!answered) return `<li><button type="button" class="mw-c" onclick="mwAnswer(${k})"><b>${mwLetter(k)}</b><span>${escapeHtml(c)}</span></button></li>`;
+      const cls = k === s.correct ? ' right' : (k === it.sibPick ? ' pick' : ' dim');
+      const note = (k === s.correct || k === it.sibPick) ? `<small>${escapeHtml(mwClean((s.rationale || [])[k]))}</small>` : '';
+      return `<li class="mw-c${cls}"><b>${mwLetter(k)}</b><span>${k === it.sibPick && k !== s.correct ? '<span class="mw-tagline">You chose</span><br>' : ''}${escapeHtml(c)}${note}</span></li>`;
+    }).join('');
+    const last = mw.i >= mw.items.length - 1;
+    body.innerHTML = mwHead(it, 'similar idea') + (s.scenario ? `<div class="mw-scn">${escapeHtml(s.scenario)}</div>` : '') + `<div class="mw-q">${highlightQualifiers(s.q)}</div><ul class="mw-choices">${choices}</ul>`
+      + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div><div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
+    return;
+  }
+}
+function mwChoose(k){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
+  if(k === it.q.correct){ it.pick = -1; it.nowRight = true; it.reason = ''; it.stage = 'fix'; }
+  else { it.pick = k; }
+  mwRender();
+}
+function mwReason(k){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
+  it.reason = k || ''; it.stage = 'fix'; mwRender();
+  const host = document.getElementById('mwHost'); if(host) host.scrollTop = 0;
+}
+async function mwFetchNote(it){
+  const q = it.q, key = q.id + ':' + it.pick + ':' + (it.reason || '');
+  const show = txt => { if(!mw || mw.items[mw.i] !== it || it.stage !== 'fix') return; const el = document.getElementById('mwNote'); if(!el) return;
+    if(!txt){ el.remove(); return; } el.className = 'mw-note'; el.innerHTML = '<b>From your tutor</b>' + escapeHtml(txt); };
+  if(mw.notes[key]){ show(mw.notes[key]); return; }
+  const r = MW_REASONS.find(x => x.k === it.reason);
+  const prompt = `A CFP exam student missed this practice question. Write a short coaching note, at most 60 words, in plain language, no lists or headings.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
+    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nSay why ${mwLetter(it.pick)} is tempting, then the one fact or rule that separates it from ${mwLetter(q.correct)}, then a short memory hook. Do not repeat the question or the choices word for word.`;
+  try{
+    const txt = trimToSentence(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 260 }));
+    if(txt){ mw && (mw.notes[key] = txt); }
+    show(txt || '');
+  }catch(e){ show(''); }
+}
+function mwAskTutor(){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it) return; const q = it.q, r = MW_REASONS.find(x => x.k === it.reason);
+  const t = `I am walking through a question I missed: "${q.q}" Choices: ` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join(' ') + ` The right answer is ${mwLetter(q.correct)}.` + (it.pick >= 0 ? ` I chose ${mwLetter(it.pick)}${r ? ' because ' + r.label.toLowerCase() : ''}.` : '') + ' Ask me one short question that checks I now see the difference, wait for my answer, then tell me what I am still missing.';
+  mwClose(); askTutorAbout(t);
+}
+function mwTry(){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
+  const sib = mwSibling(it.q, mw.used);
+  if(!sib){ it.ok = null; return mwNext(); }
+  mw.used.add(sib.id); it.sib = sib; it.sibPick = null; it.stage = 'try'; mwRender();
+  const host = document.getElementById('mwHost'); if(host) host.scrollTop = 0;
+}
+function mwAnswer(k){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it || it.stage !== 'try' || it.sibPick !== null) return;
+  const q = it.sib, right = k === q.correct;
+  it.sibPick = k; it.ok = right;
+  try{
+    DATA.questionStats[q.id] = advanceSpacedStat(getSpacedStat(DATA.questionStats, q.id), right);
+    const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; }
+    DATA.answerCounter = (DATA.answerCounter || 0) + 1;
+    if(!right){
+      if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
+      if(!DATA.wrongChoiceHistory[q.id]) DATA.wrongChoiceHistory[q.id] = {};
+      DATA.wrongChoiceHistory[q.id][k] = (DATA.wrongChoiceHistory[q.id][k] || 0) + 1;
+      try{ recordMixup(q, k); }catch(e){}
+    } else { DATA.missed = DATA.missed.filter(id => id !== q.id); try{ easeMixupOnCorrect(q); }catch(e){} }
+    try{ recordDomainAnswer(q.domain, right, q); }catch(e){}
+    recordStudyDay(); persist(); refreshHeaderStats();
+  }catch(e){}
+  mwRender();
+  const v = document.querySelector('#mwBody .mw-verdict'); if(v) v.scrollIntoView({ block:'nearest', behavior:'smooth' });
+}
+function mwNext(){
+  if(!mw) return; const it = mw.items[mw.i];
+  if(it){
+    it.stage = 'done';
+    DATA.mwDone = DATA.mwDone || {}; DATA.mwDone[it.q.id] = { t: Date.now(), r: it.reason || '', ok: it.ok };
+    const cut = Date.now() - 14 * 86400000; Object.keys(DATA.mwDone).forEach(k => { if(DATA.mwDone[k].t < cut) delete DATA.mwDone[k]; });
+    persist();
+  }
+  if(mw.i + 1 < mw.items.length){ mw.i++; mw.items[mw.i].stage = mw.items[mw.i].stage || 'why'; }
+  else { mw.stage = 'wrap'; }
+  mwRender();
+  const host = document.getElementById('mwHost'); if(host) host.scrollTop = 0;
+}
+function mwWrapHtml(){
+  const done = mw.items.filter(x => x.stage === 'done');
+  const tried = done.filter(x => x.ok !== null), fixed = tried.filter(x => x.ok);
+  const tally = {}; done.forEach(x => { if(x.reason) tally[x.reason] = (tally[x.reason] || 0) + 1; });
+  const top = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+  const tr = MW_REASONS.find(r => r.k === top);
+  const pairs = []; done.forEach(x => { if(x.pick >= 0){ const pr = detectMixup(x.q, x.pick); if(pr && !pairs.includes(pr)) pairs.push(pr); } });
+  const cards = []; done.forEach(x => { const c = cardForQuestion(x.q); if(c && !cards.some(y => y.id === c.id)) cards.push(c); });
+  mw.cards = cards;
+  if(!mw.planDone && done.length >= Math.min(3, mw.items.length)){ mw.planDone = true; try{ planMarkManualDone('tutor'); }catch(e){} }
+  const left = Math.max(0, (DATA.missed || []).length);
+  const pattern = tr ? `<div class="mw-tip"><b>Your pattern</b>${tally[top] > 1 ? `${tally[top]} of ${done.length} came down to “${escapeHtml(tr.label)}”. ` : `You said “${escapeHtml(tr.label)}”. `}${escapeHtml(tr.tip)}</div>` : '';
+  const mix = pairs[0] ? `<div class="mw-tip"><b>Mix-up to straighten out</b>${escapeHtml(pairs[0].a)}: ${escapeHtml(pairs[0].da)} ${escapeHtml(pairs[0].b)}: ${escapeHtml(pairs[0].db)}</div>` : '';
+  return `<div class="mw-kicker">Done · ${done.length} miss${done.length === 1 ? '' : 'es'} reviewed</div>`
+    + `<div class="mw-sum"><div><b>${done.length}</b><span>reviewed</span></div><div><b>${fixed.length}${tried.length ? '/' + tried.length : ''}</b><span>follow-ups right</span></div><div><b>${left}</b><span>still on your list</span></div></div>`
+    + `<ul class="mw-list">${done.map(x => `<li><i class="${x.ok === false ? 'no' : ''}">${x.ok === false ? '·' : '✓'}</i><span>${escapeHtml(String(x.q.q).replace(/\s+/g, ' ').slice(0, 90))}${String(x.q.q).length > 90 ? '…' : ''}</span></li>`).join('')}</ul>`
+    + pattern + mix
+    + `<div class="mw-actions">${cards.length ? `<button type="button" class="btn" onclick="mwCards()">Cards for these ideas (${cards.length})</button>` : ''}`
+    + `${left > 0 && done.length >= mw.items.length ? `<button type="button" class="btn ghost" onclick="mwMore()">${Math.min(5, left)} more</button>` : ''}`
+    + `<button type="button" class="btn ghost" onclick="mwClose()">Back to your plan</button></div>`;
+}
+function mwCards(){ const cs = (mw && mw.cards) || []; mwClose(); if(cs.length) startFlashcardSet(cs, 'picked'); }
+function mwMore(){ if(!mw) return; const o = mw.opener, h = mw.home; mw = null; document.body.classList.remove('mw-active'); const ok = mwOpen(5); if(ok && mw){ mw.opener = o; if(h) mw.home = h; } }
 function startMissedReview(){
   if(!DATA.missed.length){ try{ setCoach('Nothing to review yet. Questions you miss land here, so an adaptive session is the quickest way to start. Tap Study to begin one.', false); }catch(e){} return; }
   const pool = shuffle(allQuestions().filter(q=>DATA.missed.includes(q.id)));
@@ -21706,6 +22002,9 @@ function buildTutorSystemPrompt(){
       const parts = Object.keys(mp.counts).sort((a,b)=>mp.counts[b]-mp.counts[a]).slice(0,3).map(k => `${MISS_TYPES[k].label.toLowerCase()} ${Math.round(mp.counts[k]/mp.total*100)}%`);
       missContext += ` The app sorts each of their misses by cause; over their last ${mp.total} misses: ${parts.join(', ')}. Technique-type causes (misreading, missing a deciding fact in a case, rushing, overconfidence, calculation slips) call for a different fix than a knowledge gap.`;
     }
+    { const md = Object.values(DATA.mwDone || {}).filter(x => Date.now() - x.t < 7 * 86400000); const rc = {}; md.forEach(x => { if(x.r) rc[x.r] = (rc[x.r] || 0) + 1; });
+      const top = Object.keys(rc).sort((a, b) => rc[b] - rc[a])[0], lab = (MW_REASONS.find(r => r.k === top) || {}).label;
+      if(md.length >= 2) missContext += ` In the guided miss walkthrough this week they reviewed ${md.length} misses and got ${md.filter(x => x.ok === true).length} of ${md.filter(x => x.ok !== null).length} similar follow-ups right${lab ? '; their own reason for the misses was most often: "' + lab.toLowerCase() + '"' : ''}. Build on that instead of repeating it.`; }
     const mixNow = activeMixupPairs(2);
     if(mixNow.length) missContext += ` They keep mixing up ${mixNow.map(pr => pr.a + ' and ' + pr.b).join('; and ')} — a contrast between the two is more useful than re-teaching either one.`;
   }catch(e){ missContext = ''; }
@@ -21787,6 +22086,7 @@ Guidelines:
 - Before moving from one topic to a clearly different one in the same explanation, a brief check that it landed ("does that distinction make sense?" or a quick one-question check) is worth the sentence it costs -- better to catch a gap immediately than assume it and build the next explanation on top of it.
 - You have tools to actually take actions in the app on the student's behalf: switching tabs, starting a real practice session (adaptive, a specific domain drill, or a review session covering everything currently missed), opening the TVM calculator, opening one of the six interactive decision trees directly, opening their personalized study guide, setting their exam date, looking up a term in the glossary, showing their detailed progress breakdown, opening the panel that explains how their readiness score is built, generating fresh practice material on a specific domain, generating a spoken podcast episode -- either on a specific domain or personalized to their own progress, and short or in-depth if they ask for that -- and marking a specific subtopic as reviewed in their own syllabus checklist once you've actually taught it and they've agreed. If a student asks something like "which trust should I use," "help me tell these plans apart," or "when should I claim Social Security," open that specific decision tool directly rather than just explaining it in text or sending them to the tab generically, since walking through it themselves is the more effective way to actually learn it. Use these when they clearly ask for one of these things -- "quiz me on tax planning," "let's do a full session," "let's review what I got wrong," "open the calculator," "my exam is March 15," "what's a GRAT," "show me my weak spots," "make me a study guide," "make me more questions on estate planning," "make me a podcast about how I'm doing," "give me a quick podcast on tax" -- rather than just describing what they could do. If they ask you to quiz them verbally right here in the chat instead, that's different from starting a real session -- just ask questions directly as described above. Never set an exam date unless the student has stated one explicitly; don't guess or infer it. For a term lookup, still give a real, direct answer in your own words too -- the tool shows them where to find it again, it doesn't replace actually answering. After a genuinely substantive explanation of a specific named subtopic, it's fine to offer to check it off their list -- but only mark it once they've actually agreed, never on your own initiative.
 - Ways to practice (the Practice a specific way menu): Adaptive session (a mixed round tuned to weak spots), Domain drill (one domain, only questions never seen, the AI writes new ones at their level when needed; start_quiz_session drill, or weakspot for a short drill on the weakest subtopic), Practice exam (a 24-question timed checkpoint about weekly, or the full 170-question exam once or twice in the last three weeks, rested), Case studies, Missed questions, Calculator practice (formula drills and the HP 10bII+ TVM walkthrough), Flashcards (gap cards, one domain, or due), Decision tools, and the Subject podcast. Pick by their level in the domain and the time left: Foundation levels get a domain drill, flashcards or the calculator steps; Apply and Exam-ready levels get mixed rounds, cases and timed exams. Say in one line why you chose it, then start it, or use show_practice_options when the choice is theirs. When they come back, ask how it went before moving on.
+- When the student wants to go over their mistakes, or the plan's misses step comes up, call walk_through_misses: it opens a guided screen (why the wrong answer looked right, the fix, a similar question to try) and ends with the pattern in their mistakes. Offer it instead of reciting missed questions yourself, and ask afterwards what they noticed.
 - When the student says they are ready to study, or wants you to run their study time, call start_my_session: it opens a guided session with a briefing, each part in order and a check-in after each. Say in a sentence what it will cover, and when they come back, ask how it felt before they carry on.
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
@@ -22006,6 +22306,7 @@ function tutorActionText(name, input, result){
       if(label) return 'Started: ' + label + (n >= 5 && ['adaptive','drill','review'].includes(inp.mode) ? ` (${n} questions)` : '');
     }
     if(name === 'show_chart') return ''; // the chart itself is the confirmation
+    if(name === 'walk_through_misses') return 'Opened your misses walkthrough';
     if(name === 'find_flashcards') return /^No flashcards/.test(r) ? 'Looked through your flashcards' : 'Chose cards from your flashcards';
     if(name === 'start_flashcards'){
       if(/^Started/.test(r)) return you(r).replace(/\.$/, '');
@@ -22333,6 +22634,11 @@ const TUTOR_TOOLS = [
       x_label: { type: 'string' }, y_label: { type: 'string' } }, required: ['kind','title'] },
   },
   {
+    name: 'walk_through_misses',
+    description: "Open the guided miss walkthrough: a full screen that takes the student through up to five of their missed questions one at a time (what they picked, why it looked right, the fix, then a fresh similar question) and finishes with the pattern in their mistakes. Use it when they want to go over mistakes, ask you to walk through what they keep missing, or when their plan has the misses step. It leaves the chat, so say in a sentence what it will do first, and when they come back ask what they learned. Do not list their missed questions in chat yourself.",
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
     name: 'find_flashcards',
     description: "Look through the student's flashcards and get back real card ids, terms and where each stands, so you can choose specific cards (then pass the ids to start_flashcards as card_ids). Filter by words in the term or definition, by domain, and by status: 'new' (never seen), 'due' (seen and ready to come back), 'learning' (not yet got right twice in a row), or 'any'. Read-only; it does not move the student.",
     input_schema: { type: 'object', properties: {
@@ -22497,6 +22803,11 @@ async function executeTutorTool(toolName, toolInput){
   try{
     if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
     if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
+    if(toolName === 'walk_through_misses'){
+      if(!(DATA.missed || []).length) return `Nothing is on their missed list yet, so there is nothing to walk through. Suggest an adaptive session first.`;
+      setTimeout(() => { try{ mwOpen(5); }catch(e){} }, 400);
+      return `Opened the guided miss walkthrough (${Math.min(5, DATA.missed.length)} of their ${DATA.missed.length} misses). Tell them in a sentence what it will do, then stop; it leaves the chat.`;
+    }
     if(toolName === 'show_chart'){
       if(!document.getElementById('tutorThread')) return 'Error: the chat is not available.';
       const r = renderTutorChart(toolInput);
@@ -23716,7 +24027,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.290';
+const BUILD_ID = '2026-10-19.291';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
