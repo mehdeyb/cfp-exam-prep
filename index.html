@@ -24077,7 +24077,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.293';
+const BUILD_ID = '2026-10-19.294';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -24249,7 +24249,10 @@ function syncSetStatus(st, err){
   if(el){ el.textContent = syncStatusText(); el.className = 'sync-status ' + (st === 'error' ? 'err' : st === 'syncing' ? 'busy' : 'ok'); }
 }
 function syncErrText(e, status){
-  if(status === 401 || status === 403) return 'GitHub rejected the token. Make a new one and turn sync on again.';
+  const gm = (e && e.ghMsg) ? ' GitHub says: "' + String(e.ghMsg).slice(0, 110) + '"' : '';
+  if(status === 403 && /rate limit|abuse|secondary/i.test((e && e.ghMsg) || '')) return 'GitHub is limiting requests right now. Sync retries on its own in a few minutes.';
+  if(status === 401) return 'GitHub rejected the token (401). Paste a new token below.' + gm;
+  if(status === 403) return 'GitHub refused this change (403). Paste a new token below if it keeps happening.' + gm;
   if(status === 404) return 'The sync storage was not found. Turn sync off and on again.';
   return 'Could not reach GitHub. Will retry.';
 }
@@ -24292,7 +24295,7 @@ async function syncNow(reason){
   try{
     const r = await syncGh('/gists/' + SYNC.gistId, { headers: SYNC.etag ? { 'If-None-Match': SYNC.etag } : {} });
     httpStatus = r.status;
-    if(r.status !== 200 && r.status !== 304) throw new Error('http ' + r.status);
+    if(r.status !== 200 && r.status !== 304){ const er = new Error('http ' + r.status); try{ er.ghMsg = (await r.json()).message; }catch(_){} throw er; }
     let remote = null;
     if(r.status === 200){
       const j = await r.json(); SYNC.etag = r.headers.get('ETag') || null;
@@ -24321,7 +24324,7 @@ async function syncNow(reason){
       const body = { app: 'cfp-blueprint', v: 1, build: (typeof BUILD_ID !== 'undefined' ? BUILD_ID : ''), device: syncDeviceLabel(), savedAt: Date.now(), data: merged, keyEnc: pushKey ? local.keyEnc : (remote && remote.keyEnc) || local.keyEnc || null };
       const pr = await syncGh('/gists/' + SYNC.gistId, { method: 'PATCH', body: { files: { [SYNC_FILE]: { content: JSON.stringify(body) } } } });
       httpStatus = pr.status;
-      if(!pr.ok) throw new Error('http ' + pr.status);
+      if(!pr.ok){ const er = new Error('http ' + pr.status); try{ er.ghMsg = (await pr.json()).message; }catch(_){} throw er; }
       SYNC.etag = pr.headers.get('ETag') || null; SYNC.lastPushedCanon = mergedCanon;
       if(pushKey) SYNC.keyPushedFor = SYNC.keyEncFor;
     } else if(remote) SYNC.lastPushedCanon = mergedCanon;
@@ -24385,6 +24388,23 @@ async function syncEnableFromInput(){
   try{ await syncJoin(tok, null, true); }
   catch(e){ SYNC.on = false; if(msg){ msg.textContent = e.message || 'Could not turn sync on.'; msg.className = 'sync-status err'; } if(btn) btn.disabled = false; }
 }
+async function syncReplaceToken(){
+  const inp = document.getElementById('syncToken'), msg = document.getElementById('syncMsg'), btn = document.getElementById('syncOnBtn');
+  const tok = inp ? inp.value.trim() : '';
+  const say = (t, c) => { if(msg){ msg.textContent = t; msg.className = 'sync-status ' + c; } };
+  if(!/^(ghp_|github_pat_|gho_|ghu_)?[A-Za-z0-9_]{20,}$/.test(tok)){ say('Paste the token GitHub gave you.', 'err'); return; }
+  const old = SYNC.token, gid = SYNC.gistId;
+  if(btn) btn.disabled = true; say('Checking…', 'busy');
+  try{
+    SYNC.token = tok;
+    const g = await syncGh('/gists/' + gid);
+    if(!g.ok) throw new Error(g.status === 404 ? 'This token cannot see your sync storage. Use a token from the same GitHub account.' : 'GitHub said ' + g.status + '.');
+    SYNC.keyEncFor = null; SYNC.keyPushedFor = null; SYNC.etag = null;
+    await syncSaveConfig(); if(inp) inp.value = '';
+    say('Token updated.', 'ok'); await syncNow('token');
+  }catch(e){ SYNC.token = old; say(e.message || 'Could not use that token.', 'err'); }
+  if(btn) btn.disabled = false;
+}
 async function syncConnectFromText(text, quiet){
   const m = /#sync=([A-Za-z0-9_\-]+)/.exec(text || '') || /^([A-Za-z0-9_\-]{30,})$/.exec((text || '').trim());
   const msg = document.getElementById('syncMsg');
@@ -24434,6 +24454,8 @@ function renderSyncCard(force){
       '<div class="sync-status ok" id="syncStatus" role="status"></div>' +
       '<p class="hint" style="margin-top:6px;">Changes sync on their own. To add your iPad, open this link there. On an installed app, paste it into Settings › Sync instead. Keep it private: it unlocks your sync and your AI key.</p>' +
       '<div class="backup-actions"><button class="btn" onclick="syncShareLink()">Share link</button><button class="btn ghost" onclick="syncCopyLink()">Copy link</button><button class="btn ghost" onclick="syncNow(\'manual\')">Sync now</button></div>' +
+      '<div class="backup-label">Replace the token</div><input type="password" id="syncToken" class="tutor-input" placeholder="ghp_… new token" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="New GitHub token">' +
+      '<div class="backup-actions"><button class="btn ghost" id="syncOnBtn" onclick="syncReplaceToken()">Use new token</button></div>' +
       '<textarea id="syncLinkOut" class="backup-textarea" readonly onclick="this.select()" style="display:none;" aria-label="Sync link"></textarea>' +
       '<div class="sync-status" id="syncMsg" role="status"></div>' +
       '<div class="backup-actions"><button class="btn ghost" onclick="syncDisable()">Turn off on this device</button></div>';
