@@ -682,6 +682,8 @@
     position:absolute;left:16px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;
     letter-spacing:.08em;color:var(--calc-screen-text);opacity:0.7;pointer-events:none;
   }
+  .tvm-ppy-annunciator{position:absolute;left:72px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--calc-screen-text);opacity:0.7;pointer-events:none;}
+  .tvm-key-ppy{min-height:42px;font-size:13px;background:#3C4046;}
   .tvm-feedback{font-size:13px;line-height:1.5;min-height:1px;margin-bottom:14px;color:rgba(255,255,255,0.75);}
   .tvm-feedback.tvm-feedback-err{color:#FF8A7A;}
   .tvm-feedback.tvm-feedback-ok{color:#7FCB9E;}
@@ -2988,6 +2990,7 @@
           <div class="tvm-screen-wrap">
             <div class="tvm-screen" id="tvmScreen">0</div>
             <span class="tvm-begin-annunciator" id="tvmBeginAnnunciator" style="display:none;">BEGIN</span>
+            <span class="tvm-ppy-annunciator" id="tvmPpyAnnunciator">P/YR 12</span>
           </div>
 
           <div class="tvm-feedback" id="tvmFeedback" role="status"></div>
@@ -3016,6 +3019,9 @@
           <button class="tvm-key" onclick="tvmPressDigit('3')">3</button>
           <button class="tvm-key" onclick="tvmPressDigit('0')">0</button>
           <button class="tvm-key" onclick="tvmPressDecimal()">.</button>
+
+          <button class="tvm-key tvm-key-ppy" style="grid-column:span 2;" onclick="tvmPressPpy()" id="tvmPpyBtn" title="Shift + PMT. Type a number first, then press this to set payments per year">P/YR</button>
+          <button class="tvm-key tvm-key-ppy" style="grid-column:span 3;" onclick="tvmPressXppy()" id="tvmXppyBtn" title="Shift + N. Multiplies the number on screen by P/YR and stores it in N">xP/YR</button>
           </div>
         </div>
 
@@ -3284,7 +3290,7 @@
     </div>
     <div class="card" id="calcKeysCard">
       <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
-      <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then check P/YR: <span class="ck-k">1</span> Shift <span class="ck-k">PMT</span> (P/YR). The factory setting is 12. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
+      <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then set P/YR to match the problem: <span class="ck-k">12</span> Shift <span class="ck-k">PMT</span> (P/YR) for monthly, 4 quarterly, 2 semiannual, 1 yearly. The factory setting is 12. With P/YR set, I/YR is always the annual rate, and N is the years then Shift <span class="ck-k">N</span> (xP/YR), which multiplies by P/YR. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
       <div class="ed-item" data-ck="tvm"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
       <div class="ed-item" data-ck="cf"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
       <div class="ed-item"><b>Nominal to effective rate</b>10 Shift <span class="ck-k">I/YR</span> (NOM%), 12 Shift <span class="ck-k">PMT</span> (P/YR), Shift <span class="ck-k">PV</span> (EFF%) gives 10.47. Reset P/YR to 1 afterwards.</div>
@@ -14404,7 +14410,7 @@ function isRetryableError(err){
 // conventions -- this app is built around an HP 10bII+, which has neither.
 // Deliberately separate from the question-ingestion check, which scans
 // structured, bracketed-key text ("[CPT]") rather than free-form sentences.
-const HP_CALC_NOTE = 'CALCULATOR RULE (applies to every answer): the student uses an HP 10bII+ financial calculator, and it is the only calculator you may reference. It has NO CPT or compute key (you type the known values into N, I/YR, PV, PMT, FV, then press the key of the one you want to solve for) and NO I/Y key (the rate key is I/YR). Set payments per year with the orange-shift P/YR key (factory default is 12; use 1 for annual problems); BEG/END is the orange-shift of the PMT key (END is default and shows no indicator; only BEGIN is displayed); clear TVM registers with orange-shift C ALL. Uneven cash flows: clear first (orange Shift, C ALL), then key in each flow in time order, starting with the time-0 flow (an outlay is negative, so use [+/−]), pressing [CFj] after each one; [CFj] is an unshifted key. If a flow repeats, type the count and press orange Shift then Nj (an orange label) right after that flow. For NPV, first enter the discount rate with [I/YR], then press orange Shift then NPV (the orange label above the PRC key). For IRR, press orange Shift then IRR/YR (the orange label above the CST key); it needs no rate. Statistics use the calculator\'s stats mode. WHEN GIVING KEYSTROKES, be specific button by button, in the order pressed, naming each key in square brackets and saying what the display should then show: type the number, press the operator key, and finish each line with [=] so the next line starts from the number on the display (the calculator has no parentheses keys, so break a formula into lines). [+/−] makes a number negative. Power: orange Shift then [×] is yˣ (type the base, Shift [×], type the exponent, [=]); orange Shift then [÷] is 1/x. For a square root use yˣ with 0.5, and for an nth root use yˣ with 1/x on n. Other shifted functions (LN, eˣ and the like) are printed in orange above their keys: say orange Shift plus the key labelled with that function, and never guess a key position. Never give key sequences for any other calculator (no 2nd/CPT sequences); you may name another model only to explain how the HP differs. Mention calculator keys only when the student is actually doing a calculation.';
+const HP_CALC_NOTE = 'CALCULATOR RULE (applies to every answer): the student uses an HP 10bII+ financial calculator, and it is the only calculator you may reference. It has NO CPT or compute key (you type the known values into N, I/YR, PV, PMT, FV, then press the key of the one you want to solve for) and NO I/Y key (the rate key is I/YR). Set payments per year with the orange-shift P/YR key (factory default is 12). Match P/YR to the compounding: 12 monthly, 4 quarterly, 2 semiannual, 1 annual. With P/YR set, enter I/YR as the ANNUAL nominal rate (never divide it yourself), and enter N as years then orange Shift N (xP/YR), which multiplies by P/YR (or type the number of periods directly). With P/YR 2 solving I/YR on a bond gives the annual yield directly; BEG/END is the orange-shift of the PMT key (END is default and shows no indicator; only BEGIN is displayed); clear TVM registers with orange-shift C ALL. Uneven cash flows: clear first (orange Shift, C ALL), then key in each flow in time order, starting with the time-0 flow (an outlay is negative, so use [+/−]), pressing [CFj] after each one; [CFj] is an unshifted key. If a flow repeats, type the count and press orange Shift then Nj (an orange label) right after that flow. For NPV, first enter the discount rate with [I/YR], then press orange Shift then NPV (the orange label above the PRC key). For IRR, press orange Shift then IRR/YR (the orange label above the CST key); it needs no rate. Statistics use the calculator\'s stats mode. WHEN GIVING KEYSTROKES, be specific button by button, in the order pressed, naming each key in square brackets and saying what the display should then show: type the number, press the operator key, and finish each line with [=] so the next line starts from the number on the display (the calculator has no parentheses keys, so break a formula into lines). [+/−] makes a number negative. Power: orange Shift then [×] is yˣ (type the base, Shift [×], type the exponent, [=]); orange Shift then [÷] is 1/x. For a square root use yˣ with 0.5, and for an nth root use yˣ with 1/x on n. Other shifted functions (LN, eˣ and the like) are printed in orange above their keys: say orange Shift plus the key labelled with that function, and never guess a key position. Never give key sequences for any other calculator (no 2nd/CPT sequences); you may name another model only to explain how the HP differs. Mention calculator keys only when the student is actually doing a calculation.';
 function usesWrongCalculatorConventionInProse(text){
   text = String(text || '').replace(/\b(?:no|not|without|unlike|instead of|never|isn't|doesn't|don't)\b[^.\n]{0,50}?(?:\bCPT\b|compute key|\bI\/Y\b)/gi, '').replace(/(?:\bCPT\b|compute key|\bI\/Y\b)[^.\n]{0,40}?\b(?:doesn't exist|does not exist|isn't|is not|not on)\b/gi, '');
   return /\bCPT\b/i.test(text) || /\[I\/Y\]/.test(text) || /\bI\/Y\b/.test(text) ||
@@ -15589,7 +15595,7 @@ const TVM_MISTAKE_LABELS = {
   signConvention: 'mixing up sign convention (positive vs. negative cash flows)',
   decimalForm: 'entering interest rates as decimals instead of whole-number percents',
   negativeN: 'entering N (number of periods) as a negative number',
-  monthlyConversion: 'forgetting to convert N and I/YR to a monthly basis on compounding problems',
+  monthlyConversion: 'setting P/YR and N for monthly, quarterly or semiannual compounding',
   beginEndMismatch: 'forgetting to switch between BEGIN and END mode to match the problem',
   cashFlowOutlay: 'getting the sign of a cash flow wrong, or leaving out the cost at time 0 (cash-flow worksheet)',
   cashFlowTiming: 'putting cash flows in the wrong year, including skipping a year with no flow (cash-flow worksheet)',
@@ -15618,7 +15624,7 @@ function tvmGS(n, iy, pv, pmt, fv, solveFor, begin){ return tvmSolve(n, iy, pv, 
 
 const TVM_GEN_ACCTS = ['a certificate of deposit','a brokerage account','a savings account','a conservative portfolio'];
 const TVM_GEN_GOALS = [['a down payment on a home','general'],['a child\'s college fund','general'],['a vacation property','general'],['a business purchase','general'],['a major home renovation','general']];
-const TVM_GEN_LEVEL_HINT = 'Remember: convert N and I/YR to a monthly basis.';
+const TVM_GEN_LEVEL_HINT = 'Remember: set P/YR to 12. I/YR is the annual rate; N is years × 12.';
 
 // Each template returns a spec; tvmGenFinish adds the solved result and the
 // wrong-answer models. `mist` entries are functions so a failure in one model
@@ -15696,7 +15702,7 @@ const TVM_GEN_TEMPLATES = {
     const P = tvmGPick([5000,8000,10000,15000,20000,25000]), r = tvmGPick([3,4.5,6,7.5,9]), y = tvmGPick([3,4,5,6,8,10]);
     return { solveFor:'FV', domain:'general', monthly:true, known:{n:y*12, iy:r/12, pv:-P, pmt:0},
       scenario:`A client invests ${tvmGMoney(P)} today in an account that pays ${r}% annual interest, compounded monthly, for ${y} years. What will the account be worth at the end of ${y} years?`,
-      hint:TVM_GEN_LEVEL_HINT, concept:'This is a lump-sum future value problem with monthly compounding, so N and I/YR must both be converted to a monthly basis first.',
+      hint:TVM_GEN_LEVEL_HINT, concept:'This is a lump-sum future value problem with monthly compounding, so P/YR is 12, I/YR is the annual rate and N is months (years, then xP/YR).',
       mist:[
         { cat:'monthlyConversion', why:`compounds once a year (N = ${y}, I/YR = ${r}) instead of monthly. The question says compounded monthly, so N = ${y*12} and I/YR = ${tvmGNum(r/12)}.`, v:()=>tvmGS(y,r,-P,0,0,'FV') },
         { cat:'monthlyConversion', why:`converts N to ${y*12} months but leaves I/YR at the annual ${r}%, applying a full year's rate to every month.`, v:()=>tvmGS(y*12,r,-P,0,0,'FV') },
@@ -15706,7 +15712,7 @@ const TVM_GEN_TEMPLATES = {
     const W = tvmGPick([1000,1500,2000,2500,3000,4000]), y = tvmGPick([15,20,25,30]), r = tvmGPick([3,4.5,6,7.5]);
     return { solveFor:'PV', domain:'retirement', monthly:true, known:{n:y*12, iy:r/12, fv:0, pmt:W},
       scenario:`A client wants to withdraw ${tvmGMoney(W)} at the end of each month for ${y} years in retirement. If the portfolio earns ${r}% annually, compounded monthly, how large does it need to be at the start of retirement?`,
-      hint:TVM_GEN_LEVEL_HINT, concept:'This is a present value of an ordinary annuity with monthly payments, so N is the number of months and I/YR is the monthly rate.',
+      hint:TVM_GEN_LEVEL_HINT, concept:'This is a present value of an ordinary annuity with monthly payments, so P/YR is 12, I/YR is the annual rate and N is the number of months.',
       mist:[
         { cat:'monthlyConversion', why:`treats ${tvmGMoney(W*12)} a year as annual payments (N = ${y}, I/YR = ${r}) instead of converting to ${y*12} monthly payments at ${tvmGNum(r/12)}% a month.`, v:()=>tvmGS(y,r,0,W*12,0,'PV') },
         { cat:'monthlyConversion', why:`uses ${y*12} monthly payments but leaves I/YR at the annual ${r}% instead of ${tvmGNum(r/12)}%, over-discounting every payment.`, v:()=>tvmGS(y*12,r,0,W,0,'PV') },
@@ -15735,7 +15741,7 @@ const TVM_GEN_TEMPLATES = {
     const V = tvmGPick([30000,45000,60000,75000,90000]), m = tvmGPick([24,36,48,60]), r = tvmGPick([3,4.5,6,7.5,9]);
     return { solveFor:'PMT', domain:'general', monthly:true, begin:true, known:{n:m, iy:r/12, pv:-V, fv:0},
       scenario:`A business is leasing equipment valued at ${tvmGMoney(V)}. The lease requires ${m} monthly payments due at the START of each month, at ${r}% annual interest compounded monthly. What is the monthly payment?`,
-      hint:'Remember: this is an annuity due, so set your calculator to BEGIN mode, and N and I/YR are monthly.', concept:'This solves for a lease payment: payments at the start of each month (BEGIN mode) with N and I/YR converted to monthly.',
+      hint:'Remember: this is an annuity due, so set your calculator to BEGIN mode, and set P/YR to 12.', concept:'This solves for a lease payment: payments at the start of each month (BEGIN mode) with P/YR 12, the annual rate in I/YR and N in months.',
       mist:[
         { cat:'beginEndMismatch', why:`is what you get in END mode (payments at the end of each month). Lease payments are due at the start of each month, so BEGIN mode applies.`, v:()=>tvmGS(m,r/12,-V,0,0,'PMT',false) },
         { cat:'generic', why:`just divides the equipment value by ${m} payments, with no interest at all.`, v:()=>V/m },
@@ -15744,7 +15750,7 @@ const TVM_GEN_TEMPLATES = {
     const par = 1000, cr = tvmGPick([4,5,6,7,8]), y = tvmGPick([5,8,10,12,15,20]), ytm = tvmGPick([3,4,5,6,7,9,10].filter(v => v !== cr)), c = par*cr/100;
     return { solveFor:'PV', domain:'invest', per:{name:'half-year', m:2}, known:{n:y*2, iy:ytm/2, pmt:c/2, fv:par}, absAnswer:true,
       scenario:`A $1,000 par bond pays a ${cr}% coupon semiannually and matures in ${y} years. If the market yield is ${ytm}% (compounded semiannually), what is the bond's price?`,
-      hint:'Remember: coupons are paid twice a year, so N is half-years and I/YR is the half-year rate.',
+      hint:'Remember: coupons are paid twice a year. Set P/YR to 2; I/YR is the annual yield; N is half-years.',
       concept:'This is a bond price: the present value of the coupons plus the present value of par at maturity, discounted at the market yield. Coupon is PMT, par is FV, and the price comes out as PV.',
       mist:[
         { cat:'monthlyConversion', why:`treats the bond as paying once a year (N = ${y}, I/YR = ${ytm}, PMT = ${tvmGMoney(c)}) instead of twice a year (N = ${y*2}, I/YR = ${tvmGNum(ytm/2)}, PMT = ${tvmGMoney(c/2)}).`, v:()=>tvmGS(y,ytm,0,c,par,'PV') },
@@ -15757,10 +15763,10 @@ const TVM_GEN_TEMPLATES = {
     const nominal = tvmGS(y*2, 0, -price, c/2, par, 'IY') * 2;
     return { solveFor:'IY', domain:'invest', per:{name:'half-year', m:2}, annualize:2, known:{n:y*2, pv:-price, pmt:c/2, fv:par}, nominal,
       scenario:`A $1,000 par bond with a ${cr}% coupon paid semiannually matures in ${y} years and sells for ${tvmGMoney(price)}. What is its yield to maturity (annual rate, semiannual compounding)?`,
-      hint:'Remember: the calculator returns the half-year rate. Double it for the annual yield.',
-      concept:'This is yield to maturity: enter the price as a negative PV, the half-year coupon as PMT and par as FV, then solve I/YR. The result is a half-year rate, so double it for the annual yield.',
+      hint:'Remember: set P/YR to 2 and the calculator shows the annual yield.',
+      concept:'This is yield to maturity: enter the price as a negative PV, the half-year coupon as PMT and par as FV, then solve I/YR. With P/YR at 2, the result is already the annual yield.',
       mist:[
-        { cat:'monthlyConversion', why:`is the half-year rate straight from the I/YR key. It must be doubled to give the annual yield.`, v:()=>nominal/2 },
+        { cat:'monthlyConversion', why:`is the half-year rate, what the display shows when P/YR is left at 1. Set P/YR to 2 and it shows the annual yield.`, v:()=>nominal/2 },
         { cat:'generic', why:`is the ${cr}% coupon rate. Yield differs from the coupon rate whenever the price is not par.`, v:()=>cr },
         { cat:'generic', why:`is the current yield (annual coupon ÷ price). It ignores the gain or loss when the bond is redeemed at par.`, v:()=>c/price*100 },
         { cat:'monthlyConversion', why:`treats the coupons as annual (N = ${y}, PMT = ${tvmGMoney(c)}) instead of semiannual.`, v:()=>tvmGS(y, 0, -price, c, par, 'IY') } ] }; } },
@@ -15801,7 +15807,7 @@ const TVM_GEN_TEMPLATES = {
     const P = tvmGPick([8000,10000,15000,20000,30000]), r = tvmGPick([4,6,8,10,12]), y = tvmGPick([3,4,5,6,8]);
     return { solveFor:'FV', domain:'general', per:{name:'quarter', m:4}, known:{n:y*4, iy:r/4, pv:-P, pmt:0},
       scenario:`A client deposits ${tvmGMoney(P)} today into an account paying ${r}% annual interest, compounded quarterly. What is it worth after ${y} years?`,
-      hint:'Remember: convert N and I/YR to a quarterly basis.', concept:'This is a lump-sum future value with quarterly compounding, so N is quarters and I/YR is the quarterly rate.',
+      hint:'Remember: set P/YR to 4 (quarterly). I/YR is the annual rate.', concept:'This is a lump-sum future value with quarterly compounding, so P/YR is 4, I/YR is the annual rate and N is quarters.',
       mist:[
         { cat:'monthlyConversion', why:`compounds once a year (N = ${y}, I/YR = ${r}). The question says compounded quarterly.`, v:()=>tvmGS(y,r,-P,0,0,'FV') },
         { cat:'monthlyConversion', why:`uses ${y*4} quarters but leaves I/YR at the annual ${r}%, applying a full year's rate each quarter.`, v:()=>tvmGS(y*4,r,-P,0,0,'FV') },
@@ -15811,7 +15817,7 @@ const TVM_GEN_TEMPLATES = {
     const G = tvmGPick([30000,50000,75000,100000,150000,250000]), y = tvmGPick([5,8,10,15,20]), r = tvmGPick([3,4.5,6,7.5,9]);
     return { solveFor:'PMT', domain:'general', monthly:true, absAnswer:true, known:{n:y*12, iy:r/12, pv:0, fv:G},
       scenario:`A client wants ${tvmGMoney(G)} in ${y} years and will save a level amount at the end of each month in an account earning ${r}% annually, compounded monthly. How much must be saved each month?`,
-      hint:TVM_GEN_LEVEL_HINT, concept:'This solves for the monthly savings needed to reach a goal: N is months, I/YR is the monthly rate, the goal is FV and PV is zero.',
+      hint:TVM_GEN_LEVEL_HINT, concept:'This solves for the monthly savings needed to reach a goal: P/YR is 12, N is months, I/YR is the annual rate, the goal is FV and PV is zero.',
       mist:[
         { cat:'monthlyConversion', why:`finds the annual amount (N = ${y}, I/YR = ${r}) and divides by 12, which ignores monthly compounding.`, v:()=>tvmGS(y,r,0,0,G,'PMT')/12 },
         { cat:'generic', why:`divides the goal by ${y*12} months with no interest earned.`, v:()=>G/(y*12) },
@@ -15821,14 +15827,17 @@ const TVM_GEN_TEMPLATES = {
     const L = tvmGPick([15000,20000,25000,30000,40000]), r = tvmGPick([4.5,6,7.5,9]), base = Math.abs(tvmGS(60, r/12, L, 0, 0, 'PMT')), P = Math.ceil(base/10)*10;
     return { solveFor:'N', domain:'general', monthly:true, known:{iy:r/12, pv:L, pmt:-P, fv:0},
       scenario:`A client owes ${tvmGMoney(L)} at ${r}% annual interest, compounded monthly, and pays ${tvmGMoney(P)} at the end of each month. About how many months until the loan is paid off?`,
-      hint:TVM_GEN_LEVEL_HINT.replace('N and ', ''), concept:'This solves for the number of payments: enter the monthly rate, the loan as PV, the payment as a negative PMT and FV of zero, then press N.', mist:[] }; } }
+      hint:'Remember: set P/YR to 12. I/YR is the annual rate.', concept:'This solves for the number of payments: with P/YR at 12, enter the annual rate, the loan as PV, the payment as a negative PMT and FV of zero, then press N.', mist:[] }; } }
 };
 
 function tvmGenCalcSteps(spec, answerText){
   const k = spec.known, steps = [];
   steps.push(spec.concept);
   steps.push('Clear the TVM registers: press the orange Shift key, then [C].');
-  steps.push('Check that P/YR is set to 1 (press [1], then Shift, then [P/YR]) -- the HP 10bII+ defaults to 12 from the factory, which would silently give a wrong answer here.');
+  const per0 = spec.per || (spec.monthly ? { name:'month', m:12 } : null);
+  steps.push(per0
+    ? `Set P/YR to ${per0.m}: press [${per0.m}], then orange Shift, then [P/YR] (the orange label above PMT). The factory setting is 12, so check it every time.`
+    : 'Set P/YR to 1: press [1], then orange Shift, then [P/YR] (the orange label above PMT). The factory setting is 12, which would silently give a wrong answer on a yearly problem.');
   const hasPmt = spec.solveFor === 'PMT' || (k.pmt !== undefined && k.pmt !== 0);
   if(hasPmt){
     steps.push(spec.begin
@@ -15837,7 +15846,7 @@ function tvmGenCalcSteps(spec, answerText){
   }
   const per = spec.per || (spec.monthly ? { name:'month', m:12 } : null);
   if(per){
-    steps.push(per.m === 12 ? `Convert to a monthly basis first: N = years × 12 and I/YR = the annual rate ÷ 12.` : `Convert to a ${per.name} basis first: N = years × ${per.m} and I/YR = the annual rate ÷ ${per.m}.`);
+    steps.push(`With P/YR at ${per.m}, enter I/YR as the annual rate, exactly as the problem states it. The calculator divides by ${per.m} for you. N counts ${per.name}s: type the years, then orange Shift and [N] (xP/YR) to multiply by ${per.m}.`);
   }
   const keyNames = {n:'N', iy:'I/YR', pv:'PV', pmt:'PMT', fv:'FV'};
   const why = {n: per ? 'number of ' + per.name + 's' : 'number of years', iy: per ? 'the ' + per.name + ' rate' : 'the annual rate', pv:'the amount today', pmt:'the recurring payment', fv:'the amount at the end'};
@@ -15847,11 +15856,14 @@ function tvmGenCalcSteps(spec, answerText){
     if(v === undefined) return;
     if(v === 0){ steps.push(`Enter 0, press [${keyNames[key]}] -- ${key==='pmt' ? 'no recurring payment' : key==='fv' ? 'nothing left over at the end' : 'nothing today'}.`); return; }
     const mag = tvmGNum(Math.abs(v));
+    if(per && key === 'iy'){ steps.push(`Enter ${tvmGNum(v*per.m)}, press [I/YR] -- the annual rate. With P/YR ${per.m} the calculator uses ${mag}% per ${per.name}.`); return; }
+    if(per && key === 'n' && Number.isInteger(v/per.m)){ steps.push(`Enter ${v/per.m}, press orange Shift, then [N] (xP/YR) -- ${v/per.m} years × ${per.m} puts ${v} in N. (Typing ${v} and pressing [N] works too.)`); return; }
     if(v < 0) steps.push(`Enter ${mag}, press [+/-], then [${keyNames[key]}] -- ${why[key]}, entered as negative because it is money going out.`);
     else steps.push(`Enter ${mag}, press [${keyNames[key]}] -- ${why[key]}${key==='n'||key==='iy' ? '' : ', money coming in as a positive number'}.`);
   });
   steps.push(`Press [${keyNames[spec.solveFor.toLowerCase()]}] to solve -- the HP 10bII+ has no separate compute step, so this displays the answer directly: ${answerText}.`);
-  if(spec.annualize) steps.push(`That is the ${spec.per ? spec.per.name : 'periodic'} rate. Multiply by ${spec.annualize} for the annual yield.`);
+  if(spec.annualize) steps.push(`With P/YR at ${spec.annualize}, the calculator has already multiplied the ${spec.per ? spec.per.name : 'periodic'} rate by ${spec.annualize}, so the display is the annual yield. No extra step.`);
+  if(spec.solveFor === 'N' && per) steps.push(`N is a count of ${per.name}s. Divide by ${per.m} for years.`);
   if(spec.absAnswer) steps.push('The calculator shows this as a negative number because it is money going out. The amount is the same without the sign.');
   return steps;
 }
@@ -16005,6 +16017,7 @@ let tvmRegisterStatus = { n:null, iy:null, pv:null, pmt:null, fv:null };
 let tvmErrorsThisProblem = 0;
 let tvmSolved = false;
 let tvmBeginMode = false; // BEGIN (annuity due) vs END (ordinary annuity) -- like the real calculator, this is NOT auto-reset between problems within a session, so remembering to switch back is genuine practice
+let tvmPpy = 12; // payments per year, like the real calculator: factory setting 12, never reset between problems
 let tvmMultiStageActive = false;
 let tvmMultiStageProblem = null;
 let tvmMultiStageIndex = 0;
@@ -16030,6 +16043,67 @@ function tvmToggleBeginEnd(){
       feedback.className = 'tvm-feedback tvm-feedback-err';
     }
   }
+}
+function tvmReqPpy(){
+  if(!tvmCurrent || tvmCurrent.cf) return 1;
+  const u = tvmUnitOf(tvmCurrent);
+  return u && u.m ? u.m : 1;
+}
+function tvmPpyWord(m){ return m === 12 ? 'monthly' : m === 4 ? 'quarterly' : m === 2 ? 'semiannual' : m === 1 ? 'annual' : m + ' times a year'; }
+function tvmUpdatePpy(){
+  const el = document.getElementById('tvmPpyAnnunciator');
+  if(el){ el.textContent = 'P/YR ' + tvmPpy; el.style.display = tvmMode === 'cf' ? 'none' : 'inline-block'; }
+  const b = document.getElementById('tvmPpyBtn'); if(b) b.textContent = 'P/YR · ' + tvmPpy;
+  const x = document.getElementById('tvmXppyBtn'); if(x) x.textContent = 'xP/YR · ×' + tvmPpy;
+}
+// Shift + PMT. Type a number first to set it; with nothing typed it just shows the current setting.
+function tvmPressPpy(){
+  if(tvmSolved || !tvmCurrent || tvmCurrent.cf) return;
+  const fb = document.getElementById('tvmFeedback');
+  const typed = tvmDisplay !== '0' && tvmDisplay !== '';
+  const v = parseFloat(tvmDisplay);
+  const req = tvmReqPpy();
+  if(!typed){
+    fb.textContent = `P/YR is ${tvmPpy}. To change it, type the number first (for example 1), then press P/YR. This problem is ${tvmPpyWord(req)}, so it needs P/YR ${req}.`;
+    fb.className = 'tvm-feedback' + (tvmPpy === req ? ' tvm-feedback-ok' : ' tvm-feedback-err');
+    return;
+  }
+  if(!(v >= 1 && v <= 365 && Math.floor(v) === v)){
+    fb.textContent = 'P/YR is a whole number of periods per year: 1, 2, 4 or 12.';
+    fb.className = 'tvm-feedback tvm-feedback-err'; tvmDisplay = '0'; tvmUpdateScreen(); return;
+  }
+  tvmPpy = v; tvmDisplay = '0'; tvmUpdatePpy(); tvmUpdateScreen();
+  // The calculator keeps the I/YR you typed and just divides it differently, so re-judge it.
+  if(tvmRegisters.iy !== null && tvmCurrent.solveFor.toLowerCase() !== 'iy'){
+    tvmRegisterStatus.iy = Math.abs(tvmRegisters.iy - tvmCurrent.known.iy * tvmPpy) < 0.005 ? 'correct' : 'incorrect';
+  }
+  tvmRenderRegisters();
+  if(tvmPpy === req){
+    fb.textContent = `✓ P/YR ${tvmPpy}: ${tvmPpyWord(req)}. I/YR is entered as the annual rate and the calculator divides it by ${tvmPpy}.`;
+    fb.className = 'tvm-feedback tvm-feedback-ok';
+  } else {
+    fb.textContent = `P/YR is now ${tvmPpy}, but this problem is ${tvmPpyWord(req)}. It needs P/YR ${req}.`;
+    fb.className = 'tvm-feedback tvm-feedback-err';
+    tvmErrorsThisProblem++;
+    if(!DATA.tvmMistakeCategories) DATA.tvmMistakeCategories = { signConvention: 0, decimalForm: 0, negativeN: 0, monthlyConversion: 0, beginEndMismatch: 0, generic: 0 };
+    DATA.tvmMistakeCategories.monthlyConversion++; persist();
+  }
+}
+// Shift + N. Multiplies the number on screen by P/YR and stores the result in N.
+function tvmPressXppy(){
+  if(tvmSolved || !tvmCurrent || tvmCurrent.cf) return;
+  const fb = document.getElementById('tvmFeedback');
+  const v = parseFloat(tvmDisplay);
+  if(tvmDisplay === '0' || isNaN(v)){
+    fb.textContent = `Type the number of years first, then press xP/YR. It multiplies by P/YR (${tvmPpy}) and puts the result in N.`;
+    fb.className = 'tvm-feedback'; return;
+  }
+  if(tvmCurrent.solveFor.toLowerCase() === 'n'){
+    fb.textContent = 'N is the unknown here. Enter the other four values, then press N to solve.';
+    fb.className = 'tvm-feedback tvm-feedback-err'; return;
+  }
+  tvmDisplay = String(Math.round(v * tvmPpy * 1e6) / 1e6);
+  tvmPressVarKey('n', true);
 }
 function tvmUpdateBeginAnnunciator(){
   const el = document.getElementById('tvmBeginAnnunciator');
@@ -16103,7 +16177,7 @@ const fdNum = (n, d) => Number(n).toFixed(d);
 // no compute key (the answer's own key solves it), [+/−] makes a number negative, orange Shift + [×] is yˣ and orange Shift + [÷] is 1/x,
 // there are no parentheses, so each line ends with [=] and the next line starts from the number left on the display.
 const fdK = x => String(+(+x).toFixed(6));
-function fdTvmStart(){ return [`Clear the TVM registers: press the orange Shift key, then [C].`, `Check P/YR is 1: press [1], then orange Shift, then [P/YR] (the factory setting is 12).`]; }
+function fdTvmStart(){ return [`Clear the TVM registers: press the orange Shift key, then [C].`, `Set P/YR to match the problem: 1 for yearly (press [1], orange Shift, [P/YR]), 12 for monthly. The factory setting is 12.`]; }
 const FD_GENS = {
   'Future Value': () => {
     const pv = fdPick([5000,8000,10000,12000,25000]), r = fdPick([4,5,6,7,8]), n = fdPick([5,8,10,12,15]);
@@ -16674,8 +16748,9 @@ function openTvmTool(problem){
   tvmOpener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   document.body.classList.add('tvm-active');
   lockBodyScroll();
-  tvmBeginMode = false;
+  tvmBeginMode = false; tvmPpy = 12;
   loadTvmProblem();
+  tvmUpdatePpy();
   const closeBtn = host && host.querySelector('.dp-close');
   if(closeBtn) closeBtn.focus({ preventScroll:true });
 }
@@ -17088,7 +17163,7 @@ function tvmMakeMultiStage(){
     const y = P([15,30]), k = P([5,7,10]), L = P([200000,250000,300000,350000,400000]), r = P([4,4.5,5,6]);
     const per = { name:'month', m:12 };
     return { id, title:'Mortgage: payment, then balance', stages:[
-      { scenario:`A client borrows ${M(L)} at ${r}% compounded monthly for ${y} years, paying at the end of each month. What is the monthly payment?`, solveFor:'PMT', known:{ n:y*12, iy:r/12, pv:L, fv:0 }, per, hint:'Convert N and I/YR to months.' },
+      { scenario:`A client borrows ${M(L)} at ${r}% compounded monthly for ${y} years, paying at the end of each month. What is the monthly payment?`, solveFor:'PMT', known:{ n:y*12, iy:r/12, pv:L, fv:0 }, per, hint:'Set P/YR to 12. I/YR is the annual rate.' },
       { scenarioTemplate:`The payment is {carriedValue} a month, carried over from Part 1. After ${k} years of payments, what does the client still owe?`, solveFor:'FV', known:{ n:k*12, iy:r/12, pv:L }, carryInto:'pmt', carrySignFlip:false, per, hint:'N is the payments made so far. The balance is the FV left over.' } ] };
   }
   // save, then spend it down
@@ -17202,7 +17277,7 @@ function tvmPressClear(){
   tvmClearFeedback();
   tvmUpdateScreen();
 }
-function tvmPressVarKey(key){
+function tvmPressVarKey(key, viaXppy){
   if(tvmSolved || !tvmCurrent) return;
   if(tvmCurrent.cf) return cfPressKey(key);
   const feedback = document.getElementById('tvmFeedback');
@@ -17212,6 +17287,13 @@ function tvmPressVarKey(key){
     // HP 10bII+ style: pressing the unknown variable's own key computes
     // it directly -- there's no separate compute step to press first.
     const order = tvmOtherKeys(solveKey);
+    if(tvmRegisters.iy !== null && solveKey !== 'iy' && tvmRegisterStatus.iy !== 'correct'){
+      const ent = tvmRegisters.iy, req0 = tvmReqPpy();
+      if(Math.abs(ent - tvmCurrent.known.iy * req0) < 0.005 && tvmPpy !== req0){
+        feedback.textContent = `P/YR is ${tvmPpy}, so the calculator divides your I/YR by ${tvmPpy}. This problem is ${tvmPpyWord(req0)}: type ${req0}, then P/YR.`;
+        feedback.className = 'tvm-feedback tvm-feedback-err'; return;
+      }
+    }
     const allEnteredCorrectly = order.every(k => tvmRegisterStatus[k] === 'correct');
     if(!allEnteredCorrectly){
       const stillNeeded = order.filter(k => tvmRegisterStatus[k] !== 'correct').map(k => TVM_FIELD_LABELS[k]);
@@ -17234,14 +17316,22 @@ function tvmPressVarKey(key){
   }
 
   const entered = parseFloat(tvmDisplay);
-  const expected = tvmCurrent.known[key];
+  const reqPpy = tvmReqPpy();
+  // I/YR is typed as the annual rate; the calculator divides it by P/YR. Everything else is typed as is.
+  const expected = key === 'iy' ? tvmCurrent.known.iy * tvmPpy : tvmCurrent.known[key];
   const correct = !isNaN(entered) && Math.abs(entered - expected) < 0.005;
   tvmRegisters[key] = isNaN(entered) ? 0 : entered;
   tvmRegisterStatus[key] = correct ? 'correct' : 'incorrect';
   if(!DATA.tvmMistakeCategories) DATA.tvmMistakeCategories = { signConvention: 0, decimalForm: 0, negativeN: 0, monthlyConversion: 0, beginEndMismatch: 0, generic: 0 };
   if(!correct){
     tvmErrorsThisProblem++;
-    if(key === 'iy' && Math.abs(entered*100 - expected) < 0.5){
+    if(key === 'iy' && tvmPpy !== reqPpy && Math.abs(entered - tvmCurrent.known.iy * reqPpy) < 0.005){
+      feedback.textContent = `That is the right annual rate, but P/YR is ${tvmPpy} and this problem is ${tvmPpyWord(reqPpy)}. Type ${reqPpy}, then P/YR (Shift PMT), and enter I/YR again.`;
+      DATA.tvmMistakeCategories.monthlyConversion++;
+    } else if(key === 'iy' && reqPpy > 1 && tvmPpy === reqPpy && Math.abs(entered - tvmCurrent.known.iy) < 0.005){
+      feedback.textContent = `With P/YR ${tvmPpy}, enter the annual rate exactly as the problem states it (${tvmGNum(tvmCurrent.known.iy * reqPpy)}). The calculator divides by ${tvmPpy} itself.`;
+      DATA.tvmMistakeCategories.monthlyConversion++;
+    } else if(key === 'iy' && Math.abs(entered*100 - expected) < 0.5){
       feedback.textContent = `Close — but I/YR goes in as a whole-number percent, not a decimal. For ${expected}%, enter ${expected}, not ${entered}.`;
       DATA.tvmMistakeCategories.decimalForm++;
     } else if(key === 'n' && entered < 0){
@@ -17251,7 +17341,9 @@ function tvmPressVarKey(key){
       feedback.textContent = "Check your sign convention: money going out of the client's pocket (an investment, a deposit) is negative; money coming to the client (a withdrawal, a future payout) is positive.";
       DATA.tvmMistakeCategories.signConvention++;
     } else if(tvmCurrent.difficulty === 3 && (key === 'n' || key === 'iy')){
-      feedback.textContent = 'Double-check this one — with monthly compounding, both N and I/YR need to be converted to a monthly basis first.';
+      feedback.textContent = key === 'n'
+        ? `Double-check N. It counts every payment: years × ${reqPpy} = ${tvmCurrent.known.n}. Type the years, then press xP/YR, or type ${tvmCurrent.known.n} directly.`
+        : `Double-check I/YR. Enter the annual rate and make sure P/YR is ${reqPpy}.`;
       DATA.tvmMistakeCategories.monthlyConversion++;
     } else {
       feedback.textContent = 'That number needs a second look — check it against the problem again.';
@@ -17285,8 +17377,10 @@ function tvmCalculateAndShow(){
   const result = tvmSolve(n, iy, pv, pmt, fv, solveFor, tvmBeginMode);
 
   tvmSolved = true;
-  tvmRegisters[solveFor.toLowerCase()] = result;
-  tvmDisplay = result.toFixed(2);
+  // I/YR on the real calculator shows the annual rate: the periodic rate it solved for times P/YR.
+  const shown = solveFor === 'IY' ? result * tvmPpy : result;
+  tvmRegisters[solveFor.toLowerCase()] = shown;
+  tvmDisplay = shown.toFixed(2);
   tvmUpdateScreen();
   tvmRenderRegisters();
 
@@ -17297,6 +17391,10 @@ function tvmCalculateAndShow(){
   const annFactor = tvmAnnuityFactor(n, i);
   const displayVal = (key, val) => key === solveFor.toUpperCase() ? '?' : fmt(val);
   const steps = [];
+  const perU = tvmUnitOf(tvmCurrent);
+  if(perU && perU.m > 1 && solveFor !== 'IY'){
+    steps.push(`P/YR ${perU.m} (${tvmPpyWord(perU.m)}): you enter I/YR as the annual rate, ${+(iy*perU.m).toFixed(4)}%, and the calculator works with ${iy}% per ${perU.name}. N counts ${perU.name}s: ${+(n/perU.m).toFixed(4)} years × ${perU.m} = ${n}.`);
+  }
   steps.push(`N = ${solveFor==='N'?'?':n}, I/YR = ${solveFor==='IY'?'?':iy+'%'}, PV = ${displayVal('PV', pv)}, PMT = ${displayVal('PMT', pmt)}, FV = ${displayVal('FV', fv)} — solving for ${solveFor}.`);
   if(solveFor !== 'IY' && solveFor !== 'N'){
     if(hasPmt){
@@ -17335,10 +17433,17 @@ function tvmCalculateAndShow(){
   }
 
   let solutionHtml = steps.map(s => `<div class="tvm-solution-step">${s}</div>`).join('');
-  solutionHtml += `<div class="tvm-solution-answer">${solveFor} = ${solveFor === 'IY' ? result.toFixed(2)+'%' : solveFor === 'N' ? result.toFixed(2) + (tvmCurrent.per ? ' ' + tvmCurrent.per.name + 's' : ' years') : fmt(result)}</div>`;
+  solutionHtml += `<div class="tvm-solution-answer">${solveFor} = ${solveFor === 'IY' ? shown.toFixed(2)+'%' : solveFor === 'N' ? result.toFixed(2) + (tvmCurrent.per ? ' ' + tvmCurrent.per.name + 's' : ' years') : fmt(result)}</div>`;
   if(solveFor === 'IY' && tvmCurrent.annualize){
     const m = tvmCurrent.annualize;
-    solutionHtml += `<div class="tvm-solution-step"><b>Annual yield:</b> ${result.toFixed(4)}% × ${m} = ${(result*m).toFixed(2)}%.</div>`;
+    solutionHtml += tvmPpy === m
+      ? `<div class="tvm-solution-step"><b>Annual yield:</b> P/YR is ${m}, so the calculator already multiplied the ${result.toFixed(4)}% ${tvmCurrent.per ? tvmCurrent.per.name : 'periodic'} rate by ${m}: ${(result*m).toFixed(2)}%.</div>`
+      : `<div class="tvm-solution-step"><b>Annual yield:</b> with P/YR at ${tvmPpy} the display is not the annual yield. Set P/YR to ${m} and the calculator shows it directly: ${result.toFixed(4)}% × ${m} = ${(result*m).toFixed(2)}%.</div>`;
+  } else if(solveFor === 'IY' && tvmCurrent.per && tvmCurrent.per.m > 1){
+    solutionHtml += `<div class="tvm-solution-step">P/YR ${tvmPpy} shows the annual rate. The rate per ${tvmCurrent.per.name} is ${result.toFixed(4)}%.</div>`;
+  }
+  if(solveFor === 'N' && tvmCurrent.per && tvmCurrent.per.m > 1){
+    solutionHtml += `<div class="tvm-solution-step"><b>In years:</b> ${result.toFixed(2)} ${tvmCurrent.per.name}s ÷ ${tvmCurrent.per.m} = ${(result/tvmCurrent.per.m).toFixed(2)} years.</div>`;
   }
 
   if(tvmMultiStageActive){
@@ -19122,7 +19227,7 @@ const CALC_SLIP_CUES = {
   signConvention: 'Money you pay out is negative; money you receive is positive.',
   decimalForm: 'Enter rates as whole-number percents (5, not 0.05).',
   negativeN: 'Enter N as a positive number.',
-  monthlyConversion: 'On monthly problems, convert N and I/YR to monthly values or set P/YR to match.',
+  monthlyConversion: 'Set P/YR to match the compounding (12 monthly, 4 quarterly, 2 semiannual, 1 annual). I/YR is the annual rate; N is years × P/YR (xP/YR).',
   beginEndMismatch: 'Check BEGIN versus END; only BEGIN appears on the display.'
 };
 /* Screen-reader side of the waiting states: mark whatever is currently loading as busy (and give typing
@@ -19218,7 +19323,7 @@ function calcCueHtml(q){
   const f = calcSetupProfile(q); if(!f) return '';
   const bits = [];
   bits.push('Clear first (orange Shift, then C ALL).');
-  if(f.monthly) bits.push(f.p12 ? 'Monthly problem: set P/YR to 12 to match.' : 'Monthly problem: put N in months and I/YR as the monthly rate, and leave P/YR at 1.');
+  if(f.monthly) bits.push('Monthly problem: set P/YR to 12, enter the annual rate, and N as years then xP/YR (or months).');
   else bits.push('Annual problem: P/YR must be 1.');
   if(f.hasPmt) bits.push(f.begin ? 'Payments come at the start of each period, so turn BEGIN on.' : 'Payments come at the end of each period, so BEGIN must be off.');
   else bits.push('One lump sum: PMT is 0 and BEGIN/END does not matter.');
@@ -20512,7 +20617,7 @@ async function fetchCalcSteps(q){
   const correct = (q.choices||[])[q.correct];
   const prompt = HP_CALC_NOTE + '\n\nWrite exact key-by-key HP 10bII+ steps a student can follow to get the correct answer to this CFP practice question.\n' +
     (q.scenario ? 'Scenario: ' + q.scenario + '\n' : '') + 'Question: ' + q.q + '\nCorrect answer: ' + correct + '\n' +
-    'Rules: first decide if this is a time-value-of-money problem. If it is: start with clearing (orange Shift, C ALL), set P/YR (1 for annual problems), state BEGIN/END when payments exist, give each entry as "Type 25, press [N]", use [+/-] for outflows, and end with the key that solves and the rounded display. If it is NOT (a ratio, tax, exclusion ratio, percentage, etc.), skip all TVM setup and give plain arithmetic keystrokes in order using ordinary keys (x, ÷, +, −, %), showing each intermediate result, ending on the answer that matches the correct choice. Never mention CPT or I/Y. 3 to 8 short steps.\n' +
+    'Rules: first decide if this is a time-value-of-money problem. If it is: start with clearing (orange Shift, C ALL), set P/YR to match the compounding (1 annual, 12 monthly, 4 quarterly, 2 semiannual; I/YR is then the annual rate and N is years then Shift N xP/YR), state BEGIN/END when payments exist, give each entry as "Type 25, press [N]", use [+/-] for outflows, and end with the key that solves and the rounded display. If it is NOT (a ratio, tax, exclusion ratio, percentage, etc.), skip all TVM setup and give plain arithmetic keystrokes in order using ordinary keys (x, ÷, +, −, %), showing each intermediate result, ending on the answer that matches the correct choice. Never mention CPT or I/Y. 3 to 8 short steps.\n' +
     'Return ONLY a JSON object: {"calcType":"tvm" or "general","calcSteps":["step 1","step 2"]}';
   let lastErr = null;
   for(let attempt = 0; attempt < 2; attempt++){
@@ -20670,7 +20775,7 @@ function buildQuestionChatSystem(q){
       (() => { const d = getDaysUntilExam(); return d !== null ? d + ' day' + (d === 1 ? '' : 's') + ' until the exam. ' : ''; })() + '\n' + NEW_QUESTION_JUDGMENT + '\n';
   }catch(e){}
   if(q.rationale) ctx += 'Explanations shown to the student: ' + q.rationale.map((r,i) => L[i] + ') ' + r).join(' ') + '\n';
-  if(q.calcSteps) ctx += 'This is a calculation question. The app\'s verified HP 10bII+ steps (no compute key; orange Shift then C (C ALL) clears; P/YR must be 1 for annual problems): ' + q.calcSteps.join(' | ') + '\n';
+  if(q.calcSteps) ctx += 'This is a calculation question. The app\'s verified HP 10bII+ steps (no compute key; orange Shift then C (C ALL) clears; P/YR must match the compounding: 1 annual, 12 monthly, 2 semiannual; I/YR is the annual rate, N is years then xP/YR): ' + q.calcSteps.join(' | ') + '\n';
   try{
     const st = computeStats();
     ctx += 'Student context: overall readiness ' + st.readiness + '/100; weakest area ' + st.weakestMeta.name + '.';
@@ -24441,7 +24546,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.307';
+const BUILD_ID = '2026-10-19.308';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
