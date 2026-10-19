@@ -21083,6 +21083,35 @@ function teachingMoveFor(q, wasCorrect){
     return move + ' ' + lv;
   }catch(e){ return ''; }
 }
+// Every figure the app teaches, handed to the tutor so it quotes the same numbers the student studies from (2026 law for the Nov 2026 exam window).
+const TUTOR_EVERGREEN_FIGURES = [
+  'Estate and gift tax top rate 40%. Form 709 gift return due April 15; Form 706 due 9 months after death (portability election on a timely 706).',
+  'Home sale exclusion (Sec. 121): $250,000 single / $500,000 MFJ; owned and used as main home 2 of the last 5 years.',
+  '1031 exchange: identify replacement within 45 days, close within 180 days. Long-term means held more than 1 year.',
+  'IRA/plan early-withdrawal penalty 10% before 59½ (exceptions include 72(t) SEPP, disability, first-home $10,000 lifetime for IRAs). HSA non-medical withdrawal penalty 20% before 65.',
+  'Rollovers: 60 days to complete; one IRA-to-IRA rollover per 12 months; 20% mandatory withholding on an eligible rollover paid to the participant; direct trustee-to-trustee transfers are not limited. Roth IRA: 5-year clock plus 59½ for tax-free earnings.',
+  'Social Security: full retirement age 67 for anyone born 1960 or later; claiming at 62 pays 70% of the full benefit at 67; delayed credits 8% a year to age 70 (124%); spousal benefit up to 50% of the worker\'s full benefit. Medicare at 65; initial enrollment period 7 months; Part B late penalty 10% per full 12 months.',
+  'Payroll tax: 6.2% Social Security + 1.45% Medicare each for employee and employer (7.65%); self-employed 15.3%; additional Medicare tax 0.9% above $200,000 single / $250,000 MFJ; NIIT 3.8%.',
+  'Education credits: American Opportunity up to $2,500 per student (first 4 years, 40% refundable); Lifetime Learning up to $2,000 (20% of the first $10,000).',
+  'Incentive stock options: $100,000 per year first-exercisable limit; hold 2 years from grant and 1 year from exercise for qualifying treatment; the bargain element is an AMT preference item.',
+  'Life insurance: the 3-year rule pulls transferred policies back into the estate; a policy that fails the 7-pay test is a MEC (loans taxed gain-first with a 10% penalty before 59½); contestability period 2 years.',
+  'Rule of 72: years to double = 72 / rate. Rule of thumb: PMI can be removed at 20% equity and ends automatically at 22%.'
+];
+function tutorFiguresText(){
+  try{
+    const byDom = {};
+    KEY_NUMBERS.forEach(n => { (byDom[n.domain] = byDom[n.domain] || []).push(`${n.label}: ${n.value}`); });
+    const names = {}; DOMAINS.forEach(d => { names[d.key] = d.name; });
+    const lines = Object.keys(byDom).map(k => `${names[k] || k}:\n` + byDom[k].map(x => '  - ' + x).join('\n'));
+    return `
+FIGURES THE STUDENT STUDIES FROM (2026 tax year and rules; the exam window tests 2026 law). These are the app's own numbers, so quote them exactly, and when they ask for a number that is on this sheet, give it straight away instead of hedging. For a limit or threshold that is indexed each year and is not on this sheet, say it changes yearly and give the closest figure you are confident of, labelled as approximate. Never invent a figure.
+${lines.join('\n')}
+Rules and figures that do not change from year to year:
+${TUTOR_EVERGREEN_FIGURES.map(x => '  - ' + x).join('\n')}
+`;
+  }catch(e){ return ''; }
+}
+
 function buildTutorSystemPrompt(){
   const stats = computeStats();
   const weakName = stats.weakestMeta.name;
@@ -21309,6 +21338,7 @@ Guidelines:
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
 - When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+${tutorFiguresText()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -22711,7 +22741,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.263';
+const BUILD_ID = '2026-10-19.264';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
