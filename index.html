@@ -12164,6 +12164,7 @@ function fcDeckLine(){
   const gn = fcCustomQueue ? 0 : fcGapCards().length;
   if(gb){ gb.style.display = gn >= 1 ? '' : 'none'; gb.textContent = 'Cards on what I missed (' + Math.min(gn, 20) + ')'; }
   if(fcCustomQueue && fcCustomKind === 'gap'){ el.textContent = 'Showing cards tied to questions you missed. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
+  if(fcCustomQueue && (fcCustomKind === 'new' || fcCustomKind === 'learning')){ el.textContent = fcCustomKind === 'new' ? 'Showing cards you have not seen yet. When you finish, the regular deck comes back.' : 'Showing cards you are still learning. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
   if(!fcQueue.length || fcCustomQueue){ el.style.display = 'none'; return; }
   const slice = fcQueue.slice(fcIndex, fcIndex + 20);
   let due = 0, gap = 0, fresh = 0, leech = 0;
@@ -21324,6 +21325,7 @@ Guidelines:
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
+- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -21482,6 +21484,18 @@ const TUTOR_POINT_TARGETS = {
   diagnosis:      { tab:'study',      sel:'#diagnosisCard',   label:'Detailed diagnosis' },
   flashcard_stats:{ tab:'flashcards', sel:'#fcStatsCard',     label:'Cards due and still learning' },
   flashcard_deck: { tab:'flashcards', sel:'#fcCard',          label:'Start here' },
+  study_stats:    { tab:'study',      sel:'.stat-strip',      label:'Due, answered, accuracy and streak' },
+  study_guide:    { tab:'study',      sel:'.bp-guide-row',    label:'Your one-page study guide' },
+  podcast:        { tab:'reference',  sel:'.card:has(#podcastDomainSelect)', label:'Subject podcast' },
+  ref_toolkit:    { tab:'reference',  sel:'#techCard',        label:'Study toolkit: what works' },
+  ref_glossary:   { tab:'reference',  sel:'.card:has(#glossarySearch)', label:'Glossary search' },
+  ref_key_numbers:{ tab:'reference',  sel:'.card:has(#keyNumbersTable)', label:'Key numbers for 2026' },
+  ref_formulas:   { tab:'reference',  sel:'.card:has(#formulasList)', label:'Core formulas' },
+  ref_syllabus:   { tab:'reference',  sel:'.card:has(#syllabusList)', label:'Syllabus checklist' },
+  exam_standing:  { tab:'examday',    sel:'#edStandingCard',  label:'Where you stand for exam day' },
+  exam_pacing:    { tab:'examday',    sel:'.card:has(#edTiming)', label:'Pacing for the real exam' },
+  exam_checklist: { tab:'examday',    sel:'#edChecklistCard', label:'Exam-week checklist' },
+  exam_bring:     { tab:'examday',    sel:'.card:has(.ed-grid):has(.ed-item b)', label:'What to bring' },
 };
 
 const TUTOR_TOOLS = [
@@ -21518,11 +21532,11 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'start_flashcards',
-    description: "Start a flashcard set for the student right now. Use 'gaps' for cards tied to questions they missed or were sure and wrong about (best after they struggle with an idea), 'domain' with a domain for a focused set, or 'due' to open the regular deck ordered by what they need most.",
+    description: "Start a flashcard set for the student right now. Use 'gaps' for cards tied to questions they missed or were sure and wrong about (best after they struggle with an idea), 'domain' with a domain for a focused set, 'new' for cards they have never seen (add a domain to narrow it), 'learning' for cards they have seen but not yet got right twice in a row, or 'due' to open the regular deck ordered by what they need most.",
     input_schema: {
       type: 'object',
       properties: {
-        focus: { type: 'string', enum: ['gaps','domain','due'], description: 'Which set to start.' },
+        focus: { type: 'string', enum: ['gaps','domain','due','new','learning'], description: "Which set to start. 'new' = cards they have never seen (optionally within a domain); 'learning' = cards they have seen but have not yet got right twice in a row." },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when focus is 'domain'." },
         count: { type: 'integer', minimum: 5, maximum: 40, description: "Optional: how many cards in the set (default 20). Choose by the time they have and how much needs reinforcing." },
       },
@@ -21677,6 +21691,13 @@ async function executeTutorTool(toolName, toolInput){
         const n = Math.min(cap, fcGapCards().length);
         return startFlashcardSet(fcGapCards().slice(0, cap), 'gap') ? `Started ${n} flashcards tied to questions the student missed. They are in Flashcards now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
       }
+      if(toolInput.focus === 'new' || toolInput.focus === 'learning'){
+        const cap = Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20));
+        const dm = DOMAINS.some(d => d.key === toolInput.domain) ? toolInput.domain : null;
+        const set = allFlashcards().filter(c => (!dm || c.domain === dm) && (toolInput.focus === 'new' ? getSpacedStat(DATA.flashcardStats, c.id).seen === 0 : (() => { const st = getSpacedStat(DATA.flashcardStats, c.id); return st.seen > 0 && st.box <= 1; })()))
+          .sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, cap);
+        return startFlashcardSet(set, toolInput.focus === 'new' ? 'new' : 'learning') ? `Started ${set.length} ${toolInput.focus === 'new' ? 'new' : 'still-learning'} flashcards${dm ? ' in ' + dm : ''}.` : (toolInput.focus === 'new' ? 'There are no unseen flashcards left' : 'No flashcards are in the still-learning pile') + (dm ? ' in that domain' : '') + '. Offer the regular deck or a question set instead.';
+      }
       if(toolInput.focus === 'domain'){
         if(!DOMAINS.some(d => d.key === toolInput.domain)) return 'Error: say which exam domain.';
         const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20)));
@@ -21823,9 +21844,12 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'start_plan_step'){
-      const plan = buildStudyPlan(240); // any step that applies today, even if it did not fit the time budget
-      const st = plan.steps.concat(plan.blocks).find(x => x.id === (toolInput && toolInput.step_id));
-      if(!st) return `Error: "${toolInput && toolInput.step_id}" is not a step in today's plan. Valid ids: ${plan.steps.concat(plan.blocks).map(x => x.id).join(', ') || 'none'}.`;
+      // Look first in the plan the student is actually looking at (the ids the tutor was given), then in a longer one, so any step that applies today can be started even if it did not fit the time budget.
+      const planNow = buildStudyPlan(), planLong = buildStudyPlan(240), planMax = buildStudyPlan(360);
+      const all = planNow.steps.concat(planNow.blocks, planLong.steps, planLong.blocks, planMax.steps, planMax.blocks);
+      const st = all.find(x => x.id === (toolInput && toolInput.step_id));
+      const plan = planNow;
+      if(!st) return `Error: "${toolInput && toolInput.step_id}" is not a step in today's plan. Valid ids: ${[...new Set(planNow.steps.concat(planNow.blocks).map(x => x.id))].join(', ') || 'none'}.`;
       if(st.id === 'teach') return `Do this one right here in the chat: ask the first question now (before explaining anything), one question at a time, wait for their answer, and give a small hint before the answer if they are stuck.`;
       st.run();
       return `Started: ${st.title}.`;
@@ -22741,7 +22765,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.264';
+const BUILD_ID = '2026-10-19.265';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
