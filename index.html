@@ -2694,6 +2694,19 @@
   .mode-alt{display:block;margin:6px 0 0;padding:6px 0;min-height:32px;background:none;border:0;font:inherit;font-size:12.5px;font-weight:600;color:var(--gold);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;position:relative;}
   .mode-alt::after{content:'';position:absolute;inset:-8px -10px;}
   .rr-walk{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:10px 0 0;font-size:13.5px;color:var(--paper);}
+
+  /* Answer feedback: only two cards carry colour, and each says what it is in words. Your answer is amber, the correct answer is green, every other choice goes quiet. */
+  .choice.correct{border-width:2px;background:color-mix(in srgb,var(--correct) 17%,var(--surface));}
+  .choice.incorrect{border-width:2px;background:color-mix(in srgb,var(--incorrect) 17%,var(--surface));}
+  .choices .choice.locked:not(.correct):not(.incorrect){opacity:.6;background:var(--surface);}
+  .choice.correct .choice-label::before,.choice.incorrect .choice-label::before{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:2px;}
+  .choice.correct .choice-label::before{content:'Correct answer';color:var(--correct);}
+  .choice.incorrect .choice-label::before{content:'Your answer';color:var(--incorrect);}
+  .choice .result-icon{width:22px;height:22px;}
+  .choice.correct .result-icon svg,.choice.incorrect .result-icon svg{stroke-width:3;}
+  .choice-wrap:has(.choice.correct) .choice-note{color:var(--correct);}
+  .choice-wrap:has(.choice.incorrect) .choice-note{color:var(--incorrect);}
+  .choice-wrap:has(.choice.correct) .choice-note,.choice-wrap:has(.choice.incorrect) .choice-note{font-weight:500;}
 </style>
 </head>
 <body>
@@ -5745,7 +5758,8 @@ function sanitizeLoadedData(d){
   d.sessions = d.sessions.filter(isObj);
   d.tutorNotes = (Array.isArray(d.tutorNotes) ? d.tutorNotes : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.text === 'string' && typeof x.t === 'number').slice(-40);
   d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
-  d.generatedBank = d.generatedBank.filter(isObj).filter(rationaleAgreesWithKey); // drops any saved item whose key contradicts its own explanation
+  Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && !rationaleAgreesWithKey(v)){ qHealKey(v); if(!rationaleAgreesWithKey(v)) delete d.readyNew[k]; } });
+  d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q); }); // drops any saved item whose key contradicts its own explanation
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
   ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
@@ -14382,6 +14396,18 @@ function rationaleAgreesWithKey(q){
     return labs[q.correct] === 'C' && labs.filter(l => l === 'C').length === 1;
   }catch(e){ return true; }
 }
+// A question whose key points at one choice while its own explanations call a different one correct would mark the right answer
+// wrong. The explanations are written with the answer in front of them, so when exactly one says "Correct" the key follows it.
+function qHealKey(q){
+  try{
+    const r = q && q.rationale; if(!Array.isArray(r) || r.length !== 4) return false;
+    const labs = r.map(x => /^\s*correct\b/i.test(String(x)) ? 'C' : (/^\s*(wrong|incorrect)\b/i.test(String(x)) ? 'W' : '?'));
+    if(labs.every(l => l === '?')) return false;
+    const cs = labs.map((l, i) => l === 'C' ? i : -1).filter(i => i >= 0);
+    if(cs.length === 1 && cs[0] !== q.correct){ q.correct = cs[0]; return true; }
+  }catch(e){}
+  return false;
+}
 function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
   opts = opts || {};
   let cleaned = rawText.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
@@ -19233,6 +19259,7 @@ window.addEventListener('orientationchange', () => setTimeout(scheduleQuizFit, 3
 function renderQuestion(){
   paceTouch(); paceBegin(); updatePaceChip();
   const q = session.queue[session.index];
+  try{ if(q && !isGenQ(q)) qHealKey(q); }catch(e){}
   const isExam = examLike();
   session.locked = false;
   session.thinkGate = false; clearThinkGate();
@@ -19436,7 +19463,8 @@ function getVariantEntry(q, wantNew){
   e = { done: false, res: null, fromReady: false };
   const key = String(q.variantOf || q.id);
   const ready = DATA.readyNew && DATA.readyNew[key];
-  if(ready && ready.variant && (Date.now() - (ready.at || 0)) < PF_READY_DAYS * 86400000){
+  if(ready && ready.variant && !rationaleAgreesWithKey(ready.variant)) qHealKey(ready.variant);
+  if(ready && ready.variant && rationaleAgreesWithKey(ready.variant) && (Date.now() - (ready.at || 0)) < PF_READY_DAYS * 86400000){
     e.done = true; e.fromReady = true;
     e.res = { variant: ready.variant, lastVariantError: null, lastVariantRaw: '' };
     e.promise = Promise.resolve(e.res);
@@ -24049,7 +24077,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.292';
+const BUILD_ID = '2026-10-19.293';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
