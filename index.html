@@ -23517,7 +23517,7 @@ function focusEnter(o){
   if(_focus) focusExit({ stay:true });
   const panel = document.getElementById('tab-' + o.tab);
   if(!panel) return false;
-  _focus = { entering:true, origin: origin ? origin.replace(/^tab-/, '') : null, originY, tab:o.tab, stepId:o.stepId || null };
+  _focus = { entering:true, origin: origin ? origin.replace(/^tab-/, '') : null, originY, tab:o.tab, stepId:o.stepId || null, title:String(o.title || '') };
   let el = o.el || null;
   if(!el && o.sel) el = document.querySelector(o.sel);
   if(!(o.els && o.els.length) && el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
@@ -23570,6 +23570,20 @@ function focusExit(o){
   if(o.done && f.stepId){ try{ planMarkManualDone(f.stepId); }catch(e){} }
   if(!o.stay && f.origin && f.origin !== f.tab){ showTab(f.origin); requestAnimationFrame(() => { try{ window.scrollTo(0, f.originY || 0); }catch(e){} }); }
   else if(!o.stay){ try{ window.scrollTo(0, f.originY || 0); }catch(e){} }
+  if(o.done && f.stepId && !o.stay){ setTimeout(() => { try{ tutorStepDonePrompt(f.title); }catch(e){} }, 80); }
+}
+// A plan step opened in focus is finished: say so where the student lands, and lead to the next stop in one tap.
+function tutorStepDonePrompt(title){
+  if(session || _focus) return;
+  const panel = document.querySelector('.tab-panel.active'); if(!panel || panel.id === 'tab-tutor') return;
+  const nx = tutorNextChoice();
+  const old = document.querySelector('.tutor-guide'); if(old) old.remove();
+  const box = tutorGuideBox(); if(!box) return;
+  box.classList.remove('pending');
+  const t = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 50);
+  box.querySelector('.tg-t').textContent = (t ? t + ': done. ' : 'Done. ') + (nx ? 'Next up is below.' : 'That is everything in today\'s plan. Nice work.');
+  tutorGuideNextButton(box);
+  tutorGuideShow(box);
 }
 function clearTutorPoint(){
   if(tutorPointTimer){ clearTimeout(tutorPointTimer); tutorPointTimer = null; }
@@ -24078,7 +24092,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.295';
+const BUILD_ID = '2026-10-19.296';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
