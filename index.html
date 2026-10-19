@@ -7978,6 +7978,16 @@ function buildStudyPlan(minutes){
       const key = pinned || (top ? planTarget('toolKey', top.key) : null); // pinned for the day once chosen; no pin while nothing qualifies
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
+      if(TREE_SCENARIOS[t.key]){
+        // Client scenarios, a handful chosen for you (weakest and newest first), counted so the step completes by itself.
+        const avail = dtwList(t.key).length;
+        const goal = Math.max(1, Math.min(3, planTarget('toolGoal', Math.min(3, avail)), avail));
+        const have = Math.min(goal, ((planDayLog().trees) || []).filter(k => k === t.key).length);
+        return { id:'tool', title:`Decision tool: ${t.name}`, minutes: Math.max(4, goal * 3),
+          why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. ${goal} client scenarios, picked from your weakest first, teach which choice fits.`,
+          need:goal, have, unit:'scenarios',
+          run: () => openTreeRun(t.key, { goal: goal - have > 0 ? goal - have : goal, stepId:'tool', title:'Decision tool: ' + t.name }) };
+      }
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
         why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. Working through the choices yourself teaches which one fits.`,
         manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
@@ -8255,7 +8265,7 @@ function conductorPickNext(){
   return fit[0] || null;
 }
 function conductorSnapshot(){
-  return { sess: (DATA.sessions || []).length, rate: DATA.flashcardRatingCount || 0, ans: DATA.answerCounter || 0 };
+  return { sess: (DATA.sessions || []).length, rate: DATA.flashcardRatingCount || 0, ans: DATA.answerCounter || 0, tw: ((planDayLog().trees) || []).length };
 }
 function conductorLaunchNext(){
   const c = conductorState(); if(!c) return;
@@ -8288,6 +8298,8 @@ function conductorDebrief(cur){
     const k = cur.cardsKnew, t = cur.cardsTotal;
     return { text: (t ? `You went through ${cards} cards and knew ${k} of the last ${t}. ` : `You went through ${cards} cards. `) + 'The ones you missed come back soonest.', cards };
   }
+  const tw = ((planDayLog().trees) || []).length - (snap.tw || 0);
+  if(tw > 0) return { text: `You walked ${tw} client scenario${tw === 1 ? '' : 's'}. The turns you missed come back sooner.`, cards: 0 };
   const answered = (DATA.answerCounter || 0) - (snap.ans || 0);
   if(answered > 0) return { text: `You answered ${answered} question${answered === 1 ? '' : 's'} in this part. They all count toward your review schedule.` };
   return { text: 'Nothing was done in this part, so it stays on today\'s plan for later.', empty: true };
@@ -8597,7 +8609,7 @@ function renderTodayPlan(){
   const mins = chips.arr.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}${m === chips.sug ? ' sug' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}"${m === chips.sug ? ' title="Suggested for your exam date"' : ''}>${planMinuteLabel(m)}</button>`).join('');
   const advice = studyPaceAdvice();
   const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
-  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : 'questions';
+  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : st.unit === 'scenarios' ? 'scenarios' : 'questions';
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
   const stepRows = plan.steps.map((st, i) => {
     const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
@@ -11419,9 +11431,15 @@ function dtModeOf(inst){
   return (!sfx && dtwStats(dtKeyOf(inst)).clean < 2) ? 'walk' : 'explore'; // new to this tree: start with practice
 }
 function dtSetMode(inst, mode){ dtModeMap[inst] = mode; if(mode === 'explore') dtInit(inst); else dtRender(inst); }
+let dtwRun = null; // a curated set: { key, goal, n, seen:[ids], stepId }
+function dtwWhy(w){
+  const st = dtwStatOf(w.id);
+  return !st ? 'New to you' : (st.lastClean ? 'Walked clean before' : 'You missed this one before');
+}
 function dtwPick(key, avoidId){
   const l = dtwList(key); if(!l.length) return null;
-  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
+  const seen = (dtwRun && dtwRun.key === key) ? dtwRun.seen : [];
+  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
   return scored[0].x;
 }
 function dtwStart(inst, avoidId){
@@ -11445,8 +11463,11 @@ function dtwFinish(inst){
     DATA.treeWalk = DATA.treeWalk || {};
     const prev = DATA.treeWalk[w.id] || { seen: 0, clean: 0, miss: 0 };
     DATA.treeWalk[w.id] = { seen: prev.seen + 1, clean: prev.clean + (w.wrong ? 0 : 1), miss: prev.miss + w.wrong, lastClean: w.wrong === 0, lastAt: Date.now() };
+    { const L = planDayLog(); L.trees = L.trees || []; L.trees.push(dtKeyOf(inst)); }
+    if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); }
     recordStudyDay(); persist();
     try{ renderToolPracticeButtons(); }catch(e){}
+    try{ renderTodayPlan(); }catch(e){}
   }catch(e){}
 }
 function dtwNext(inst){ const w = dtwState[inst]; dtwStart(inst, w && w.id); dtwRender(inst); }
@@ -11470,7 +11491,7 @@ function dtwRender(inst){
     const res = tree.nodes[w.s.to];
     const clean = w.wrong === 0;
     body = `<div class="dt-result"><div class="dtw-score ${clean ? 'clean' : ''}">${clean ? 'Clean walk, no wrong turns' : w.wrong + ' wrong turn' + (w.wrong === 1 ? '' : 's')}</div><div class="dt-result-title">${res.title}</div><div class="dt-result-body">${res.body}</div></div>
-      <div class="dtw-actions"><button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario</button><button type="button" class="btn ghost" onclick="dtwReplay('${inst}')">Walk it again</button><button type="button" class="btn ghost" onclick="dtwAskTutor('${inst}')">Ask the tutor</button></div>`;
+      <div class="dtw-actions">${(dtwRun && dtwRun.key === key) ? (dtwRun.n >= dtwRun.goal ? `<button type="button" class="btn" onclick="dtwRunDone()">Finish this part</button><button type="button" class="btn ghost" onclick="dtwNext('${inst}')">One more</button>` : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario, ${dtwRun.n + 1} of ${dtwRun.goal}</button>`) : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario</button>`}<button type="button" class="btn ghost" onclick="dtwReplay('${inst}')">Walk it again</button><button type="button" class="btn ghost" onclick="dtwAskTutor('${inst}')">Ask the tutor</button></div>`;
   } else {
     const st = w.route[w.step], node = st.node, hint = w.wrongHere.length >= 2 || w.wrongHere.length >= node.options.length - 1; // a second miss, or only the right answer left
     const opts = node.options.map((o, i) => {
@@ -11483,13 +11504,28 @@ function dtwRender(inst){
     body = `<div class="dt-question">${node.question}</div><div class="dt-options">${opts}</div>${msg}`;
   }
   host.innerHTML = `<div class="dt-widget dtw">
-    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${dtwStats(key).clean} of ${w.total} walked clean</span></div>
-    <div class="dtw-facts"><div class="dtw-lab">Client facts</div>${escapeHtml(w.s.facts)}</div>
+    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : `${dtwStats(key).clean} of ${w.total} walked clean`}</span></div>
+    <div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
     ${logHtml}${body}</div>`;
   if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } }
 }
 
+// Open a tree's client scenarios on their own, a set number of them, then hand back to the plan.
+function openTreeRun(key, o){
+  o = o || {};
+  const avail = dtwList(key).length; if(!avail) return false;
+  dtwRun = { key, goal: Math.max(1, Math.min(o.goal || 3, 6)), n: 0, seen: [], stepId: o.stepId || null };
+  showTab('tools'); dtModeMap[key] = 'walk'; delete dtwState[key];
+  try{ dtRender(key); }catch(e){}
+  const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
+  if(!card) return false;
+  const nm = (TREE_META[key] || {}).name || key;
+  focusEnter({ tab:'tools', el:card, title:o.title || ('Decision tool: ' + nm), stepId:o.stepId || null });
+  return true;
+}
+function dtwRunDone(){ const r = dtwRun; dtwRun = null; focusExit({ done:true }); return r; }
 function openTreeWalk(key){
+  dtwRun = null;
   showTab('tools'); dtModeMap[key] = 'walk'; delete dtwState[key];
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
@@ -22753,6 +22789,7 @@ const TUTOR_TOOLS = [
       type: 'object',
       properties: {
         tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        scenarios: { type: 'integer', minimum: 1, maximum: 6, description: 'With practice true on trust, entity, ira, roth or socialSecurity: opens a focused run of exactly this many client scenarios, picked from the weakest and newest first, and prompts the student to move on when they are done. Use 2 to 4. Leave it out to show one scenario in the chat.' },
         practice: { type: 'boolean', description: 'True when the student wants to practice, be quizzed or test themselves on this tool: it shows a short client scenario they walk, with right and wrong feedback at every question. Leave false to just explore the branches.' },
       },
       required: ['tool'],
@@ -23013,6 +23050,10 @@ async function executeTutorTool(toolName, toolInput){
       };
       const meta = toolMeta[toolInput.tool];
       if(!meta) return `Error: "${toolInput.tool}" isn't a valid decision tool.`;
+      if(toolInput.practice && toolInput.scenarios && TREE_SCENARIOS[toolInput.tool] && openTreeRun(toolInput.tool, { goal: Math.round(Number(toolInput.scenarios)) || 3, title: meta.label })){
+        const g = dtwRun ? dtwRun.goal : 3;
+        return `Opened "${meta.label}" on its own in a focus view with ${g} client scenarios, weakest and newest first. The app counts them, tells the student right or wrong at each step, and offers "Finish this part" and the next stop after scenario ${g}. Do not repeat the answers.`;
+      }
       if(DECISION_TREES[toolInput.tool]){
         _tutorTreeShown[toolInput.tool] = tutorConversationId;
         tutorTreeRow(toolInput.tool, !!toolInput.practice && !!TREE_SCENARIOS[toolInput.tool]);
@@ -23560,7 +23601,7 @@ function focusKey(e){ if(e.key === 'Escape' && _focus && !session) focusExit({})
 function focusExit(o){
   o = o || {};
   const f = _focus; if(!f) return;
-  _focus = null;
+  _focus = null; try{ dtwRun = null; }catch(e){}
   document.removeEventListener('keydown', focusKey, true);
   document.body.classList.remove('focus-mode');
   if(f.relock && document.body.classList.contains('tvm-active') && !bodyIsLocked()) lockBodyScroll();
@@ -23570,9 +23611,10 @@ function focusExit(o){
   if(o.done && f.stepId){ try{ planMarkManualDone(f.stepId); }catch(e){} }
   if(!o.stay && f.origin && f.origin !== f.tab){ showTab(f.origin); requestAnimationFrame(() => { try{ window.scrollTo(0, f.originY || 0); }catch(e){} }); }
   else if(!o.stay){ try{ window.scrollTo(0, f.originY || 0); }catch(e){} }
-  if(o.done && f.stepId && !o.stay){ setTimeout(() => { try{ tutorStepDonePrompt(f.title); }catch(e){} }, 80); }
+  if(o.done && f.stepId && !o.stay){ _lastFocusStep = f.stepId; setTimeout(() => { try{ tutorStepDonePrompt(f.title); }catch(e){} }, 80); }
 }
 // A plan step opened in focus is finished: say so where the student lands, and lead to the next stop in one tap.
+let _lastFocusStep = null;
 function tutorStepDonePrompt(title){
   if(session || _focus) return;
   const panel = document.querySelector('.tab-panel.active'); if(!panel || panel.id === 'tab-tutor') return;
@@ -23581,7 +23623,11 @@ function tutorStepDonePrompt(title){
   const box = tutorGuideBox(); if(!box) return;
   box.classList.remove('pending');
   const t = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 50);
-  box.querySelector('.tg-t').textContent = (t ? t + ': done. ' : 'Done. ') + (nx ? 'Next up is below.' : 'That is everything in today\'s plan. Nice work.');
+  let part = null; try{ part = buildStudyPlan().steps.find(x => x.id === (_lastFocusStep || '')); }catch(e){}
+  const open = part && !part.done && part.need > 0 && !part.manual;
+  box.querySelector('.tg-t').textContent = open
+    ? (t ? t + ': ' : '') + (part.have || 0) + ' of ' + part.need + ' ' + (part.unit || 'questions') + ' so far. It stays on today\'s plan. ' + (nx ? 'Next up is below.' : '')
+    : (t ? t + ': done. ' : 'Done. ') + (nx ? 'Next up is below.' : 'That is everything in today\'s plan. Nice work.');
   tutorGuideNextButton(box);
   tutorGuideShow(box);
 }
@@ -24092,7 +24138,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.296';
+const BUILD_ID = '2026-10-19.297';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
