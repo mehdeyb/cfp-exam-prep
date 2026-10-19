@@ -12142,7 +12142,7 @@ let fcCustomKind = null;
 function fcGapCards(){
   return allFlashcards().filter(c => {
     const sig = fcCardSignals(c);
-    return sig.gap >= 0.4 && (sig.stat.seen === 0 || isDue(sig.stat) || sig.stat.box <= 1);
+    return sig.gap >= 0.4 && (sig.stat.seen === 0 || isDue(sig.stat)) && !(sig.stat.lastSeenAt && Date.now() - sig.stat.lastSeenAt < 6 * 3600000 && sig.stat.box >= 1); // a gap card you just got right waits its turn, so the set changes as you learn
   }).sort((a,b) => fcCardSignals(b).gap - fcCardSignals(a).gap || flashcardPriority(b) - flashcardPriority(a));
 }
 function startFlashcardSet(cards, kind){
@@ -12256,7 +12256,7 @@ const _fcSessionSeed = Math.floor(Math.random()*1e9);
 function fcJitter(id){
   // A small, per-launch nudge so equally-ranked cards don't always come out in the same order.
   let h = _fcSessionSeed; for(let i=0;i<id.length;i++){ h = (h*31 + id.charCodeAt(i)) >>> 0; }
-  return 1 + (h % 1000) / 1000 * 0.12;
+  return 1 + (h % 1000) / 1000 * 0.3;
 }
 
 /* ===========================================================
@@ -12290,10 +12290,10 @@ function fcCompose(pool, filtered){
   let open = pool.filter(c => !fcSessBlocked(c));
   if(open.length < 8) open = pool.filter(c => !_fcSess.seen.has(c.id)).concat(pool.filter(c => _fcSess.seen.has(c.id))); // nearly the whole deck done: repeats only as a last resort, and last
   const fresh = [], review = [], rest = [];
-  open.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen === 0) fresh.push(c); else if(isDue(st) || st.box <= 1) review.push(c); else rest.push(c); });
+  open.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen === 0) fresh.push(c); else if(isDue(st)) review.push(c); else rest.push(c); }); // only cards actually due return; one you just got right waits out its interval
   const days = getDaysUntilExam();
-  let share = (days !== null && days <= 7) ? 0.25 : 0.4;
-  try{ if(fcContext().backlog > 40) share = Math.min(share, 0.25); }catch(e){}
+  let share = (days !== null && days <= 7) ? 0.3 : 0.5;
+  try{ if(fcContext().backlog > 40) share = Math.min(share, 0.35); }catch(e){}
   const mixed = []; let i = 0, j = 0;
   while(i < fresh.length || j < review.length){
     const takeFresh = i < fresh.length && (j >= review.length || i < share * (mixed.length + 1));
@@ -22711,7 +22711,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.262';
+const BUILD_ID = '2026-10-19.263';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
