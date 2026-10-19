@@ -17702,7 +17702,7 @@ function mwOpen(n, prefer){
   lockBodyScroll();
   mwRender();
   host.scrollTop = 0;
-  const c = host.querySelector('.dp-close'); if(c) c.focus({ preventScroll:true });
+  const h = document.getElementById('mwTitle'); if(h){ h.tabIndex = -1; h.style.outline = 'none'; h.focus({ preventScroll:true }); }
   return true;
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('mw-active')) mwClose(); });
