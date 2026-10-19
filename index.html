@@ -17291,7 +17291,10 @@ function focusDomainKey(parts){
   });
   return best;
 }
+// When the tutor picks how long a practice set should be, it is held here until the session starts.
+let tutorLengthOverride = null;
 function drillLengthFor(domainKey){
+  if(tutorLengthOverride) return tutorLengthOverride;
   const n = (DATA.domainStats[domainKey] || {}).total || 0;
   if(!n) return 10;
   return ({1:10, 2:12, 3:15, 4:18})[domainStageOf(domainKey)] || DRILL_LENGTH;
@@ -17559,7 +17562,7 @@ function showCardForQuestion(q, isCorrect){
   box.style.display = 'block';
 }
 function startAdaptive(){
-  const picked = pickAdaptiveQueue(Math.min(ADAPTIVE_LENGTH, allQuestions().length));
+  const picked = pickAdaptiveQueue(Math.min(tutorLengthOverride || ADAPTIVE_LENGTH, allQuestions().length));
   const reasons = picked.reasons;
   const queue = adaptiveInterleave(tvmInjectIntoAdaptive(picked.queue, reasons), reasons);
   beginSession(queue, 'adaptive', null, reasons);
@@ -18073,6 +18076,8 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
     }
   }catch(e){}
   _planLaunchId = null;
+  if(tutorLengthOverride && ['drill','adaptive','review'].includes(mode) && queue.length > tutorLengthOverride) queue = queue.slice(0, tutorLengthOverride);
+  tutorLengthOverride = null;
   const freshened = freshenQueue(queue, mode);
   queue = freshened.queue.map(shuffleQuestionChoices);
   if(Object.keys(freshened.siblingOf).length || Object.keys(freshened.wantNew).length){
@@ -21492,7 +21497,7 @@ Guidelines:
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
-- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
+- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
 - Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing.
@@ -21647,6 +21652,7 @@ const TUTOR_TOOLS = [
         mode: { type: 'string', enum: ['adaptive','drill','review','case','checkpoint','fullexam','weakspot'], description: "'fullexam' for the full 170-question exam in two 3-hour sections (only when they clearly ask for a full simulation and have the time; say how long it takes first), 'weakspot' with a domain for a short drill on that domain's weakest subtopic, 'checkpoint' for the 24-question timed checkpoint at real exam pace (about 51 minutes; it counts toward readiness), 'adaptive' for a general mixed session, 'drill' for one specific domain, 'review' for everything currently missed, 'case' for a full exam-style client case study." },
         case: { type: 'string', enum: CASE_STUDIES.map(c => c.id), description: "Optional when mode is 'case' -- which case to work; omit to let the app pick the one they have tried least. Cases: " + CASE_STUDIES.map(c => c.id + ' = ' + c.title).join('; ') + '.' },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when mode is 'drill' -- which domain to focus the session on." },
+        count: { type: 'integer', minimum: 5, maximum: 40, description: "Optional: how many questions, for 'adaptive', 'drill' or 'review'. You choose: about 5-8 when they are short on time or tired, 10-15 for a normal sitting, 20-40 when they have time and want volume. Omit to use the app's own length for their level." },
       },
       required: ['mode'],
     },
@@ -21664,6 +21670,7 @@ const TUTOR_TOOLS = [
       properties: {
         focus: { type: 'string', enum: ['gaps','domain','due'], description: 'Which set to start.' },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when focus is 'domain'." },
+        count: { type: 'integer', minimum: 5, maximum: 40, description: "Optional: how many cards in the set (default 20). Choose by the time they have and how much needs reinforcing." },
       },
       required: ['focus'],
     },
@@ -21681,7 +21688,7 @@ const TUTOR_TOOLS = [
   {
     name: 'play_podcast',
     description: "Write and play a spoken study episode for the student. Use type 'tutor_pick' (default) to blend what you judge they most need to hear from their own weak topics, missed questions and failing flashcards; or 'overview', 'formulas' or 'mistakes' for one domain. Put anything they asked to hear, or anything you want stressed, in 'request' (for example 'the difference between a Roth conversion and a recharacterization, with a worked example'). The episode is written from their real data, saved, and starts playing.",
-    input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['tutor_pick','overview','formulas','mistakes'] }, domain: { type: 'string', description: 'Domain key for the non-tutor_pick types; omit to use their weakest.' }, request: { type: 'string', description: 'What to emphasize or what they asked to hear.' } } },
+    input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['tutor_pick','overview','formulas','mistakes'] }, domain: { type: 'string', description: 'Domain key for the non-tutor_pick types; omit to use their weakest.' }, request: { type: 'string', description: 'What to emphasize or what they asked to hear.' }, length: { type: 'string', enum: ['short','standard','deep'], description: "How long: 'short' (~2 min) for one idea or a tired student, 'standard' (~4 min), 'deep' (~7 min) for a full topic or when they have time. You choose to fit the time they have and how much there is to cover; omit to match their plan." } } },
   },
   {
     name: 'open_formula_drill',
@@ -21812,12 +21819,13 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
     if(toolName === 'start_flashcards'){
       if(toolInput.focus === 'gaps'){
-        const n = Math.min(20, fcGapCards().length);
-        return startGapFlashcards() ? `Started ${n} flashcards tied to questions the student missed. They are in Flashcards now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
+        const cap = Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20));
+        const n = Math.min(cap, fcGapCards().length);
+        return startFlashcardSet(fcGapCards().slice(0, cap), 'gap') ? `Started ${n} flashcards tied to questions the student missed. They are in Flashcards now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
       }
       if(toolInput.focus === 'domain'){
         if(!DOMAINS.some(d => d.key === toolInput.domain)) return 'Error: say which exam domain.';
-        const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0,20);
+        const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20)));
         return startFlashcardSet(set, 'domain') ? `Started ${set.length} ${toolInput.domain} flashcards, ordered by what the student needs most.` : 'No flashcards in that domain.';
       }
       if(fcCustomQueue){ try{ rebuildFlashcardQueue(); }catch(e){} } // drop any leftover custom set so the deck really is the regular, need-ordered one
@@ -21831,6 +21839,7 @@ async function executeTutorTool(toolName, toolInput){
       return `Switched to the ${toolInput.tab} tab.`;
     }
     if(toolName === 'start_quiz_session'){
+      { const c = parseInt(toolInput.count, 10); tutorLengthOverride = (c >= 5 && ['adaptive','drill','review'].includes(toolInput.mode)) ? Math.min(40, c) : null; }
       showTab('study'); // startAdaptive() doesn't navigate here itself (unlike startDrill()), and this tool can be called from any tab
       if(toolInput.mode === 'drill'){
         const domainMeta = DOMAINS.find(d => d.key === toolInput.domain);
@@ -21892,6 +21901,7 @@ async function executeTutorTool(toolName, toolInput){
       try{
         const ts = document.getElementById('podcastTypeSelect'), ds = document.getElementById('podcastDomainSelect');
         ts.value = t === 'tutor_pick' ? 'personalized' : t;
+        if(toolInput && ['short','standard','deep'].includes(toolInput.length)) document.getElementById('podcastLengthSelect').value = toolInput.length;
         if(t !== 'tutor_pick'){ const dk = (toolInput && toolInput.domain && DOMAINS.some(d => d.key === toolInput.domain)) ? toolInput.domain : (computeStats().weakestMeta || {}).key; if(dk) ds.value = dk; }
         podcastDomainChanged();
       }catch(e){}
@@ -22866,7 +22876,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.241';
+const BUILD_ID = '2026-10-18.242';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
