@@ -9867,18 +9867,30 @@ function podcastDomainChanged(){
 let podcastAutoTimer = null;
 // The podcast card opens on what suits where the student is now (a personalised episode once there are answers to build it on,
 // a domain overview before that) and keeps doing so as they study, until they pick something themselves.
+// An out-of-date episode is rewritten by itself the first time you come back to it, once per change, so the one that plays is always current.
+function podcastAutoFresh(){
+  try{
+    if(!aiFeaturesAvailable || (typeof naturalSpeechState !== 'undefined' && naturalSpeechState.active)) return;
+    const type = document.getElementById('podcastTypeSelect').value, key = podcastCacheKey();
+    if(!podcastIsStale(key, type)) return;
+    const tag = key + '|' + podcastPlanSig() + '|' + computeStats().totalAnswered;
+    if(window._podFreshTag === tag) return; window._podFreshTag = tag;
+    generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Fresh for today. Tap play.'; }catch(e){} });
+  }catch(e){}
+}
 function podcastAutoDefault(){
   try{
     if(window._podPicked || (typeof naturalSpeechState !== 'undefined' && naturalSpeechState.active)) return;
     const ts = document.getElementById('podcastTypeSelect'), ds = document.getElementById('podcastDomainSelect');
     if(!ts || !ds || !ds.options.length) return;
     const st = computeStats(); let want = 'overview', wk = null;
-    if(st.totalAnswered >= 10) want = 'personalized'; else wk = (st.weakestMeta || {}).key;
+    if(st.totalAnswered >= 10 || (st.totalAnswered > 0 && podcastPlanSteps().length)) want = 'personalized'; else wk = (st.weakestMeta || {}).key;
     let changed = false;
     if(ts.value !== want){ ts.value = want; changed = true; }
     if(want === 'overview' && wk && ds.value !== wk){ ds.value = wk; changed = true; }
     window._podAuto = true;
     try{ if(changed) podcastDomainChanged(); else refreshPodcastView(); }finally{ window._podAuto = false; }
+    podcastAutoFresh();
   }catch(e){}
 }
 function podcastSelectionChanged(){
@@ -10020,9 +10032,32 @@ function refreshPodcastView(){
 
 // What the tutor thinks you most need to hear right now, read from the same data the rest of the app uses.
 // Ranked by how much it is costing you: shaky official topics first, then questions you keep missing, flashcards you keep failing, shaky calculator types, then untested domains.
+// Today's plan is what the tutor has set, so the episode is built around it: the steps still to do, in order.
+function podcastPlanSteps(){
+  try{ return (buildStudyPlan().steps || []).filter(x => x.id !== 'listen'); }catch(e){ return []; }
+}
+// Changes when the day, the plan's steps, or the tutor's top note change, so an old episode is never replayed as if current.
+function podcastPlanSig(){
+  try{
+    const ids = podcastPlanSteps().map(x => x.id + ':' + x.title).join('|');
+    const tn = (DATA.tutorNotes || []).filter(n => n.state === 'new').slice(-1)[0];
+    return localDayKey() + '#' + ids + '#' + (tn ? tn.id : '');
+  }catch(e){ return ''; }
+}
 function podcastBriefing(){
   const focus = []; const lines = [];
   let lead = null;
+  try{
+    const todo = podcastPlanSteps().filter(x => !x.done);
+    if(todo.length){
+      lines.push("TODAY'S PLAN, set by their tutor, in order. Build the episode around these first, as the warm-up for what they are about to do:");
+      todo.slice(0, 4).forEach((st, i) => {
+        lines.push(`Plan step ${i + 1}: ${st.title}${st.need ? ' (' + (st.have || 0) + ' of ' + st.need + ' ' + (st.unit || 'done') + ')' : ''}. ${String(st.why || '').slice(0, 170)}`);
+        if(i < 3) focus.push({ kind:'plan', label:st.title, detail: i === 0 ? 'next on your plan' : 'on today’s plan' });
+      });
+    }
+    (DATA.tutorNotes || []).filter(n => n.state === 'new').slice(-2).forEach(n => { if(n.text) lines.push('Their tutor flagged: ' + String(n.text).slice(0, 200)); });
+  }catch(e){}
   try{
     weakSubtopics(3).forEach(w => {
       const dm = DOMAINS.find(d => d.key === w.key);
@@ -10059,12 +10094,22 @@ function podcastBriefing(){
   return { focus, lines, lead, prior: prior.slice(-8), days: d };
 }
 function podcastBriefingPrompt(b){
-  return `Here is what you know about this student right now:\n${b.lines.map(l => '- ' + l).join('\n') || '- Not much data yet; lean on their weakest domain.'}\n${b.days !== null && b.days > 0 ? `Their exam is in ${b.days} days.\n` : ''}${b.prior.length ? `Recent episodes already covered: ${b.prior.join('; ')}. Do not repeat those; build on them or cover something new.\n` : ''}\nYou are their tutor deciding what they most need to hear today. Choose the two or three things from the list above that will cost them the most points, and blend them into one episode: open in one sentence by saying what you picked and why (using their real numbers), then for each, explain the idea plainly, name the exact trap or confusion behind their misses, and give one worked example with numbers (calculator steps for the HP 10bII+ when it is a calculation: no CPT key, interest is I/YR). Pause aloud and ask them to say the answer in their own words once, then give it. Close with the single next thing to do in the app. Be specific to them, never generic.`;
+  return `Here is what you know about this student right now:\n${b.lines.map(l => '- ' + l).join('\n') || '- Not much data yet; lean on their weakest domain.'}\n${b.days !== null && b.days > 0 ? `Their exam is in ${b.days} days.\n` : ''}${b.prior.length ? `Recent episodes already covered: ${b.prior.join('; ')}. Do not repeat those; build on them or cover something new.\n` : ''}\nYou are their tutor deciding what they most need to hear today. ${b.lines.some(l => l.indexOf('TODAY\'S PLAN') === 0) ? 'Start from today\'s plan above: teach the ideas behind those steps in that order, so the episode prepares them for exactly what they are about to practice, and only add a weak spot from the rest of the list if it fits. Do not drift to a subject that is not on the plan.' : 'Choose the two or three things from the list above that will cost them the most points.'} Blend them into one episode: open in one sentence by saying what you picked and why (using their real numbers), then for each, explain the idea plainly, name the exact trap or confusion behind their misses, and give one worked example with numbers (calculator steps for the HP 10bII+ when it is a calculation: no CPT key, interest is I/YR). Pause aloud and ask them to say the answer in their own words once, then give it. Close with the single next thing to do in the app. Be specific to them, never generic.`;
 }
 function podcastStalePersonal(key){
   try{
     const m = DATA.podcastMeta && DATA.podcastMeta[key]; if(!m) return false;
-    return (computeStats().totalAnswered - (m.n || 0) >= 15) || m.day !== localDayKey();
+    return (computeStats().totalAnswered - (m.n || 0) >= 15) || m.day !== localDayKey() || (m.sig && m.sig !== podcastPlanSig());
+  }catch(e){ return false; }
+}
+// Any episode: old if it was written before today and the work behind it has moved on.
+function podcastIsStale(key, type){
+  try{
+    if(!(DATA.podcastEpisodes && DATA.podcastEpisodes[key])) return false;
+    if(type === 'personalized') return podcastStalePersonal(key);
+    const m = DATA.podcastMeta && DATA.podcastMeta[key]; if(!m || m.day === localDayKey()) return false;
+    const dk = key.split('-')[0], st = DATA.domainStats && DATA.domainStats[dk];
+    return !!st && st.total - (m.dn || 0) >= 5;
   }catch(e){ return false; }
 }
 function renderPodcastFocus(){
@@ -10077,8 +10122,8 @@ function renderPodcastFocus(){
       const b = podcastBriefing();
       if(!b.focus.length){ html = `<b class="pf-h">What your tutor will cover</b>Answer a few questions first and the tutor will build this around your real gaps.`; }
       else {
-        html = `<b class="pf-h">What your tutor will cover</b>` + b.focus.slice(0, 3).map(f => `<div class="pf-row"><i>●</i><span>${escapeHtml(f.label)}${f.detail ? `<small>${escapeHtml(f.detail)}</small>` : ''}</span></div>`).join('')
-          + (DATA.podcastEpisodes && DATA.podcastEpisodes[key] && podcastStalePersonal(key) ? `<div class="pf-stale">Your answers have changed since this was written. Refresh it to match today.</div>` : '');
+        html = `<b class="pf-h">${b.focus.some(f => f.kind === 'plan') ? 'Built from today’s plan' : 'What your tutor will cover'}</b>` + b.focus.slice(0, 3).map(f => `<div class="pf-row"><i>●</i><span>${escapeHtml(f.label)}${f.detail ? `<small>${escapeHtml(f.detail)}</small>` : ''}</span></div>`).join('')
+          + (DATA.podcastEpisodes && DATA.podcastEpisodes[key] && podcastStalePersonal(key) ? `<div class="pf-stale">Your plan or answers have changed since this was written. A fresh one is on its way.</div>` : '');
       }
     } else {
       const dk = document.getElementById('podcastDomainSelect').value, st = DATA.domainStats && DATA.domainStats[dk];
@@ -10139,7 +10184,7 @@ function podcastOpenTutorPick(){
   try{ const card = document.getElementById('podcastTypeSelect').closest('.card'); if(card) focusEnter({ tab:'reference', el:card, title:'Your briefing', stepId:'listen' }); }catch(e){}
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
-    if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
+    if(!have || podcastIsStale(key, 'personalized')){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
     else togglePodcastPlayback();
   }catch(e){}
 }
@@ -10180,15 +10225,15 @@ function renderPodcastHero(busy){
   const dm = DOMAINS.find(d => d.key === dk);
   const mins = { short:2, standard:4, deep:7 }[len] || 4;
   const set = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
-  set('podHeroKicker', type === 'personalized' ? 'Written for you today' : 'Domain episode');
-  set('podHeroTitle', type === 'personalized' ? 'Your tutor’s pick' : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
+  set('podHeroKicker', type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'Built from today’s plan' : 'Written for you today') : 'Domain episode');
+  set('podHeroTitle', type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'Today’s plan, in audio' : 'Your tutor’s pick') : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
   let sub;
   if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (podcastSavedPos(key) ? ' · you left off partway' : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
   else sub = (aiFeaturesAvailable ? 'About ' + mins + ' min. Written fresh from your progress, then saved.' : 'Read from your flashcards. Connect an API key in Settings for a full conversation.');
   set('podHeroSub', sub);
   const b = document.getElementById('podcastHeroBtn'); if(!b) return;
   b.disabled = !!busy;
-  b.textContent = busy ? 'Writing…' : text ? ((type === 'personalized' && podcastStalePersonal(key)) ? 'Write a fresh one' : (podcastSavedPos(key) ? '▶  Resume' : '▶  Play')) : 'Write this episode';
+  b.textContent = busy ? 'Writing…' : text ? (podcastIsStale(key, type) ? 'Write a fresh one' : (podcastSavedPos(key) ? '▶  Resume' : '▶  Play')) : 'Write this episode';
   document.querySelectorAll('#podcastTypeSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === type));
   document.querySelectorAll('#podcastLenSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === len));
   const opts = document.querySelector('.pod-opts'); const ds = document.getElementById('podcastDomainSelect');
@@ -10199,7 +10244,7 @@ function renderPodcastHero(busy){
 function podcastHeroAction(){
   const key = podcastCacheKey(), type = document.getElementById('podcastTypeSelect').value;
   const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
-  if(have && !(type === 'personalized' && podcastStalePersonal(key))){
+  if(have && !podcastIsStale(key, type)){
     if(naturalSpeechState.active) togglePodcastPlayback(); else togglePodcastPlayback();
     return;
   }
@@ -10294,7 +10339,7 @@ async function generatePodcastEpisode(forceNew, refine){
       DATA.podcastEpisodes[cacheKey] = script;
       DATA.podcastGeneratedAt[cacheKey] = Date.now();
       DATA.podcastPersonalized[cacheKey] = false;
-      try{ DATA.podcastMeta[cacheKey] = { focus:[episodeType === 'personalized' ? 'your weakest ideas' : domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey() }; }catch(e){}
+      try{ DATA.podcastMeta[cacheKey] = { focus:[episodeType === 'personalized' ? 'your weakest ideas' : domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey(), sig: podcastPlanSig(), dn: ((DATA.domainStats || {})[domainKey] || {}).total || 0 }; }catch(e){}
       persist();
       podcastDomainChanged();
       return;
@@ -10375,7 +10420,7 @@ async function generatePodcastEpisode(forceNew, refine){
     DATA.podcastGeneratedAt[cacheKey] = Date.now();
     if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
     DATA.podcastPersonalized[cacheKey] = wasPersonalized;
-    try{ DATA.podcastMeta[cacheKey] = { focus: podcastFocusNow || [domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey() }; }catch(e){}
+    try{ DATA.podcastMeta[cacheKey] = { focus: podcastFocusNow || [domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey(), sig: podcastPlanSig(), dn: ((DATA.domainStats || {})[domainKey] || {}).total || 0 }; }catch(e){}
     persist();
     if(!stillOnSameSelection()) return;
     podcastDomainChanged();
@@ -24685,7 +24730,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.309';
+const BUILD_ID = '2026-10-19.310';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
