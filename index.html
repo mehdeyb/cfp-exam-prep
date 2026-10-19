@@ -2638,6 +2638,10 @@
   }
   body.flashcard-fullscreen .fc-back-term{font-size:clamp(22px,3.3vh,28px);margin-bottom:10px;}
   @media (min-width:700px) and (min-height:800px){ body.flashcard-fullscreen .fc-back-term{font-size:32px;} }
+  .pt-lead{margin:10px 0 6px;padding:14px 14px 12px;border-radius:14px;background:var(--gold-soft);border:1px solid color-mix(in srgb,var(--gold) 35%,transparent);}
+  .pt-lead-txt b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;font-weight:600;}
+  .pt-lead-txt span{display:block;font-size:14px;line-height:1.5;color:var(--paper);}
+  .pt-lead-foot{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -7662,7 +7666,7 @@ function computeNextStep(stats){
         const partial = (first.have || 0) > 0 && first.need > 0;
         const total = Math.min(plan.minutes, open.reduce((a, x) => a + x.minutes, 0));
         step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}`, title: open.length === 1 ? first.title : "Today's session",
-          why: open.length === 1 ? first.why : `Opens with ${first.title.charAt(0).toLowerCase() + first.title.slice(1)}, then ${open.length - 1} more part${open.length === 2 ? '' : 's'}. The order adjusts as you go.`,
+          why: open.length === 1 ? first.why : `First: ${first.title}. Then ${open.length - 1} more part${open.length === 2 ? '' : 's'}; the order adjusts as you go.`,
           cta: partial ? 'Continue' : "Start today's session", meta:`about ${total} min`, run: open.length === 1 ? first.run : () => conductorStart(),
           bigger: step.title };
       }
@@ -8452,6 +8456,12 @@ function planAdvanceUpdate(plan){
 }
 // When the Next best step card is already offering today's session, the advance strip only reports progress; one Start, not two.
 function nsOwnsNext(){ return !!(currentNextStep && /^Today's session/.test(currentNextStep.kicker || '')); }
+function planLeadHtml(plan){
+  if(!nsOwnsNext()) return '';
+  if(typeof conductorState === 'function' && conductorState()) return '';
+  const s = currentNextStep;
+  return `<div class="pt-lead"><div class="pt-lead-txt"><b>Up next</b><span>${escapeHtml(s.why)}</span></div><div class="pt-lead-foot"><button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button><span class="ns-meta">${escapeHtml(s.meta || '')}</span></div></div>`;
+}
 function planAdvanceHtml(plan){
   if(!_planAdv) return '';
   if(typeof conductorState === 'function' && conductorState()) return '';
@@ -8459,7 +8469,7 @@ function planAdvanceHtml(plan){
   const t = _planAdv.titles;
   const head = t.length === 1 ? t[0] + ' done' : t.length + ' steps done';
   return `<div class="pt-adv" id="ptAdv" role="status"><div class="pt-adv-top"><b>\u2713 ${escapeHtml(head)}</b><button type="button" class="pt-adv-x" aria-label="Dismiss" onclick="planAdvanceDismiss()">\u00d7</button></div>`
-    + (nxt && nsOwnsNext() ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min. Start it from Next best step above.</div>`
+    + (nxt && nsOwnsNext() ? ''
     : nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
       : `<div class="pt-adv-next">That is everything on today's plan. Rest, or take an adaptive session if you still have energy.</div>`)
     + '</div>';
@@ -8510,6 +8520,7 @@ function renderTodayPlan(){
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
+    ${planLeadHtml(plan)}
     ${(plan.phase.key === 'taper' || plan.phase.key === 'rest') && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${(runwayTxt || lateNote) ? `<p class="pt-sub">${escapeHtml((runwayTxt || '') + lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
@@ -8526,7 +8537,9 @@ function renderNextStepCard(stats, refreshed){
   const s = computeNextStep(stats);
   const _nsBefore = nsOwnsNext();
   currentNextStep = s;
-  if(_nsBefore !== nsOwnsNext()){ try{ if(_planAdv) renderTodayPlan(); }catch(e){} }
+  if(_nsBefore !== nsOwnsNext()){ try{ renderTodayPlan(); }catch(e){} }
+  // Today's plan is the next best step: when the recommendation is the plan's own session, the plan card carries the Start button and this card steps aside.
+  if(nsOwnsNext()){ el.style.display = 'none'; el.innerHTML = ''; return; }
   // When the recommendation is also a step in today's plan, say which one, so the two read as one thread.
   let planTag = '';
   try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && x.title === s.title); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
@@ -8554,7 +8567,8 @@ function runNextStep(){
   const fresh = computeNextStep(stats);
   if(fresh.title !== currentNextStep.title){
     renderNextStepCard(stats, true);
-    return;
+    if(!nsOwnsNext()) return;
+    renderTodayPlan(); currentNextStep.run(); return;
   }
   currentNextStep.run();
 }
@@ -23207,6 +23221,7 @@ function tutorPoint(key, note, isolate){
   showTab(t.tab);
   if(key === 'ref_calc_keys') renderCalcKeysCard();
   let el = document.querySelector(t.sel);
+  if((!el || el.style.display === 'none') && key === 'next_step') el = document.getElementById('todayPlanCard');
   if(!el || el.style.display === 'none') el = document.querySelector('#tab-' + t.tab + ' .card') || null;
   if(!el) return false;
   const text = String(note || t.label).replace(/\s+/g, ' ').slice(0, 70);
@@ -23683,7 +23698,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.284';
+const BUILD_ID = '2026-10-19.285';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
