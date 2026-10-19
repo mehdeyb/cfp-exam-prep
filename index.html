@@ -7890,7 +7890,12 @@ function planTodayActivity(){
   const modes = Object.keys(L.modes).filter(m => L.modes[m] > 0);
   return { modes, counts: L.modes, cards, tvm: L.tvm, formula: L.formula, L };
 }
+var _podPlanBusy = false, _inPlanBuild = false;
 function buildStudyPlan(minutes){
+  const _wasBuilding = _inPlanBuild; _inPlanBuild = true;
+  try{ return buildStudyPlanCore(minutes); }finally{ _inPlanBuild = _wasBuilding; }
+}
+function buildStudyPlanCore(minutes){
   minutes = minutes || planMinutes();
   const stats = computeStats();
   const days = getDaysUntilExam();
@@ -10033,8 +10038,11 @@ function refreshPodcastView(){
 // What the tutor thinks you most need to hear right now, read from the same data the rest of the app uses.
 // Ranked by how much it is costing you: shaky official topics first, then questions you keep missing, flashcards you keep failing, shaky calculator types, then untested domains.
 // Today's plan is what the tutor has set, so the episode is built around it: the steps still to do, in order.
+// Building the plan itself asks the podcast what it will cover, so this must never re-enter the plan builder.
 function podcastPlanSteps(){
-  try{ return (buildStudyPlan().steps || []).filter(x => x.id !== 'listen'); }catch(e){ return []; }
+  if(_podPlanBusy || _inPlanBuild) return [];
+  _podPlanBusy = true;
+  try{ return (buildStudyPlan().steps || []).filter(x => x.id !== 'listen'); }catch(e){ return []; }finally{ _podPlanBusy = false; }
 }
 // Changes when the day, the plan's steps, or the tutor's top note change, so an old episode is never replayed as if current.
 function podcastPlanSig(){
@@ -24730,7 +24738,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.310';
+const BUILD_ID = '2026-10-19.311';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
