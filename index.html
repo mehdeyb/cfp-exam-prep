@@ -22778,6 +22778,15 @@ function tutorSuggestions(){
   else add('plan', days !== null && days <= 60 ? `Plan my ${days} days` : 'What should I study today?', talking ? 45 : 90, () => askTutorQuick('plan'));
   let ns = null; try{ ns = computeNextStep(st); }catch(e){}
   if(answered && ns && ns.title) add('next', 'Explain my next step', talking ? 40 : 80, () => askTutorQuick('nextStep'));
+  try{
+    // Today's plan drives the first suggestion: start the next part, or say what to do once the plan is finished.
+    const pl = buildStudyPlan();
+    if(pl && pl.steps && pl.steps.length){
+      const nxt = pl.steps.find(x => !x.done);
+      if(nxt && typeof nxt.run === 'function' && !session) add('plan_next', 'Start: ' + tutorShort(nxt.title, 24), talking ? 62 : 93, () => { showTab('study'); nxt.run(); });
+      else if(!nxt) add('plan_done', 'Plan done. What now?', talking ? 48 : 92, say("I finished today's plan. Based on how I did, what is worth doing next, if anything, and what should I leave for tomorrow?"), true);
+    }
+  }catch(e){}
   const nm = (DATA.missed || []).length;
   if(nm) add('missed', nm === 1 ? 'Walk through my missed question' : `Walk through my ${nm} missed`, talking ? 42 : 86, () => askTutorQuick('missed'));
   const mix = activeMixupPairs(1)[0];
@@ -22954,7 +22963,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.249';
+const BUILD_ID = '2026-10-18.250';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
