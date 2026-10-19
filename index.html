@@ -1781,6 +1781,7 @@
   .ed-pacing-fill.slow{background:var(--incorrect);}
   .ed-item{font-size:13px;color:var(--paper);padding:9px 0;border-bottom:1px solid var(--hair);}
   .ed-item:last-child{border-bottom:none;}
+  .ck-k{display:inline-block;padding:0 6px;margin:0 1px;border:1px solid var(--hair);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.55;white-space:nowrap;}
   .ed-item b{display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;margin-bottom:3px;font-weight:600;}
   .calc-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
   .calc-chip{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:5px 10px;border-radius:14px;background:var(--surface2);border:1px solid var(--hair);color:var(--paper);}
@@ -3147,6 +3148,15 @@
     <div class="card">
       <div class="card-head"><h2>Key numbers — 2026</h2><div class="note">reordered around your weak spots</div></div>
       <div class="ref-scroll"><table class="ref-table" id="keyNumbersTable"></table></div>
+    </div>
+    <div class="card" id="calcKeysCard">
+      <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
+      <div class="ed-item"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then check P/YR: <span class="ck-k">1</span> Shift <span class="ck-k">PMT</span> (P/YR). The factory setting is 12. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
+      <div class="ed-item"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
+      <div class="ed-item"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
+      <div class="ed-item"><b>Nominal to effective rate</b>10 Shift <span class="ck-k">I/YR</span> (NOM%), 12 Shift <span class="ck-k">PMT</span> (P/YR), Shift <span class="ck-k">PV</span> (EFF%) gives 10.47. Reset P/YR to 1 afterwards.</div>
+      <div class="ed-item"><b>Loan balance and interest</b>Solve the payment first, with P/YR matching the payment frequency. Then <span class="ck-k">1</span> <span class="ck-k">INPUT</span> <span class="ck-k">12</span> Shift <span class="ck-k">FV</span> (AMORT) shows payments 1 to 12. Press <span class="ck-k">=</span> to step through principal, interest, then balance.</div>
+      <div class="ed-item"><b>Powers and reciprocals</b>Shift <span class="ck-k">×</span> is yˣ, Shift <span class="ck-k">÷</span> is 1/x, Shift <span class="ck-k">−</span> is √x, Shift <span class="ck-k">1</span> is eˣ, Shift <span class="ck-k">2</span> is LN.</div>
     </div>
     <div class="card">
       <div class="card-head"><h2>Core formulas</h2><div class="note">the ones that show up again and again</div></div>
@@ -4944,8 +4954,8 @@ const FLASHCARDS = [
 {id:'f1033',domain:'psych',term:"Job Loss Planning",def:"First review the emergency fund, expenses, unemployment benefits and health coverage to build a short-term cash flow plan, before changing long-term investments."},
 {id:'f1034',domain:'psych',term:"Cultural Influences on Debt Attitudes",def:"Upbringing and family culture shape views on debt and money. Ask about those influences and discuss them openly instead of assuming the client shares your view."},
 {id:'f1035',domain:'psych',term:"Communication: Avoid Jargon",def:"Effective communication uses plain language, active listening and clear explanations. Using unexplained technical jargon to demonstrate expertise undermines it."},
-{id:'f1036',domain:'general',term:"NPV on the HP 10bII+",def:"Clear with orange Shift then C ALL, key each flow in time order with CFj starting at time 0 (an outlay is negative), type the discount rate and press I/YR. Then press orange Shift and NPV, the orange label above the PRC key."},
-{id:'f1037',domain:'general',term:"IRR on the HP 10bII+",def:"Enter the same cash flows with CFj, in time order and starting at time 0, then press orange Shift and IRR/YR, the orange label above the CST key. IRR needs no discount rate, because it solves for the rate that makes NPV zero."},
+{id:'f1036',domain:'general',term:"NPV on the HP 10bII+",def:"Clear with orange Shift then C ALL, set P/YR to 1 (1, orange Shift, P/YR; the factory 12 treats yearly flows as monthly), key each flow in time order with CFj starting at time 0 (an outlay is negative), type the discount rate and press I/YR. Then press orange Shift and NPV, the orange label above the PRC key."},
+{id:'f1037',domain:'general',term:"IRR on the HP 10bII+",def:"With P/YR at 1, enter the same cash flows with CFj, in time order and starting at time 0, then press orange Shift and IRR/YR, the orange label above the CST key. IRR needs no discount rate, because it solves for the rate that makes NPV zero."},
 {id:'f1038',domain:'general',term:"Repeated Cash Flows on the HP 10bII+ (Nj)",def:"When the same flow repeats in a row, enter it once with CFj. Then type the number of times and press the orange Nj label, so a flow that repeats three years takes one entry instead of three."},
 {id:'f1039',domain:'general',term:"WACC (Weighted Average Cost of Capital)",def:"WACC = (E/V x cost of equity) + (D/V x cost of debt x (1 - tax rate)). Debt cost is taken after tax because interest is deductible. It is the usual discount rate for a firm's average-risk projects."},
 {id:'f1040',domain:'general',term:"Federal Student Loan Changes (Loans Disbursed On or After July 1, 2026)",def:"Grad PLUS is closed to new borrowers. New graduate borrowing is capped at $20,500 a year ($100,000 aggregate) and professional degrees at $50,000 a year ($200,000 aggregate). Parent PLUS is capped at $20,000 a year and $65,000 per student. New borrowers choose between a standard plan and the Repayment Assistance Plan (RAP)."},
@@ -16868,7 +16878,7 @@ const CF_GEN_TEMPLATES = {
 };
 
 function cfKeySteps(P, resultText){
-  const st = ['Clear the worksheet: press the orange Shift key, then C ALL.'];
+  const st = ['Clear the worksheet: press the orange Shift key, then C ALL.', 'Check P/YR is 1: press [1], then orange Shift, then [P/YR] (the factory setting is 12, which would discount these yearly flows as if they were monthly).'];
   P.flows.forEach((f, j) => {
     const a = tvmGNum(Math.abs(f.amt));
     let s;
@@ -16895,7 +16905,8 @@ function cfGenerateProblem(level, templateKey){
   if(!templateKey){
     const exact = keys.filter(k => CF_GEN_TEMPLATES[k].level === level);
     keys = exact.length ? exact.concat(Math.random() < 0.3 ? keys : []) : keys;
-    if(keys.length > 1 && tvmLastGenTemplate) keys = keys.filter(k => k !== tvmLastGenTemplate);
+    keys = Array.from(new Set(keys));
+    if(keys.length > 1 && tvmLastGenTemplate){ const f = keys.filter(k => k !== tvmLastGenTemplate); if(f.length) keys = f; }
   }
   const key = templateKey || tvmGWeighted(keys);
   tvmLastGenTemplate = key;
@@ -16963,7 +16974,7 @@ function tvmApplyModeUI(){
   if(seg) seg.querySelectorAll('button').forEach(b => { const on = b.dataset.mode === tvmMode; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   const ht = document.getElementById('tvmHowtoText');
   if(ht) ht.textContent = cf
-    ? 'Press C ALL, then enter each cash flow in time order, the cost at time 0 first and as a negative, pressing CFj after each one. If a flow repeats, type the count and press Nj. For NPV, type the rate and press I/YR, then NPV. For IRR, just press IRR. On the real calculator the keys marked ⇧ (Nj, NPV, IRR/YR) are orange-shift functions.'
+    ? 'Press C ALL and make sure P/YR is 1 (orange Shift, P/YR), then enter each cash flow in time order, the cost at time 0 first and as a negative, pressing CFj after each one. If a flow repeats, type the count and press Nj. For NPV, type the rate and press I/YR, then NPV. For IRR, just press IRR. On the real calculator the keys marked ⇧ (Nj, NPV, IRR/YR) are orange-shift functions.'
     : 'Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you\'re solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.';
 }
 
@@ -21548,7 +21559,7 @@ Guidelines:
 - When a tool takes them to another screen, your reply appears on that screen as a short note with a way back to the chat. So write it for where they now are: one line on what they are looking at, then one clear next action, in two or three short sentences. Do not stack several moves in one turn.\n- Official exam facts (CFP Board Candidate Handbook, October 2026; the Exam Day tab has them too, so point there for the full list): 170 multiple-choice questions in two 3-hour sections, each split into two subsections (43 and 42 questions) that share one timer; a free optional break between subsections (the clock keeps running) and a 40-minute break between sections that can be skipped with Resume Test; once a subsection is submitted it cannot be reopened, and if time is left only the last subsection can be reviewed. Items are stand-alone questions, short scenarios (about 3 questions) and case histories (about 8 to 12 questions). Arrive 30 minutes early with an unexpired government photo ID whose name matches the registration. Approved calculators include the HP 10BII+; memory must be cleared by the student before each section, and any notes on the calculator covered with tape. Only a clear unlabeled water bottle is allowed; no food, notes, phones or watches in the room. Scoring is pass or fail against a standard the Board does not publish, so never quote a pass mark. The October 2026 window tests 2026 tax law. A retake needs the whole exam in a later window, with at most three attempts in 24 months. The official CFP Board Practice Exam comes free with registration and reports results by domain. Per CFP Board, four new tax-law items still need more guidance before being tested: mortgage interest and PMI, tips, overtime and car-loan interest, so do not spend their time on them.\n- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
-- Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing.
+- Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing. Verified HP 10bII+ keystrokes (also on the Reference tab as ref_calc_keys): clear = orange Shift then C; P/YR = n, Shift, PMT (factory 12; set 1 for yearly problems and for cash-flow NPV/IRR, since NPV divides I/YR by P/YR and IRR/YR multiplies by it); BEG/END = Shift then MAR; Nj = Shift then CFj; NPV = Shift then PRC; IRR/YR = Shift then CST; NOM% = Shift I/YR, P/YR = Shift PMT, EFF% = Shift PV; AMORT = Shift FV after INPUT-ing the payment range (1 INPUT 12), then = steps through principal, interest, balance; yˣ = Shift ×, 1/x = Shift ÷, √x = Shift −.
 - If a student asks whether they should be in BEG or END mode: End is the standard default and what an ordinary annuity (payments at the end of each period) requires — the vast majority of TVM problems. BEG (annuity due, payments at the start of each period) only comes up when a problem explicitly says payments occur in advance, like a lease or a retirement withdrawal taken at the start of each year rather than the end. There's no "END" indicator on the display at all — only "BEGIN" shows when that mode is active, so its absence means the calculator is already in End mode. BEG/END has zero effect on a pure lump-sum FV or PV calculation with no payment involved.
 - Separately from the TVM tool: a handful of regular practice questions (tax brackets, present/future value, debt ratios, bond yields, and similar calculations) are genuinely computational rather than conceptual. If a student gets one of these wrong during an adaptive session, a "Show calculator steps" button appears right below the answer feedback with an exact, pre-verified walkthrough — point them to that button by name rather than re-deriving the calculation yourself in chat, since the steps already there are exact and specific to the numbers in that question.
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
@@ -21823,6 +21834,7 @@ const TUTOR_POINT_TARGETS = {
   ref_toolkit:    { tab:'reference',  sel:'#techCard',        label:'Study toolkit: what works' },
   ref_glossary:   { tab:'reference',  sel:'.card:has(#glossarySearch)', label:'Glossary search' },
   ref_key_numbers:{ tab:'reference',  sel:'.card:has(#keyNumbersTable)', label:'Key numbers for 2026' },
+  ref_calc_keys:  { tab:'reference',  sel:'#calcKeysCard', label:'Your HP 10bII+ keystrokes' },
   ref_formulas:   { tab:'reference',  sel:'.card:has(#formulasList)', label:'Core formulas' },
   ref_syllabus:   { tab:'reference',  sel:'.card:has(#syllabusList)', label:'Syllabus checklist' },
   exam_standing:  { tab:'examday',    sel:'#edStandingCard',  label:'Where you stand for exam day' },
@@ -23198,7 +23210,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.273';
+const BUILD_ID = '2026-10-19.274';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
