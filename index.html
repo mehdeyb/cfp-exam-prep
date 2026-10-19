@@ -1800,6 +1800,7 @@
   .tutor-guide{margin:0 0 14px;padding:12px 14px;border:1px solid var(--gold);border-left-width:3px;border-radius:14px;background:var(--gold-soft);animation:tgIn .28s var(--ease);}
   .tutor-guide .tg-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
   .tutor-guide .tg-t{font-size:14px;line-height:1.45;color:var(--paper);}
+  .tutor-guide.pending .tg-t{min-height:20px;}
   .tutor-guide .tg-row{display:flex;gap:10px;align-items:center;margin-top:10px;}
   .tutor-guide .tg-back{margin-left:0;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:8px 6px;cursor:pointer;}
@@ -3115,7 +3116,6 @@
     </div>
     <div class="card">
       <div class="card-head"><h2>Key numbers — 2026</h2><div class="note">reordered around your weak spots</div></div>
-      <p class="hint">Reordered around your weak spots.</p>
       <div class="ref-scroll"><table class="ref-table" id="keyNumbersTable"></table></div>
     </div>
     <div class="card">
@@ -21419,21 +21419,45 @@ function tutorTreeRow(key, practice){
 // with a way back to the conversation; if a quiz is open, just light the Tutor tab so the note waits.
 let tutorUnread = false;
 function tutorGuideDismiss(){ document.querySelectorAll('.tutor-guide').forEach(e => e.remove()); }
+function tutorGuideBox(){
+  let box = document.querySelector('.tutor-guide');
+  if(box) return box;
+  const panel = document.querySelector('.tab-panel.active');
+  if(!panel || panel.id === 'tab-tutor') return null;
+  box = document.createElement('div'); box.className = 'tutor-guide'; box.setAttribute('role', 'status');
+  box.innerHTML = '<div class="tg-k">From your tutor</div><div class="tg-t"></div><div class="tg-row"><button type="button" class="tutor-show tg-back">Back to chat</button><button type="button" class="tg-x">Got it</button></div>';
+  box.querySelector('.tg-back').onclick = () => { tutorGuideDismiss(); clearTutorPoint(); showTab('tutor'); };
+  box.querySelector('.tg-x').onclick = () => { tutorGuideDismiss(); clearTutorPoint(); };
+  // Sit it right above what is being pointed at when that is a card on this screen, so the words and the thing are in view together.
+  if(typeof tutorPointEl !== 'undefined' && tutorPointEl && tutorPointEl.parentElement === panel) panel.insertBefore(box, tutorPointEl);
+  else panel.insertBefore(box, panel.firstChild);
+  return box;
+}
+function tutorGuideShow(box){
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try{ box.style.scrollMarginTop = '14px'; box.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }catch(e){}
+}
+// The moment a tool has moved the student, say so on the screen they are now looking at: the note is on its way.
+function tutorGuidePending(){
+  if(session) return;
+  const box = tutorGuideBox(); if(!box) return;
+  if(!box.querySelector('.tg-t').textContent && !box.querySelector('.typing-dots')){
+    box.querySelector('.tg-t').innerHTML = '<span class="typing-dots" aria-label="Your tutor is writing a note"><span></span><span></span><span></span></span>';
+    box.classList.add('pending');
+    tutorGuideShow(box);
+  }
+}
 function tutorGuideAfterMove(reply){
   const panel = document.querySelector('.tab-panel.active');
-  if(!panel || panel.id === 'tab-tutor' || !reply) return;
+  if(!panel || panel.id === 'tab-tutor' || !reply){ tutorGuideDismiss(); return; }
   if(session){ tutorUnread = true; tnRenderDot(); return; }
-  tutorGuideDismiss();
   const sentences = String(reply).replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+/g) || [String(reply)];
   let txt = ''; for(const t of sentences){ if((txt + t).length > 230 && txt) break; txt += t; }
-  const box = document.createElement('div'); box.className = 'tutor-guide'; box.setAttribute('role', 'status');
-  box.innerHTML = '<div class="tg-k">From your tutor</div><div class="tg-t"></div><div class="tg-row"><button type="button" class="tutor-show tg-back">Back to chat</button><button type="button" class="tg-x">Got it</button></div>';
+  const had = document.querySelector('.tutor-guide');
+  const box = tutorGuideBox(); if(!box) return;
+  box.classList.remove('pending');
   box.querySelector('.tg-t').textContent = txt.trim();
-  box.querySelector('.tg-back').onclick = () => { tutorGuideDismiss(); showTab('tutor'); };
-  box.querySelector('.tg-x').onclick = tutorGuideDismiss;
-  panel.insertBefore(box, panel.firstChild);
-  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(!tutorPointEl){ try{ box.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' }); }catch(e){} }
+  if(!had) tutorGuideShow(box);
 }
 
 // After a tutor reply, offer the matching tool when the question (or what the tutor explained) is one a tool covers.
@@ -21444,6 +21468,51 @@ function tutorMaybeOfferTree(userText, replyText){
     _tutorTreeShown[hit.key] = tutorConversationId; // once per topic per conversation, so it never nags
     tutorTreeRow(hit.key);
   }catch(e){}
+}
+
+// What the student reads in the chat when the tutor does something. The tool result is written for the model ("the student"),
+// so this says the same thing plainly, names where they have been taken, and never shows an internal error string.
+function tutorActionText(name, input, result){
+  const r = String(result || '');
+  const inp = input || {};
+  const tabName = { study:'Study', tools:'Decision tools', reference:'Reference', flashcards:'Flashcards', examday:'Exam Day', tutor:'Tutor' };
+  const domName = k => { const d = DOMAINS.find(x => x.key === k); return d ? d.name : ''; };
+  const you = t => t.replace(/\bthe student's\b/gi, 'your').replace(/\bthe student\b/gi, 'you').replace(/\s+/g, ' ').trim();
+  try{
+    if(/^Error/i.test(r)) return 'That did not work. I will say what to do instead.';
+    if(name === 'navigate_to_tab') return 'Took you to ' + (tabName[inp.tab] || 'that tab');
+    if(name === 'point_to'){
+      const t = TUTOR_POINT_TARGETS[inp.target];
+      return t ? `Showing you: ${t.label}` + (t.tab ? ` (${tabName[t.tab] || t.tab})` : '') : you(r);
+    }
+    if(name === 'start_quiz_session'){
+      const n = parseInt(inp.count, 10);
+      const label = { adaptive:'Adaptive session', drill:'Domain drill' + (inp.domain ? ': ' + domName(inp.domain) : ''), review:'Review of your missed questions',
+        case:'Case study', checkpoint:'Timed checkpoint', fullexam:'Full exam simulation', weakspot:'Weak-spot drill' + (inp.domain ? ': ' + domName(inp.domain) : '') }[inp.mode];
+      if(label) return 'Started: ' + label + (n >= 5 && ['adaptive','drill','review'].includes(inp.mode) ? ` (${n} questions)` : '');
+    }
+    if(name === 'start_flashcards'){
+      if(/^Started/.test(r)) return you(r).replace(/\.$/, '');
+      if(/^No flashcards|^There are no/.test(r)) return 'No flashcards matched that, so nothing was changed';
+      return 'Opened Flashcards';
+    }
+    if(name === 'open_tvm_calculator') return 'Opened the calculator walkthrough' + (inp.mode === 'cashflow' ? ' (cash flows)' : '');
+    if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
+    if(name === 'open_study_guide') return 'Opened your study guide';
+    if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
+    if(name === 'show_progress') return 'Opened your detailed progress (Study tab)';
+    if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
+    if(name === 'start_my_session') return 'Opened today\'s guided session';
+    if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
+    if(name === 'lookup_term') return 'Looked up “' + String(inp.term || '').slice(0, 40) + '” in the glossary (Reference tab)';
+    if(name === 'open_decision_tool') return 'Opened a decision tool (Decision tools)';
+    if(name === 'play_podcast' || name === 'open_podcast') return 'Opened your podcast episode (Reference tab)';
+    if(name === 'generate_practice') return /^(Error|Can't|Already)/.test(r) ? you(r).replace(/\.$/, '') : 'Writing new practice questions for you';
+    if(name === 'mark_subtopic_reviewed') return /^Error|^Could not|^No /.test(r) ? you(r).replace(/\.$/, '') : 'Marked as reviewed in your syllabus checklist';
+    if(name === 'schedule_check_in') return /^Scheduled/.test(r) ? 'Scheduled a check-in: ' + (r.match(/for ([^.]+)\./) || [,'for later'])[1].replace(/^for /, '') : you(r).replace(/\.$/, '');
+    if(name === 'show_practice_options') return 'Opened the ' + ({ exam:'practice exam', calculator:'calculator', domain:'domain drill', case:'case study' }[inp.which] || '') + ' chooser';
+  }catch(e){}
+  { const one = (you(r).match(/^[^.!?]+[.!?]?/) || [''])[0].replace(/\.$/, ''); return one.length > 90 ? one.slice(0, 87) + '…' : one; }
 }
 
 function renderTutorActionIndicator(text){
@@ -22172,12 +22241,13 @@ async function sendTutorMessage(presetText){
       // would reject on the next request, breaking the conversation.
       const toolResults = await Promise.all(toolUseBlocks.map(async block => {
         const actionResult = await executeTutorTool(block.name, block.input);
-        renderTutorActionIndicator(actionResult);
+        renderTutorActionIndicator(tutorActionText(block.name, block.input, actionResult));
         return { type:'tool_result', tool_use_id: block.id, content: actionResult };
       }));
 
       tutorMessages.push({role:'user', content: toolResults});
       status.textContent = 'Tutor is wrapping up…';
+      try{ tutorGuidePending(); }catch(e){}
       const followUp = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS });
       if(tutorConversationId !== conversationIdAtRequestTime) return;
       finalTextBlocks = followUp.filter(b => b.type === 'text').map(b => b.text);
@@ -22195,6 +22265,7 @@ async function sendTutorMessage(presetText){
     if(presetText === undefined) tutorRemember(text, 'tutor');
   }catch(e){
     if(tutorConversationId !== conversationIdAtRequestTime) return;
+    try{ tutorGuideDismiss(); }catch(_){}
     tutorMessages.pop(); // don't leave an unanswered user turn in the API history
     const msg = (e && e.message) ? e.message : 'Unknown error';
     typingBubble.classList.remove('typing');
@@ -22282,7 +22353,7 @@ let tutorPointTimer = null, tutorPointEl = null;
 function clearTutorPoint(){
   if(tutorPointTimer){ clearTimeout(tutorPointTimer); tutorPointTimer = null; }
   if(tutorPointEl){ tutorPointEl.classList.remove('tutor-point'); tutorPointEl.removeAttribute('data-tutor-note'); tutorPointEl = null; }
-  document.removeEventListener('pointerdown', clearTutorPoint, true);
+  document.removeEventListener('click', clearTutorPoint, true);
   document.removeEventListener('keydown', clearTutorPoint, true);
 }
 function tutorPoint(key, note){
@@ -22299,10 +22370,12 @@ function tutorPoint(key, note){
   el.classList.add('tutor-point');
   tutorPointEl = el;
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  requestAnimationFrame(() => el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }));
-  tutorPointTimer = setTimeout(clearTutorPoint, 9000);
-  // Any tap or key press dismisses it, after the tap that triggered this finishes
-  setTimeout(() => { document.addEventListener('pointerdown', clearTutorPoint, true); document.addEventListener('keydown', clearTutorPoint, true); }, 0);
+  const tall = el.getBoundingClientRect().height > window.innerHeight * 0.55;
+  requestAnimationFrame(() => { const g = document.querySelector('.tutor-guide'); if(g && g.nextElementSibling === el){ g.style.scrollMarginTop = '14px'; g.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); return; } try{ el.style.scrollMarginTop = '84px'; }catch(e){} el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: tall ? 'start' : 'center' }); });
+  tutorPointTimer = setTimeout(clearTutorPoint, 20000);
+  // A tap or key press dismisses it (not a scroll, so you can read), after the tap that triggered this finishes
+  setTimeout(() => { document.addEventListener('click', clearTutorPoint, true); document.addEventListener('keydown', clearTutorPoint, true); }, 0);
+  try{ if(typeof tutorBusy !== 'undefined' && tutorBusy) tutorGuidePending(); }catch(e){}
   return true;
 }
 function tutorRemember(text, where){
@@ -22765,7 +22838,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.265';
+const BUILD_ID = '2026-10-19.267';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
