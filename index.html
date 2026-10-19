@@ -3451,6 +3451,12 @@
           <div class="podcast-player-secondary-row">
             <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastStopBtn" onclick="stopPodcastPlayback()" aria-label="Stop"><span></span><span>Stop</span></button>
             <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Follow along</span></button>
+            <select id="podcastSleepSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSleepChanged()" aria-label="Sleep timer">
+              <option value="0" selected>Sleep: off</option>
+              <option value="10">10 min</option>
+              <option value="20">20 min</option>
+              <option value="30">30 min</option>
+            </select>
             <select id="podcastSpeedSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSpeedChanged()" aria-label="Playback speed">
               <option value="0.75">0.75×</option>
               <option value="1" selected>1×</option>
@@ -10080,12 +10086,12 @@ function renderPodcastHero(busy){
   set('podHeroKicker', type === 'personalized' ? 'Written for you today' : 'Domain episode');
   set('podHeroTitle', type === 'personalized' ? 'Your tutor’s pick' : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
   let sub;
-  if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
+  if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (podcastSavedPos(key) ? ' · you left off partway' : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
   else sub = (aiFeaturesAvailable ? 'About ' + mins + ' min. Written fresh from your progress, then saved.' : 'Read from your flashcards. Connect an API key in Settings for a full conversation.');
   set('podHeroSub', sub);
   const b = document.getElementById('podcastHeroBtn'); if(!b) return;
   b.disabled = !!busy;
-  b.textContent = busy ? 'Writing…' : text ? ((type === 'personalized' && podcastStalePersonal(key)) ? 'Write a fresh one' : '▶  Play') : 'Write this episode';
+  b.textContent = busy ? 'Writing…' : text ? ((type === 'personalized' && podcastStalePersonal(key)) ? 'Write a fresh one' : (podcastSavedPos(key) ? '▶  Resume' : '▶  Play')) : 'Write this episode';
   document.querySelectorAll('#podcastTypeSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === type));
   document.querySelectorAll('#podcastLenSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === len));
   const opts = document.querySelector('.pod-opts'); const ds = document.getElementById('podcastDomainSelect');
@@ -10345,8 +10351,8 @@ function setPodcastPlayButtonState(state){
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
-    onDone: () => { setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
-    onChunkStart: (index) => { setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ podcastSetCaption(index); podcastUpdateProgress(index); }catch(e){} try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
+    onDone: () => { podcastClearPos(); setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
+    onChunkStart: (index) => { podcastSavePos(index); setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ podcastSetCaption(index); podcastUpdateProgress(index); }catch(e){} try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
   };
 }
 
@@ -10367,8 +10373,34 @@ function togglePodcastPlayback(){
   }
   const text = DATA.podcastEpisodes && DATA.podcastEpisodes[podcastCacheKey()];
   if(!text) return;
+  podcastPlayingKey = podcastCacheKey();
   const cb = podcastPlaybackCallbacks();
-  speakChunkedSequence(text, null, cb.onDone, cb.onChunkStart, podcastSpeedValue(), undefined, podcastMediaSessionOpts());
+  speakChunkedSequence(text, null, cb.onDone, cb.onChunkStart, podcastSpeedValue(), podcastSavedPos(podcastPlayingKey) || undefined, podcastMediaSessionOpts());
+}
+
+// Leave and come back: the episode remembers the sentence you stopped at and picks up there.
+let podcastPlayingKey = null, podcastPosWrites = 0;
+function podcastSavedPos(key){ const m = DATA.podcastMeta && DATA.podcastMeta[key]; return (m && m.pos > 1) ? m.pos : 0; }
+function podcastSavePos(index){
+  try{
+    const key = podcastPlayingKey || podcastCacheKey(); if(!DATA.podcastMeta) DATA.podcastMeta = {};
+    const m = DATA.podcastMeta[key] || (DATA.podcastMeta[key] = {}); const n = naturalSpeechState.chunks.length;
+    m.pos = (n && index >= n - 2) ? 0 : index;
+    if(++podcastPosWrites % 6 === 0) persist();
+  }catch(e){}
+}
+function podcastClearPos(){ try{ const m = DATA.podcastMeta && DATA.podcastMeta[podcastPlayingKey || podcastCacheKey()]; if(m){ m.pos = 0; persist(); } }catch(e){} }
+
+// Sleep timer: pause after a set time so a bedtime listen does not run all night.
+let podcastSleepTimer = null;
+function podcastSleepChanged(){
+  const sel = document.getElementById('podcastSleepSelect'); if(!sel) return;
+  clearTimeout(podcastSleepTimer); podcastSleepTimer = null;
+  const min = parseInt(sel.value, 10) || 0; if(!min) return;
+  podcastSleepTimer = setTimeout(() => {
+    podcastSleepTimer = null; sel.value = '0';
+    try{ if(naturalSpeechState.active && !naturalSpeechState.paused){ pauseSpeechSequence(); setPodcastPlayButtonState('Resume'); const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Sleep timer: paused. Tap play to carry on.'; } }catch(e){}
+  }, min * 60000);
 }
 
 // Tapping a sentence in the transcript. If something's already playing this
@@ -10382,6 +10414,7 @@ function podcastJumpToSentence(index){
   }
   const text = DATA.podcastEpisodes && DATA.podcastEpisodes[podcastCacheKey()];
   if(!text) return;
+  podcastPlayingKey = podcastCacheKey();
   const cb = podcastPlaybackCallbacks();
   speakChunkedSequence(text, null, cb.onDone, cb.onChunkStart, podcastSpeedValue(), index, podcastMediaSessionOpts());
 }
@@ -10403,6 +10436,7 @@ function stopPodcastPlayback(){
   if(status) status.textContent = '';
   clearPodcastHighlight();
   updatePodcastQueueUi();
+  try{ renderPodcastHero(); }catch(e){}
 }
 
 const podcastQueueState = { active: false, domainKeys: [], index: 0, episodeType: null, episodeLength: null };
@@ -22832,7 +22866,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.240';
+const BUILD_ID = '2026-10-18.241';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
