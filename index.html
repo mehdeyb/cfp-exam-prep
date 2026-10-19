@@ -8027,9 +8027,12 @@ function buildStudyPlan(minutes){
     teach: () => {
       const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
       if(!topic) return null;
-      return { id:'teach', title:`Explain it back: ${topic}`, minutes:8,
-        why:'Saying a concept in your own words shows what you only think you know. You write it first, then see which key ideas your words covered and which they missed, and you decide how it went.',
-        manual:true, run: () => { showTab('flashcards'); ebOpenForTopic(wk, weakDom); } };
+      const goal = Math.max(1, Math.min(3, planTarget('teachGoal', 3)));
+      const have = Math.min(goal, ((planDayLog().explains) || []).length);
+      return { id:'teach', title:`Explain it back: ${topic}`, minutes: Math.max(4, goal * 3),
+        why:`Saying a concept in your own words shows what you only think you know. ${goal} ideas, the shakiest first: you write each, see which key ideas your words covered, and decide how it went.`,
+        need:goal, have, unit:'ideas',
+        run: () => { showTab('flashcards'); if(!ebStartRun(ebCurate(wk, weakDom, goal - have > 0 ? goal - have : goal), { stepId:'teach', goal: goal - have > 0 ? goal - have : goal })) ebOpenForTopic(wk, weakDom); } };
     },
     // Longer days have room for a second round. These only appear once the first pass leaves time.
     weak2: () => { const t = wkAt(1); if(!t) return null;
@@ -8266,7 +8269,7 @@ function conductorPickNext(){
   return fit[0] || null;
 }
 function conductorSnapshot(){
-  return { sess: (DATA.sessions || []).length, rate: DATA.flashcardRatingCount || 0, ans: DATA.answerCounter || 0, tw: ((planDayLog().trees) || []).length };
+  return { sess: (DATA.sessions || []).length, rate: DATA.flashcardRatingCount || 0, ans: DATA.answerCounter || 0, tw: ((planDayLog().trees) || []).length, ex: ((planDayLog().explains) || []).length };
 }
 function conductorLaunchNext(){
   const c = conductorState(); if(!c) return;
@@ -8299,6 +8302,8 @@ function conductorDebrief(cur){
     const k = cur.cardsKnew, t = cur.cardsTotal;
     return { text: (t ? `You went through ${cards} cards and knew ${k} of the last ${t}. ` : `You went through ${cards} cards. `) + 'The ones you missed come back soonest.', cards };
   }
+  const ex = ((planDayLog().explains) || []).length - (snap.ex || 0);
+  if(ex > 0) return { text: `You explained ${ex} idea${ex === 1 ? '' : 's'} back in your own words. The shaky ones come back sooner.`, cards: 0 };
   const tw = ((planDayLog().trees) || []).length - (snap.tw || 0);
   if(tw > 0) return { text: `You walked ${tw} client scenario${tw === 1 ? '' : 's'}. The turns you missed come back sooner.`, cards: 0 };
   const answered = (DATA.answerCounter || 0) - (snap.ans || 0);
@@ -8610,7 +8615,7 @@ function renderTodayPlan(){
   const mins = chips.arr.map(m => `<button type="button" class="pt-min${plan.minutes === m ? ' on' : ''}${m === chips.sug ? ' sug' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m}"${m === chips.sug ? ' title="Suggested for your exam date"' : ''}>${planMinuteLabel(m)}</button>`).join('');
   const advice = studyPaceAdvice();
   const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
-  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : st.unit === 'scenarios' ? 'scenarios' : 'questions';
+  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : st.unit === 'scenarios' ? 'scenarios' : st.unit === 'ideas' ? 'ideas' : 'questions';
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
   const stepRows = plan.steps.map((st, i) => {
     const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
@@ -9440,7 +9445,7 @@ function ebOpen(spec){
   ebState = Object.assign({ phase:'write', text:'' }, spec);
   try{ const b = ebBuildCues(ebState); ebState.cues = b.cues; ebState.tier = b.tier; }catch(e){ ebState.cues = []; }
   document.getElementById('ebTitle').textContent = spec.title;
-  document.getElementById('ebKicker').textContent = spec.kind === 'question' ? 'Explain your answer' : 'Explain it back';
+  document.getElementById('ebKicker').textContent = (spec.kind === 'question' ? 'Explain your answer' : 'Explain it back') + ((spec.run && ebRun && ebRun.goal > 1) ? ' · ' + (ebRun.i + 1) + ' of ' + ebRun.goal : '');
   try{ if(!bodyIsLocked()){ lockBodyScroll(); ebLocked = true; } }catch(e){}
   o.classList.add('open'); o.scrollTop = 0;
   ebRenderWrite();
@@ -9450,6 +9455,7 @@ function ebClose(){
   const st = ebState; if(!st) return;
   try{ if(ebRec){ ebRec.stop(); } }catch(e){} ebRec = null;
   ebState = null;
+  if(!st.run) ebRun = null;
   const o = document.getElementById('ebOverlay'); if(o) o.classList.remove('open');
   try{ if(ebLocked){ unlockBodyScroll(); ebLocked = false; } }catch(e){}
   try{ if(typeof st.onClose === 'function') st.onClose(st); }catch(e){}
@@ -9465,7 +9471,7 @@ function ebRenderWrite(){
   const redo = st.result ? st.result.filter(r => !r.ok) : [];
   const nudge = redo.length ? `<div class="eb-nudge"><b>Still to add:</b> think about ${redo.map(r => ebHintWords(r.text, 1)[0]).filter(Boolean).map(w => '\u201c' + escapeHtml(w) + '\u201d').join(', ') || 'the part you left out'}.</div>` : '';
   document.getElementById('ebBody').innerHTML = ebStepper(1) +
-    `<div class="eb-write"><p class="eb-prompt">${escapeHtml(st.prompt)}</p>${nudge}${ebCuesHtml()}<div class="eb-ca"><textarea class="eb-ta" id="ebTa" rows="5" placeholder="Say it the way you would to a client. Tap a prompt above if you get stuck." aria-label="Your explanation" autocapitalize="sentences" oninput="ebOnInput()"></textarea>
+    `<div class="eb-write">${st.note ? `<p class="eb-prompt" style="color:var(--gold);font-weight:600;">${escapeHtml(st.note)}</p>` : ''}<p class="eb-prompt">${escapeHtml(st.prompt)}</p>${nudge}${ebCuesHtml()}<div class="eb-ca"><textarea class="eb-ta" id="ebTa" rows="5" placeholder="Say it the way you would to a client. Tap a prompt above if you get stuck." aria-label="Your explanation" autocapitalize="sentences" oninput="ebOnInput()"></textarea>
     <div class="eb-meta"><span id="ebCount">0 words</span><span>A full answer has ${n} key idea${n === 1 ? '' : 's'}</span></div></div>
     <div class="eb-cb"><div class="eb-row">${hasMic ? '<button type="button" class="eb-mic" id="ebMic" aria-label="Dictate" onclick="ebToggleMic()">🎤</button>' : ''}<button type="button" class="btn" id="ebCheck" onclick="ebCheck()" disabled>Check my explanation</button></div>
     <div class="eb-note" id="ebHint">Aim for two or three sentences. Nothing is graded until you choose how it went.</div></div></div>`;
@@ -9547,7 +9553,8 @@ function ebGrade(g){
       const id = st.key.slice(2); DATA.missed = DATA.missed || []; if(DATA.missed.indexOf(id) < 0) DATA.missed.push(id);
     }
     recordStudyDay(); persist();
-    try{ planMarkManualDone('teach'); }catch(e){} // counts as today's explain-it-back plan step
+    { const L = planDayLog(); L.explains = L.explains || []; L.explains.push(st.key); }
+    try{ renderTodayPlan(); }catch(e){}
   }catch(e){}
   const b = document.getElementById('ebBody');
   const msg = g === 'nailed' ? 'Nice. This one will come back later than the rest.' : g === 'partly' ? 'Good start. It stays in your rotation.' : 'That is useful to know. It will come back sooner.';
@@ -9557,7 +9564,8 @@ function ebGrade(g){
     const again = typeof st.again === 'function';
     const hint = g === 'nailed' ? '' : ((ts2.hints || []).length ? `<div class="eb-note">Next time, make sure you cover: ${ts2.hints.map(w => '“' + escapeHtml(w) + '”').join(', ')}.</div>` : '');
     b.innerHTML = ebStepper(4) + `<div class="eb-verdict"><b>Saved</b><span>${escapeHtml(msg)}</span></div><div class="eb-saved">${nn} time${nn === 1 ? '' : 's'} explained back</div>${hint}`
-      + (st.kind === 'card' && st.onClose ? `<div class="eb-row"><button type="button" class="btn" onclick="ebClose()">Continue</button></div>`
+      + (st.run && ebRun ? (() => { const more = ebRun.i + 1 < ebRun.cards.length; return `<div class="eb-row">${more ? `<button type="button" class="btn" onclick="ebRunNext()">Next idea, ${ebRun.i + 2} of ${ebRun.goal}</button>` : `<button type="button" class="btn" onclick="ebRunFinish()">Finish this part</button>`}${!more && nx ? `<button type="button" class="btn ghost" onclick="ebRun=null;ebCloseThen('${nx.id}')">Next: ${escapeHtml(String(nx.title).slice(0, 40))} →</button>` : ''}</div>${more ? '' : `<div class="eb-note">${nx ? 'Next on today\u2019s plan, about ' + (nx.minutes || 10) + ' min.' : 'That is everything on today\u2019s plan.'}</div>`}`; })()
+      : st.kind === 'card' && st.onClose ? `<div class="eb-row"><button type="button" class="btn" onclick="ebClose()">Continue</button></div>`
         : `<div class="eb-row">${nx ? `<button type="button" class="btn" onclick="ebCloseThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}${again ? `<button type="button" class="btn ${nx ? 'ghost' : ''}" onclick="ebAgain()">Explain another</button>` : ''}<button type="button" class="btn ghost" onclick="ebClose()">Done</button></div>${nx ? `<div class="eb-note">Next on today's plan, about ${nx.minutes || 10} min.</div>` : '<div class="eb-note">That is everything on today’s plan.</div>'}`);
   }
   if(st.afterGrade) try{ st.afterGrade(g, st); }catch(e){}
@@ -9599,6 +9607,43 @@ function ebFrontClick(){
   const card = fcQueue[fcIndex]; if(!card) return;
   const wasFlipped = fcFlipped;
   ebOpenCard(card, { onClose: st => { if(!wasFlipped && st.graded && !fcFlipped){ try{ flipFlashcard(); }catch(e){} } } });
+}
+// A run of explain-it-back ideas picked for you: ones you fell short on before first, then ones not tried yet, then the rest; no repeats.
+let ebRun = null; // { cards:[], i, goal, stepId, from, note }
+function ebCurate(wk, weakDom, n, pool0){
+  const key = wk ? wk.key : (weakDom ? weakDom.key : null);
+  let cards = pool0 && pool0.length ? pool0.slice() : allFlashcards().filter(c => !key || c.domain === key);
+  if(!pool0 && wk && typeof SYLLABUS_COVERAGE_PATTERNS !== 'undefined'){
+    let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[wk.key][wk.idx]; }catch(e){}
+    if(pat){ const m = cards.filter(c => pat.test((c.term + ' ' + c.def).toLowerCase())); if(m.length >= n) cards = m; }
+  }
+  if(cards.length < n) cards = cards.concat(allFlashcards().filter(c => !cards.includes(c)));
+  const ts = c => (DATA.teachStats || {})['c:' + c.id];
+  const score = c => { const t = ts(c); let sc = flashcardPriority(c); if(!t) sc += 2; else if(t.grade === 'missed') sc += 6; else if(t.grade === 'partly') sc += 4; else if(Date.now() - t.last < 3 * 86400000) sc -= 8; else sc -= 1; return sc + Math.random(); };
+  const out = []; const seenTerm = new Set();
+  cards.sort((a, b) => score(b) - score(a)).forEach(c => { if(out.length < n && !seenTerm.has(c.term)){ seenTerm.add(c.term); out.push(c); } });
+  return out;
+}
+function ebStartRun(cards, o){
+  o = o || {};
+  if(!cards || !cards.length) return false;
+  ebRun = { cards, i: 0, goal: Math.min(cards.length, o.goal || cards.length), stepId: o.stepId || null, from: o.from || 'plan', note: o.note || '' };
+  return ebOpenRunCard();
+}
+function ebOpenRunCard(){
+  const r = ebRun; if(!r) return false;
+  const c = r.cards[r.i];
+  return ebOpenCard(c, { run: true, note: r.note, again: null });
+}
+function ebRunNext(){
+  const r = ebRun; if(!r) return;
+  r.i++; ebClose(); ebRun = r;
+  setTimeout(() => { try{ if(r.i < r.cards.length) ebOpenRunCard(); else ebRun = null; }catch(e){} }, 60);
+}
+function ebRunFinish(){
+  const from = ebRun && ebRun.from; ebRun = null; ebClose();
+  if(from === 'tutor'){ try{ showTab('tutor'); }catch(e){} return; }
+  setTimeout(() => { try{ tutorStepDonePrompt('Explain it back'); }catch(e){} }, 120);
 }
 function ebOpenForTopic(wk, weakDom){
   const key = wk ? wk.key : (weakDom ? weakDom.key : null);
@@ -22300,7 +22345,7 @@ let tutorUnread = false;
 function tutorGuideDismiss(){ document.querySelectorAll('.tutor-guide').forEach(e => e.remove()); }
 // The next stop on the tutor's route. The tutor can queue one (queue_next_stop); otherwise it is the next unfinished step of today's plan.
 let tutorNextStop = null;
-const TUTOR_NEXT_TOOLS = ['start_plan_step','point_to','start_flashcards','start_quiz_session','open_formula_drill','open_tvm_calculator','open_study_guide','navigate_to_tab','open_decision_tool'];
+const TUTOR_NEXT_TOOLS = ['start_plan_step','point_to','start_flashcards','start_quiz_session','open_formula_drill','open_tvm_calculator','open_study_guide','navigate_to_tab','open_decision_tool','explain_it_back'];
 function tutorNextChoice(skipId){
   if(tutorNextStop) return tutorNextStop;
   try{
@@ -22434,6 +22479,7 @@ function tutorActionText(name, input, result){
     if(name === 'start_my_session') return 'Opened today\'s guided session';
     if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
     if(name === 'lookup_term') return 'Looked up “' + String(inp.term || '').slice(0, 40) + '” in the glossary (Reference tab)';
+    if(name === 'explain_it_back') return inp.topic ? 'Explain it back: ' + String(inp.topic).slice(0, 40) : 'Explain it back';
     if(name === 'open_decision_tool') return inp.isolate || inp.scenarios ? 'Opened a decision tool on its own' : 'Opened a decision tool (Decision tools)';
     if(name === 'play_podcast' || name === 'open_podcast') return 'Opened your podcast episode (Reference tab)';
     if(name === 'generate_practice') return /^(Error|Can't|Already)/.test(r) ? you(r).replace(/\.$/, '') : 'Writing new practice questions for you';
@@ -22780,6 +22826,19 @@ const TUTOR_TOOLS = [
     input_schema: { type: 'object', properties: { formula: { type: 'string', enum: FD_NAMES, description: 'Optional: the specific formula to practise; omit for a mix weighted toward their weakest.' } } },
   },
   {
+    name: 'explain_it_back',
+    description: "Open the student's Explain it back exercise on its own, full screen: they write a concept in their own words, the app shows which key ideas they covered and missed, and they rate how it went. Use it when the student says they know something, after you teach a concept, or as a step of today's plan. Name a topic (a term or concept such as 'GRAT' or 'duration') to pull the matching flashcards, or leave it out to use their weakest area. count is how many ideas to run in a row (1 to 4); the app counts them, shows progress, and offers the next plan step afterwards. note is one short line shown above the prompt.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        topic: { type: 'string', description: 'A flashcard term or concept to explain back, e.g. "GRAT" or "duration". Optional.' },
+        domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: 'Limit to one domain when no topic is given. Optional.' },
+        count: { type: 'integer', minimum: 1, maximum: 4, description: 'How many ideas in a row. Default 2.' },
+        note: { type: 'string', description: 'One short line (under 70 characters) shown above the prompt, e.g. "Say it as if to a new client".' },
+      },
+    },
+  },
+  {
     name: 'open_study_guide',
     description: "Open the app's personalized study guide -- a short, printable, one-or-two-page list built fresh from the student's own progress: specific unchecked subtopics in their weakest domains, flashcard terms still marked learning, the key numbers tied to those domains, questions they keep missing the same way (with the actual reasoning included), and any calculation questions they've gotten wrong (with the full worked steps included, not just a pointer back to the app). Genuinely self-contained -- built to be printed or saved and reviewed repeatedly without needing to open the app again. Use this when the student asks for a study guide, a summary to print or save, something concrete to review before exam day, or something they can go over without pulling up other resources. This is different from show_progress, which reports aggregate stats -- this names specific items to act on.",
     input_schema: { type: 'object', properties: {} },
@@ -23059,6 +23118,23 @@ async function executeTutorTool(toolName, toolInput){
       showTab('study');
       openFormulaDrill(toolInput && toolInput.formula);
       return toolInput && FD_GENS[toolInput.formula] ? `Opened formula drills on ${toolInput.formula}.` : `Opened formula drills with a mix of formulas.`;
+    }
+    if(toolName === 'explain_it_back'){
+      const n = Math.max(1, Math.min(4, Math.round(Number(toolInput && toolInput.count)) || 2));
+      const topic = String((toolInput && toolInput.topic) || '').trim().toLowerCase();
+      const dom = toolInput && toolInput.domain ? DOMAINS.find(d => d.key === toolInput.domain) : null;
+      let pool = null;
+      if(topic){
+        const words = topic.split(/\s+/).filter(w => w.length > 2);
+        const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); const wb = x => new RegExp('(^|[^a-z0-9])' + esc(x) + '([^a-z0-9]|$)', 'i'); const tre = wb(topic);
+        const sc = c => { const t = c.term.toLowerCase(), d = c.def.toLowerCase(); return (t === topic ? 10 : tre.test(t) ? 6 : 0) + (tre.test(d) ? 2 : 0) + words.filter(w => wb(w).test(t)).length * 2 + words.filter(w => wb(w).test(d)).length * 0.5; };
+        pool = allFlashcards().map(c => ({ c, s: sc(c) })).filter(x => x.s >= 2).sort((a, b) => b.s - a.s).slice(0, Math.max(n, 4)).map(x => x.c);
+        if(!pool.length) return `Error: no flashcard matches "${toolInput.topic}". Try a term from the glossary or leave topic out.`;
+      }
+      const picks = pool ? pool.slice(0, n) : ebCurate(null, dom || (() => { try{ return DOMAINS.find(d => d.key === focusDomainKey(computeStats().parts)) || null; }catch(e){ return null; } })(), n);
+      showTab('flashcards');
+      if(!ebStartRun(picks, { from:'tutor', goal:n, note:String((toolInput && toolInput.note) || '').slice(0, 70) })) return 'Error: nothing to explain back right now.';
+      return `Opened Explain it back full screen with ${picks.length} idea${picks.length === 1 ? '' : 's'}${topic ? ' on "' + toolInput.topic + '"' : ''}: ${picks.map(c => c.term).join('; ')}. The student writes each in their own words and rates it; the app checks coverage and shows progress. Do not explain these yet. Afterwards ask what felt shaky.`;
     }
     if(toolName === 'open_study_guide'){
       showTab('study');
@@ -24176,7 +24252,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.299';
+const BUILD_ID = '2026-10-19.300';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
