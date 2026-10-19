@@ -683,7 +683,15 @@
     letter-spacing:.08em;color:var(--calc-screen-text);opacity:0.7;pointer-events:none;
   }
   .tvm-ppy-annunciator{position:absolute;left:72px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--calc-screen-text);opacity:0.7;pointer-events:none;}
-  .tvm-key-ppy{min-height:42px;font-size:13px;background:#3C4046;}
+  .hk{display:flex;flex-direction:column;min-width:0;}
+  .hk-o{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--calc-orange);text-align:center;height:13px;line-height:13px;white-space:nowrap;overflow:hidden;border-radius:4px;}
+  .tvm-keypad.hp-shift .hk-o{background:var(--calc-orange);color:#1d1d1d;}
+  .hk .tvm-key-orange{background:var(--calc-orange);border-color:var(--calc-orange);color:#1d1d1d;}
+  .hk .tvm-key-orange.on{box-shadow:0 0 0 2px #fff inset;}
+  .hk .tvm-key-blue{background:#4B79B8;border-color:#4B79B8;color:#fff;}
+  .hk .tvm-key-op{background:#5A5F66;}
+  .tvm-key-small{font-size:12px;}
+  .tvm-keypad.hk-grid{gap:4px 6px;}
   .tvm-feedback{font-size:13px;line-height:1.5;min-height:1px;margin-bottom:14px;color:rgba(255,255,255,0.75);}
   .tvm-feedback.tvm-feedback-err{color:#FF8A7A;}
   .tvm-feedback.tvm-feedback-ok{color:#7FCB9E;}
@@ -692,7 +700,7 @@
   .tvm-device,.tvm-keypad,.tvm-key,.tvm-screen-wrap,.tvm-screen{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
   .tvm-keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;}
   .tvm-key{
-    min-width:0;box-sizing:border-box;min-height:52px;
+    min-width:0;box-sizing:border-box;min-height:44px;
     font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;
     border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:#4A4E54;color:#F2F0EA;
     cursor:pointer;transition:background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
@@ -2991,38 +2999,12 @@
             <div class="tvm-screen" id="tvmScreen">0</div>
             <span class="tvm-begin-annunciator" id="tvmBeginAnnunciator" style="display:none;">BEGIN</span>
             <span class="tvm-ppy-annunciator" id="tvmPpyAnnunciator">P/YR 12</span>
+            <span class="tvm-ppy-annunciator" id="tvmShiftAnnunciator" style="left:142px;display:none;">SHIFT</span>
           </div>
 
           <div class="tvm-feedback" id="tvmFeedback" role="status"></div>
 
-          <div class="tvm-keypad" id="tvmKeypad">
-          <button class="tvm-key tvm-key-var" onclick="tvmPressVarKey('n')" id="tvmKey_n">N</button>
-          <button class="tvm-key tvm-key-var" onclick="tvmPressVarKey('iy')" id="tvmKey_iy">I/YR</button>
-          <button class="tvm-key tvm-key-var" onclick="tvmPressVarKey('pv')" id="tvmKey_pv">PV</button>
-          <button class="tvm-key tvm-key-var" onclick="tvmPressVarKey('pmt')" id="tvmKey_pmt">PMT</button>
-          <button class="tvm-key tvm-key-var" onclick="tvmPressVarKey('fv')" id="tvmKey_fv">FV</button>
-
-          <button class="tvm-key" onclick="tvmPressDigit('7')">7</button>
-          <button class="tvm-key" onclick="tvmPressDigit('8')">8</button>
-          <button class="tvm-key" onclick="tvmPressDigit('9')">9</button>
-          <button class="tvm-key tvm-key-fn" onclick="tvmPressClear()">C</button>
-          <button class="tvm-key tvm-key-fn tvm-key-begend" onclick="tvmBeginEndOrClear()" id="tvmBeginEndBtn" title="Toggle BEGIN (annuity due) / END (ordinary annuity) mode">BEG/END</button>
-
-          <button class="tvm-key" onclick="tvmPressDigit('4')">4</button>
-          <button class="tvm-key" onclick="tvmPressDigit('5')">5</button>
-          <button class="tvm-key" onclick="tvmPressDigit('6')">6</button>
-          <button class="tvm-key" onclick="tvmPressSign()">+/&minus;</button>
-          <button class="tvm-key tvm-key-fn" onclick="tvmPressBackspace()" aria-label="Backspace">&#9003;</button>
-
-          <button class="tvm-key" onclick="tvmPressDigit('1')">1</button>
-          <button class="tvm-key" onclick="tvmPressDigit('2')">2</button>
-          <button class="tvm-key" onclick="tvmPressDigit('3')">3</button>
-          <button class="tvm-key" onclick="tvmPressDigit('0')">0</button>
-          <button class="tvm-key" onclick="tvmPressDecimal()">.</button>
-
-          <button class="tvm-key tvm-key-ppy" style="grid-column:span 2;" onclick="tvmPressPpy()" id="tvmPpyBtn" title="Shift + PMT. Type a number first, then press this to set payments per year">P/YR</button>
-          <button class="tvm-key tvm-key-ppy" style="grid-column:span 3;" onclick="tvmPressXppy()" id="tvmXppyBtn" title="Shift + N. Multiplies the number on screen by P/YR and stores it in N">xP/YR</button>
-          </div>
+          <div class="tvm-keypad" id="tvmKeypad"></div>
         </div>
 
         <div class="tvm-actions">
@@ -16050,15 +16032,171 @@ function tvmReqPpy(){
   return u && u.m ? u.m : 1;
 }
 function tvmPpyWord(m){ return m === 12 ? 'monthly' : m === 4 ? 'quarterly' : m === 2 ? 'semiannual' : m === 1 ? 'annual' : m + ' times a year'; }
+/* ===========================================================
+   HP 10bII+ KEYBOARD: same 5 x 8 grid as the real calculator, so the
+   position of every key you practise here is the position on exam day.
+   Orange labels sit above the keys and are reached with the orange Shift.
+=========================================================== */
+const HP_ROWS = [
+  [['n','N','xP/YR','var'],['iy','I/YR','NOM%','var'],['pv','PV','EFF%','var'],['pmt','PMT','P/YR','var'],['fv','FV','AMORT','var']],
+  [['input','INPUT','DATE','sm'],['mu','MU','ΔDYS','sm'],['cst','CST','IRR/YR','sm'],['prc','PRC','NPV','sm'],['mar','MAR','BEG/END','sm']],
+  [['k','K','SWAP','sm'],['pct','%','%CHG','sm'],['cfj','CFj','Nj','sm'],['sigp','Σ+','Σ−','sm'],['bs','⌫','RND','sm']],
+  [['sign','+/−','EEX','sm'],['rcl','RCL','STO','sm'],['tom','→M','CLΣ','sm'],['rm','RM','(','sm'],['mp','M+',')','sm']],
+  [['blue','▲','','blue'],['7','7',''],['8','8',''],['9','9',''],['div','÷','1/x','op']],
+  [['orange','▼','','orange'],['4','4',''],['5','5',''],['6','6',''],['mul','×','yˣ','op']],
+  [['c','C','C ALL','sm'],['1','1','eˣ'],['2','2','LN'],['3','3','n!'],['sub','−','√x','op']],
+  [['on','ON','OFF','sm'],['0','0',''],['dot','.','',''],['eq','=','DISP','op'],['add','+','x²','op']]
+];
+let tvmShift = false, tvmFresh = false, tvmMem = 0, tvmNomReg = null, tvmEffReg = null;
+function hpBuildKeypad(){
+  const kp = document.getElementById('tvmKeypad');
+  if(!kp || kp.dataset.built) return;
+  kp.dataset.built = '1'; kp.classList.add('hk-grid');
+  kp.innerHTML = HP_ROWS.map(row => row.map(([id, lab, org, cls]) => {
+    const c = 'tvm-key' + (cls === 'var' ? ' tvm-key-var' : cls === 'orange' ? ' tvm-key-orange' : cls === 'blue' ? ' tvm-key-blue' : cls === 'op' ? ' tvm-key-op' : cls === 'sm' ? ' tvm-key-fn tvm-key-small' : '');
+    const bid = id === 'mar' ? ' id="tvmBeginEndBtn"' : id === 'orange' ? ' id="tvmOrangeKey"' : '';
+    return `<div class="hk"><div class="hk-o">${org}</div><button class="${c}"${bid} onclick="hpKey('${id}')"${id === 'bs' ? ' aria-label="Backspace"' : ''}>${lab}</button></div>`;
+  }).join('')).join('');
+}
+function hpSay(t, ok){
+  const fb = document.getElementById('tvmFeedback'); if(!fb) return;
+  fb.textContent = t; fb.className = 'tvm-feedback' + (ok === true ? ' tvm-feedback-ok' : ok === false ? ' tvm-feedback-err' : '');
+}
+function hpShiftUi(){
+  const kp = document.getElementById('tvmKeypad'); if(kp) kp.classList.toggle('hp-shift', tvmShift);
+  const o = document.getElementById('tvmOrangeKey'); if(o) o.classList.toggle('on', tvmShift);
+  const a = document.getElementById('tvmShiftAnnunciator'); if(a) a.style.display = tvmShift ? 'inline-block' : 'none';
+}
+function hpNum(x){ return isFinite(x) ? String(parseFloat(x.toPrecision(12))) : 'Error'; }
+function hpCur(){ const v = parseFloat(tvmDisplay); return isNaN(v) ? 0 : v; }
+const HP_OPS = { add:'+', sub:'−', mul:'×', div:'÷', pow:'^' };
+let tvmExpr = [];
+function hpLast(){ return tvmExpr[tvmExpr.length - 1]; }
+function hpIsOp(t){ return typeof t === 'string' && !!HP_OPS[t]; }
+function hpExpecting(){ const l = hpLast(); return l === undefined || hpIsOp(l) || l === '('; }
+// Standard order of operations, with parentheses, as on the real calculator.
+function hpEval(tok){
+  let i = 0;
+  const atom = () => { const t = tok[i++]; if(t === '('){ const v = add(); if(tok[i] === ')') i++; return v; } return t; };
+  const pw = () => { const a = atom(); if(tok[i] === 'pow'){ i++; return Math.pow(a, pw()); } return a; };
+  const mul = () => { let a = pw(); while(tok[i] === 'mul' || tok[i] === 'div'){ const o = tok[i++], b = pw(); a = o === 'mul' ? a * b : a / b; } return a; };
+  const add = () => { let a = mul(); while(tok[i] === 'add' || tok[i] === 'sub'){ const o = tok[i++], b = mul(); a = o === 'add' ? a + b : a - b; } return a; };
+  return add();
+}
+function hpOp(op){
+  if(hpExpecting()){
+    if(hpIsOp(hpLast()) && tvmFresh){ tvmExpr[tvmExpr.length - 1] = op; return; }
+    tvmExpr.push(hpCur());
+  }
+  tvmExpr.push(op); tvmFresh = true;
+}
+function hpParen(c){
+  if(c === '('){ if(!hpExpecting()) return; tvmExpr.push('('); tvmFresh = true; return; }
+  if(!tvmExpr.includes('(')) return;
+  if(hpExpecting()) tvmExpr.push(hpCur());
+  tvmExpr.push(')'); tvmFresh = true;
+}
+function hpEquals(){
+  if(!tvmExpr.length) return;
+  if(hpExpecting()){ if(hpIsOp(hpLast()) && tvmFresh) tvmExpr.pop(); else tvmExpr.push(hpCur()); }
+  let open = tvmExpr.filter(t => t === '(').length - tvmExpr.filter(t => t === ')').length;
+  while(open-- > 0) tvmExpr.push(')');
+  let r = NaN; try{ r = hpEval(tvmExpr); }catch(e){}
+  tvmExpr = []; tvmDisplay = hpNum(r); tvmFresh = true; tvmUpdateScreen();
+}
+function hpUnary(f){
+  const v = hpCur(); let r;
+  if(f === 'inv') r = 1 / v; else if(f === 'sq') r = v * v; else if(f === 'sqrt') r = Math.sqrt(v);
+  else if(f === 'exp') r = Math.exp(v); else if(f === 'ln') r = Math.log(v);
+  else if(f === 'fact'){ r = (v >= 0 && v <= 69 && Math.floor(v) === v) ? Array.from({length:v}, (_, i) => i + 1).reduce((a, b) => a * b, 1) : NaN; }
+  tvmDisplay = hpNum(r); tvmFresh = true; tvmUpdateScreen();
+}
+function hpTyped(){ return !tvmFresh && tvmDisplay !== '0' && tvmDisplay !== ''; }
+// Shift I/YR (NOM%) and Shift PV (EFF%): nominal and effective rate at the current P/YR.
+function hpNom(){
+  if(hpTyped()){ tvmNomReg = hpCur(); tvmEffReg = null; tvmDisplay = '0'; tvmUpdateScreen(); return hpSay(`NOM% stored: ${tvmNomReg}. Set P/YR for the compounding, then press Shift EFF%.`, true); }
+  if(tvmEffReg !== null){ tvmNomReg = tvmPpy * (Math.pow(1 + tvmEffReg / 100, 1 / tvmPpy) - 1) * 100; }
+  if(tvmNomReg === null) return hpSay('Type the nominal rate first, then Shift NOM%.');
+  tvmDisplay = tvmNomReg.toFixed(2); tvmFresh = true; tvmUpdateScreen();
+}
+function hpEff(){
+  if(hpTyped()){ tvmEffReg = hpCur(); tvmNomReg = null; tvmDisplay = '0'; tvmUpdateScreen(); return hpSay(`EFF% stored: ${tvmEffReg}. Set P/YR, then press Shift NOM% to convert.`, true); }
+  if(tvmNomReg !== null){ tvmEffReg = (Math.pow(1 + tvmNomReg / 100 / tvmPpy, tvmPpy) - 1) * 100; }
+  if(tvmEffReg === null) return hpSay('Type the effective rate first, or enter NOM% and P/YR, then Shift EFF%.');
+  tvmDisplay = tvmEffReg.toFixed(2); tvmFresh = true; tvmUpdateScreen();
+}
+function hpClearAll(){
+  if(tvmCurrent && tvmCurrent.cf){ cfClearAll(); return; }
+  if(tvmSolved) return;
+  tvmRegisters = { n:null, iy:null, pv:null, pmt:null, fv:null };
+  tvmRegisterStatus = { n:null, iy:null, pv:null, pmt:null, fv:null };
+  tvmDisplay = '0'; tvmExpr = []; tvmFresh = false; tvmNomReg = null; tvmEffReg = null;
+  tvmUpdateScreen(); tvmRenderRegisters();
+  hpSay('Cleared: all five registers are empty. P/YR stays at ' + tvmPpy + '.', true);
+}
+function hpTvmKey(k){
+  if(tvmCurrent && tvmCurrent.cf){
+    if(k === 'iy') return cfPressKey('rate');
+    return hpSay('Cash-flow problems use CFj, Nj, I/YR (the rate), NPV and IRR/YR.');
+  }
+  tvmPressVarKey(k);
+}
+function hpCfKey(k){
+  if(!(tvmCurrent && tvmCurrent.cf)) return hpSay('That key is for cash-flow problems. Switch to the Cash flows tab above.');
+  cfPressKey(k);
+}
+function hpNA(name){ hpSay(name + ' is not part of this drill. The keys for the exam are all live.'); }
+function hpKey(id){
+  const sh = tvmShift;
+  if(id === 'orange'){ tvmShift = !tvmShift; hpShiftUi(); return; }
+  tvmShift = false; hpShiftUi();
+  const num = '0123456789'.includes(id) && id.length === 1;
+  if(num){
+    if(sh){ const map = { '1':['exp'], '2':['ln'], '3':['fact'] }; if(map[id]) return hpUnary(map[id][0]); return hpNA('That statistics key'); }
+    return tvmPressDigit(id);
+  }
+  const A = {
+    n:[() => hpTvmKey('n'), () => tvmPressXppy()],
+    iy:[() => hpTvmKey('iy'), hpNom],
+    pv:[() => hpTvmKey('pv'), hpEff],
+    pmt:[() => hpTvmKey('pmt'), () => tvmPressPpy()],
+    fv:[() => hpTvmKey('fv'), () => hpNA('AMORT')],
+    mar:[() => hpNA('MAR'), () => { if(tvmCurrent && tvmCurrent.cf) hpSay('BEG/END only matters on TVM problems.'); else tvmToggleBeginEnd(); }],
+    cst:[() => hpNA('CST'), () => hpCfKey('irr')],
+    prc:[() => hpNA('PRC'), () => hpCfKey('npv')],
+    cfj:[() => hpCfKey('cfj'), () => hpCfKey('nj')],
+    bs:[() => tvmPressBackspace(), () => hpNA('RND')],
+    sign:[() => tvmPressSign(), () => hpNA('EEX')],
+    c:[() => { tvmPressClear(); tvmExpr = []; tvmFresh = false; }, hpClearAll],
+    dot:[() => tvmPressDecimal(), () => hpNA('That key')],
+    div:[() => hpOp('div'), () => hpUnary('inv')],
+    mul:[() => hpOp('mul'), () => hpOp('pow')],
+    sub:[() => hpOp('sub'), () => hpUnary('sqrt')],
+    add:[() => hpOp('add'), () => hpUnary('sq')],
+    eq:[hpEquals, () => hpNA('DISP')],
+    tom:[() => { tvmMem = hpCur(); tvmFresh = true; }, () => hpNA('CLΣ')],
+    rm:[() => { tvmDisplay = hpNum(tvmMem); tvmFresh = true; tvmUpdateScreen(); }, () => hpParen('(')],
+    mp:[() => { tvmMem += hpCur(); tvmFresh = true; }, () => hpParen(')')],
+    on:[() => hpSay('The calculator is on.'), () => hpNA('OFF')],
+    blue:[() => hpNA('The blue shift'), () => hpNA('The blue shift')]
+  }[id];
+  if(!A) return hpNA(id.toUpperCase());
+  (sh ? A[1] : A[0])();
+}
 function tvmUpdatePpy(){
   const el = document.getElementById('tvmPpyAnnunciator');
-  if(el){ el.textContent = 'P/YR ' + tvmPpy; el.style.display = tvmMode === 'cf' ? 'none' : 'inline-block'; }
+  if(el){ el.textContent = 'P/YR ' + tvmPpy; el.style.display = 'inline-block'; }
   const b = document.getElementById('tvmPpyBtn'); if(b) b.textContent = 'P/YR · ' + tvmPpy;
   const x = document.getElementById('tvmXppyBtn'); if(x) x.textContent = 'xP/YR · ×' + tvmPpy;
 }
 // Shift + PMT. Type a number first to set it; with nothing typed it just shows the current setting.
 function tvmPressPpy(){
-  if(tvmSolved || !tvmCurrent || tvmCurrent.cf) return;
+  if(tvmSolved || !tvmCurrent) return;
+  if(tvmCurrent.cf){
+    const v0 = parseFloat(tvmDisplay);
+    if(tvmDisplay !== '0' && v0 >= 1 && Math.floor(v0) === v0){ tvmPpy = v0; tvmDisplay = '0'; tvmUpdatePpy(); tvmUpdateScreen(); }
+    return hpSay(tvmPpy === 1 ? '✓ P/YR 1: right for yearly cash flows.' : `P/YR is ${tvmPpy}. Cash-flow problems with yearly flows need P/YR 1: type 1, then Shift PMT.`, tvmPpy === 1);
+  }
   const fb = document.getElementById('tvmFeedback');
   const typed = tvmDisplay !== '0' && tvmDisplay !== '';
   const v = parseFloat(tvmDisplay);
@@ -17056,7 +17194,7 @@ function loadTvmProblem(){
   tvmCurrent = next;
   tvmMode = next.cf ? 'cf' : 'tvm';
   cfState = { flows: next.cf && cfLeftover ? cfLeftover.map(f => ({ amt:f.amt, n:f.n })) : [], rate:null, stale: !!(next.cf && cfLeftover), result:null };
-  tvmDisplay = '0';
+  tvmDisplay = '0'; tvmShift = false; tvmExpr = []; tvmFresh = false; hpBuildKeypad(); hpShiftUi(); tvmUpdatePpy();
   tvmRegisters = { n:null, iy:null, pv:null, pmt:null, fv:null };
   tvmRegisterStatus = { n:null, iy:null, pv:null, pmt:null, fv:null };
   tvmErrorsThisProblem = 0;
@@ -17244,12 +17382,14 @@ function tvmClearFeedback(){
 function tvmPressDigit(d){
   tvmCollapseHowto();
   if(tvmSolved) return;
+  if(tvmFresh){ tvmDisplay = '0'; tvmFresh = false; }
   tvmDisplay = (tvmDisplay === '0') ? d : tvmDisplay + d;
   tvmClearFeedback();
   tvmUpdateScreen();
 }
 function tvmPressDecimal(){
   if(tvmSolved) return;
+  if(tvmFresh){ tvmDisplay = '0'; tvmFresh = false; }
   if(!tvmDisplay.includes('.')) tvmDisplay += '.';
   tvmClearFeedback();
   tvmUpdateScreen();
@@ -17681,10 +17821,8 @@ function tvmSetMode(m){
 function tvmApplyModeUI(){
   const cf = tvmMode === 'cf';
   const set = (id, html) => { const e = document.getElementById(id); if(e) e.innerHTML = html; };
-  set('tvmKey_n', cf ? 'CFj' : 'N'); set('tvmKey_iy', cf ? 'Nj<small>⇧</small>' : 'I/YR'); set('tvmKey_pv', cf ? 'I/YR' : 'PV');
-  set('tvmKey_pmt', cf ? 'NPV<small>⇧</small>' : 'PMT'); set('tvmKey_fv', cf ? 'IRR<small>⇧</small>' : 'FV');
   const be = document.getElementById('tvmBeginEndBtn');
-  if(be){ be.textContent = cf ? 'C ALL' : 'BEG/END'; be.title = cf ? 'Clear the cash-flow worksheet (orange Shift, then C ALL on the real calculator)' : 'Toggle BEGIN (annuity due) / END (ordinary annuity) mode'; be.classList.toggle('tvm-begin-active', !cf && tvmBeginMode); }
+  if(be) be.classList.toggle('tvm-begin-active', !cf && tvmBeginMode);
   const ann = document.getElementById('tvmBeginAnnunciator'); if(ann && cf) ann.style.display = 'none';
   const ms = document.getElementById('tvmMultiStageEntryBtn'); if(ms && cf) ms.style.display = 'none';
   const h2 = document.getElementById('tvmTitle'); if(h2) h2.textContent = cf ? 'Cash-flow walkthrough' : 'TVM walkthrough';
@@ -17721,7 +17859,7 @@ function cfPressKey(key){
   const say = (t, ok) => { fb.textContent = t; fb.className = 'tvm-feedback ' + (ok ? 'tvm-feedback-ok' : 'tvm-feedback-err'); };
   const bump = cat => { tvmErrorsThisProblem++; if(cat){ if(!DATA.tvmMistakeCategories) DATA.tvmMistakeCategories = {}; DATA.tvmMistakeCategories[cat] = (DATA.tvmMistakeCategories[cat] || 0) + 1; persist(); } };
   const E = cfExpand(cfState.flows).length, entered = parseFloat(tvmDisplay);
-  const k = { n:'cfj', iy:'nj', pv:'rate', pmt:'npv', fv:'irr' }[key];
+  const k = key;
   const done = () => { tvmDisplay = '0'; tvmUpdateScreen(); tvmRenderRegisters(); };
   if(cfState.stale){ bump('cashFlowClear'); say('The worksheet still holds the last problem\'s cash flows. Press C ALL to clear it first.'); tvmRenderRegisters(); return; }
   if(k === 'cfj'){
@@ -17762,6 +17900,7 @@ function cfPressKey(key){
     return done();
   }
   // NPV / IRR
+  if(tvmPpy !== 1){ bump('monthlyConversion'); say(`P/YR is ${tvmPpy}, so yearly cash flows would be treated as ${tvmPpyWord(tvmPpy)}. Type 1, then Shift PMT (P/YR), and press ${k === 'npv' ? 'NPV' : 'IRR/YR'} again.`); return; }
   if(k !== P.solveFor.toLowerCase()){
     bump(); say(P.solveFor === 'NPV' ? 'This question asks for NPV, not IRR. Enter the rate with I/YR, then press NPV.' : 'This question asks for IRR, not NPV. Press IRR.');
     return;
@@ -24546,7 +24685,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.308';
+const BUILD_ID = '2026-10-19.309';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
