@@ -1782,6 +1782,8 @@
   .ed-item{font-size:13px;color:var(--paper);padding:9px 0;border-bottom:1px solid var(--hair);}
   .ed-item:last-child{border-bottom:none;}
   .ck-k{display:inline-block;padding:0 6px;margin:0 1px;border:1px solid var(--hair);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.55;white-space:nowrap;}
+  .ck-slip{display:block;margin-top:5px;font-size:12px;color:var(--gold);}
+  .ck-link{display:inline-block;margin:8px 0 6px;padding:6px 0;background:none;border:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .ed-item b{display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;margin-bottom:3px;font-weight:600;}
   .calc-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
   .calc-chip{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:5px 10px;border-radius:14px;background:var(--surface2);border:1px solid var(--hair);color:var(--paper);}
@@ -1826,6 +1828,7 @@
   body.focus-mode #appHeader,body.focus-mode #appTabbar,body.focus-mode #conductorPill,body.focus-mode .storage-warning{display:none !important;}
   body.focus-mode .focus-path > *:not(.focus-path):not(.focus-target):not(.focus-bar):not(.tutor-guide){display:none !important;}
   body.focus-mode .tutor-guide .tg-next{display:none;}
+  body.focus-mode.tvm-active #tvmHost{display:none !important;}
   body.focus-mode .tab-panel.active{padding-top:max(10px,env(safe-area-inset-top,0px));}
   .focus-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--card, var(--bg));-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:tgIn .28s var(--ease);}
   .focus-bar .fb-l{flex:1;min-width:0;}
@@ -2838,7 +2841,7 @@
           </button>
         </div>
         <div class="tvm-modeseg"><div class="dt-seg" id="tvmModeSeg" role="group" aria-label="Calculator practice mode"><button type="button" data-mode="tvm" class="on" aria-pressed="true" onclick="tvmSetMode('tvm')">Time value</button><button type="button" data-mode="cf" aria-pressed="false" onclick="tvmSetMode('cf')">Cash flows</button></div></div>
-        <details class="tvm-howto" id="tvmHowto"><summary onclick="this.parentNode.dataset.user=1">How this works</summary><p class="hint" id="tvmHowtoText" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p></details>
+        <details class="tvm-howto" id="tvmHowto"><summary onclick="this.parentNode.dataset.user=1">How this works</summary><p class="hint" id="tvmHowtoText" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p><button type="button" class="ck-link" onclick="openCalcKeys()">Your calculator keystrokes</button></details>
         <div class="tvm-status" id="tvmStatus" role="status"></div>
         <div class="tvm-scenario" id="tvmScenario"></div>
         <div class="tvm-level-badge" id="tvmLevelBadge"></div>
@@ -3151,9 +3154,9 @@
     </div>
     <div class="card" id="calcKeysCard">
       <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
-      <div class="ed-item"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then check P/YR: <span class="ck-k">1</span> Shift <span class="ck-k">PMT</span> (P/YR). The factory setting is 12. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
-      <div class="ed-item"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
-      <div class="ed-item"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
+      <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then check P/YR: <span class="ck-k">1</span> Shift <span class="ck-k">PMT</span> (P/YR). The factory setting is 12. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
+      <div class="ed-item" data-ck="tvm"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
+      <div class="ed-item" data-ck="cf"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
       <div class="ed-item"><b>Nominal to effective rate</b>10 Shift <span class="ck-k">I/YR</span> (NOM%), 12 Shift <span class="ck-k">PMT</span> (P/YR), Shift <span class="ck-k">PV</span> (EFF%) gives 10.47. Reset P/YR to 1 afterwards.</div>
       <div class="ed-item"><b>Loan balance and interest</b>Solve the payment first, with P/YR matching the payment frequency. Then <span class="ck-k">1</span> <span class="ck-k">INPUT</span> <span class="ck-k">12</span> Shift <span class="ck-k">FV</span> (AMORT) shows payments 1 to 12. Press <span class="ck-k">=</span> to step through principal, interest, then balance.</div>
       <div class="ed-item"><b>Powers and reciprocals</b>Shift <span class="ck-k">×</span> is yˣ, Shift <span class="ck-k">÷</span> is 1/x, Shift <span class="ck-k">−</span> is √x, Shift <span class="ck-k">1</span> is eˣ, Shift <span class="ck-k">2</span> is LN.</div>
@@ -3373,6 +3376,7 @@
         <span class="calc-chip">Sharp EL-733</span><span class="calc-chip">Sharp EL-733A</span><span class="calc-chip">Sharp EL-738</span>
       </div>
       <p class="hint" style="margin-top:14px;">You clear your calculator's memory yourself before each section (staff inspect it first, but don't clear it for you), then reset your settings. On the HP 10bII+ that means checking P/YR (the default is 12) and END mode. Cover any printed formulas or notes on the calculator with solid tape.</p>
+      <button type="button" class="ck-link" onclick="openCalcKeys()">Review your calculator keystrokes</button>
     </div>
     <div class="card" id="edChecklistCard">
       <div class="card-head"><h2>Exam-week checklist</h2><div class="note" id="edChecklistNote"></div></div>
@@ -3720,6 +3724,7 @@ function showTab(name, opts){
       if(!fcQueue.length || window._fcPlanSig !== sig || (Date.now() - (window._fcBuiltAt || 0)) > 20*60000){ rebuildFlashcardQueue(); } }
     renderExamDayCallout();
     updateTutorContextNote();
+    if(name === 'reference') renderCalcKeysCard();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
       DATA.lastTab = name;
@@ -22678,6 +22683,8 @@ function focusEnter(o){
   const els = (o.els && o.els.length) ? o.els.filter(Boolean) : (el ? [el] : []);
   els.forEach(t => { t.classList.add('focus-target'); let a = t.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } });
   if(el) _focus.el = el;
+  _focus.relock = bodyIsLocked() && document.body.classList.contains('tvm-active');
+  if(_focus.relock) unlockBodyScroll();
   document.body.classList.add('focus-mode');
   const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
   const fromChat = _focus.origin === 'tutor';
@@ -22714,6 +22721,7 @@ function focusExit(o){
   _focus = null;
   document.removeEventListener('keydown', focusKey, true);
   document.body.classList.remove('focus-mode');
+  if(f.relock && document.body.classList.contains('tvm-active') && !bodyIsLocked()) lockBodyScroll();
   document.querySelectorAll('.focus-path,.focus-target').forEach(n => n.classList.remove('focus-path', 'focus-target'));
   if(f.bar && f.bar.parentNode) f.bar.remove();
   try{ clearTutorPoint(); }catch(e){}
@@ -22727,12 +22735,29 @@ function clearTutorPoint(){
   document.removeEventListener('click', clearTutorPoint, true);
   document.removeEventListener('keydown', clearTutorPoint, true);
 }
+const CK_SLIPS = { setup:['monthlyConversion','beginEndMismatch'], tvm:['signConvention','decimalForm','negativeN'], cf:['cashFlowOutlay','cashFlowTiming','cashFlowRepeat','cashFlowClear'] };
+const CK_SLIP_WORDS = { monthlyConversion:'converting to monthly', beginEndMismatch:'BEGIN or END mode', signConvention:'signs', decimalForm:'typing rates as decimals', negativeN:'a negative N', cashFlowOutlay:'the cost at time 0', cashFlowTiming:'which year a flow lands in', cashFlowRepeat:'counting a repeated flow', cashFlowClear:'clearing between problems' };
+// The keystroke card points at the slips this student actually makes on the calculator.
+function renderCalcKeysCard(){
+  const card = document.getElementById('calcKeysCard'); if(!card) return;
+  card.querySelectorAll('.ck-slip').forEach(e => e.remove());
+  const m = (DATA && DATA.tvmMistakeCategories) || {};
+  Object.keys(CK_SLIPS).forEach(k => {
+    const row = card.querySelector('[data-ck="' + k + '"]'); if(!row) return;
+    const top = CK_SLIPS[k].filter(c => (m[c] || 0) >= 2).sort((a, b) => m[b] - m[a])[0];
+    if(!top) return;
+    const sp = document.createElement('span'); sp.className = 'ck-slip'; sp.textContent = 'You have slipped on ' + CK_SLIP_WORDS[top] + ' ' + m[top] + ' times.';
+    row.appendChild(sp);
+  });
+}
+function openCalcKeys(){ tutorPoint('ref_calc_keys', null, true); }
 function tutorPoint(key, note, isolate){
   if(key === 'exam_date'){ openSettingsToExamDate(); return true; }
   const t = TUTOR_POINT_TARGETS[key];
   if(!t) return false;
   clearTutorPoint();
   showTab(t.tab);
+  if(key === 'ref_calc_keys') renderCalcKeysCard();
   let el = document.querySelector(t.sel);
   if(!el || el.style.display === 'none') el = document.querySelector('#tab-' + t.tab + ' .card') || null;
   if(!el) return false;
@@ -23210,7 +23235,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.274';
+const BUILD_ID = '2026-10-19.275';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
