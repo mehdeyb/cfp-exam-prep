@@ -62,10 +62,10 @@
   }
   html[data-boot-theme="light"], html[data-boot-theme="light"] body{background-color:#F6F4EE;}
   html.booting *, html.booting *::before, html.booting *::after{transition:none !important;}
-  /* A returning student never sees the empty starting values: the numbers appear once they are real, with a soft fade. */
-  html.booting #scoreRow, html.booting .stat, html.booting .exam-countdown-card, html.booting #nextStepCard, html.booting #todayPlanCard{opacity:0;}
-  html.booted #scoreRow, html.booted .stat, html.booted .exam-countdown-card, html.booted #nextStepCard, html.booted #todayPlanCard{animation:bootFade .4s cubic-bezier(.22,1,.36,1);}
-  @media (prefers-reduced-motion:reduce){html.booted #scoreRow, html.booted .stat, html.booted .exam-countdown-card, html.booted #nextStepCard, html.booted #todayPlanCard{animation:none;}}
+  /* While the app is still filling in, the page shows only its title; the content fades in together once it is real, so nothing appears half built. */
+  html.booting .tab-panel{opacity:0;}
+  html.booted .tab-panel.active{animation:bootFade .45s cubic-bezier(.22,1,.36,1);}
+  @media (prefers-reduced-motion:reduce){html.booted .tab-panel.active{animation:none;}}
   html[data-boot-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:scale(.5) rotate(90deg);}
   html[data-boot-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:scale(1) rotate(0deg);}
   @keyframes bootFade{from{opacity:0;}to{opacity:1;}}
@@ -22999,7 +22999,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.257';
+const BUILD_ID = '2026-10-18.258';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
