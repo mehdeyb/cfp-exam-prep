@@ -598,6 +598,8 @@
   .qcl[open] summary::after{content:' ▴';}
   .qcl-def{font-size:14px;line-height:1.45;margin-top:6px;}
   .qcl-note{font-size:12px;color:var(--muted);margin-top:6px;}
+  .formula-row .fshow:empty{display:none;}
+  .formula-row .fshow .tutor-chart-row{margin:8px 0 2px;}
   .formula-row .fpractice{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted);}
   .formula-row .fpractice button{font-size:12px;padding:4px 12px;position:relative;}
   .formula-row .fpractice button::after{content:'';position:absolute;inset:-10px -6px;}
@@ -9915,6 +9917,7 @@ function podcastOpenTutorPick(){
     podcastDomainChanged();
   }catch(e){}
   openPodcastFromStudy();
+  try{ const card = document.getElementById('podcastTypeSelect').closest('.card'); if(card) focusEnter({ tab:'reference', el:card, title:'Your briefing', stepId:'listen' }); }catch(e){}
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
     if(!have || podcastStalePersonal(key)){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
@@ -10769,9 +10772,9 @@ function renderReference(){
     const acc = FD_GENS[f.name] ? fdAccuracy(f.name) : null;
     const accTxt = acc === null ? (FD_GENS[f.name] ? 'not practised yet' : '') : `${Math.round(acc*100)}% right over ${fdStats(f.name).attempts}`;
     const practice = FD_GENS[f.name] ? `<div class="fpractice"><button class="btn ghost" onclick="openFormulaDrill(${JSON.stringify(f.name).replace(/"/g,'&quot;')})" aria-label="Practise ${f.name.replace(/"/g,'')}">Practise this</button><span>${accTxt}</span></div>` : '';
-    let keysHtml = '';
+    const show = FORMULA_CHARTS[f.name] ? `<div class="fpractice"><button class="btn ghost" aria-expanded="false" onclick="formulaToggleChart(this, ${JSON.stringify(f.name).replace(/"/g,'&quot;')})">See it</button><span>${FORMULA_CHARTS[f.name].hint}</span></div><div class="fshow"></div>` : '';
     // The HP 10bII+ key sequence lives in the drill ("Practise this"), shown with fresh numbers, so the list stays flat.
-    return `<div class="formula-row"><div class="fname">${flag}${f.name}</div><div class="fexpr">${f.formula}</div><div class="fnote">${f.note}</div>${keysHtml}${practice}</div>`;
+    return `<div class="formula-row"><div class="fname">${flag}${f.name}</div><div class="fexpr">${f.formula}</div><div class="fnote">${f.note}</div>${show}${practice}</div>`;
   }).join('');
 
   const syl = document.getElementById('syllabusList');
@@ -22103,13 +22106,12 @@ function tcSvg(m){
   data = { kind: m.type, xs: m.categories.map((_, i) => X(i)), rows: m.categories.map((c, i) => [(m.xFmt ? (m.xLabel || '') + ' ' + m.xFmt(c) : c) + ': ' + S.map(s => (S.length > 1 ? s.name + ' ' : '') + tcFmt(s.values[i], m.yFmt)).join(' · ')]) };
   return { svg: out, data };
 }
-function renderTutorChart(a){
+function tcBuild(a){
   a = a || {};
   const kind = String(a.kind || '');
   const m = ['growth','amortization','bond_price'].includes(kind) ? tcCompute(kind, a) : tcCustom(a);
   if(m.error) return { error: m.error };
   const { svg, data } = tcSvg(m);
-  const thread = document.getElementById('tutorThread'); if(!thread) return { error: 'The chat is not on screen.' };
   const row = document.createElement('div'); row.className = 'tutor-chart-row';
   const title = String(a.title || '').slice(0, 80), cap = String(a.takeaway || '').slice(0, 160);
   const legend = ((m.type === 'bar' && m.series && m.series.length > 1) || (m.type === 'line' && m.series && m.series.length > 3)) ? '<div class="tc-legend">' + m.series.map((s, k) => `<span><i style="background:${TC_COLORS[k % 4]}"></i>${tcEsc(s.name)}</span>`).join('') + '</div>' : '';
@@ -22121,10 +22123,30 @@ function renderTutorChart(a){
     svgEl.addEventListener('pointerdown', at); svgEl.addEventListener('pointermove', ev => { if(ev.pressure > 0 || ev.pointerType === 'mouse') at(ev); });
     read.textContent = 'Tap the chart to read a value.';
   }
+  return { ok: true, row, title, extra: m.pmt ? 'The monthly payment is $' + m.pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '.' : (m.atCoupon ? 'At a yield equal to the coupon the price is ' + tcFmt(m.atCoupon, 'dollars') + '.' : '') };
+}
+const FORMULA_CHARTS = {
+  'Future Value': { hint:'4% vs 7% over 30 years', args:{ kind:'growth', principal:10000, rates:[4,7], years:30, title:'$10,000 growing at 4% vs 7%', takeaway:'The extra 3% more than doubles the end result: time multiplies the rate.' } },
+  'Rule of 72': { hint:'doubling at 6% and 9%', args:{ kind:'growth', principal:10000, rates:[6,9], years:24, title:'$10,000 doubling at 6% vs 9%', takeaway:'At 6% it doubles near year 12; at 9% near year 8.' } },
+  'Modified Duration': { hint:'price vs yield, 5% bond', args:{ kind:'bond_price', coupon_rate:5, years:10, title:'10-year 5% bond: price vs yield', takeaway:'Price falls as yield rises, and the curve is convex: duration measures how steeply it falls.' } },
+  'Bond Price Change (Duration)': { hint:'price vs yield, 5% bond', args:{ kind:'bond_price', coupon_rate:5, years:10, title:'10-year 5% bond: price vs yield', takeaway:'A yield change moves price along the curve; duration estimates the straight-line part.' } }
+};
+function formulaToggleChart(btn, name){
+  const row = btn.closest('.formula-row'), box = row && row.querySelector('.fshow'), cfg = FORMULA_CHARTS[name];
+  if(!box || !cfg) return;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  if(open){ box.innerHTML = ''; btn.setAttribute('aria-expanded','false'); btn.textContent = 'See it'; return; }
+  const r = tcBuild(cfg.args); if(r.error) return;
+  box.innerHTML = ''; box.appendChild(r.row);
+  btn.setAttribute('aria-expanded','true'); btn.textContent = 'Hide';
+}
+function renderTutorChart(a){
+  const thread = document.getElementById('tutorThread'); if(!thread) return { error: 'The chat is not on screen.' };
+  const r = tcBuild(a); if(r.error) return r;
   const typingRow = thread.querySelector('.tutor-msg .typing');
-  if(typingRow && typingRow.closest('.tutor-msg')) thread.insertBefore(row, typingRow.closest('.tutor-msg')); else thread.appendChild(row);
+  if(typingRow && typingRow.closest('.tutor-msg')) thread.insertBefore(r.row, typingRow.closest('.tutor-msg')); else thread.appendChild(r.row);
   thread.scrollTop = thread.scrollHeight;
-  return { ok: true, title, extra: m.pmt ? 'The monthly payment is $' + m.pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '.' : (m.atCoupon ? 'At a yield equal to the coupon the price is ' + tcFmt(m.atCoupon, 'dollars') + '.' : '') };
+  const { row, ...rest } = r; return rest;
 }
 function renderTutorActionIndicator(text){
   if(!text) return null;
@@ -23626,7 +23648,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.281';
+const BUILD_ID = '2026-10-19.282';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
