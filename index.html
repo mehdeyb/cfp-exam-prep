@@ -1840,6 +1840,15 @@
   .focus-bar button.fb-next{border-color:var(--gold);color:var(--gold);}
   @media (prefers-reduced-motion:reduce){.focus-bar{animation:none}}
   @media (prefers-reduced-motion:reduce){.tutor-guide{animation:none}}
+  .tutor-chart-row{margin:6px 0 10px;max-width:100%;}
+  .tutor-chart{margin:0;padding:12px 12px 10px;border:1px solid var(--hair);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-sm);animation:tgIn .28s var(--ease);}
+  .tutor-chart .tc-title{font-size:13px;font-weight:650;line-height:1.3;color:var(--paper);margin:0 2px 6px;}
+  .tutor-chart svg{display:block;width:100%;height:auto;touch-action:pan-y;}
+  .tutor-chart .tc-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 2px 4px;font-size:11px;color:var(--muted);}
+  .tutor-chart .tc-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+  .tutor-chart .tc-read{min-height:16px;margin:2px 2px 0;font:500 10.5px 'IBM Plex Mono',monospace;color:var(--muted);}
+  .tutor-chart .tc-take{margin:4px 2px 0;font-size:12.5px;line-height:1.4;color:var(--paper);}
+  @media (prefers-reduced-motion:reduce){.tutor-chart{animation:none}}
   .tutor-action-indicator{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0;font-size:11.5px;color:var(--teal);font-weight:600;}
   .tutor-msg-bot .tutor-bubble.tutor-bubble-err{background:var(--incorrect-tint);border-color:var(--incorrect);color:var(--paper);}
   .tutor-bubble.typing{color:var(--muted);}
@@ -21684,7 +21693,7 @@ Guidelines:
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
-- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
+- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); show_chart draws one small chart in the chat when a picture teaches faster than words (compounding, loan principal versus interest, bond price against yield, a cash-flow timeline, risk against return, a few numbers compared), so use it sparingly, once per idea, never as decoration, and always say in a line or two what to notice; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -21898,6 +21907,7 @@ function tutorActionText(name, input, result){
         case:'Case study', checkpoint:'Timed checkpoint', fullexam:'Full exam simulation', weakspot:'Weak-spot drill' + (inp.domain ? ': ' + domName(inp.domain) : '') }[inp.mode];
       if(label) return 'Started: ' + label + (n >= 5 && ['adaptive','drill','review'].includes(inp.mode) ? ` (${n} questions)` : '');
     }
+    if(name === 'show_chart') return ''; // the chart itself is the confirmation
     if(name === 'find_flashcards') return /^No flashcards/.test(r) ? 'Looked through your flashcards' : 'Chose cards from your flashcards';
     if(name === 'start_flashcards'){
       if(/^Started/.test(r)) return you(r).replace(/\.$/, '');
@@ -21923,6 +21933,171 @@ function tutorActionText(name, input, result){
   { const one = (you(r).match(/^[^.!?]+[.!?]?/) || [''])[0].replace(/\.$/, ''); return one.length > 90 ? one.slice(0, 87) + '…' : one; }
 }
 
+/* ---------- Tutor charts ----------
+   The tutor can draw one small, quiet chart in the chat when a picture teaches faster than words: compounding, a loan's
+   principal/interest split, a bond's price against yield, a cash-flow timeline, risk against return, or a few numbers side by side.
+   The app does the arithmetic for growth, amortization and bond price, so those cannot be wrong; any other numbers are the tutor's.
+   Everything is drawn here as inline SVG in the app's own colours, with no libraries, so it works offline and in both themes. */
+const TC_COLORS = ['var(--gold)', 'var(--teal)', 'var(--incorrect)', 'var(--muted)'];
+function tcNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
+function tcFmt(v, f){
+  const a = Math.abs(v), sg = v < 0 ? '-' : '';
+  if(f === 'percent') return sg + (a >= 100 ? Math.round(a) : Math.round(a * 10) / 10) + '%';
+  const body = a >= 1e6 ? (Math.round(a / 1e5) / 10) + 'M' : a >= 1e4 ? Math.round(a / 1e3) + 'K' : a >= 1e3 ? (Math.round(a / 100) / 10) + 'K' : (a >= 100 ? Math.round(a) : Math.round(a * 100) / 100);
+  return sg + (f === 'dollars' ? '$' : '') + body;
+}
+function tcNiceTicks(lo, hi, n){
+  if(!(hi > lo)){ hi = lo + 1; }
+  const raw = (hi - lo) / (n || 4), mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+  const step = (r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10) * mag;
+  const a = Math.floor(lo / step + 1e-9) * step, b = Math.ceil(hi / step - 1e-9) * step, t = [];
+  for(let v = a; v <= b + step / 2; v += step) t.push(Math.round(v / step * 1e6) / 1e6 * step);
+  return t;
+}
+function tcEsc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c])); }
+// Exact figures for the three charts the app computes itself.
+function tcCompute(kind, a){
+  a = a || {};
+  if(kind === 'growth'){
+    const P = tcNum(a.principal) || 0, C = tcNum(a.annual_contribution) || 0, Y = Math.max(1, Math.min(60, Math.round(tcNum(a.years) || 20)));
+    let rates = (Array.isArray(a.rates) ? a.rates : [a.rate]).map(tcNum).filter(x => x !== null && x > -50 && x < 60).slice(0, 3);
+    if(!rates.length) return { error: 'growth needs at least one rate, such as rates [4, 7].' };
+    if(!(P > 0 || C > 0)) return { error: 'growth needs a starting amount or a yearly contribution.' };
+    const cats = []; for(let y = 0; y <= Y; y++) cats.push(y);
+    const series = rates.map(r => { const v = []; let bal = P; v.push(Math.round(bal)); for(let y = 1; y <= Y; y++){ bal = bal * (1 + r / 100) + C; v.push(Math.round(bal)); } return { name: r + '%', values: v }; });
+    return { type:'line', categories: cats, series, yFmt:'dollars', xLabel:'Years', yLabel:'Balance', xFmt: y => y };
+  }
+  if(kind === 'amortization'){
+    const L = tcNum(a.loan), r = tcNum(a.rate), Y = Math.max(1, Math.min(40, Math.round(tcNum(a.years) || 30)));
+    if(!(L > 0) || r === null || r < 0 || r > 40) return { error: 'amortization needs a loan amount and an annual rate.' };
+    const n = Y * 12, i = r / 1200, pmt = i === 0 ? L / n : L * i / (1 - Math.pow(1 + i, -n));
+    let bal = L; const prin = [], int = [];
+    for(let y = 0; y < Y; y++){ let p = 0, it = 0; for(let m = 0; m < 12; m++){ const ii = bal * i, pp = pmt - ii; it += ii; p += pp; bal -= pp; } prin.push(Math.round(p)); int.push(Math.round(it)); }
+    const cats = prin.map((_, k) => k + 1);
+    return { type:'bar', stacked:true, categories: cats, series:[{ name:'Principal', values: prin }, { name:'Interest', values: int }], yFmt:'dollars', xLabel:'Year of the loan', yLabel:'Paid in the year', pmt: Math.round(pmt * 100) / 100 };
+  }
+  if(kind === 'bond_price'){
+    const F = tcNum(a.face) || 1000, c = tcNum(a.coupon_rate), Y = Math.max(1, Math.min(40, Math.round(tcNum(a.years) || 10)));
+    if(c === null || c < 0 || c > 30) return { error: 'bond_price needs a coupon_rate, such as 5.' };
+    const lo = Math.max(0.5, tcNum(a.ytm_min) || Math.max(0.5, c - 4)), hi = Math.max(lo + 1, tcNum(a.ytm_max) || c + 4);
+    const price = y => { const i = y / 200, n = Y * 2, cp = F * c / 200; return i === 0 ? cp * n + F : cp * (1 - Math.pow(1 + i, -n)) / i + F * Math.pow(1 + i, -n); };
+    const pts = []; for(let k = 0; k <= 16; k++){ const y = lo + (hi - lo) * k / 16; pts.push({ x: Math.round(y * 100) / 100, y: Math.round(price(y) * 100) / 100 }); }
+    return { type:'curve', points: pts, par: F, yFmt:'dollars', xFmt:'percent', xLabel:'Yield to maturity', yLabel:'Price', couponMark: c, atCoupon: Math.round(price(c) * 100) / 100 };
+  }
+  return { error: 'unknown chart kind' };
+}
+function tcCustom(a){
+  const kind = a.kind;
+  const yFmt = ['dollars','percent','number'].includes(a.y_format) ? a.y_format : 'number';
+  if(kind === 'cashflow'){
+    const flows = (Array.isArray(a.flows) ? a.flows : []).map(f => ({ t: Math.round(tcNum(f && f.t)), amount: tcNum(f && f.amount) })).filter(f => f.amount !== null && Number.isFinite(f.t) && f.t >= 0 && f.t <= 40 && f.amount !== 0).slice(0, 24);
+    if(flows.length < 2) return { error: 'cashflow needs at least two flows, each with a period t and an amount.' };
+    return { type:'cashflow', flows, unit: String(a.x_label || 'Year').slice(0, 14) };
+  }
+  if(kind === 'scatter'){
+    const pts = (Array.isArray(a.points) ? a.points : []).map(p => ({ label: String((p && p.label) || '').slice(0, 18), x: tcNum(p && p.x), y: tcNum(p && p.y) })).filter(p => p.x !== null && p.y !== null).slice(0, 12);
+    if(pts.length < 2) return { error: 'scatter needs at least two points with x and y.' };
+    const ln = a.line && ['x1','y1','x2','y2'].every(k => tcNum(a.line[k]) !== null) ? { x1:+a.line.x1, y1:+a.line.y1, x2:+a.line.x2, y2:+a.line.y2, label: String(a.line.label || '').slice(0, 18) } : null;
+    return { type:'scatter', points: pts, line: ln, xFmt: ['dollars','percent','number'].includes(a.x_format) ? a.x_format : yFmt, yFmt, xLabel: String(a.x_label || '').slice(0, 30), yLabel: String(a.y_label || '').slice(0, 30) };
+  }
+  if(kind === 'line' || kind === 'bar'){
+    const cats = (Array.isArray(a.categories) ? a.categories : []).map(c => String(c).slice(0, 14)).slice(0, 24);
+    const series = (Array.isArray(a.series) ? a.series : []).slice(0, 4).map(s => ({ name: String((s && s.name) || '').slice(0, 20), values: (Array.isArray(s && s.values) ? s.values : []).map(tcNum) })).filter(s => s.values.length);
+    if(cats.length < 2 || !series.length) return { error: kind + ' needs categories (at least 2) and series with values.' };
+    for(const s of series){ if(s.values.length !== cats.length || s.values.some(v => v === null)) return { error: 'every series needs exactly one number per category (' + cats.length + ').' }; }
+    return { type: kind, categories: cats, series, stacked: kind === 'bar' && !!a.stacked && series.length > 1, yFmt, xLabel: String(a.x_label || '').slice(0, 30), yLabel: String(a.y_label || '').slice(0, 30) };
+  }
+  return { error: 'kind must be one of growth, amortization, bond_price, line, bar, scatter, cashflow.' };
+}
+function tcSvg(m){
+  const W = 340, H = 214, L = 46, B = 34, T = 24;
+  const R = (m.type === 'line' && m.series.length <= 3) ? 64 : 14, pw = W - L - R, ph = H - T - B;
+  const ax = 'style="stroke:var(--hair-strong);stroke-width:1"', gr = 'style="stroke:var(--hair);stroke-width:1"';
+  const tx = (x, y, t, o) => `<text x="${x}" y="${y}" text-anchor="${(o && o.a) || 'middle'}" style="fill:${(o && o.c) || 'var(--muted)'};font:${(o && o.f) || '500 10px IBM Plex Mono,monospace'}">${tcEsc(t)}</text>`;
+  let out = '', data = null;
+  const yAxis = (lo, hi, fmt) => { const ticks = tcNiceTicks(lo, hi, 4); const a0 = ticks[0], a1 = ticks[ticks.length - 1]; const Y = v => T + ph - (v - a0) / (a1 - a0) * ph;
+    ticks.forEach(v => { out += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" ${v === 0 ? ax : gr}/>` + tx(L - 6, Y(v) + 3.5, tcFmt(v, fmt), { a:'end' }); }); return { Y, a0, a1 }; };
+  if(m.type === 'cashflow'){
+    const fl = m.flows, maxT = Math.max(...fl.map(f => f.t)), maxA = Math.max(...fl.map(f => Math.abs(f.amount)));
+    const X = t => 24 + (maxT === 0 ? 0 : t / maxT) * (W - 48), mid = T + ph / 2 + 4, hmax = ph / 2 - 24;
+    out += `<line x1="14" x2="${W - 10}" y1="${mid}" y2="${mid}" ${ax}/>`;
+    const every = maxT > 12 ? Math.ceil(maxT / 10) : 1;
+    for(let t = 0; t <= maxT; t += every) out += tx(X(t), H - 20, t);
+    out += tx(W / 2, H - 6, m.unit, { f:'500 9.5px Inter,sans-serif' });
+    fl.forEach(f => { const h = Math.max(14, Math.abs(f.amount) / maxA * hmax), up = f.amount > 0, x = X(f.t), y2 = up ? mid - h : mid + h, col = up ? 'var(--teal)' : 'var(--incorrect)';
+      out += `<line x1="${x}" x2="${x}" y1="${mid}" y2="${y2}" style="stroke:${col};stroke-width:2.4;stroke-linecap:round"/><path d="M${x - 4.5} ${y2 + (up ? 7 : -7)} L${x} ${y2} L${x + 4.5} ${y2 + (up ? 7 : -7)}" style="fill:none;stroke:${col};stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"/>`
+        + tx(x, up ? y2 - 5 : y2 + 12, tcFmt(f.amount, 'dollars'), { c: col, f: '600 10px IBM Plex Mono,monospace' }); });
+    return { svg: out, data: null };
+  }
+  if(m.type === 'curve'){
+    const ys = m.points.map(p => p.y), ya = yAxis(Math.min(...ys, m.par), Math.max(...ys, m.par), 'dollars');
+    const x0 = m.points[0].x, x1 = m.points[m.points.length - 1].x, X = x => L + (x - x0) / (x1 - x0) * pw;
+    out += `<line x1="${L}" x2="${W - R}" y1="${ya.Y(m.par)}" y2="${ya.Y(m.par)}" style="stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3"/>` + tx(W - R, ya.Y(m.par) - 4, 'par ' + tcFmt(m.par, 'dollars'), { a:'end', f:'500 9.5px Inter,sans-serif' });
+    out += `<path d="${m.points.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ' ' + ya.Y(p.y).toFixed(1)).join(' ')}" style="fill:none;stroke:var(--gold);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"/>`;
+    if(m.couponMark >= x0 && m.couponMark <= x1){ const cx = X(m.couponMark), cy = ya.Y(m.atCoupon); out += `<circle cx="${cx}" cy="${cy}" r="4" style="fill:var(--gold);stroke:var(--surface);stroke-width:1.5"/>` + tx(cx + 7, cy - 7, 'yield = coupon', { a:'start', f:'500 9.5px Inter,sans-serif', c:'var(--paper)' }); }
+    for(let k = 0; k <= 4; k++){ const xv = x0 + (x1 - x0) * k / 4; out += tx(X(xv), H - 20, tcFmt(xv, 'percent')); }
+    out += tx(L + pw / 2, H - 6, m.xLabel, { f:'500 9.5px Inter,sans-serif' });
+    data = { kind:'curve', xs: m.points.map(p => X(p.x)), rows: m.points.map(p => [tcFmt(p.x, 'percent') + ' yield: ' + tcFmt(p.y, 'dollars')]) };
+    return { svg: out, data };
+  }
+  if(m.type === 'scatter'){
+    const xs = m.points.map(p => p.x).concat(m.line ? [m.line.x1, m.line.x2] : []), ysv = m.points.map(p => p.y).concat(m.line ? [m.line.y1, m.line.y2] : []);
+    const xa = tcNiceTicks(Math.min(0, ...xs), Math.max(...xs), 4), xl = xa[0], xh = xa[xa.length - 1], ya = yAxis(Math.min(0, ...ysv), Math.max(...ysv), m.yFmt);
+    const X = x => L + (x - xl) / (xh - xl) * pw;
+    xa.forEach(v => { out += tx(X(v), H - 20, tcFmt(v, m.xFmt)); });
+    if(m.line) out += `<line x1="${X(m.line.x1)}" y1="${ya.Y(m.line.y1)}" x2="${X(m.line.x2)}" y2="${ya.Y(m.line.y2)}" style="stroke:var(--muted);stroke-width:1.6;stroke-dasharray:4 3"/>` + (m.line.label ? tx(X(m.line.x2) - 2, ya.Y(m.line.y2) - 6, m.line.label, { a:'end', f:'500 9.5px Inter,sans-serif' }) : '');
+    m.points.forEach((p, i) => { const cx = X(p.x), cy = ya.Y(p.y), right = cx < L + pw * 0.72; out += `<circle cx="${cx}" cy="${cy}" r="4.2" style="fill:${TC_COLORS[i % 2 ? 1 : 0]};stroke:var(--surface);stroke-width:1.5"/>` + tx(cx + (right ? 7 : -7), cy + 3.5, p.label, { a: right ? 'start' : 'end', c:'var(--paper)', f:'600 10px Inter,sans-serif' }); });
+    if(m.xLabel) out += tx(L + pw / 2, H - 6, m.xLabel, { f:'500 9.5px Inter,sans-serif' });
+    return { svg: out, data: null };
+  }
+  // line and bar
+  const n = m.categories.length, S = m.series;
+  let lo = 0, hi;
+  if(m.type === 'bar' && m.stacked) hi = Math.max(...m.categories.map((_, i) => S.reduce((s, x) => s + Math.max(0, x.values[i]), 0)));
+  else { const all = [].concat(...S.map(s => s.values)); hi = Math.max(...all); lo = Math.min(0, ...all); if(m.type === 'line'){ const mn = Math.min(...all); if(mn > 0 && mn / hi >= 0.6) lo = mn - (hi - mn) * 0.3; } }
+  const ya = yAxis(lo, hi, m.yFmt), Y = ya.Y;
+  const X = i => m.type === 'bar' ? L + pw * (i + 0.5) / n : L + (n === 1 ? 0 : i / (n - 1)) * pw;
+  const every = n > 12 ? Math.ceil(n / 6) : 1;
+  m.categories.forEach((c, i) => { if(i % every === 0 || i === n - 1) out += tx(X(i), H - 20, m.xFmt ? m.xFmt(c) : c); });
+  if(m.xLabel) out += tx(L + pw / 2, H - 6, m.xLabel, { f:'500 9.5px Inter,sans-serif' });
+  if(m.yLabel) out += tx(L, 11, m.yLabel, { a:'start', f:'500 9.5px Inter,sans-serif' });
+  if(m.type === 'line'){
+    S.forEach((s, k) => { const col = TC_COLORS[k % 4]; out += `<path d="${s.values.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ')}" style="fill:none;stroke:${col};stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round"/>`; });
+    if(S.length <= 3){ let lastY = -99; S.map((s, k) => ({ s, k, y: Y(s.values[n - 1]) })).sort((a, b) => a.y - b.y).forEach(o => { const yy = Math.max(o.y, lastY + 12); lastY = yy; out += `<circle cx="${X(n - 1)}" cy="${o.y}" r="3.2" style="fill:${TC_COLORS[o.k % 4]}"/>` + tx(X(n - 1) + 7, yy + 3.5, (o.s.name || '') , { a:'start', c: TC_COLORS[o.k % 4], f:'600 10px Inter,sans-serif' }); }); }
+  } else {
+    const gap = Math.max(1, pw / n * 0.22), bw = pw / n - gap, groups = m.stacked ? 1 : S.length, gw = bw / groups;
+    m.categories.forEach((c, i) => { let base = 0; S.forEach((s, k) => { const v = s.values[i]; const x = X(i) - bw / 2 + (m.stacked ? 0 : k * gw);
+      if(m.stacked){ const h = Math.max(0, v) / (ya.a1 - ya.a0) * ph; out += `<rect x="${x.toFixed(1)}" y="${(Y(0) - (base + Math.max(0, v)) / (ya.a1 - ya.a0) * ph).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" style="fill:${TC_COLORS[k % 4]}" rx="1.5"/>`; base += Math.max(0, v); }
+      else { const y0 = Y(0), y1 = Y(v); out += `<rect x="${x.toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" width="${Math.max(1, gw - 1).toFixed(1)}" height="${Math.abs(y1 - y0).toFixed(1)}" style="fill:${TC_COLORS[k % 4]}" rx="2"/>`;
+        if(n <= 8 && S.length === 1) out += tx(x + gw / 2, (v >= 0 ? y1 - 4 : y1 + 11), tcFmt(v, m.yFmt), { f:'600 10px IBM Plex Mono,monospace', c:'var(--paper)' }); } }); });
+  }
+  if(m.type === 'bar' && !m.stacked && n <= 8 && S.length === 1) return { svg: out, data: null }; // every bar already carries its value
+  data = { kind: m.type, xs: m.categories.map((_, i) => X(i)), rows: m.categories.map((c, i) => [(m.xFmt ? (m.xLabel || '') + ' ' + m.xFmt(c) : c) + ': ' + S.map(s => (S.length > 1 ? s.name + ' ' : '') + tcFmt(s.values[i], m.yFmt)).join(' · ')]) };
+  return { svg: out, data };
+}
+function renderTutorChart(a){
+  a = a || {};
+  const kind = String(a.kind || '');
+  const m = ['growth','amortization','bond_price'].includes(kind) ? tcCompute(kind, a) : tcCustom(a);
+  if(m.error) return { error: m.error };
+  const { svg, data } = tcSvg(m);
+  const thread = document.getElementById('tutorThread'); if(!thread) return { error: 'The chat is not on screen.' };
+  const row = document.createElement('div'); row.className = 'tutor-chart-row';
+  const title = String(a.title || '').slice(0, 80), cap = String(a.takeaway || '').slice(0, 160);
+  const legend = ((m.type === 'bar' && m.series && m.series.length > 1) || (m.type === 'line' && m.series && m.series.length > 3)) ? '<div class="tc-legend">' + m.series.map((s, k) => `<span><i style="background:${TC_COLORS[k % 4]}"></i>${tcEsc(s.name)}</span>`).join('') + '</div>' : '';
+  const sumText = (title || 'Chart') + (data ? '. ' + data.rows.slice(0, 6).map(r => r[0]).join('; ') : '');
+  row.innerHTML = `<figure class="tutor-chart"><figcaption class="tc-title">${tcEsc(title)}</figcaption>${legend}<svg viewBox="0 0 340 214" role="img" aria-label="${tcEsc(sumText)}" preserveAspectRatio="xMidYMid meet">${svg}<line class="tc-guide" x1="0" x2="0" y1="24" y2="180" style="stroke:var(--gold);stroke-width:1;opacity:0"/></svg><div class="tc-read" aria-live="polite"></div>${cap ? `<div class="tc-take">${tcEsc(cap)}</div>` : ''}${m.pmt ? `<div class="tc-take">Monthly payment: $${m.pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.</div>` : ''}</figure>`;
+  if(data){
+    const svgEl = row.querySelector('svg'), guide = row.querySelector('.tc-guide'), read = row.querySelector('.tc-read');
+    const at = ev => { const r = svgEl.getBoundingClientRect(); const x = (ev.clientX - r.left) / r.width * 340; let bi = 0; data.xs.forEach((v, i) => { if(Math.abs(v - x) < Math.abs(data.xs[bi] - x)) bi = i; }); guide.setAttribute('x1', data.xs[bi]); guide.setAttribute('x2', data.xs[bi]); guide.style.opacity = '0.6'; read.textContent = data.rows[bi][0]; };
+    svgEl.addEventListener('pointerdown', at); svgEl.addEventListener('pointermove', ev => { if(ev.pressure > 0 || ev.pointerType === 'mouse') at(ev); });
+    read.textContent = 'Tap the chart to read a value.';
+  }
+  const typingRow = thread.querySelector('.tutor-msg .typing');
+  if(typingRow && typingRow.closest('.tutor-msg')) thread.insertBefore(row, typingRow.closest('.tutor-msg')); else thread.appendChild(row);
+  thread.scrollTop = thread.scrollHeight;
+  return { ok: true, title, extra: m.pmt ? 'The monthly payment is $' + m.pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '.' : (m.atCoupon ? 'At a yield equal to the coupon the price is ' + tcFmt(m.atCoupon, 'dollars') + '.' : '') };
+}
 function renderTutorActionIndicator(text){
   if(!text) return null;
   const thread = document.getElementById('tutorThread');
@@ -22022,6 +22197,23 @@ const TUTOR_TOOLS = [
       },
       required: [],
     },
+  },
+  {
+    name: 'show_chart',
+    description: "Draw one small chart in the chat when a picture teaches an idea faster than words. Good uses: how money compounds at different rates (growth), how a loan's payment splits between principal and interest over time (amortization), how a bond's price moves with yield (bond_price), when cash comes in and goes out (cashflow), risk against return or a line like the SML or CML (scatter), or a few numbers side by side (bar) or over time (line). The app computes growth, amortization and bond_price itself from your inputs, so prefer those for anything numeric; for the others you supply the numbers, so they must be right. Use it sparingly: only when the picture adds something the words cannot, never as decoration, never for a single fact, and at most one per reply. Always follow it with one or two sentences saying what to notice. The app draws charts and diagrams only; it cannot make photographs or illustrations.",
+    input_schema: { type: 'object', properties: {
+      kind: { type: 'string', enum: ['growth','amortization','bond_price','cashflow','scatter','bar','line'], description: "growth: needs principal and/or annual_contribution, years, and rates (up to 3, in percent). amortization: loan, rate (percent), years. bond_price: coupon_rate (percent), years, optional face, ytm_min, ytm_max. cashflow: flows [{t, amount}] (negative = money out). scatter: points [{label, x, y}] and optional line {x1,y1,x2,y2,label}. bar and line: categories [..] and series [{name, values[]}], optional stacked for bar." },
+      title: { type: 'string', description: 'Short plain title, under 70 characters, saying what the chart shows.' },
+      takeaway: { type: 'string', description: 'One short line (under 140 characters) on what to notice, shown under the chart.' },
+      principal: { type: 'number' }, annual_contribution: { type: 'number' }, years: { type: 'integer' }, rates: { type: 'array', items: { type: 'number' } },
+      loan: { type: 'number' }, rate: { type: 'number' }, coupon_rate: { type: 'number' }, face: { type: 'number' }, ytm_min: { type: 'number' }, ytm_max: { type: 'number' },
+      flows: { type: 'array', items: { type: 'object', properties: { t: { type: 'integer' }, amount: { type: 'number' } }, required: ['t','amount'] } },
+      points: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' } }, required: ['x','y'] } },
+      line: { type: 'object', properties: { x1: { type: 'number' }, y1: { type: 'number' }, x2: { type: 'number' }, y2: { type: 'number' }, label: { type: 'string' } } },
+      categories: { type: 'array', items: { type: 'string' } },
+      series: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, values: { type: 'array', items: { type: 'number' } } }, required: ['name','values'] } },
+      stacked: { type: 'boolean' }, y_format: { type: 'string', enum: ['dollars','percent','number'] }, x_format: { type: 'string', enum: ['dollars','percent','number'] },
+      x_label: { type: 'string' }, y_label: { type: 'string' } }, required: ['kind','title'] },
   },
   {
     name: 'find_flashcards',
@@ -22188,6 +22380,12 @@ async function executeTutorTool(toolName, toolInput){
   try{
     if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
     if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
+    if(toolName === 'show_chart'){
+      if(!document.getElementById('tutorThread')) return 'Error: the chat is not available.';
+      const r = renderTutorChart(toolInput);
+      if(r.error) return 'Error: ' + r.error + ' Describe it in words instead, or try again with corrected inputs.';
+      return `Drew the chart "${r.title}" in the chat, directly above your reply. ${r.extra ? r.extra + ' ' : ''}Now say in one or two sentences what to notice; do not repeat every number it shows.`;
+    }
     if(toolName === 'find_flashcards'){
       const q = String(toolInput.query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
       const dm = DOMAINS.some(d => d.key === toolInput.domain) ? toolInput.domain : null;
@@ -23400,7 +23598,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.278';
+const BUILD_ID = '2026-10-19.280';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
