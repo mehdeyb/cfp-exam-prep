@@ -1073,6 +1073,18 @@
   .difficulty-indicator{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--hair);}
   .pattern-callout{font-size:12px;line-height:1.5;color:var(--paper);margin-top:14px;padding:12px 14px;border-radius:8px;background:var(--gold-tint);border:1px solid var(--gold);}
   .pattern-callout b{color:var(--gold);}
+  .dg-item{padding:14px 0;border-top:1px solid var(--hair);}
+  .dg-item:first-of-type{border-top:0;}
+  .dg-title{font-weight:700;font-size:14.5px;line-height:1.35;color:var(--paper);}
+  .dg-line{font-size:13px;line-height:1.5;color:var(--paper);margin-top:4px;}
+  .dg-why{font-size:12px;line-height:1.5;color:var(--muted);margin-top:6px;}
+  .dg-act{margin-top:10px;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .dg-act:active{transform:scale(.97);}
+  .dg-item.good .dg-title{color:var(--teal);}
+  .diag-more{color:var(--muted);}
+  .pattern-callout .pc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .pattern-callout .pc-btn{min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--gold);background:var(--gold);color:var(--ink);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .pattern-callout .pc-btn.ghost{background:transparent;color:var(--gold);}
   .difficulty-indicator .diff-dots{display:flex;gap:3px;}
   .difficulty-indicator .diff-dot{width:7px;height:7px;border-radius:50%;background:var(--hair-strong);}
   .difficulty-indicator .diff-dot.on{background:var(--gold);}
@@ -8988,12 +9000,38 @@ function missProfile(){
   return { total: log.length, counts };
 }
 
+// Questions where the same wrong answer has been picked more than once, and are still not answered right twice in a row.
+// Ones you have since got right (twice running) drop off, so this list shrinks as you fix them instead of only ever growing.
+function stuckPoints(){
+  const qs = allQuestions(), byId = {}; qs.forEach(q => { byId[q.id] = q; });
+  const all = [], open = [];
+  Object.keys(DATA.wrongChoiceHistory || {}).forEach(id => {
+    const picks = DATA.wrongChoiceHistory[id] || {};
+    if(!byId[id] || !Object.values(picks).some(n => n >= 2)) return;
+    all.push(id);
+    const st = (DATA.questionStats || {})[id];
+    if(!st || (st.box || 0) <= 1) open.push(byId[id]);
+  });
+  const dom = {}; open.forEach(q => { dom[q.domain] = (dom[q.domain] || 0) + 1; });
+  const topKey = Object.keys(dom).sort((a, b) => dom[b] - dom[a])[0] || null;
+  return { total: all.length, open, fixed: all.length - open.length, topKey, topN: topKey ? dom[topKey] : 0 };
+}
+function retestStuckPoints(){
+  const sp = stuckPoints(); if(!sp.open.length) return;
+  beginSession(shuffle(sp.open.slice()).slice(0, 15), 'review', null);
+}
+function askTutorAboutStuck(){
+  showTab('tutor');
+  try{ sendTutorMessage('Walk me through the questions I keep getting wrong the same way. Start with the one that matters most for my exam.'); }catch(e){}
+}
 function renderPatternCallout(){
   const el = document.getElementById('patternCallout');
   if(!el) return;
-  const recurringCount = Object.values(DATA.wrongChoiceHistory || {}).reduce((total, picks) => total + Object.values(picks).filter(n => n >= 2).length, 0);
-  if(recurringCount > 0){
-    el.innerHTML = `<b>Worth a look:</b> you've picked the exact same wrong answer more than once on ${recurringCount} question${recurringCount===1?'':'s'} — a stronger signal than a typical miss. Ask the tutor to walk through ${recurringCount===1?'it':'those'} directly.`;
+  const sp = stuckPoints();
+  if(sp.open.length > 0){
+    const d = DOMAINS.find(x => x.key === sp.topKey);
+    const where = (d && sp.open.length > 1 && sp.topN >= 2) ? ` Most are in ${escapeHtml(d.name)} (${sp.topN}).` : '';
+    el.innerHTML = `<b>Stuck points:</b> ${sp.open.length} question${sp.open.length === 1 ? '' : 's'} you keep getting wrong the same way${sp.fixed ? `, with ${sp.fixed} already fixed` : ''}. A repeated wrong choice usually means one specific misconception, so fixing it directly beats more volume.${where}<span class="pc-actions"><button type="button" class="pc-btn" onclick="retestStuckPoints()">Re-test ${Math.min(15, sp.open.length)}</button><button type="button" class="pc-btn ghost" onclick="askTutorAboutStuck()">Walk me through them</button></span>`;
     el.style.display = 'block';
     return;
   }
@@ -20697,6 +20735,7 @@ function toggleDiagnosis(){
   const expanded = body.style.display === 'block';
   body.style.display = expanded ? 'none' : 'block';
   chevron.textContent = expanded ? 'tap to expand ▾' : 'tap to collapse ▴';
+  const sm = document.getElementById('diagnosisSummary'); if(sm) sm.style.display = expanded ? '' : 'none'; // the findings below say it in full
 }
 
 function toggleScience(){
@@ -20718,13 +20757,165 @@ function missSectionHtml(){
   return `<div class="diag-section-title">How you miss</div>${rows}<div class="diag-source-note">Based on your last ${mp.total} misses. Misreading and rushing are fixed by technique, not more content.</div>`;
 }
 
+// ---- Diagnosis: ranked findings, each with the numbers, the reason it matters (with research where it earns a place), and one action ----
+const _dgActs = {};
+function dgRun(id){ const f = _dgActs[id]; if(typeof f === 'function') f(); }
+function diagnosisFindings(){
+  const out = [];
+  let stats; try{ stats = computeStats(); }catch(e){ return out; }
+  if(!stats.totalAnswered) return out;
+  const now = Date.now(), DAY = 86400000;
+  const add = f => { out.push(f); _dgActs[f.id] = f.act; };
+  const pctTxt = n => Math.round(n) + '%';
+
+  // 1. Where the points are: exam weight x what is still open (expected-value reasoning, the same one behind the Blueprint Bar).
+  try{
+    const open = stats.parts.slice().sort((a, b) => b.lost - a.lost);
+    const top = open[0];
+    if(top && top.lost >= 0.5){
+      const second = open[1];
+      add({ id:'points', sev: Math.min(1, 0.45 + top.lost / 8), kind:'focus',
+        title: `Most points are in ${top.name}`,
+        line: `Worth ${top.weight} exam points; you hold about ${top.earned.toFixed(1)}.${second ? ` Next: ${second.name} (${second.lost.toFixed(1)} open).` : ''}`,
+        why: 'Practice pays most where exam weight times the remaining gap is largest, so this is where an hour moves your score most.',
+        cta: `Drill ${top.name.split(' ')[0]}`, act: () => startDrill(top.key) });
+    }
+  }catch(e){}
+
+  // 2. Forgetting: things you had learned that are due to come back.
+  try{
+    let due = 0, learned = 0;
+    const qsRaw = DATA.questionStats || {}, fcRaw = DATA.flashcardStats || {};
+    [qsRaw, fcRaw].forEach(store => Object.keys(store).forEach(k => { const st = store[k]; if(st && st.seen > 0 && (st.box || 0) >= 2){ learned++; if(st.dueAt && now > st.dueAt + DAY) due++; } }));
+    if(due >= 8){
+      add({ id:'forget', sev: Math.min(0.95, 0.35 + due / 120), kind:'retention',
+        title: `${due} things you learned are overdue`,
+        line: `You had these down (${learned} learned in all), but their review dates have passed.`,
+        why: 'Memory fades without retrieval, and reviews spread over time beat cramming for lasting recall (Cepeda et al., 2006; Dunlosky et al., 2013).',
+        cta: 'Review what is due', act: () => { showTab('flashcards'); try{ rebuildFlashcardQueue(); }catch(e){} } });
+    }
+  }catch(e){}
+
+  // (Stuck points live in the callout above the diagnosis, so they are not repeated here.)
+
+  // 4. Calibration: does how sure you feel match how often you are right?
+  try{
+    const cs = DATA.confidenceStats || {};
+    const c = cs.confident || { correct:0, total:0 }, u = cs.unsure || { correct:0, total:0 };
+    const overall = stats.accuracy;
+    if(c.total >= 8 && overall !== null){
+      const cp = 100 * c.correct / c.total;
+      if(cp < overall - 3){
+        add({ id:'calib', sev: Math.min(0.9, 0.4 + (overall - cp) / 40), kind:'calibration',
+          title: 'Your confident answers are your weak ones',
+          line: `Marked confident: right ${pctTxt(cp)} of the time, against ${overall}% overall.`,
+          why: 'Feeling sure and being right come apart for most learners, and overconfidence makes people stop studying too soon (Dunlosky & Rawson, 2012). Treat a confident answer as one to double-check.',
+          cta: 'Practise what you missed', act: startMissedReview });
+      }
+    }
+    if(u.total >= 8 && overall !== null){
+      const up = 100 * u.correct / u.total;
+      if(up >= 70 && up >= overall){
+        add({ id:'under', sev:0.3, kind:'calibration',
+          title: 'You know more than you think',
+          line: `Marked unsure: still right ${pctTxt(up)} of the time.`,
+          why: 'Your first instinct is better than your doubt, so change an answer only when you can name the specific fact that makes you wrong.',
+          cta: 'Take an adaptive session', act: startAdaptive });
+      }
+    }
+  }catch(e){}
+
+  // 5. Practice mix: blocked (one domain at a time) versus mixed.
+  try{
+    const since = now - 14 * DAY;
+    const rec = (DATA.sessions || []).filter(x => x.date && new Date(x.date).getTime() >= since);
+    const n = a => rec.filter(x => a.includes(x.mode)).reduce((t, x) => t + (x.answered || x.total || 0), 0);
+    const blocked = n(['drill','weakspot','subtopic']), mixed = n(['adaptive','mock','fullexam','checkpoint','case','review']);
+    if(blocked + mixed >= 40 && blocked / (blocked + mixed) > 0.7){
+      add({ id:'mix', sev:0.5, kind:'interleaving',
+        title: 'Most of your practice is one domain at a time',
+        line: `${Math.round(100 * blocked / (blocked + mixed))}% of your last two weeks of questions were single-domain drills.`,
+        why: 'Mixing topics feels harder and improves later performance, because you practise telling problem types apart, which is what the exam asks (Rohrer & Taylor, 2007; Kornell & Bjork, 2008).',
+        cta: 'Take a mixed session', act: startAdaptive });
+    }
+  }catch(e){}
+
+  // 6. Habit: how many of the last 14 days you studied (spacing needs gaps that are not too long).
+  try{
+    const days = getDaysUntilExam();
+    const todayN = dayKeyToNumber(localDayKey());
+    const k = new Set((DATA.studyDates || []).filter(d => dayKeyToNumber(d) >= todayN - 13)).size;
+    const span = Math.min(14, Math.max(7, (DATA.studyDates || []).length ? 14 : 0));
+    if(span && k <= 5 && (days === null || days > 2)){
+      add({ id:'habit', sev: Math.min(0.8, 0.3 + (6 - k) * 0.07), kind:'spacing',
+        title: `You studied ${k} of the last 14 days`,
+        line: days !== null && days > 0 ? `${days} day${days === 1 ? '' : 's'} to go.` : 'Short and often beats long and rare.',
+        why: 'Several shorter sittings spread across days are remembered better than one long one (Cepeda et al., 2006), so ten minutes today is worth more than an hour at the weekend.',
+        cta: 'Open today\'s plan', act: () => { try{ tutorPoint('todays_plan', 'Start with the first step'); }catch(e){ showTab('study'); } } });
+    }
+  }catch(e){}
+
+  // 7. Why you miss: the dominant kind of error, with the fix that fits it.
+  try{
+    const mp = missProfile();
+    if(mp.total >= 8){
+      const top = Object.keys(mp.counts).filter(x => x !== 'gap').sort((a, b) => mp.counts[b] - mp.counts[a])[0];
+      if(top && mp.counts[top] / mp.total >= 0.3){
+        add({ id:'misstype', sev: 0.35 + 0.4 * mp.counts[top] / mp.total, kind:'errortype',
+          title: `Mostly: ${MISS_TYPES[top].label.toLowerCase()}`,
+          line: `${Math.round(100 * mp.counts[top] / mp.total)}% of your last ${mp.total} misses.`,
+          why: MISS_TYPES[top].tip + ' Different errors need different fixes, so it helps to name which kind you are making.',
+          cta: 'Practise what you missed', act: startMissedReview });
+      }
+    }
+  }catch(e){}
+
+  // 8. Momentum: the last two weeks against the two before.
+  try{
+    const recent = [0, 0], prior = [0, 0];
+    (DATA.sessions || []).forEach(x => { const t = x.date ? new Date(x.date).getTime() : 0, a = x.answered || x.total || 0; if(!t || !a) return;
+      if(t >= now - 14 * DAY){ recent[0] += x.correct || 0; recent[1] += a; } else if(t >= now - 28 * DAY){ prior[0] += x.correct || 0; prior[1] += a; } });
+    if(recent[1] >= 30 && prior[1] >= 30){
+      const r = 100 * recent[0] / recent[1], p = 100 * prior[0] / prior[1], dlt = r - p;
+      if(dlt >= 5) add({ id:'up', sev:0.2, kind:'good', title: 'Your accuracy is climbing', line: `${pctTxt(r)} over the last two weeks, up from ${pctTxt(p)} before.`, why: 'Keep the mix you are using: this is what spaced, varied practice looks like when it is working.', cta: null, act: null });
+      else if(dlt <= -5) add({ id:'down', sev:0.55, kind:'trend', title: 'Your accuracy has slipped lately', line: `${pctTxt(r)} over the last two weeks, down from ${pctTxt(p)} before.`, why: 'A dip often means new, harder material or tired sessions rather than lost knowledge, so check the weakest domain and the length of your sessions.', cta: 'Drill your weakest area', act: () => { const w = stats.parts.slice().sort((a, b) => b.lost - a.lost)[0]; if(w) startDrill(w.key); } });
+    }
+  }catch(e){}
+
+  // 9. Coverage: how much of the bank you have not met yet, close to the exam.
+  try{
+    const days = getDaysUntilExam();
+    const all = allQuestions(); const unseen = all.filter(q => !((DATA.questionStats || {})[q.id] || {}).seen).length;
+    if(days !== null && days > 0 && days <= 21 && unseen / all.length > 0.4){
+      add({ id:'coverage', sev: Math.min(0.85, 0.4 + (21 - days) * 0.02), kind:'coverage',
+        title: `${Math.round(100 * unseen / all.length)}% of the questions are still new to you`,
+        line: `${unseen} of ${all.length} unseen with ${days} day${days === 1 ? '' : 's'} left.`,
+        why: 'Seeing every topic once matters more now than polishing the ones you know, since an unseen topic cannot be recalled.',
+        cta: 'Take an adaptive session', act: startAdaptive });
+    }
+  }catch(e){}
+
+  return out.sort((a, b) => b.sev - a.sev);
+}
+function diagnosisFindingsHtml(list){
+  if(!list.length) return '';
+  const top = list.filter(f => f.kind !== 'good').slice(0, 4), good = list.find(f => f.kind === 'good');
+  const item = f => `<div class="dg-item${f.kind === 'good' ? ' good' : ''}"><div class="dg-title">${escapeHtml(f.title)}</div>${f.line ? `<div class="dg-line">${escapeHtml(f.line)}</div>` : ''}<div class="dg-why">${escapeHtml(f.why)}</div>${f.cta ? `<button type="button" class="dg-act" onclick="dgRun('${f.id}')">${escapeHtml(f.cta)}</button>` : ''}</div>`;
+  return `<div class="diag-section-title">What to work on, in order</div>${top.map(item).join('')}${good ? item(good) : ''}`;
+}
+const DIAG_SOURCES = 'Research behind these: Cepeda et al. (2006), distributed practice, Psychological Bulletin. Dunlosky et al. (2013), which study techniques work, Psychological Science in the Public Interest. Rohrer & Taylor (2007) and Kornell & Bjork (2008), mixing topics. Butterfield & Metcalfe (2001), correcting confident errors. Dunlosky & Rawson (2012), overconfidence and study.';
+
 function renderDiagnosisCard(){
   const summaryEl = document.getElementById('diagnosisSummary');
   const bodyEl = document.getElementById('diagnosisBody');
   if(!summaryEl || !bodyEl) return;
 
   const totalHours = (DATA.totalStudyMinutes || 0) / 60;
-  summaryEl.innerHTML = `${totalHours.toFixed(1)} hours logged so far — tap to see a full breakdown by domain, difficulty, and question type.`;
+  let findings = []; try{ findings = diagnosisFindings(); }catch(e){}
+  const lead = findings.find(f => f.kind !== 'good');
+  summaryEl.innerHTML = lead
+    ? `<b>Top priority:</b> ${escapeHtml(lead.title)}. <span class="diag-more">${findings.filter(f => f.kind !== 'good').length} finding${findings.filter(f => f.kind !== 'good').length === 1 ? '' : 's'} in all, ranked.</span>`
+    : `${totalHours.toFixed(1)} hours logged so far — tap to see a full breakdown by domain, difficulty, and question type.`;
 
   const hoursPct = Math.min(100, Math.round(totalHours/300*100));
   const weekAgo = Date.now() - 7*24*60*60*1000;
@@ -20809,6 +21000,7 @@ function renderDiagnosisCard(){
   }
 
   bodyEl.innerHTML = `
+    ${diagnosisFindingsHtml(findings)}
     <div class="diag-hours-row"><span>Study hours logged</span><b>${totalHours.toFixed(1)} hrs</b></div>
     <div class="diag-hours-bar"><div class="diag-hours-fill" style="width:${hoursPct}%"></div></div>
     <div class="diag-source-note">CFP Board recommends roughly 250–300 hours of dedicated review beyond your education coursework as the typical benchmark for exam readiness.</div>
@@ -20830,7 +21022,7 @@ function renderDiagnosisCard(){
     <div class="diag-type-row"><span>When you say you're unsure</span><b>${unsurePct!==null ? unsurePct+'%' : '—'}</b></div>
     ${totalConfLogged < 3 ? '<div class="diag-source-note">Rate your confidence before answering in Adaptive Session, Domain Drill, or Missed Review — this fills in once there is enough logged to compare.</div>' : ''}
 
-    <div class="diag-callout">${diagnosisText}</div>
+    ${findings.length ? `<div class="diag-source-note" style="margin-top:14px;">${DIAG_SOURCES}</div>` : `<div class="diag-callout">${diagnosisText}</div>`}
   `;
 }
 
@@ -21344,6 +21536,7 @@ Guidelines:
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
 - When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice(0, 4); return f.length ? '\nThe Study tab shows the student this ranked diagnosis, so refer to it rather than contradicting it: ' + f.map((x, i) => (i + 1) + '. ' + x.title + (x.line ? ' (' + x.line + ')' : '')).join(' ') + '\n' : ''; }catch(e){ return ''; } })()}
 ${tutorFiguresText()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
@@ -21487,6 +21680,15 @@ function tutorGuidePending(){
     tutorGuideShow(box);
   }
 }
+// The tool already moved them but the note never arrived: say so where they are, with the way back.
+function tutorGuideFail(){
+  tutorGuideDismiss();
+  const panel = document.querySelector('.tab-panel.active');
+  if(!panel || panel.id === 'tab-tutor' || session) return;
+  const box = tutorGuideBox(); if(!box) return;
+  box.querySelector('.tg-t').textContent = 'I took you here, but my note did not come through. Open the chat and I will pick it up from there.';
+  tutorGuideShow(box);
+}
 function tutorGuideAfterMove(reply){
   const panel = document.querySelector('.tab-panel.active');
   if(!panel || panel.id === 'tab-tutor' || !reply){ tutorGuideDismiss(); return; }
@@ -21520,6 +21722,7 @@ function tutorActionText(name, input, result){
   const domName = k => { const d = DOMAINS.find(x => x.key === k); return d ? d.name : ''; };
   const you = t => t.replace(/\bthe student's\b/gi, 'your').replace(/\bthe student\b/gi, 'you').replace(/\s+/g, ' ').trim();
   try{
+    if(name === 'queue_next_stop') return /^Error/.test(r) ? '' : 'Lined up next: ' + String(inp.label || '').slice(0, 48);
     if(/^Error/i.test(r)) return 'That did not work. I will say what to do instead.';
     if(name === 'navigate_to_tab') return 'Took you to ' + (tabName[inp.tab] || 'that tab');
     if(name === 'point_to'){
@@ -21540,7 +21743,6 @@ function tutorActionText(name, input, result){
     if(name === 'open_tvm_calculator') return 'Opened the calculator walkthrough' + (inp.mode === 'cashflow' ? ' (cash flows)' : '');
     if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
     if(name === 'open_study_guide') return 'Opened your study guide';
-    if(name === 'queue_next_stop') return /^Error/.test(r) ? '' : 'Lined up next: ' + String(inp.label || '').slice(0, 48);
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return 'Opened your detailed progress (Study tab)';
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
@@ -21558,6 +21760,7 @@ function tutorActionText(name, input, result){
 }
 
 function renderTutorActionIndicator(text){
+  if(!text) return null;
   const thread = document.getElementById('tutorThread');
   const row = document.createElement('div');
   row.className = 'tutor-action-indicator';
@@ -21972,6 +22175,11 @@ async function executeTutorTool(toolName, toolInput){
       if(!TUTOR_NEXT_TOOLS.includes(tl)) return `Error: "${tl}" cannot be queued. Use one of: ${TUTOR_NEXT_TOOLS.join(', ')}.`;
       const label = String((toolInput && toolInput.label) || '').replace(/\s+/g, ' ').trim().slice(0, 48);
       if(!label) return 'Error: give the button a short label.';
+      { const qi = (toolInput && toolInput.input) || {};
+        if(tl === 'point_to' && !TUTOR_POINT_TARGETS[qi.target]) return `Error: "${qi.target}" is not something that can be highlighted, so it cannot be queued.`;
+        if(tl === 'start_plan_step'){ const ids = []; [buildStudyPlan(), buildStudyPlan(240), buildStudyPlan(360)].forEach(pl => pl.steps.concat(pl.blocks).forEach(x => ids.push(x.id))); if(!ids.includes(qi.step_id)) return `Error: "${qi.step_id}" is not a step in today's plan, so it cannot be queued.`; }
+        if(tl === 'navigate_to_tab' && !['study','tools','reference','flashcards','examday'].includes(qi.tab)) return `Error: "${qi.tab}" is not a tab.`;
+        if((tl === 'start_quiz_session' || tl === 'start_flashcards') && !(qi.mode || qi.focus)) return 'Error: say which session or card set to queue.'; }
       tutorNextStop = { label, tool: tl, input: (toolInput && toolInput.input && typeof toolInput.input === 'object') ? toolInput.input : {} };
       return `Queued. The student will see a Next button labelled "${label}" on the note.`;
     }
@@ -22330,7 +22538,7 @@ async function sendTutorMessage(presetText){
     if(presetText === undefined) tutorRemember(text, 'tutor');
   }catch(e){
     if(tutorConversationId !== conversationIdAtRequestTime) return;
-    try{ tutorGuideDismiss(); }catch(_){}
+    try{ tutorGuideFail(); }catch(_){}
     tutorMessages.pop(); // don't leave an unanswered user turn in the API history
     const msg = (e && e.message) ? e.message : 'Unknown error';
     typingBubble.classList.remove('typing');
@@ -22903,7 +23111,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.268';
+const BUILD_ID = '2026-10-19.271';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
