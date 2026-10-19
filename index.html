@@ -16441,7 +16441,17 @@ function fdRenderStatus(){
   const acc = s.attempts ? Math.round(s.correct/s.attempts*100) + '% right over ' + s.attempts + (s.attempts===1?' try':' tries') : 'first time with this one';
   const t = fd.tally.n ? `<b>This sitting:</b> ${fd.tally.ok} of ${fd.tally.n}` : '<b>This sitting:</b> just started';
   const lv = fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula hidden' : ' · unaided';
-  el.innerHTML = `<span>${t}</span><span><b>This formula:</b> ${escapeHtml(acc)}${s.streak >= 3 ? ' · ' + s.streak + ' in a row' : ''}${lv}</span>`;
+  let plan = '';
+  try{
+    const pl = buildStudyPlan(), st = pl.steps.find(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && x.unit === 'problems');
+    if(st){
+      const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id);
+      plan = st.done
+        ? `<span class="fd-plan done"><b>Today's plan:</b> formula practice done ✓${nx ? ` <button type="button" class="fc-plan-next" onclick="closeFormulaDrill();setTimeout(()=>planGoNext('${nx.id}'),60)">Next: ${escapeHtml(nx.title)} →</button>` : ''}</span>`
+        : `<span class="fd-plan"><b>Today's plan:</b> ${st.have || 0} of ${st.need} problems</span>`;
+    }
+  }catch(e){}
+  el.innerHTML = `<span>${t}</span><span><b>This formula:</b> ${escapeHtml(acc)}${s.streak >= 3 ? ' · ' + s.streak + ' in a row' : ''}${lv}</span>${plan}`;
 }
 function fdWeakest(){
   const rows = FD_NAMES.map(n => ({ n, s: fdStats(n) })).filter(r => r.s.attempts >= 3);
@@ -16814,6 +16824,19 @@ function tvmCollapseHowto(){
 }
 
 function tvmRenderStatus(){
+  tvmRenderStatusCore();
+  try{
+    const el = document.getElementById('tvmStatus'); if(!el) return;
+    const st = buildStudyPlan().steps.find(x => x.id === 'calc' && !x.manual && /^Calculator practice/.test(x.title));
+    if(!st) return;
+    const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('calc');
+    el.insertAdjacentHTML('beforeend', st.done
+      ? `<span class="tvm-chip">Today's plan: calculator practice done ✓</span>${nx ? `<button type="button" class="fc-plan-next" onclick="closeTvmThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}`
+      : `<span class="tvm-chip">Today's plan: ${st.have || 0} of ${st.need} solved</span>`);
+  }catch(e){}
+}
+function closeTvmThen(id){ try{ closeTvmTool(); }catch(e){} setTimeout(() => { try{ planGoNext(id); }catch(e){} }, 60); }
+function tvmRenderStatusCore(){
   const el = document.getElementById('tvmStatus');
   const howto = document.getElementById('tvmHowto');
   if(howto && !howto.dataset.user) howto.open = !(DATA.tvmSolvedCount > 0) && !((DATA.tvmProgress && DATA.tvmProgress.currentTier > 1)) && !(window.matchMedia && matchMedia('(max-height:520px) and (orientation:landscape)').matches);
@@ -17937,7 +17960,8 @@ function mwWrapHtml(){
     + `<div class="mw-sum"><div><b>${done.length}</b><span>reviewed</span></div><div><b>${fixed.length}${tried.length ? '/' + tried.length : ''}</b><span>follow-ups right</span></div><div><b>${left}</b><span>still on your list</span></div></div>`
     + `<ul class="mw-list">${done.map(x => `<li><i class="${x.ok === false ? 'no' : ''}">${x.ok === false ? '·' : '✓'}</i><span>${escapeHtml(String(x.q.q).replace(/\s+/g, ' ').slice(0, 90))}${String(x.q.q).length > 90 ? '…' : ''}</span></li>`).join('')}</ul>`
     + pattern + mix
-    + `<div class="mw-actions">${cards.length ? `<button type="button" class="btn" onclick="mwCards()">Cards for these ideas (${cards.length})</button>` : ''}`
+    + `<div class="mw-actions">${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('tutor'); }catch(e){} return nx ? `<button type="button" class="btn" onclick="mwClose();setTimeout(()=>planGoNext('${nx.id}'),60)">Next: ${escapeHtml(String(nx.title).slice(0, 44))} →</button>` : ''; })()}`
+    + `${cards.length ? `<button type="button" class="btn ghost" onclick="mwCards()">Cards for these ideas (${cards.length})</button>` : ''}`
     + `${left > 0 && done.length >= mw.items.length ? `<button type="button" class="btn ghost" onclick="mwMore()">${Math.min(5, left)} more misses</button>` : ''}`
     + `<button type="button" class="btn ghost" onclick="mwClose()">Back to your plan</button></div>`;
 }
@@ -24138,7 +24162,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.297';
+const BUILD_ID = '2026-10-19.298';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
