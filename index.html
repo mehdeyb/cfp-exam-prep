@@ -2536,6 +2536,11 @@
   @media (max-width:640px){ #modePanel .mode-grid .mode-card:last-child:nth-child(odd){grid-column:1 / -1;} }
   .bp-plan{margin-top:12px;}
   .bp-plan .plan-forecast{margin-top:8px;}
+  /* Touch targets: small controls keep their look but get an invisible 44px-tall hit area. */
+  .score-why,.pt-mark,.syl-chip,.sub-back,.fc-ebbtn{position:relative;}
+  .score-why::after,.pt-mark::after,.syl-chip::after,.sub-back::after,.fc-ebbtn::after{content:"";position:absolute;left:-2px;right:-2px;top:-4px;bottom:-4px;}
+  .syl-info,.tutor-show,.fpractice .btn,.fpractice button{position:relative;}
+  .syl-info::after,.tutor-show::after,.fpractice .btn::after,.fpractice button::after{content:"";position:absolute;left:-8px;right:-8px;top:-10px;bottom:-10px;}
 </style>
 </head>
 <body>
@@ -22893,7 +22898,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.245';
+const BUILD_ID = '2026-10-18.246';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
