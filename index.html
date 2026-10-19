@@ -7803,7 +7803,7 @@ function buildStudyPlan(minutes){
       const mins = Math.min(SUBTOPIC_DRILL_LENGTH, Math.max(4, Math.ceil(n * 0.4)));
       const kind = gapT >= 4 ? 'gap' : null;
       let K = null; try{ K = fcBalCounts(n, { kind }, fcBalListsCached({})); }catch(e){}
-      const R = K ? K.gap + K.due + K.leech : n, F = K ? K.fresh : 0;
+      const R = K ? K.gap + K.learn + K.due + K.leech : n, F = K ? K.fresh : 0;
       const title = F > 0 && R > 0 ? `Review ${n} flashcards, ${R} to review and ${F} new` : F > 0 ? `Learn ${n} new flashcards` : `Review ${n} due flashcards`;
       return { id:'cards', title, minutes: mins, need:n, have:act.cards, unit:'cards',
         why: gapT >= 4
@@ -12198,6 +12198,8 @@ function flashcardPriority(card){
   const boost = 1 + 0.9*sig.gap + 0.4*(sig.weakSub ? 1 : 0) + (sig.leech ? 0.5 : 0);
   let p = weaknessFactor * weightFactor * due * boost;
   { const ts = (DATA.teachStats || {})['c:' + card.id]; if(ts && Date.now() - ts.last < 14*86400000){ if(ts.grade === 'missed') p *= 1.25; else if(ts.grade === 'partly') p *= 1.1; } } // an explanation that fell short should come back
+  // "Still learning" is the student's own judgement that there is more to learn here, so it counts as a real gap: it rises in the order.
+  if(stat.seen > 0 && stat.known === false) p *= 1.3;
   const justSeen = stat.seen > 0 && stat.lastSeenAt && (Date.now() - stat.lastSeenAt) < 6*3600000;
   if(!justSeen && sig.gap >= 0.5 && stat.seen > 0 && !isDue(stat) && stat.box <= 2) p = Math.max(p, weaknessFactor * weightFactor * 1.4 * boost);
   if(days !== null && days <= 7 && stat.seen > 0 && stat.box >= 4 && !isDue(stat)) p *= 0.6;
@@ -12214,7 +12216,7 @@ function flashcardPriority(card){
 }
 function fcReasonsFor(card){
   const sig = fcCardSignals(card), stat = sig.stat, out = [];
-  if(sig.leech) out.push('missed ' + sig.misses + ' times — say it in your own words first');
+  if(sig.leech) out.push('marked still learning ' + sig.misses + ' times — say it in your own words first');
   if(sig.hyper) out.push('tied to a question you were sure about and got wrong');
   else if(sig.gap >= 0.4) out.push('tied to a question you missed');
   if(sig.weakSub) out.push('weak spot: ' + sig.weakSub.name);
@@ -12273,13 +12275,13 @@ function fcWeightedPick(list, k, power){
 function fcCooling(st){
   if(!st || !st.seen || !st.lastSeenAt) return false;
   const age = Date.now() - st.lastSeenAt;
-  return st.box >= 1 ? age < 6 * 3600000 : age < 4 * 3600000; // rated right: waits its interval; missed: back after a few hours, not minutes
+  return st.box >= 1 ? age < 6 * 3600000 : age < 2 * 3600000; // rated right: waits its interval; marked still learning: back within a couple of hours, not minutes
 }
 function fcBalLists(o){
   o = o || {};
   let pool = allFlashcards();
   if(o.domain) pool = pool.filter(c => c.domain === o.domain);
-  const L = { gap:[], due:[], weakNew:[], newer:[], leech:[] };
+  const L = { gap:[], learn:[], due:[], weakNew:[], newer:[], leech:[] };
   let weakDoms = []; try{ weakDoms = allDomainsWeakestFirst().slice(0, 3); }catch(e){}
   _fcPri = new Map();
   pool.forEach(c => {
@@ -12287,7 +12289,7 @@ function fcBalLists(o){
     const sig = fcCardSignals(c), st = sig.stat;
     if(fcCooling(st)) return;
     if(st.seen === 0){ _fcPri.set(c.id, flashcardPriority(c)); (sig.gap >= 0.4 || sig.weakSub || weakDoms.includes(c.domain) ? L.weakNew : L.newer).push(c); }
-    else if(isDue(st)){ _fcPri.set(c.id, flashcardPriority(c)); (sig.leech ? L.leech : (sig.gap >= 0.4 ? L.gap : L.due)).push(c); }
+    else if(isDue(st)){ _fcPri.set(c.id, flashcardPriority(c)); (sig.leech ? L.leech : (sig.gap >= 0.4 ? L.gap : (st.known === false ? L.learn : L.due))).push(c); }
   });
   return L;
 }
@@ -12299,27 +12301,31 @@ function fcBalListsCached(o){
 }
 function fcBalCounts(n, o, L){
   o = o || {}; L = L || fcBalLists(o);
+  if(o.learnOnly){ const nl = Math.min(n, L.learn.length), nk = Math.min(2, L.leech.length, n - nl); return { gap:0, learn:nl, due:0, leech:nk, fresh:0, weakNew:0, breadth:0 }; }
   const days = getDaysUntilExam();
   let newShare = (days !== null && days <= 7) ? 0.3 : 0.5;
   try{ if(fcContext().backlog > 40 && !(days !== null && days <= 7)) newShare = Math.min(newShare, 0.4); }catch(e){}
   if(o.only === 'new') newShare = 1; else if(o.only === 'review') newShare = 0; else if(o.kind === 'gap') newShare = Math.min(newShare, 0.4);
-  const reviewAvail = L.gap.length + L.due.length + Math.min(2, L.leech.length);
+  const reviewAvail = L.gap.length + L.learn.length + L.due.length + Math.min(2, L.leech.length);
   const newAvail = L.weakNew.length + L.newer.length;
   let nNew = Math.round(n * newShare), nRev = n - nNew;
   if(nRev > reviewAvail){ nNew += nRev - reviewAvail; nRev = reviewAvail; }
   if(nNew > newAvail){ const spill = nNew - newAvail; nNew = newAvail; nRev = Math.min(reviewAvail, nRev + spill); }
   const nWeak = Math.min(L.weakNew.length, Math.ceil(nNew * 0.7)), nBreadth = Math.min(L.newer.length, nNew - nWeak);
   const nWeakFill = Math.min(L.weakNew.length, nNew - nBreadth); // breadth short: weak fills the rest
-  const gapCap = o.kind === 'gap' ? nRev : Math.ceil(nRev * 0.6);
-  const nGap = Math.min(L.gap.length, gapCap), nLeech = Math.min(2, L.leech.length, Math.max(0, nRev - nGap));
-  const nDue = Math.min(L.due.length, nRev - nGap - nLeech);
-  return { gap:nGap, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
+  // Review slots: cards tied to missed questions, cards the student marked still learning, then ordinary spaced reviews.
+  const nGap = Math.min(L.gap.length, o.kind === 'gap' ? nRev : Math.ceil(nRev * 0.4));
+  const nLeech = Math.min(2, L.leech.length, Math.max(0, nRev - nGap));
+  const nLearn = Math.min(L.learn.length, Math.max(0, nRev - nGap - nLeech), o.only === 'review' ? nRev : Math.ceil(nRev * 0.6));
+  const nDue = Math.min(L.due.length, Math.max(0, nRev - nGap - nLeech - nLearn));
+  const nLearn2 = Math.min(L.learn.length, nLearn + Math.max(0, nRev - nGap - nLeech - nLearn - nDue)); // nothing else due: more of the flagged ones
+  return { gap:nGap, learn:nLearn2, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
 }
 function fcBalanced(n, o){
   o = o || {}; n = Math.max(4, Math.min(40, parseInt(n, 10) || 20));
   const L = fcBalLists(o), K = fcBalCounts(n, o, L);
   const take = (list, k) => fcWeightedPick(list, k, 1.5);
-  const rev = take(L.gap, K.gap).concat(take(L.due, K.due), take(L.leech, K.leech));
+  const rev = take(L.gap, K.gap).concat(take(L.learn, K.learn), take(L.due, K.due), take(L.leech, K.leech));
   const fresh = take(L.weakNew, K.weakNew).concat(take(L.newer, K.breadth));
   const a = rev, b = fresh, mixed = []; let i = 0, j = 0;
   const share = (a.length + b.length) ? b.length / (a.length + b.length) : 0;
@@ -12330,11 +12336,11 @@ function fcBalanced(n, o){
   let list = fcInterleave(mixed);
   const out = [], later = [];
   list.forEach(c => { if(out.slice(-40).some(x => fcSimilar(x, c))) later.push(c); else out.push(c); });
-  return { cards: out.concat(later), mix: { review: K.gap + K.due + K.leech, gap: K.gap, fresh: K.fresh } };
+  return { cards: out.concat(later), mix: { review: K.gap + K.learn + K.due + K.leech, gap: K.gap, learn: K.learn, fresh: K.fresh } };
 }
 function fcMixText(m){
   if(!m) return '';
-  const bits = []; if(m.review) bits.push(m.review + ' to review'); if(m.fresh) bits.push(m.fresh + ' new');
+  const bits = []; if(m.review) bits.push(m.review + ' to review' + (m.learn ? ' (' + m.learn + ' you are still learning)' : '')); if(m.fresh) bits.push(m.fresh + ' new');
   return bits.join(', ');
 }
 function startFlashcardSet(cards, kind){
@@ -12361,15 +12367,16 @@ function fcDeckLine(){
   if(fcCustomQueue && (fcCustomKind === 'new' || fcCustomKind === 'learning')){ el.textContent = fcCustomKind === 'new' ? 'Showing cards you have not seen yet. When you finish, the regular deck comes back.' : 'Showing cards you are still learning. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
   if(!fcQueue.length || fcCustomQueue){ el.style.display = 'none'; return; }
   const slice = fcQueue.slice(fcIndex, fcIndex + 20);
-  let due = 0, gap = 0, fresh = 0, leech = 0;
+  let due = 0, gap = 0, fresh = 0, leech = 0, learn = 0;
   slice.forEach(c => {
     const sig = fcCardSignals(c);
     if(sig.leech) leech++;
     if(sig.gap >= 0.4) gap++;
-    if(sig.stat.seen === 0) fresh++; else if(isDue(sig.stat)) due++;
+    if(sig.stat.seen === 0) fresh++; else if(isDue(sig.stat)){ if(sig.stat.known === false) learn++; else due++; }
   });
   const bits = [];
   if(due) bits.push(due + ' due');
+  if(learn) bits.push(learn + ' still learning');
   if(leech) bits.push(leech + ' tricky');
   if(fresh) bits.push(fresh + ' new');
   const days = getDaysUntilExam();
@@ -13001,7 +13008,7 @@ function fcPaintRetell(){
   const p = fcRetellPick(card);
   if(!p){ box.style.display = 'none'; return; }
   box.innerHTML = '';
-  const l = document.createElement('b'); l.textContent = p.label + ' · missed ' + fcLapseN(card) + '×'; box.appendChild(l);
+  const l = document.createElement('b'); l.textContent = p.label + ' · still learning ' + fcLapseN(card) + '×'; box.appendChild(l);
   box.appendChild(document.createTextNode(p.text));
   box.style.display = 'block';
 }
@@ -13231,17 +13238,17 @@ function fcRecapHtml(r){
   const pct = Math.round(r.knew / r.total * 100);
   let msg = pct >= 85 ? 'Strong round.' : pct >= 60 ? 'Solid round.' : 'A tough round, which is exactly when spacing helps most.';
   const body = r.missed.length
-    ? `You knew ${r.knew} of ${r.total}. ${msg} These come back first: ${miss}.`
+    ? `You knew ${r.knew} of ${r.total}. ${msg} These stay in your learning pile and come back first: ${miss}.`
     : `You knew all ${r.total}. ${msg} They will return later, on a longer gap.`;
   const ps = fcPlanState();
   const nextBtn = conductorCardsRecap(r, !!(ps && ps.done));
   const planBit = ps ? `<div class="fr-plan">${ps.done ? `Today's plan: cards done ✓ (${ps.have} reviewed).` : `Today's plan: ${ps.have} of ${ps.need} cards done, ${ps.need - ps.have} to go.`}</div>` : '';
-  return `<div class="fr-title">Checkpoint</div>${body}${planBit}<div class="fr-next">${nextBtn}<button class="${nextBtn && ps && ps.done ? 'btn ghost' : 'btn'}" onclick="continueFlashcards()">Keep going</button>${r.missed.length ? '<button class="btn ghost" onclick="askTutorAboutMisses()">Walk me through the misses</button>' : ''}</div>`;
+  return `<div class="fr-title">Checkpoint</div>${body}${planBit}<div class="fr-next">${nextBtn}<button class="${nextBtn && ps && ps.done ? 'btn ghost' : 'btn'}" onclick="continueFlashcards()">Keep going</button>${r.missed.length ? '<button class="btn ghost" onclick="askTutorAboutMisses()">Go through the ones I am still learning</button>' : ''}</div>`;
 }
 function askTutorAboutMisses(){
   const terms = fcRound.missed.slice(0, 6); if(!terms.length) return;
   if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen();
-  askTutorAbout('I just missed these flashcards: ' + terms.join('; ') + '. Take them one at a time, starting with the one that matters most for the exam. Ask me what I remember, then fill in what I am missing, and show how to tell it apart from anything it is easy to confuse with.');
+  askTutorAbout('I just marked these flashcards as still learning: ' + terms.join('; ') + '. Take them one at a time, starting with the one that matters most for the exam. Ask me what I remember, then fill in what I am missing, and show how to tell it apart from anything it is easy to confuse with.');
 }
 // A checkpoint left on screen stays true: its plan line is rewritten from today's real progress each time the screen is shown,
 // and after half an hour it gives way to a fresh deck.
@@ -13356,7 +13363,8 @@ function getSpacedStat(store, id){
     seen: s.seen||0, correct: s.correct||0,
     box: typeof s.box==='number' ? s.box : (s.known===true ? 2 : 0),
     dueAt: s.dueAt||0, lastSeenAt: s.lastSeenAt||0,
-    firstOk: typeof s.firstOk === 'boolean' ? s.firstOk : undefined
+    firstOk: typeof s.firstOk === 'boolean' ? s.firstOk : undefined,
+    known: typeof s.known === 'boolean' ? s.known : undefined
   };
 }
 
@@ -20968,6 +20976,22 @@ function diagnosisFindings(){
     }
   }catch(e){}
 
+  // 3. What you flagged yourself: cards marked "Still learning". Your own sense of what you have not got yet is a real signal.
+  try{
+    const fl = {}; let nFl = 0;
+    allFlashcards().forEach(c => { const st = (DATA.flashcardStats || {})[c.id]; if(st && st.seen > 0 && st.known === false){ nFl++; fl[c.domain] = (fl[c.domain] || 0) + 1; } });
+    if(nFl >= 6){
+      const top = Object.keys(fl).sort((a, b) => fl[b] - fl[a]).slice(0, 2).map(k => { const d = DOMAINS.find(x => x.key === k); return { k, n: fl[k], name: d ? d.name : k }; });
+      const acc = top[0] ? (stats.parts.find(x => x.key === top[0].k) || {}).acc : null;
+      const feels = top[0] && acc != null && acc >= 0.75 ? ` Your question scores there are strong, so you may know more than it feels like; a few quick retrievals will tell.` : '';
+      add({ id:'selflearn', sev: Math.min(0.8, 0.3 + nFl / 80), kind:'selfcheck',
+        title: `${nFl} cards you are still learning`,
+        line: `Mostly ${top.map(t => t.name + ' (' + t.n + ')').join(' and ')}.${feels}`,
+        why: 'You marked these yourself, and learners are more often overconfident than not (Dunlosky & Rawson, 2012), so a flag from you is a reliable sign. They are weighted up in every set until you get them.',
+        cta: 'Study these', act: () => { try{ const b = fcBalanced(20, { learnOnly:true }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'learning')) showTab('flashcards'); }catch(e){ showTab('flashcards'); } } });
+    }
+  }catch(e){}
+
   // (Stuck points live in the callout above the diagnosis, so they are not repeated here.)
 
   // 4. Calibration: does how sure you feel match how often you are right?
@@ -21646,7 +21670,11 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   const fcProgress = computeFlashcardProgress();
   if(fcProgress.knownCount + fcProgress.learningCount > 0){
-    flashcardContext = ` They've also been using the app's flashcards: ${fcProgress.knownCount} of ${fcProgress.total} marked as known, ${fcProgress.learningCount} still learning, and ${fcProgress.dueCount} currently due for review.`;
+    flashcardContext = ` They've also been using the app's flashcards: ${fcProgress.knownCount} of ${fcProgress.total} marked as known, ${fcProgress.learningCount} marked "Still learning", and ${fcProgress.dueCount} currently due for review.`;
+    try{
+      const fl = allFlashcards().filter(c => { const st = (DATA.flashcardStats || {})[c.id]; return st && st.seen > 0 && st.known === false; }).sort((a, b) => ((DATA.flashcardStats[b.id] || {}).lastSeenAt || 0) - ((DATA.flashcardStats[a.id] || {}).lastSeenAt || 0));
+      if(fl.length) flashcardContext += ' "Still learning" is their own judgement that there is more to learn on a card, so treat those as real gaps even where their question scores look fine; most recent: ' + fl.slice(0, 6).map(c => c.term).join('; ') + '.';
+    }catch(e){}
   }
 
   let foundationContext = '';
@@ -22186,12 +22214,12 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'start_flashcards',
-    description: "Start a flashcard set for the student right now. Use 'gaps' for cards tied to questions they missed or were sure and wrong about (best after they struggle with an idea), 'domain' with a domain for a focused set, 'new' for cards they have never seen (add a domain to narrow it), 'learning' for cards they have seen but not yet got right twice in a row, or 'due' to open the regular deck ordered by what they need most.",
+    description: "Start a flashcard set for the student right now. Use 'gaps' for cards tied to questions they missed or were sure and wrong about (best after they struggle with an idea), 'domain' with a domain for a focused set, 'new' for cards they have never seen (add a domain to narrow it), 'learning' for cards they marked Still learning (their own sign that there is more to learn on them, so treat it as a real gap), or 'due' to open the regular deck ordered by what they need most.",
     input_schema: {
       type: 'object',
       properties: {
         card_ids: { type: 'array', items: { type: 'string' }, description: "Optional: specific cards to study, by id, in the order to show them (up to 30). Get real ids from find_flashcards. When given, focus is ignored." },
-        focus: { type: 'string', enum: ['gaps','domain','due','new','learning'], description: "Which set to start. 'new' = cards they have never seen (optionally within a domain); 'learning' = cards they have seen but have not yet got right twice in a row." },
+        focus: { type: 'string', enum: ['gaps','domain','due','new','learning'], description: "Which set to start. 'new' = cards they have never seen (optionally within a domain); 'learning' = cards they marked Still learning." },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when focus is 'domain'." },
         count: { type: 'integer', minimum: 5, maximum: 40, description: "Optional: how many cards in the set (default 20). Choose by the time they have and how much needs reinforcing." },
       },
@@ -22395,10 +22423,10 @@ async function executeTutorTool(toolName, toolInput){
       allFlashcards().forEach(c => {
         if(dm && c.domain !== dm) return;
         const st = getSpacedStat(DATA.flashcardStats, c.id);
-        const status = st.seen === 0 ? 'new' : (isDue(st) ? 'due' : (st.box <= 1 ? 'learning' : 'known'));
+        const status = st.seen === 0 ? 'new' : (st.known === false ? 'learning' : (isDue(st) ? 'due' : (st.box <= 1 ? 'learning' : 'known')));
         if(stt === 'new' && status !== 'new') return;
-        if(stt === 'due' && status !== 'due') return;
-        if(stt === 'learning' && !(st.seen > 0 && st.box <= 1)) return;
+        if(stt === 'due' && !(st.seen > 0 && isDue(st))) return;
+        if(stt === 'learning' && !(st.seen > 0 && (st.known === false || st.box <= 1))) return;
         const hay = (c.term + ' ' + c.def).toLowerCase();
         if(q.length && !q.every(w => hay.includes(w))) return;
         let sc = 0; try{ sc = flashcardPriority(c); }catch(e){}
@@ -22423,7 +22451,7 @@ async function executeTutorTool(toolName, toolInput){
         const opts = { domain: dm };
         if(toolInput.focus === 'gaps') opts.kind = 'gap';
         else if(toolInput.focus === 'new') opts.only = 'new';
-        else if(toolInput.focus === 'learning') opts.only = 'review';
+        else if(toolInput.focus === 'learning') opts.learnOnly = true;
         const b = fcBalanced(cap, opts);
         if(!b.cards.length) return toolInput.focus === 'new' ? 'There are no unseen flashcards' + (dm ? ' in that domain' : '') + ' left.' : toolInput.focus === 'gaps' ? 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.' : 'No flashcards are ready in that set right now (the ones they have rated recently are resting). Offer new cards or the regular deck.';
         window._fcLastMix = b.mix;
@@ -23598,7 +23626,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.280';
+const BUILD_ID = '2026-10-19.281';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
