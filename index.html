@@ -7660,14 +7660,17 @@ function computeNextStep(stats){
   if(step && ['Biggest opportunity','Looking strong','Rebuild the basics','Blind spot','Spaced review','Flashcards due','Calculator practice','Formula practice','Exam-style practice','Weak topic'].includes(step.kicker)){
     try{
       const plan = buildStudyPlan();
-      const open = plan.steps.filter(x => !x.done && !x.manual && typeof x.run === 'function');
-      const first = open[0];
+      let open = plan.steps.filter(x => !x.done && !x.manual && typeof x.run === 'function');
+      let first = open[0];
+      // The session itself also runs the hands-on parts (a teach-back, the briefing), so count what it will really run: the briefing and this card then agree.
+      try{ const parts = conductorFit(conductorCandidates({ ran: [], skipped: [], log: [] }, plan), 0, plan.minutes); if(first && parts.length >= open.length){ open = parts; first = parts[0]; } }catch(e){}
       if(first){
         const partial = (first.have || 0) > 0 && first.need > 0;
+        const started = partial || plan.steps.some(x => x.done); // anything finished or begun today makes it a continuation
         const total = Math.min(plan.minutes, open.reduce((a, x) => a + x.minutes, 0));
         step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}`, title: open.length === 1 ? first.title : "Today's session",
-          why: open.length === 1 ? first.why : `First: ${first.title}. Then ${open.length - 1} more part${open.length === 2 ? '' : 's'}; the order adjusts as you go.`,
-          cta: partial ? 'Continue' : "Start today's session", meta:`about ${total} min`, run: open.length === 1 ? first.run : () => conductorStart(),
+          why: open.length === 1 ? first.why : `${started ? 'Next' : 'First'}: ${first.title}. Then ${open.length - 1} more part${open.length === 2 ? '' : 's'}; the order adjusts as you go.`,
+          cta: started ? "Continue today's session" : "Start today's session", meta:`about ${total} min${started ? ' left' : ''}`, run: (open.length === 1 && typeof first.run === 'function') ? first.run : () => conductorStart(),
           bigger: step.title };
       }
     }catch(e){}
@@ -8269,11 +8272,12 @@ function conductorShow(kind){
     let cum = 0, brkAt = -1; if(withBreak){ for(let i = 0; i < parts.length - 1; i++){ cum += parts[i].minutes; if(cum >= Math.min(105, tot / 2)){ brkAt = i; break; } } }
     const endAt = new Date(Date.now() + (tot + (brkAt >= 0 ? 10 : 0)) * 60000); const endTxt = endAt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
     let focusTxt = ''; try{ const bf = podcastBriefing().focus.slice(0, 2).map(f => f.label); if(bf.length) focusTxt = 'Focus today: ' + bf.join('; ') + '. '; }catch(e){}
-    html = `<div class="cd-kicker">Today's session · ${escapeHtml(plan.phase.label)}</div><h3 class="cd-title" id="cdTitle">${parts.length} part${parts.length === 1 ? '' : 's'}, about ${tot} minutes</h3>
+    const resumed = plan.steps.some(x => x.done); // some of today is already finished
+    html = `<div class="cd-kicker">${resumed ? 'Rest of today' : "Today's session"} · ${escapeHtml(plan.phase.label)}</div><h3 class="cd-title" id="cdTitle">${parts.length} part${parts.length === 1 ? '' : 's'}${resumed ? ' left' : ''}, about ${tot} minutes</h3>
       <p class="cd-text">${escapeHtml(focusTxt)}Done around ${escapeHtml(endTxt)}${brkAt >= 0 ? ', with one 10 minute break' : ''}.${(endAt.getHours() >= 23 && endAt.getMinutes() >= 30) || endAt.getHours() < 5 ? ' That runs late: stopping after the break and finishing tomorrow protects your sleep, which is when practice settles.' : ''} After each part I check how it went and adjust what comes next. Skip a part or stop whenever you like.</p>
       <ol class="cd-parts">${parts.map((x, i) => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>` + (i === brkAt ? `<li class="cd-brk"><div>Break<small>10 min, away from the screen</small></div></li>` : '')).join('')}</ol>
       <div class="cd-next"><b>Starting with: ${escapeHtml(parts[0].title)}</b><span>${escapeHtml(CONDUCTOR_CUES[parts[0].id] || 'Take it one question at a time.')}</span></div>
-      <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">Begin</button><button type="button" class="cd-link" onclick="conductorClose(false)">Not now</button></div>`;
+      <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">${resumed ? 'Continue' : 'Begin'}</button><button type="button" class="cd-link" onclick="conductorClose(false)">Not now</button></div>`;
   } else if(kind === 'between' || kind === 'menu'){
     const last = c.log[c.log.length - 1];
     const nxt = conductorPickNext();
@@ -23699,7 +23703,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.286';
+const BUILD_ID = '2026-10-19.288';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
