@@ -8532,6 +8532,7 @@ function renderModeMeta(){
 function refreshCoachSurfaces(){
   if(typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   lastCoachRefreshAt = Date.now();
+  try{ focusRefresh(); }catch(e){}
   lastCoachRefreshDay = new Date().toDateString();
   const stats = computeStats();
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
@@ -12273,6 +12274,7 @@ function renderFlashcardStats(){
 }
 
 function enterFlashcardFullscreen(){
+  try{ if(_focus) focusExit({ stay:true }); }catch(e){}
   document.body.classList.add('flashcard-fullscreen');
   document.getElementById('appHeader').style.display = 'none';
   document.getElementById('appTabbar').style.display = 'none';
@@ -18003,6 +18005,7 @@ document.addEventListener('touchmove', function(e){
 }, {passive:false});
 
 function enterFullScreenQuiz(){
+  try{ if(_focus) focusExit({ stay:true }); }catch(e){}
   document.body.classList.add('quiz-active');
   document.getElementById('appHeader').style.display = 'none';
   document.getElementById('appTabbar').style.display = 'none';
@@ -21538,7 +21541,7 @@ Guidelines:
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
 - Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
-- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
+- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
@@ -21760,7 +21763,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
     if(name === 'open_study_guide') return 'Opened your study guide';
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
-    if(name === 'show_progress') return 'Opened your detailed progress (Study tab)';
+    if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Study tab)';
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
     if(name === 'start_my_session') return 'Opened today\'s guided session';
     if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
@@ -21952,7 +21955,7 @@ const TUTOR_TOOLS = [
   {
     name: 'show_progress',
     description: "Open the student's detailed progress breakdown in the app -- accuracy by domain and difficulty tier, scenario vs. standalone question performance, and confidence calibration. Use this when they ask how they're doing, want to see a fuller picture than what you can describe in a chat reply, or ask something like \"show me my weak spots\" or \"what does my progress look like.\" If they specifically want something printable or saveable with concrete items to act on (specific subtopics, numbers, or questions), use open_study_guide instead -- that one names specific things to do, this one reports aggregate stats.",
-    input_schema: { type: 'object', properties: {} },
+    input_schema: { type: 'object', properties: { isolate: { type: 'boolean', description: 'true shows it alone in a focus view with the rest of the app hidden, so they can read it without distraction.' } } },
   },
   {
     name: 'generate_practice',
@@ -22229,6 +22232,7 @@ async function executeTutorTool(toolName, toolInput){
       const chevron = document.getElementById('diagnosisChevron');
       if(body) body.style.display = 'block'; // force-open rather than toggle, since a toggle could accidentally close it if already open
       if(chevron) chevron.textContent = 'tap to collapse ▴';
+      if(toolInput && toolInput.isolate){ const card = document.getElementById('diagnosisCard'); const sm = document.getElementById('diagnosisSummary'); focusEnter({ tab:'study', els:[card, body], title:'Where you stand' }); return `Opened your detailed progress alone in a focus view, with the rest of the app hidden. They leave with Done.`; }
       return `Opened your detailed progress breakdown.`;
     }
     if(toolName === 'generate_practice'){
@@ -22657,9 +22661,11 @@ function focusEnter(o){
   _focus = { entering:true, origin: origin ? origin.replace(/^tab-/, '') : null, originY, tab:o.tab, stepId:o.stepId || null };
   let el = o.el || null;
   if(!el && o.sel) el = document.querySelector(o.sel);
-  if(el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
+  if(!(o.els && o.els.length) && el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
   if(el === panel) el = null;
-  if(el){ el.classList.add('focus-target'); let a = el.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } _focus.el = el; }
+  const els = (o.els && o.els.length) ? o.els.filter(Boolean) : (el ? [el] : []);
+  els.forEach(t => { t.classList.add('focus-target'); let a = t.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } });
+  if(el) _focus.el = el;
   document.body.classList.add('focus-mode');
   const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
   const fromChat = _focus.origin === 'tutor';
@@ -22669,13 +22675,25 @@ function focusEnter(o){
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
   bar.querySelector('.fb-done').onclick = () => focusExit({ done:true });
-  const nb = bar.querySelector('.fb-next'); if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
+  const nb = bar.querySelector('.fb-next'); if(nb && nx) nb.setAttribute('aria-label', 'Next: ' + nx.label);
+  if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
   panel.insertBefore(bar, panel.firstChild);
   _focus.bar = bar; _focus.panel = panel;
   document.addEventListener('keydown', focusKey, true);
   _focus.entering = false;
   try{ window.scrollTo(0, 0); }catch(e){}
   return true;
+}
+function focusRefresh(){
+  const f = _focus; if(!f || !f.bar) return;
+  let nx = null; try{ nx = tutorNextChoice(f.stepId); }catch(e){}
+  let nb = f.bar.querySelector('.fb-next');
+  if(nx && !nb){
+    nb = document.createElement('button'); nb.type = 'button'; nb.className = 'fb-next'; nb.textContent = 'Next';
+    nb.onclick = () => { focusExit({ stay:true, done:true }); tutorGoNext(); };
+    f.bar.insertBefore(nb, f.bar.querySelector('.fb-done'));
+  }
+  if(nb){ if(nx) nb.setAttribute('aria-label', 'Next: ' + nx.label); else nb.remove(); }
 }
 function focusKey(e){ if(e.key === 'Escape' && _focus && !session) focusExit({}); }
 function focusExit(o){
@@ -23180,7 +23198,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.272';
+const BUILD_ID = '2026-10-19.273';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
