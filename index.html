@@ -1561,7 +1561,7 @@
   #glossarySearch{font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--paper);background:var(--surface2);border:1px solid var(--hair-strong);border-radius:8px;padding:10px 14px;min-height:44px;width:100%;box-sizing:border-box;margin-bottom:10px;}
   #glossarySearch:focus{border-color:var(--gold);}
   #glossarySearch::placeholder{color:var(--muted-dim);}
-  .glossary-item{padding:12px 0;border-bottom:1px solid var(--hair);cursor:pointer;}
+  .glossary-item{padding:12px 0;border-bottom:1px solid var(--hair);cursor:pointer;content-visibility:auto;contain-intrinsic-size:auto 64px;}
   .glossary-item:last-child{border-bottom:none;}
   .glossary-item:hover .glossary-term{color:var(--gold);}
   .glossary-term{font-weight:600;color:var(--paper);font-size:14px;margin-bottom:3px;display:flex;align-items:center;transition:color var(--t-fast) var(--ease);}
@@ -3935,7 +3935,11 @@ function showTab(name, opts){
   if(hero) hero.style.display = (name === 'study') ? 'block' : 'none';
   try{ conductorRefreshPill(); }catch(e){}
   if(DATA){
-    if(name === 'reference' || !window._refRenderedOnce){ renderReference(); window._refRenderedOnce = true; }
+    // The Reference page is big (hundreds of terms), so it is rebuilt only when what it shows has changed.
+    if(name === 'reference' || !window._refRenderedOnce){
+      let sig = ''; try{ sig = [allDomainsWeakestFirst().join(','), DATA.answerCounter, allFlashcards().length, DATA.checkedSubtopics.length, Object.keys(DATA.formulaStats || {}).length, Object.values(DATA.formulaStats || {}).reduce((x,f)=>x+((f&&f.attempts)||0),0), localDayKey()].join('|'); }catch(e){ sig = String(Math.random()); }
+      if(!window._refRenderedOnce || window._refSig !== sig){ renderReference(); window._refRenderedOnce = true; window._refSig = sig; }
+    }
     // Keep your place in the deck when you hop between tabs; only re-plan it when something that changes the plan has happened
     // (a quiz answer, a card rating, a new day) or the deck has gone stale.
     { const sig = fcPlanSignature();
@@ -22876,7 +22880,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.242';
+const BUILD_ID = '2026-10-18.243';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
