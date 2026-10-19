@@ -17831,11 +17831,12 @@ async function mwFetchNote(it){
   if(mw.notes[key]){ show(mw.notes[key]); return; }
   const r = MW_REASONS.find(x => x.k === it.reason);
   const prompt = `A CFP exam student missed this practice question. Write a short coaching note, at most 60 words, in plain language, no lists or headings.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
-    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nSay why ${mwLetter(it.pick)} is tempting, then the one fact or rule that separates it from ${mwLetter(q.correct)}, then a short memory hook. Do not repeat the question or the choices word for word.`;
+    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r && r.k === 'guess' ? ' They were guessing; do not comment on guessing.' : r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nSay why ${mwLetter(it.pick)} is tempting, then the one fact or rule that separates it from ${mwLetter(q.correct)}, then a short memory hook. Do not repeat the question or the choices word for word.`;
   try{
     const txt = trimToSentence(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 260 }));
-    if(txt){ mw && (mw.notes[key] = txt); }
-    show(txt || '');
+    const ok = txt && txt.length > 40 && /[.!?][\"'\u201d\u2019)\]]*$/.test(txt);
+    if(ok){ mw && (mw.notes[key] = txt); }
+    show(ok ? txt : '');
   }catch(e){ show(''); }
 }
 function mwAskTutor(){
@@ -24077,7 +24078,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.294';
+const BUILD_ID = '2026-10-19.295';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
