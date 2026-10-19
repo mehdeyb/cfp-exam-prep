@@ -1374,6 +1374,11 @@
   .cue-flag{background:rgba(196,74,60,.22);}
   .cue-acct{background:rgba(63,111,176,.22);}
   .cue-toggle{margin-left:auto;font:600 11px 'IBM Plex Sans',sans-serif;min-height:44px;padding:0 12px;border-radius:22px;border:1px solid var(--hair);background:var(--surface);color:var(--paper);cursor:pointer;transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease);}
+  .q-scenario{position:relative;}
+  .q-scenario .cue-toggle{position:absolute;top:6px;right:8px;margin:0;min-height:30px;padding:0 12px;}
+  .q-scenario .cue-toggle::after{content:"";position:absolute;inset:-8px -4px;}
+  .q-scenario .scenario-label{padding-right:96px;}
+  .simplify-row .btn.ghost{flex:1 1 0;min-width:150px;}
   .cue-toggle:hover{border-color:var(--gold);}
   .cue-toggle:active{transform:scale(.96);}
   .cue-toggle[aria-pressed="true"]{color:var(--gold);border-color:var(--gold);}
@@ -10348,7 +10353,7 @@ Definition: ${f.def}
 Describe a brief, concrete scenario (a client situation, a number, or a specific application) that shows how this works in practice. 2-3 sentences. Don't just restate the definition.`;
 
   try{
-    const reply = (await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 250 })).trim()
+    const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 400 }))
       || "Sorry, couldn't come up with one just now — try again in a moment.";
     if(!DATA.glossaryExamples) DATA.glossaryExamples = {};
     DATA.glossaryExamples[f.id] = reply;
@@ -12738,7 +12743,7 @@ async function fcRetellCall(card, angle, prior, lp, ctx){
   if(prior.length) lines.push('Already shown to them (do not repeat or paraphrase):\n' + prior.map(v => '- ' + v.text).join('\n'));
   lines.push('This time: ' + angle.ask);
   lines.push('Plain text only, no markdown, no preamble, under 65 words. Do not invent rules or figures beyond the definition unless you are certain; if unsure, stay general.');
-  return String(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 420 })).trim();
+  return trimToSentence(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 480 }));
 }
 async function fcMaybeRetell(card){
   if(!aiFeaturesAvailable || !fcNeedsRetell(card) || _fcRetellBusy[card.id]) return;
@@ -12904,7 +12909,7 @@ Definition: ${card.def}
 The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Don't just restate the definition in different words.`;
 
   try{
-    const reply = (await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 200 })).trim()
+    const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 320 }))
       || "Sorry, couldn't come up with one just now — try again in a moment.";
     if(!DATA.flashcardMnemonics) DATA.flashcardMnemonics = {};
     DATA.flashcardMnemonics[card.id] = reply;
@@ -12965,7 +12970,7 @@ async function requestFlashcardExplain(){
     'Term: ' + card.term + '\nDefinition: ' + card.def + '\n\n' +
     'Use plain text only, no markdown, under 110 words. Do not invent rules or figures beyond the definition unless you are certain of them; if you are unsure, say so.' + weak;
   try{
-    const reply = String(await anthropicMessagesRequest({ messages:[{role:'user', content:prompt}], maxTokens:300 })).trim();
+    const reply = trimToSentence(await anthropicMessagesRequest({ messages:[{role:'user', content:prompt}], maxTokens:480 }));
     if(reply) fcExplainCache[idAt] = reply;
     if(!same()) return;
     paint(reply || "Sorry, I couldn't put one together just now. Try again in a moment.", 'Worked example');
@@ -13858,6 +13863,13 @@ async function anthropicMessagesRequest(args, attempt){
   }
 }
 
+// A reply that hit its length cap can stop mid-sentence. Keep everything up to the last finished sentence.
+function trimToSentence(t){
+  t = String(t || '').trim();
+  if(!t || /[.!?\u2026][\"'\u201d\u2019)\]]*$/.test(t)) return t;
+  const m = t.match(/^[\s\S]*[.!?][\"'\u201d\u2019)\]]*(?=\s)/);
+  return (m && m[0].length > 40) ? m[0].trim() : t;
+}
 async function callClaude(promptText, maxTokens){
   return anthropicMessagesRequest({ messages: [{ role: "user", content: promptText }], maxTokens: maxTokens || 4000 });
 }
@@ -18351,7 +18363,7 @@ const CUE_RULES = [
   { k:'goal', re:/\b(?:wants?|plans?|hopes?|goals?|intends?|considering|worr(?:ies|ied)|asked|expects?|would like|needs?|wish(?:es)?)\b/gi },
   { k:'acct', re:/\b(?:S-corporation|C-corporation|LLC|partnership|401\(k\)|403\(b\)|IRAs?|Roth|529|QDRO|buy-sell agreement|term life policy|life insurance|disability|long-term care|Social Security|Medicare|Medicaid|trust|brokerage account|mortgage|pension|annuity|stock|rental property)\b/gi }
 ];
-const CUE_LABELS = { fig:'Figures', goal:'Goals', flag:'Red flags and gaps', acct:'Accounts and entities' };
+const CUE_LABELS = { fig:'Figures', goal:'Goals', flag:'Red flags', acct:'Accounts' };
 function cueFor(q){ return (q && (q.cue || CASE_CUES[q.id])) || null; }
 function sanitizeCue(c, scenario){
   if(!c || typeof c !== 'object') return null;
@@ -19864,10 +19876,10 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences maximum. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
+They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences, under 70 words, always finishing the last sentence. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
 
   try{
-    let reply = (await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 400 })).trim()
+    let reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 650 }))
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(reply);
     if(hitCalcConventionGuard){
@@ -22695,7 +22707,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.260';
+const BUILD_ID = '2026-10-19.261';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
