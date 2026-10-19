@@ -62,6 +62,10 @@
   }
   html[data-boot-theme="light"], html[data-boot-theme="light"] body{background-color:#F6F4EE;}
   html.booting *, html.booting *::before, html.booting *::after{transition:none !important;}
+  /* A returning student never sees the empty starting values: the numbers appear once they are real, with a soft fade. */
+  html.booting #scoreRow, html.booting .stat, html.booting .exam-countdown-card, html.booting #nextStepCard, html.booting #todayPlanCard{opacity:0;}
+  html.booted #scoreRow, html.booted .stat, html.booted .exam-countdown-card, html.booted #nextStepCard, html.booted #todayPlanCard{animation:bootFade .4s cubic-bezier(.22,1,.36,1);}
+  @media (prefers-reduced-motion:reduce){html.booted #scoreRow, html.booted .stat, html.booted .exam-countdown-card, html.booted #nextStepCard, html.booted #todayPlanCard{animation:none;}}
   html[data-boot-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:scale(.5) rotate(90deg);}
   html[data-boot-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:scale(1) rotate(0deg);}
   @keyframes bootFade{from{opacity:0;}to{opacity:1;}}
@@ -6060,8 +6064,9 @@ async function loadData(){
   renderAll();
   try{
     const _ap = document.querySelector('.tab-panel.active'); if(_ap){ _ap.classList.add('tab-enter'); setTimeout(() => _ap.classList.remove('tab-enter'), 600); }
-    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('booting')));
-    setTimeout(() => document.documentElement.classList.remove('booting'), 2000);
+    const endBoot = () => { const h = document.documentElement; if(!h.classList.contains('booting')) return; h.classList.add('booted'); h.classList.remove('booting'); setTimeout(() => h.classList.remove('booted'), 700); };
+    requestAnimationFrame(() => requestAnimationFrame(endBoot));
+    setTimeout(endBoot, 2000);
   }catch(_){}
   // The Reference page is the heaviest to build, so the opening screen does not wait for it unless it is the one showing.
   if(DATA.lastTab === 'reference'){ renderReference(); window._refRenderedOnce = true; }
@@ -6625,7 +6630,16 @@ async function persist(){
   }
 }
 
-function allQuestions(){ return QUESTIONS.concat(DATA.generatedBank); }
+// The combined lists are asked for many thousands of times while the app starts, so they are built once and reused
+// until the generated part changes (a new array, a different length, or a different first or last item).
+let _aqMemo = null;
+function allQuestions(){
+  const g = DATA.generatedBank, m = _aqMemo;
+  if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
+  const out = QUESTIONS.concat(g);
+  _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
+  return out;
+}
 
 // Difficulty tier (1=foundational recall, 2=intermediate, 3=applied/complex),
 // computed from each question's own characteristics rather than hand-tagged.
@@ -6645,7 +6659,14 @@ function questionDifficulty(q){
   if(q.q.length < 70) return 1;
   return 2;
 }
-function allFlashcards(){ return FLASHCARDS.concat(DATA.generatedFlashcards); }
+let _afMemo = null;
+function allFlashcards(){
+  const g = DATA.generatedFlashcards, m = _afMemo;
+  if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
+  const out = FLASHCARDS.concat(g);
+  _afMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
+  return out;
+}
 
 // ---- Readiness model helpers ----
 const READINESS_FLOOR = 0.25;      // chance of a right answer by guessing on a four-choice question
@@ -22978,7 +22999,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.255';
+const BUILD_ID = '2026-10-18.257';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
