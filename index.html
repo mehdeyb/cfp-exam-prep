@@ -21420,6 +21420,16 @@ function buildTutorSystemPrompt(){
         ' If they say they have more or less time, use plan_my_study with the new minutes so the plan on screen changes to match.';
     }
   }catch(e){}
+  try{
+    // Where they are in the app and the audio and calculator practice the app holds, so the tutor can connect to it.
+    const act = document.querySelector('.tab-panel.active'); const tabName = act ? act.id.replace(/^tab-/, '') : '';
+    if(tabName) timeContext += ` They are on the ${tabName === 'examday' ? 'Exam Day' : tabName} tab right now${session ? ', with a practice session open' : ''}.`;
+    const eps = Object.keys(DATA.podcastEpisodes || {}).length;
+    const lastPg = Object.values(DATA.podcastMeta || {}).filter(m => m && m.at).sort((a, b) => b.at - a.at)[0];
+    if(eps) timeContext += ` They have ${eps} podcast episode${eps === 1 ? '' : 's'} saved${lastPg ? ' (latest ' + modeAgoText(lastPg.at) + ', on ' + (lastPg.focus || []).slice(0, 2).join(' and ') + ')' : ''}; offer play_podcast when a spoken recap would help, and tell them which focus you will stress.`;
+    const fw = (typeof FD_NAMES !== 'undefined' ? FD_NAMES : []).map(n => ({ n, st: fdStats(n) })).filter(x => x.st.attempts >= 3 && x.st.correct / x.st.attempts < 0.6).sort((a, b) => a.st.correct / a.st.attempts - b.st.correct / b.st.attempts).slice(0, 3);
+    if(fw.length) timeContext += ` Calculation drills they get wrong most: ${fw.map(x => `${x.n} (${Math.round(x.st.correct / x.st.attempts * 100)}% over ${x.st.attempts})`).join(', ')}. Offer open_formula_drill on these when it fits.`;
+  }catch(e){}
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
@@ -22944,7 +22954,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.248';
+const BUILD_ID = '2026-10-18.249';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
