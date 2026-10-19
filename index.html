@@ -7569,7 +7569,13 @@ function computeNextStep(stats){
   if(!step && !session && conductorState()){
     const cs = conductorState();
     const pr = conductorProgress(cs), tot = pr.total;
-    step = { kicker:'Your session', title: cs.current ? 'Back to your session' : 'Continue your session',
+    // The part you were on is already finished on today's plan: say so and lead to the next one, instead of asking whether you are done.
+    let fin = false, nxtP = null;
+    if(cs.current){ try{ const st0 = buildStudyPlan().steps.find(x => x.id === cs.current.id); fin = !!(st0 && st0.done); if(fin) nxtP = conductorPickNext(); }catch(e){} }
+    if(fin) step = { kicker:'Your session', title:`Part ${pr.n} of ${tot} done`,
+      why: nxtP ? `${cs.current.title}: finished. Next up is ${nxtP.title}, about ${nxtP.minutes} min.` : `${cs.current.title}: finished. That was the last part for today.`,
+      cta: nxtP ? 'Next part' : 'See your summary', meta: nxtP ? `part ${pr.n + 1} of ${tot}` : 'session complete', launchesSession:false, run: () => conductorOpenMenu() };
+    else step = { kicker:'Your session', title: cs.current ? 'Back to your session' : 'Continue your session',
       why: cs.current ? `You are on part ${pr.n} of ${tot}: ${cs.current.title}. Tap when you are done and I will check in.` : `${pr.done} of ${tot} parts are done. The next one is chosen from how those went.`,
       cta:'Continue', meta: cs.current ? `part ${pr.n} of ${tot}` : `${pr.done} of ${tot} done`, launchesSession:false, run: () => conductorOpenMenu() };
   }
@@ -8500,6 +8506,10 @@ function conductorRefreshPill(){
   if(c.current){ try{ const st = buildStudyPlan().steps.find(x => x.id === c.current.id); finished = !!(st && st.done); }catch(e){} }
   // Already on this part's own screen, still working: the screen shows its own progress ("Today's plan: 8 of 20 cards"),
   // so the pill would only sit on top of the card. It comes back when the part is finished or when you leave.
+  { // The Next best step card on the Study tab already says this, so the pill would only repeat it on top of the page.
+    const act0 = document.querySelector('.tab-panel.active'), nc = document.getElementById('nextStepCard');
+    if(act0 && act0.id === 'tab-study' && nc && nc.style.display !== 'none' && nc.offsetParent !== null && currentNextStep && currentNextStep.kicker === 'Your session'){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
+  }
   if(c.current && !finished){
     const own = { cards:'flashcards', keys:'reference', teach:'tutor' }[c.current.id];
     const act = document.querySelector('.tab-panel.active');
@@ -9561,7 +9571,7 @@ function ebGrade(g){
     }
     recordStudyDay(); persist();
     { const L = planDayLog(); L.explains = L.explains || []; L.explains.push(st.key); }
-    try{ renderTodayPlan(); }catch(e){}
+    try{ renderTodayPlan(); refreshCoachSurfaces(); conductorRefreshPill(); }catch(e){}
   }catch(e){}
   const b = document.getElementById('ebBody');
   const msg = g === 'nailed' ? 'Nice. This one will come back later than the rest.' : g === 'partly' ? 'Good start. It stays in your rotation.' : 'That is useful to know. It will come back sooner.';
@@ -11633,7 +11643,7 @@ function dtwFinish(inst){
     if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); }
     recordStudyDay(); persist();
     try{ renderToolPracticeButtons(); }catch(e){}
-    try{ renderTodayPlan(); }catch(e){}
+    try{ renderTodayPlan(); refreshCoachSurfaces(); conductorRefreshPill(); }catch(e){}
   }catch(e){}
 }
 function dtwNext(inst){ const w = dtwState[inst]; const av = w && w.id; delete dtwState[inst]; if(dtwAiOn()){ dtwBegin(inst, av); return; } dtwStart(inst, av); dtwRender(inst); }
@@ -24381,7 +24391,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.301';
+const BUILD_ID = '2026-10-19.302';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
