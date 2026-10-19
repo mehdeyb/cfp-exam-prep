@@ -7786,16 +7786,20 @@ function buildStudyPlan(minutes){
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
-      if(!(dueCards >= 5 || act.cards >= 8 || gapN >= 4 || L.targets.cards)) return null;
-      const n = planTarget('cards', Math.min(Math.max(dueCards, act.cards, gapN), 25));
+      const unseenN = allFlashcards().filter(f => getSpacedStat(DATA.flashcardStats, f.id).seen === 0).length;
+      if(!(dueCards >= 5 || act.cards >= 8 || gapN >= 4 || unseenN >= 6 || L.targets.cards)) return null;
+      const n = planTarget('cards', Math.min(Math.max(dueCards, act.cards, gapN, 12), 25));
       const gapT = planTarget('cardsGap', gapN >= 4 ? gapN : 0);
       const mins = Math.min(SUBTOPIC_DRILL_LENGTH, Math.max(4, Math.ceil(n * 0.4)));
-      if(gapT >= 4) return { id:'cards', title: `Review ${n} flashcards, ${gapT} tied to questions you missed`, minutes: mins, need:n, have:act.cards, unit:'cards',
-        why:'Cards on the same ideas as questions you missed give a second way in to the same idea, which helps it stick.',
-        run: () => startGapFlashcards() };
-      return { id:'cards', title: `Review ${n} due flashcards`, minutes: mins, need:n, have:act.cards, unit:'cards',
-        why:'Cards come back just as they start to fade. Pulling an answer from memory strengthens it more than rereading does.',
-        run: () => showTab('flashcards') };
+      const kind = gapT >= 4 ? 'gap' : null;
+      let K = null; try{ K = fcBalCounts(n, { kind }, fcBalListsCached({})); }catch(e){}
+      const R = K ? K.gap + K.due + K.leech : n, F = K ? K.fresh : 0;
+      const title = F > 0 && R > 0 ? `Review ${n} flashcards, ${R} to review and ${F} new` : F > 0 ? `Learn ${n} new flashcards` : `Review ${n} due flashcards`;
+      return { id:'cards', title, minutes: mins, need:n, have:act.cards, unit:'cards',
+        why: gapT >= 4
+          ? 'A mix on purpose: cards on ideas you missed, ones that are due, and new ones you have not met. Seeing an idea from a new angle helps it stick, and new cards keep the deck from going stale.'
+          : 'A mix on purpose: cards that are due as they start to fade, and new ones you have not met. Pulling an answer from memory strengthens it more than rereading does.',
+        run: () => { const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : `Adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
       why: dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.',
@@ -12219,6 +12223,92 @@ function fcGapCards(){
     return sig.gap >= 0.4 && (sig.stat.seen === 0 || isDue(sig.stat)) && !(sig.stat.lastSeenAt && Date.now() - sig.stat.lastSeenAt < 6 * 3600000 && sig.stat.box >= 1); // a gap card you just got right waits its turn, so the set changes as you learn
   }).sort((a,b) => fcCardSignals(b).gap - fcCardSignals(a).gap || flashcardPriority(b) - flashcardPriority(a));
 }
+
+/* ---------- Balanced flashcard sets ----------
+   One recipe for every set the app or the tutor builds: cards that are due or missed (spacing), cards never seen in the weak areas
+   (the most value per card), and a few never seen from elsewhere (breadth). The mix follows the exam date and how many reviews are
+   waiting, cards are drawn by weighted chance rather than strict rank (so two sets are never the same ten cards), a card just rated or
+   just missed cools off, and tricky cards are capped so they cannot crowd out new material. */
+let _fcPri = null;
+function fcPri(c){ return (_fcPri && _fcPri.get(c.id)) || 0.1; }
+function fcWeightedPick(list, k, power){
+  const items = list.map(c => ({ c, w: Math.pow(Math.max(0.05, fcPri(c)), power || 1.5) }));
+  const out = [];
+  while(out.length < k && items.length){
+    let tot = 0; items.forEach(x => tot += x.w);
+    let r = Math.random() * tot, i = 0;
+    for(; i < items.length - 1; i++){ r -= items[i].w; if(r <= 0) break; }
+    out.push(items.splice(i, 1)[0].c);
+  }
+  return out;
+}
+function fcCooling(st){
+  if(!st || !st.seen || !st.lastSeenAt) return false;
+  const age = Date.now() - st.lastSeenAt;
+  return st.box >= 1 ? age < 6 * 3600000 : age < 4 * 3600000; // rated right: waits its interval; missed: back after a few hours, not minutes
+}
+function fcBalLists(o){
+  o = o || {};
+  let pool = allFlashcards();
+  if(o.domain) pool = pool.filter(c => c.domain === o.domain);
+  const L = { gap:[], due:[], weakNew:[], newer:[], leech:[] };
+  let weakDoms = []; try{ weakDoms = allDomainsWeakestFirst().slice(0, 3); }catch(e){}
+  _fcPri = new Map();
+  pool.forEach(c => {
+    if(fcSessBlocked(c)) return;
+    const sig = fcCardSignals(c), st = sig.stat;
+    if(fcCooling(st)) return;
+    if(st.seen === 0){ _fcPri.set(c.id, flashcardPriority(c)); (sig.gap >= 0.4 || sig.weakSub || weakDoms.includes(c.domain) ? L.weakNew : L.newer).push(c); }
+    else if(isDue(st)){ _fcPri.set(c.id, flashcardPriority(c)); (sig.leech ? L.leech : (sig.gap >= 0.4 ? L.gap : L.due)).push(c); }
+  });
+  return L;
+}
+let _fcBalCache = null;
+function fcBalListsCached(o){
+  const key = fcPlanSignature() + '|' + Math.floor(Date.now() / 60000) + '|' + ((o && o.domain) || '');
+  if(_fcBalCache && _fcBalCache.key === key) return _fcBalCache.L;
+  const L = fcBalLists(o); _fcBalCache = { key, L }; return L;
+}
+function fcBalCounts(n, o, L){
+  o = o || {}; L = L || fcBalLists(o);
+  const days = getDaysUntilExam();
+  let newShare = (days !== null && days <= 7) ? 0.3 : 0.5;
+  try{ if(fcContext().backlog > 40 && !(days !== null && days <= 7)) newShare = Math.min(newShare, 0.4); }catch(e){}
+  if(o.only === 'new') newShare = 1; else if(o.only === 'review') newShare = 0; else if(o.kind === 'gap') newShare = Math.min(newShare, 0.4);
+  const reviewAvail = L.gap.length + L.due.length + Math.min(2, L.leech.length);
+  const newAvail = L.weakNew.length + L.newer.length;
+  let nNew = Math.round(n * newShare), nRev = n - nNew;
+  if(nRev > reviewAvail){ nNew += nRev - reviewAvail; nRev = reviewAvail; }
+  if(nNew > newAvail){ const spill = nNew - newAvail; nNew = newAvail; nRev = Math.min(reviewAvail, nRev + spill); }
+  const nWeak = Math.min(L.weakNew.length, Math.ceil(nNew * 0.7)), nBreadth = Math.min(L.newer.length, nNew - nWeak);
+  const nWeakFill = Math.min(L.weakNew.length, nNew - nBreadth); // breadth short: weak fills the rest
+  const gapCap = o.kind === 'gap' ? nRev : Math.ceil(nRev * 0.6);
+  const nGap = Math.min(L.gap.length, gapCap), nLeech = Math.min(2, L.leech.length, Math.max(0, nRev - nGap));
+  const nDue = Math.min(L.due.length, nRev - nGap - nLeech);
+  return { gap:nGap, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
+}
+function fcBalanced(n, o){
+  o = o || {}; n = Math.max(4, Math.min(40, parseInt(n, 10) || 20));
+  const L = fcBalLists(o), K = fcBalCounts(n, o, L);
+  const take = (list, k) => fcWeightedPick(list, k, 1.5);
+  const rev = take(L.gap, K.gap).concat(take(L.due, K.due), take(L.leech, K.leech));
+  const fresh = take(L.weakNew, K.weakNew).concat(take(L.newer, K.breadth));
+  const a = rev, b = fresh, mixed = []; let i = 0, j = 0;
+  const share = (a.length + b.length) ? b.length / (a.length + b.length) : 0;
+  while(i < a.length || j < b.length){
+    const takeFresh = j < b.length && (i >= a.length || j < share * (mixed.length + 1));
+    mixed.push(takeFresh ? b[j++] : a[i++]);
+  }
+  let list = fcInterleave(mixed);
+  const out = [], later = [];
+  list.forEach(c => { if(out.slice(-40).some(x => fcSimilar(x, c))) later.push(c); else out.push(c); });
+  return { cards: out.concat(later), mix: { review: K.gap + K.due + K.leech, gap: K.gap, fresh: K.fresh } };
+}
+function fcMixText(m){
+  if(!m) return '';
+  const bits = []; if(m.review) bits.push(m.review + ' to review'); if(m.fresh) bits.push(m.fresh + ' new');
+  return bits.join(', ');
+}
 function startFlashcardSet(cards, kind){
   if(!cards || !cards.length) return false;
   showTab('flashcards');
@@ -12230,14 +12320,16 @@ function startFlashcardSet(cards, kind){
   const c = document.getElementById('fcCard'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'});
   return true;
 }
-function startGapFlashcards(){ return startFlashcardSet(fcGapCards().slice(0,20), 'gap'); }
+function startGapFlashcards(){ const b = fcBalanced(20, { kind:'gap' }); window._fcLastMix = b.mix; return startFlashcardSet(b.cards.length ? b.cards : fcGapCards().slice(0,20), 'gap'); }
 function fcDeckLine(){
   const el = document.getElementById('fcDeckLine');
   if(!el) return;
   const gb = document.getElementById('fcGapBtn');
   const gn = fcCustomQueue ? 0 : fcGapCards().length;
   if(gb){ gb.style.display = gn >= 1 ? '' : 'none'; gb.textContent = 'Cards on what I missed (' + Math.min(gn, 20) + ')'; }
-  if(fcCustomQueue && fcCustomKind === 'gap'){ el.textContent = 'Showing cards tied to questions you missed. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
+  if(fcCustomQueue && fcCustomKind === 'gap'){ el.textContent = 'Showing cards on what you missed' + (window._fcLastMix && window._fcLastMix.fresh ? ', plus new ones on the same ideas' : '') + '. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
+  if(fcCustomQueue && fcCustomKind === 'plan'){ const m = window._fcLastMix; el.textContent = 'Today\'s mix' + (m ? ': ' + fcMixText(m) : '') + '. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
+  if(fcCustomQueue && fcCustomKind === 'picked'){ el.textContent = 'Showing the cards your tutor picked for you. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
   if(fcCustomQueue && (fcCustomKind === 'new' || fcCustomKind === 'learning')){ el.textContent = fcCustomKind === 'new' ? 'Showing cards you have not seen yet. When you finish, the regular deck comes back.' : 'Showing cards you are still learning. When you finish, the regular deck comes back.'; el.style.display = 'block'; return; }
   if(!fcQueue.length || fcCustomQueue){ el.style.display = 'none'; return; }
   const slice = fcQueue.slice(fcIndex, fcIndex + 20);
@@ -12366,10 +12458,18 @@ function fcCompose(pool, filtered){
   let open = pool.filter(c => !fcSessBlocked(c));
   if(open.length < 8) open = pool.filter(c => !_fcSess.seen.has(c.id)).concat(pool.filter(c => _fcSess.seen.has(c.id))); // nearly the whole deck done: repeats only as a last resort, and last
   const fresh = [], review = [], rest = [];
-  open.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen === 0) fresh.push(c); else if(isDue(st)) review.push(c); else rest.push(c); }); // only cards actually due return; one you just got right waits out its interval
+  open.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen === 0) fresh.push(c); else if(isDue(st) && !fcCooling(st)) review.push(c); else rest.push(c); }); // only cards actually due return; one you just got right waits out its interval
+  // Strict rank would open on the same cards every visit: new cards are drawn by weighted chance, and tricky ones are held to two per twenty.
+  if(!filtered){
+    _fcPri = new Map(open.map(c => [c.id, flashcardPriority(c)]));
+    if(fresh.length > 1){ const f2 = fcWeightedPick(fresh.slice(0, 400), Math.min(400, fresh.length), 1.5); fresh.splice(0, f2.length, ...f2); }
+    let tricky = 0; const keep = [], hold = [];
+    review.forEach((c, idx) => { if(fcCardSignals(c).leech && tricky >= 2 && idx < 20) hold.push(c); else { if(fcCardSignals(c).leech) tricky++; keep.push(c); } });
+    review.length = 0; keep.slice(0, 20).concat(hold, keep.slice(20)).forEach(c => review.push(c));
+  }
   const days = getDaysUntilExam();
   let share = (days !== null && days <= 7) ? 0.3 : 0.5;
-  try{ if(fcContext().backlog > 40) share = Math.min(share, 0.35); }catch(e){}
+  try{ if(fcContext().backlog > 40 && !(days !== null && days <= 7)) share = Math.min(share, 0.4); else if(fcContext().backlog > 40) share = Math.min(share, 0.3); }catch(e){} // a pile of reviews never pushes new cards below four in ten, except in exam week
   const mixed = []; let i = 0, j = 0;
   while(i < fresh.length || j < review.length){
     const takeFresh = i < fresh.length && (j >= review.length || i < share * (mixed.length + 1));
@@ -21556,7 +21656,7 @@ Guidelines:
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
-- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
+- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -21770,6 +21870,7 @@ function tutorActionText(name, input, result){
         case:'Case study', checkpoint:'Timed checkpoint', fullexam:'Full exam simulation', weakspot:'Weak-spot drill' + (inp.domain ? ': ' + domName(inp.domain) : '') }[inp.mode];
       if(label) return 'Started: ' + label + (n >= 5 && ['adaptive','drill','review'].includes(inp.mode) ? ` (${n} questions)` : '');
     }
+    if(name === 'find_flashcards') return /^No flashcards/.test(r) ? 'Looked through your flashcards' : 'Chose cards from your flashcards';
     if(name === 'start_flashcards'){
       if(/^Started/.test(r)) return you(r).replace(/\.$/, '');
       if(/^No flashcards|^There are no/.test(r)) return 'No flashcards matched that, so nothing was changed';
@@ -21886,12 +21987,22 @@ const TUTOR_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
+        card_ids: { type: 'array', items: { type: 'string' }, description: "Optional: specific cards to study, by id, in the order to show them (up to 30). Get real ids from find_flashcards. When given, focus is ignored." },
         focus: { type: 'string', enum: ['gaps','domain','due','new','learning'], description: "Which set to start. 'new' = cards they have never seen (optionally within a domain); 'learning' = cards they have seen but have not yet got right twice in a row." },
         domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: "Required when focus is 'domain'." },
         count: { type: 'integer', minimum: 5, maximum: 40, description: "Optional: how many cards in the set (default 20). Choose by the time they have and how much needs reinforcing." },
       },
-      required: ['focus'],
+      required: [],
     },
+  },
+  {
+    name: 'find_flashcards',
+    description: "Look through the student's flashcards and get back real card ids, terms and where each stands, so you can choose specific cards (then pass the ids to start_flashcards as card_ids). Filter by words in the term or definition, by domain, and by status: 'new' (never seen), 'due' (seen and ready to come back), 'learning' (not yet got right twice in a row), or 'any'. Read-only; it does not move the student.",
+    input_schema: { type: 'object', properties: {
+      query: { type: 'string', description: 'Words to look for in the term or definition, such as "QDRO" or "annuity due".' },
+      domain: { type: 'string', enum: DOMAINS.map(d => d.key) },
+      status: { type: 'string', enum: ['new','due','learning','any'] },
+      limit: { type: 'integer', minimum: 1, maximum: 15, description: 'How many to return (default 10).' } }, required: [] },
   },
   {
     name: 'show_practice_options',
@@ -22049,23 +22160,49 @@ async function executeTutorTool(toolName, toolInput){
   try{
     if(toolName === 'write_new_question') return await executeWriteNewQuestion(toolInput);
     if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
+    if(toolName === 'find_flashcards'){
+      const q = String(toolInput.query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+      const dm = DOMAINS.some(d => d.key === toolInput.domain) ? toolInput.domain : null;
+      const stt = ['new','due','learning','any'].includes(toolInput.status) ? toolInput.status : 'any';
+      const lim = Math.max(1, Math.min(15, parseInt(toolInput.limit, 10) || 10));
+      const rows = [];
+      allFlashcards().forEach(c => {
+        if(dm && c.domain !== dm) return;
+        const st = getSpacedStat(DATA.flashcardStats, c.id);
+        const status = st.seen === 0 ? 'new' : (isDue(st) ? 'due' : (st.box <= 1 ? 'learning' : 'known'));
+        if(stt === 'new' && status !== 'new') return;
+        if(stt === 'due' && status !== 'due') return;
+        if(stt === 'learning' && !(st.seen > 0 && st.box <= 1)) return;
+        const hay = (c.term + ' ' + c.def).toLowerCase();
+        if(q.length && !q.every(w => hay.includes(w))) return;
+        let sc = 0; try{ sc = flashcardPriority(c); }catch(e){}
+        if(q.length && c.term.toLowerCase().includes(q.join(' '))) sc += 5;
+        rows.push({ c, status, sc });
+      });
+      if(!rows.length) return 'No flashcards match that. Try fewer words, another status, or no domain.';
+      rows.sort((a, b) => b.sc - a.sc);
+      return rows.slice(0, lim).map(r => `${r.c.id} | ${r.c.term} | ${r.c.domain} | ${r.status}`).join('\n') + `\n(${rows.length} match; pass ids as card_ids to start_flashcards.)`;
+    }
     if(toolName === 'start_flashcards'){
-      if(toolInput.focus === 'gaps'){
-        const cap = Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20));
-        const n = Math.min(cap, fcGapCards().length);
-        return startFlashcardSet(fcGapCards().slice(0, cap), 'gap') ? `Started ${n} flashcards tied to questions the student missed. They are in Flashcards now.` : 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.';
+      if(Array.isArray(toolInput.card_ids) && toolInput.card_ids.length){
+        const byId = new Map(allFlashcards().map(c => [c.id, c]));
+        const picked = []; toolInput.card_ids.forEach(id => { const c = byId.get(String(id)); if(c && !picked.includes(c)) picked.push(c); });
+        if(!picked.length) return 'Error: none of those card ids exist. Use find_flashcards to get real ids.';
+        return startFlashcardSet(picked.slice(0, 30), 'picked') ? `Started ${Math.min(30, picked.length)} flashcards you picked, in that order. They are in Flashcards now.` : 'Could not start those cards.';
       }
-      if(toolInput.focus === 'new' || toolInput.focus === 'learning'){
+      if(['gaps','domain','new','learning'].includes(toolInput.focus)){
         const cap = Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20));
         const dm = DOMAINS.some(d => d.key === toolInput.domain) ? toolInput.domain : null;
-        const set = allFlashcards().filter(c => (!dm || c.domain === dm) && (toolInput.focus === 'new' ? getSpacedStat(DATA.flashcardStats, c.id).seen === 0 : (() => { const st = getSpacedStat(DATA.flashcardStats, c.id); return st.seen > 0 && st.box <= 1; })()))
-          .sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, cap);
-        return startFlashcardSet(set, toolInput.focus === 'new' ? 'new' : 'learning') ? `Started ${set.length} ${toolInput.focus === 'new' ? 'new' : 'still-learning'} flashcards${dm ? ' in ' + dm : ''}.` : (toolInput.focus === 'new' ? 'There are no unseen flashcards left' : 'No flashcards are in the still-learning pile') + (dm ? ' in that domain' : '') + '. Offer the regular deck or a question set instead.';
-      }
-      if(toolInput.focus === 'domain'){
-        if(!DOMAINS.some(d => d.key === toolInput.domain)) return 'Error: say which exam domain.';
-        const set = allFlashcards().filter(c => c.domain === toolInput.domain).sort((a,b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, Math.max(5, Math.min(40, parseInt(toolInput.count, 10) || 20)));
-        return startFlashcardSet(set, 'domain') ? `Started ${set.length} ${toolInput.domain} flashcards, ordered by what the student needs most.` : 'No flashcards in that domain.';
+        if(toolInput.focus === 'domain' && !dm) return 'Error: say which exam domain.';
+        const opts = { domain: dm };
+        if(toolInput.focus === 'gaps') opts.kind = 'gap';
+        else if(toolInput.focus === 'new') opts.only = 'new';
+        else if(toolInput.focus === 'learning') opts.only = 'review';
+        const b = fcBalanced(cap, opts);
+        if(!b.cards.length) return toolInput.focus === 'new' ? 'There are no unseen flashcards' + (dm ? ' in that domain' : '') + ' left.' : toolInput.focus === 'gaps' ? 'No flashcards match what the student has missed yet. Offer the regular deck or a question set instead.' : 'No flashcards are ready in that set right now (the ones they have rated recently are resting). Offer new cards or the regular deck.';
+        window._fcLastMix = b.mix;
+        const kind = toolInput.focus === 'gaps' ? 'gap' : toolInput.focus === 'new' ? 'new' : toolInput.focus === 'learning' ? 'learning' : 'domain';
+        return startFlashcardSet(b.cards, kind) ? `Started ${b.cards.length} flashcards${dm ? ' in ' + dm : ''}: ${fcMixText(b.mix) || 'a mixed set'}. They are in Flashcards now.` : 'Could not start that set.';
       }
       if(fcCustomQueue){ try{ rebuildFlashcardQueue(); }catch(e){} } // drop any leftover custom set so the deck really is the regular, need-ordered one
       showTab('flashcards');
@@ -22216,7 +22353,7 @@ async function executeTutorTool(toolName, toolInput){
         if(tl === 'point_to' && !TUTOR_POINT_TARGETS[qi.target]) return `Error: "${qi.target}" is not something that can be highlighted, so it cannot be queued.`;
         if(tl === 'start_plan_step'){ const ids = []; [buildStudyPlan(), buildStudyPlan(240), buildStudyPlan(360)].forEach(pl => pl.steps.concat(pl.blocks).forEach(x => ids.push(x.id))); if(!ids.includes(qi.step_id)) return `Error: "${qi.step_id}" is not a step in today's plan, so it cannot be queued.`; }
         if(tl === 'navigate_to_tab' && !['study','tools','reference','flashcards','examday'].includes(qi.tab)) return `Error: "${qi.tab}" is not a tab.`;
-        if((tl === 'start_quiz_session' || tl === 'start_flashcards') && !(qi.mode || qi.focus)) return 'Error: say which session or card set to queue.'; }
+        if((tl === 'start_quiz_session' || tl === 'start_flashcards') && !(qi.mode || qi.focus || (qi.card_ids && qi.card_ids.length))) return 'Error: say which session or card set to queue.'; }
       tutorNextStop = { label, tool: tl, input: (toolInput && toolInput.input && typeof toolInput.input === 'object') ? toolInput.input : {} };
       return `Queued. The student will see a Next button labelled "${label}" on the note.`;
     }
@@ -23235,7 +23372,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.275';
+const BUILD_ID = '2026-10-19.276';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
