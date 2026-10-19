@@ -8507,8 +8507,8 @@ function conductorRefreshPill(){
   // Already on this part's own screen, still working: the screen shows its own progress ("Today's plan: 8 of 20 cards"),
   // so the pill would only sit on top of the card. It comes back when the part is finished or when you leave.
   { // The Next best step card on the Study tab already says this, so the pill would only repeat it on top of the page.
-    const act0 = document.querySelector('.tab-panel.active'), nc = document.getElementById('nextStepCard');
-    if(act0 && act0.id === 'tab-study' && nc && nc.style.display !== 'none' && nc.offsetParent !== null && currentNextStep && currentNextStep.kicker === 'Your session'){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
+    const act0 = document.querySelector('.tab-panel.active'), nc = document.getElementById('nextStepCard'), ld = document.querySelector('.pt-lead');
+    if(act0 && act0.id === 'tab-study' && currentNextStep && currentNextStep.kicker === 'Your session' && ((nc && nc.style.display !== 'none' && nc.offsetParent !== null) || (ld && ld.offsetParent !== null))){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   }
   if(c.current && !finished){
     const own = { cards:'flashcards', keys:'reference', teach:'tutor' }[c.current.id];
@@ -8585,12 +8585,13 @@ function planAdvanceUpdate(plan){
   if(_planAdv && (_planAdv.day !== day || Date.now() - _planAdv.at > 45 * 60000)) _planAdv = null;
 }
 // When the Next best step card is already offering today's session, the advance strip only reports progress; one Start, not two.
-function nsOwnsNext(){ return !!(currentNextStep && /^Today's session/.test(currentNextStep.kicker || '')); }
+function nsOwnsNext(){ return !!(currentNextStep && /^(Today's session|Your session)/.test(currentNextStep.kicker || '')); }
 function planLeadHtml(plan){
   if(!nsOwnsNext()) return '';
-  if(typeof conductorState === 'function' && conductorState()) return '';
   const s = currentNextStep;
-  return `<div class="pt-lead"><div class="pt-lead-txt"><b>Up next</b><span>${escapeHtml(s.why)}</span></div><div class="pt-lead-foot"><button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button><span class="ns-meta">${escapeHtml(s.meta || '')}</span></div></div>`;
+  const inSess = /^Your session/.test(s.kicker || '');
+  if(!inSess && typeof conductorState === 'function' && conductorState()) return '';
+  return `<div class="pt-lead"><div class="pt-lead-txt"><b>${inSess ? escapeHtml(s.title) : 'Up next'}</b><span>${escapeHtml(s.why)}</span></div><div class="pt-lead-foot"><button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button><span class="ns-meta">${escapeHtml(s.meta || '')}</span></div></div>`;
 }
 function planAdvanceHtml(plan){
   if(!_planAdv) return '';
@@ -24393,7 +24394,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.305';
+const BUILD_ID = '2026-10-19.306';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
