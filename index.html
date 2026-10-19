@@ -3938,7 +3938,14 @@ function showTab(name, opts){
     // The Reference page is big (hundreds of terms), so it is rebuilt only when what it shows has changed.
     if(name === 'reference' || !window._refRenderedOnce){
       let sig = ''; try{ sig = [allDomainsWeakestFirst().join(','), DATA.answerCounter, allFlashcards().length, DATA.checkedSubtopics.length, Object.keys(DATA.formulaStats || {}).length, Object.values(DATA.formulaStats || {}).reduce((x,f)=>x+((f&&f.attempts)||0),0), localDayKey()].join('|'); }catch(e){ sig = String(Math.random()); }
-      if(!window._refRenderedOnce || window._refSig !== sig){ renderReference(); window._refRenderedOnce = true; window._refSig = sig; }
+      if(name !== 'reference' && !window._refRenderedOnce){
+        // First launch: do not make the opening screen wait for the big Reference page; build it just after, when idle.
+        if(!window._refIdleTimer) window._refIdleTimer = setTimeout(() => {
+          window._refIdleTimer = null;
+          const go = () => { if(!window._refRenderedOnce){ try{ renderReference(); window._refRenderedOnce = true; window._refSig = sig; }catch(e){} } };
+          if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
+        }, 1200);
+      } else if(!window._refRenderedOnce || window._refSig !== sig){ clearTimeout(window._refIdleTimer); window._refIdleTimer = null; renderReference(); window._refRenderedOnce = true; window._refSig = sig; }
     }
     // Keep your place in the deck when you hop between tabs; only re-plan it when something that changes the plan has happened
     // (a quiz answer, a card rating, a new day) or the deck has gone stale.
@@ -6027,7 +6034,13 @@ async function loadData(){
     requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('booting')));
     setTimeout(() => document.documentElement.classList.remove('booting'), 2000);
   }catch(_){}
-  renderReference();
+  // The Reference page is the heaviest to build, so the opening screen does not wait for it unless it is the one showing.
+  if(DATA.lastTab === 'reference'){ renderReference(); window._refRenderedOnce = true; }
+  else if(!window._refIdleTimer) window._refIdleTimer = setTimeout(() => {
+    window._refIdleTimer = null;
+    const go = () => { if(!window._refRenderedOnce){ try{ renderReference(); window._refRenderedOnce = true; }catch(e){} } };
+    if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
+  }, 1200);
   initFlashcards();
   initToolsTab();
   renderExamDayCallout();
@@ -22880,7 +22893,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-18.243';
+const BUILD_ID = '2026-10-18.244';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
