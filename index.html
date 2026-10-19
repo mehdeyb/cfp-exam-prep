@@ -1821,6 +1821,20 @@
   .tutor-guide .tg-back{margin-left:0;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:8px 6px;cursor:pointer;}
   @keyframes tgIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  /* Focus: one thing on screen. Everything else in the panel, the header, the tab bar and the floating pill step aside. */
+  body.focus-mode #appHeader,body.focus-mode #appTabbar,body.focus-mode #conductorPill,body.focus-mode .storage-warning{display:none !important;}
+  body.focus-mode .focus-path > *:not(.focus-path):not(.focus-target):not(.focus-bar):not(.tutor-guide){display:none !important;}
+  body.focus-mode .tutor-guide .tg-next{display:none;}
+  body.focus-mode .tab-panel.active{padding-top:max(10px,env(safe-area-inset-top,0px));}
+  .focus-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--card, var(--bg));-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:tgIn .28s var(--ease);}
+  .focus-bar .fb-l{flex:1;min-width:0;}
+  .focus-bar .fb-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
+  .focus-bar .fb-t{font-size:14px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  body.focus-mode .focus-target .ref-scroll,body.focus-mode .focus-target.ref-scroll{max-height:none;overflow:visible;}
+  .focus-bar button{flex:none;min-height:40px;padding:0 14px;border-radius:11px;border:1px solid var(--hair);background:none;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .focus-bar button.fb-done{background:var(--gold);border-color:var(--gold);color:#1b1608;}
+  .focus-bar button.fb-next{border-color:var(--gold);color:var(--gold);}
+  @media (prefers-reduced-motion:reduce){.focus-bar{animation:none}}
   @media (prefers-reduced-motion:reduce){.tutor-guide{animation:none}}
   .tutor-action-indicator{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0;font-size:11.5px;color:var(--teal);font-weight:600;}
   .tutor-msg-bot .tutor-bubble.tutor-bubble-err{background:var(--incorrect-tint);border-color:var(--incorrect);color:var(--paper);}
@@ -3664,8 +3678,10 @@ function showTab(name, opts){
   }
   if(curName && !same){
     _tabScroll[curName] = window.scrollY || 0;
+    window._prevTab = { name:curName, at:Date.now(), y:window.scrollY || 0 };
   }
   if(SUB_SCREENS.includes(name) && curName && !SUB_SCREENS.includes(curName)){ _subOrigin = curName; try{ updateSubBack(); }catch(e){} }
+  if(typeof _focus !== 'undefined' && _focus && !_focus.entering){ try{ focusExit({ stay:true }); }catch(e){} }
   if(!same) { try{ tutorGuideDismiss(); }catch(e){} }
   document.querySelectorAll('.tab-panel').forEach(el=>{ el.classList.remove('active'); el.classList.remove('tab-enter'); });
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
@@ -7425,7 +7441,7 @@ function computeNextStep(stats){
         ? "Today is for performing, not studying. Read the key numbers once if it settles you, then go. Bring your photo ID and an approved calculator, and clear its memory before each section."
         : "No new material now. Skim the key numbers and the cards you still miss for about 15 minutes, pack your photo ID and an approved calculator, and go to bed on time.",
       cta:'Open key numbers', meta:'about 15 minutes', launchesSession:false,
-      run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } };
+      run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers' }); } };
   }
 
   // Final stretch: stamina and pacing, then clearing misses
@@ -7817,7 +7833,7 @@ function buildStudyPlan(minutes){
       if(!t) return null;
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
         why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. Working through the choices yourself teaches which one fits.`,
-        manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing'); } } };
+        manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
     },
     listen: () => {
       if(answered < 20 || !weakDom) return null;
@@ -7890,7 +7906,7 @@ function buildStudyPlan(minutes){
       if(!weakDom || answered >= 150) return null;
       return { id:'read', title:`Read the topic notes: ${weakDom.name}`, minutes:25,
         why:`${weakDom.name} carries the most weight you have not yet earned. Read each topic's "what to know" note, check off the ones you could now explain, and let the questions test the rest.`,
-        manual:true, run: () => { showTab('reference'); setTimeout(() => { const e = document.getElementById('syllabusList'); if(e) e.scrollIntoView({block:'start', behavior:'smooth'}); }, 120); } };
+        manual:true, run: () => { showTab('reference'); const e = document.getElementById('syllabusList'); if(e) focusEnter({ tab:'reference', el:e, title:'Topic notes: ' + weakDom.name, stepId:'read' }); } };
     },
     case2: () => {
       if(answered < 80) return null;
@@ -7929,10 +7945,10 @@ function buildStudyPlan(minutes){
     },
     logistics: () => ({ id:'logistics', title:'Check your exam-day plan', minutes:5,
       why:'Knowing the route, timing, ID and calculator rules removes avoidable stress. Do it once, calmly, before the day.',
-      manual:true, run: () => showTab('examday') }),
+      manual:true, run: () => { showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }),
     keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
       why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
-      manual:true, run: () => { showTab('reference'); setTimeout(() => { const t = document.getElementById('keyNumbersTable'); if(t) t.scrollIntoView({block:'start', behavior:'smooth'}); }, 80); } })
+      manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
     foundation: ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','case','teach','listen'],
@@ -21522,7 +21538,7 @@ Guidelines:
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
 - Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
-- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is.
+- When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
@@ -21619,11 +21635,11 @@ function tutorGuideDismiss(){ document.querySelectorAll('.tutor-guide').forEach(
 // The next stop on the tutor's route. The tutor can queue one (queue_next_stop); otherwise it is the next unfinished step of today's plan.
 let tutorNextStop = null;
 const TUTOR_NEXT_TOOLS = ['start_plan_step','point_to','start_flashcards','start_quiz_session','open_formula_drill','open_tvm_calculator','open_study_guide','navigate_to_tab','open_decision_tool'];
-function tutorNextChoice(){
+function tutorNextChoice(skipId){
   if(tutorNextStop) return tutorNextStop;
   try{
     const plan = buildStudyPlan();
-    const st = plan.steps.find(x => !x.done && x.id !== _tutorLastStepId);
+    const st = plan.steps.find(x => !x.done && x.id !== _tutorLastStepId && x.id !== skipId);
     if(st) return { label: String(st.title).replace(/\s+/g, ' ').slice(0, 60), tool: 'start_plan_step', input: { step_id: st.id } };
   }catch(e){}
   return null;
@@ -21727,7 +21743,7 @@ function tutorActionText(name, input, result){
     if(name === 'navigate_to_tab') return 'Took you to ' + (tabName[inp.tab] || 'that tab');
     if(name === 'point_to'){
       const t = TUTOR_POINT_TARGETS[inp.target];
-      return t ? `Showing you: ${t.label}` + (t.tab ? ` (${tabName[t.tab] || t.tab})` : '') : you(r);
+      return t ? (inp.isolate ? `Opened on its own: ${t.label}` : `Showing you: ${t.label}`) + (t.tab ? ` (${tabName[t.tab] || t.tab})` : '') : you(r);
     }
     if(name === 'start_quiz_session'){
       const n = parseInt(inp.count, 10);
@@ -21998,6 +22014,7 @@ const TUTOR_TOOLS = [
       properties: {
         target: { type: 'string', enum: Object.keys(TUTOR_POINT_TARGETS), description: "What to highlight: " + Object.keys(TUTOR_POINT_TARGETS).map(k => k + ' = ' + TUTOR_POINT_TARGETS[k].label).join('; ') + '.' },
         note: { type: 'string', description: "A short note (under 60 characters) shown on the highlight, such as 'Start with these 12 due cards'." },
+        isolate: { type: 'boolean', description: "true opens it alone in a focus view with the rest of the app hidden, for something to read or work through without distraction (the key numbers, a study guide, a decision tool). Leave false when they only need to see where something is." },
       },
       required: ['target'],
     },
@@ -22199,7 +22216,7 @@ async function executeTutorTool(toolName, toolInput){
       const t = TUTOR_POINT_TARGETS[toolInput && toolInput.target];
       if(!t) return `Error: "${toolInput && toolInput.target}" isn't something that can be highlighted.`;
       if(toolInput.target === 'exam_date'){ tutorPoint('exam_date'); return 'Opened Settings at the Exam date section, where the date is set.'; }
-      return tutorPoint(toolInput.target, toolInput.note) ? `Took the student to the ${t.tab} tab and highlighted "${t.label}".` : `Could not find that spot on screen.`;
+      return tutorPoint(toolInput.target, toolInput.note, !!toolInput.isolate) ? (toolInput.isolate ? `Opened "${t.label}" on its own in a focus view, with everything else hidden, so the student can concentrate on it. They leave with Done${tutorNextChoice() ? ' or go on with Next' : ''}.` : `Took the student to the ${t.tab} tab and highlighted "${t.label}".`) : `Could not find that spot on screen.`;
     }
     if(toolName === 'show_readiness_breakdown'){
       openReadinessBreakdown();
@@ -22623,13 +22640,64 @@ function askTutorCapabilityPrefill(prefixText){
 // The tutor (chat tool, or the "Show me" link on its opening message) can take
 // the learner to a spot in the app and highlight it, with a short note.
 let tutorPointTimer = null, tutorPointEl = null;
+/* ---------- Focus: an isolated view ----------
+   The tutor or today's plan can open one thing on its own: the header, tab bar, floating pill and every other card step aside,
+   leaving a slim bar (Done, and Next when there is a next stop). Leaving it, by Done, Next, Escape or switching tabs,
+   puts everything back and returns to where the student was. */
+let _focus = null;
+function focusActive(){ return !!_focus; }
+function focusEnter(o){
+  o = o || {};
+  let origin = _focus ? _focus.origin : (document.querySelector('.tab-panel.active') || {}).id;
+  let originY = _focus ? _focus.originY : (window.scrollY || 0);
+  if(!_focus && window._prevTab && Date.now() - window._prevTab.at < 1500 && 'tab-' + window._prevTab.name !== origin){ origin = 'tab-' + window._prevTab.name; originY = window._prevTab.y; }
+  if(_focus) focusExit({ stay:true });
+  const panel = document.getElementById('tab-' + o.tab);
+  if(!panel) return false;
+  _focus = { entering:true, origin: origin ? origin.replace(/^tab-/, '') : null, originY, tab:o.tab, stepId:o.stepId || null };
+  let el = o.el || null;
+  if(!el && o.sel) el = document.querySelector(o.sel);
+  if(el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
+  if(el === panel) el = null;
+  if(el){ el.classList.add('focus-target'); let a = el.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } _focus.el = el; }
+  document.body.classList.add('focus-mode');
+  const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
+  const fromChat = _focus.origin === 'tutor';
+  const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
+  bar.innerHTML = '<div class="fb-l"><div class="fb-k">Focus</div><div class="fb-t"></div></div>' +
+    (nx ? '<button type="button" class="fb-next">Next</button>' : '') +
+    '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
+  bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
+  bar.querySelector('.fb-done').onclick = () => focusExit({ done:true });
+  const nb = bar.querySelector('.fb-next'); if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
+  panel.insertBefore(bar, panel.firstChild);
+  _focus.bar = bar; _focus.panel = panel;
+  document.addEventListener('keydown', focusKey, true);
+  _focus.entering = false;
+  try{ window.scrollTo(0, 0); }catch(e){}
+  return true;
+}
+function focusKey(e){ if(e.key === 'Escape' && _focus && !session) focusExit({}); }
+function focusExit(o){
+  o = o || {};
+  const f = _focus; if(!f) return;
+  _focus = null;
+  document.removeEventListener('keydown', focusKey, true);
+  document.body.classList.remove('focus-mode');
+  document.querySelectorAll('.focus-path,.focus-target').forEach(n => n.classList.remove('focus-path', 'focus-target'));
+  if(f.bar && f.bar.parentNode) f.bar.remove();
+  try{ clearTutorPoint(); }catch(e){}
+  if(o.done && f.stepId){ try{ planMarkManualDone(f.stepId); }catch(e){} }
+  if(!o.stay && f.origin && f.origin !== f.tab){ showTab(f.origin); requestAnimationFrame(() => { try{ window.scrollTo(0, f.originY || 0); }catch(e){} }); }
+  else if(!o.stay){ try{ window.scrollTo(0, f.originY || 0); }catch(e){} }
+}
 function clearTutorPoint(){
   if(tutorPointTimer){ clearTimeout(tutorPointTimer); tutorPointTimer = null; }
   if(tutorPointEl){ tutorPointEl.classList.remove('tutor-point'); tutorPointEl.removeAttribute('data-tutor-note'); tutorPointEl = null; }
   document.removeEventListener('click', clearTutorPoint, true);
   document.removeEventListener('keydown', clearTutorPoint, true);
 }
-function tutorPoint(key, note){
+function tutorPoint(key, note, isolate){
   if(key === 'exam_date'){ openSettingsToExamDate(); return true; }
   const t = TUTOR_POINT_TARGETS[key];
   if(!t) return false;
@@ -22642,6 +22710,7 @@ function tutorPoint(key, note){
   el.setAttribute('data-tutor-note', 'Tutor: ' + text);
   el.classList.add('tutor-point');
   tutorPointEl = el;
+  if(isolate){ clearTutorPoint(); focusEnter({ tab:t.tab, el, title:t.label }); try{ if(typeof tutorBusy !== 'undefined' && tutorBusy) tutorGuidePending(); }catch(e){} return true; }
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tall = el.getBoundingClientRect().height > window.innerHeight * 0.55;
   requestAnimationFrame(() => { const g = document.querySelector('.tutor-guide'); if(g && g.nextElementSibling === el){ g.style.scrollMarginTop = '14px'; g.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); return; } try{ el.style.scrollMarginTop = '84px'; }catch(e){} el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: tall ? 'start' : 'center' }); });
@@ -23111,7 +23180,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.271';
+const BUILD_ID = '2026-10-19.272';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
