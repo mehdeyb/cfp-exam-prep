@@ -8470,6 +8470,7 @@ function planAdvanceHtml(plan){
   const head = t.length === 1 ? t[0] + ' done' : t.length + ' steps done';
   return `<div class="pt-adv" id="ptAdv" role="status"><div class="pt-adv-top"><b>\u2713 ${escapeHtml(head)}</b><button type="button" class="pt-adv-x" aria-label="Dismiss" onclick="planAdvanceDismiss()">\u00d7</button></div>`
     + (nxt && nsOwnsNext() ? ''
+    : nxt && (document.getElementById('nextStepCard') || {}).style && document.getElementById('nextStepCard').style.display === 'block' ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div>`
     : nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
       : `<div class="pt-adv-next">That is everything on today's plan. Rest, or take an adaptive session if you still have energy.</div>`)
     + '</div>';
@@ -23698,7 +23699,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.285';
+const BUILD_ID = '2026-10-19.286';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
