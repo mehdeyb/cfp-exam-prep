@@ -3724,7 +3724,8 @@ function showTab(name, opts){
       if(!fcQueue.length || window._fcPlanSig !== sig || (Date.now() - (window._fcBuiltAt || 0)) > 20*60000){ rebuildFlashcardQueue(); } }
     renderExamDayCallout();
     updateTutorContextNote();
-    if(name === 'reference') renderCalcKeysCard();
+    if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
+    if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
       DATA.lastTab = name;
@@ -6790,10 +6791,10 @@ function refreshCoachIdleMessage(){
 
 function getDaysUntilExam(){
   if(!DATA.examDate) return null;
-  const examDateObj = new Date(DATA.examDate + 'T00:00:00');
+  // Whole calendar days, so the clock change on the first Sunday of November (an hour longer) never makes the count one too high.
+  const p = String(DATA.examDate).split('-').map(Number);
   const now = new Date();
-  const msPerDay = 24*60*60*1000;
-  return Math.ceil((examDateObj - now) / msPerDay);
+  return Math.round((Date.UTC(p[0], (p[1] || 1) - 1, p[2] || 1) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
 }
 
 function renderExamCountdownCard(){
@@ -9634,7 +9635,24 @@ function podcastDomainChanged(){
 // (briefly debounced so flipping through the dropdowns doesn't spend a
 // generation on every stop). The button remains only for regenerating.
 let podcastAutoTimer = null;
+// The podcast card opens on what suits where the student is now (a personalised episode once there are answers to build it on,
+// a domain overview before that) and keeps doing so as they study, until they pick something themselves.
+function podcastAutoDefault(){
+  try{
+    if(window._podPicked || (typeof naturalSpeechState !== 'undefined' && naturalSpeechState.active)) return;
+    const ts = document.getElementById('podcastTypeSelect'), ds = document.getElementById('podcastDomainSelect');
+    if(!ts || !ds || !ds.options.length) return;
+    const st = computeStats(); let want = 'overview', wk = null;
+    if(st.totalAnswered >= 10) want = 'personalized'; else wk = (st.weakestMeta || {}).key;
+    let changed = false;
+    if(ts.value !== want){ ts.value = want; changed = true; }
+    if(want === 'overview' && wk && ds.value !== wk){ ds.value = wk; changed = true; }
+    window._podAuto = true;
+    try{ if(changed) podcastDomainChanged(); else refreshPodcastView(); }finally{ window._podAuto = false; }
+  }catch(e){}
+}
 function podcastSelectionChanged(){
+  if(!window._podAuto) window._podPicked = true;
   podcastDomainChanged();
   clearTimeout(podcastAutoTimer);
   podcastAutoTimer = setTimeout(()=>{
@@ -9718,6 +9736,7 @@ function togglePodcastLibrary(){
 }
 
 function playPodcastFromLibrary(key){
+  window._podPicked = true;
   const parts = key.split('-');
   const length = parts.pop();
   const type = parts[0] === 'personalized' ? 'personalized' : parts[1];
@@ -13215,6 +13234,15 @@ function askTutorAboutMisses(){
   if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen();
   askTutorAbout('I just missed these flashcards: ' + terms.join('; ') + '. Take them one at a time, starting with the one that matters most for the exam. Ask me what I remember, then fill in what I am missing, and show how to tell it apart from anything it is easy to confuse with.');
 }
+// A checkpoint left on screen stays true: its plan line is rewritten from today's real progress each time the screen is shown,
+// and after half an hour it gives way to a fresh deck.
+function fcRecapRefresh(){
+  try{
+    const box = document.getElementById('fcRecap'); if(!box || box.style.display !== 'block' || !fcRound.total) return;
+    if(Date.now() - (window._fcRecapAt || 0) > 30 * 60000){ continueFlashcards(); return; }
+    box.innerHTML = fcRecapHtml(fcRound);
+  }catch(e){}
+}
 function continueFlashcards(){
   const box = document.getElementById('fcRecap'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
   const missedIds = fcRound.missedIds.slice();
@@ -13291,7 +13319,7 @@ function rateFlashcard(knowsIt){
     if(box){
       document.getElementById('fcCard').style.display = 'none';
       document.getElementById('fcActions').style.display = 'none';
-      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block'; fcUndoRefresh();
+      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block'; window._fcRecapAt = Date.now(); fcUndoRefresh();
       const b = box.querySelector('button'); if(b) b.focus({preventScroll:true});
     }
   }
@@ -23372,7 +23400,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.276';
+const BUILD_ID = '2026-10-19.278';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
