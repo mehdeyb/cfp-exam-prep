@@ -2691,6 +2691,9 @@
   .mw-sum span{font-size:11.5px;color:var(--muted);}
   .mw-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;font-size:13.5px;color:var(--paper);}
   .mw-list li{display:flex;gap:8px;line-height:1.45;} .mw-list li i{font-style:normal;flex:0 0 18px;color:var(--correct);} .mw-list li i.no{color:var(--muted);}
+  .mode-alt{display:block;margin:6px 0 0;padding:6px 0;min-height:32px;background:none;border:0;font:inherit;font-size:12.5px;font-weight:600;color:var(--gold);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;position:relative;}
+  .mode-alt::after{content:'';position:absolute;inset:-8px -10px;}
+  .rr-walk{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:10px 0 0;font-size:13.5px;color:var(--paper);}
 </style>
 </head>
 <body>
@@ -2860,6 +2863,7 @@
         <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
           <h3>Missed questions</h3>
           <div class="mode-when" id="missedCardText">What you have gotten wrong.</div>
+          <button type="button" class="mode-alt" id="missedWalkBtn" style="display:none;" onclick="event.stopPropagation(); mwOpen();">Talk through them</button>
           <div class="mode-meta" data-mm="review"></div>
         </div>
         <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
@@ -6947,6 +6951,7 @@ function renderAll(){
   document.getElementById('missedCardText').textContent = DATA.missed.length
     ? `${DATA.missed.length} to revisit.`
     : `None yet.`;
+  { const wb = document.getElementById('missedWalkBtn'); if(wb) wb.style.display = DATA.missed.length >= 2 ? '' : 'none'; }
   const caseCardEl = document.getElementById('caseCardText');
   if(caseCardEl){
     const total = CASE_STUDIES.filter(c => caseQuestions(c.id).length).length;
@@ -8744,10 +8749,21 @@ function renderResultReadiness(){
       <div class="ns-why">${escapeHtml(s.why)}</div>
       <div class="ns-foot"><button type="button" class="ns-cta" onclick="runNextStepFromResults()">${escapeHtml(s.cta)}</button><span class="ns-meta">${escapeHtml(s.meta)}</span></div>
     </div>` : '';
-  el.innerHTML = top + nextHtml;
-  el.style.display = (top || nextHtml) ? 'block' : 'none';
+  let walk = '';
+  try{
+    const missedHere = (session && session.queue || []).filter((q, i) => { const e = (session.answerLog || []).find(x => x.index === i); return e ? !e.correct : (session.examAnswers && session.examAnswers[i] !== undefined && session.examAnswers[i] !== q.correct); }).filter(q => (DATA.missed || []).includes(q.id) && !isGenQ(q));
+    const reviewing = s && /Review misses/i.test(s.cta || '');
+    if(missedHere.length >= 2 && !reviewing && session.mode !== 'review') walk = `<div class="rr-walk"><span>You missed ${missedHere.length} here.</span><button type="button" class="btn ghost" onclick="mwOpenFromResults()">Walk through them</button></div>`;
+  }catch(e){}
+  el.innerHTML = top + nextHtml + walk;
+  el.style.display = (top || nextHtml || walk) ? 'block' : 'none';
 }
 
+function mwOpenFromResults(){
+  const ids = (session && session.queue || []).filter((q, i) => { const e = (session.answerLog || []).find(x => x.index === i); return e && !e.correct; }).map(q => q.id);
+  exitToMenu();
+  mwOpen(5, ids);
+}
 function runNextStepFromResults(){
   const s = currentNextStep;
   if(!s || typeof s.run !== 'function') return;
@@ -9587,13 +9603,14 @@ function renderEdTutorChips(){
   else if(d <= 2) items.push(['Walk me through exam-day eve', 'My exam is in ' + d + ' day' + (d===1?'':'s') + '. What should I do, and not do, between now and when I walk into the test center?']);
   else if(d <= 10) items.push(['Plan my last ' + d + ' days', 'My exam is in ' + d + ' days. Using my weak areas, build a day-by-day plan for the time I have left.']);
   else items.push(['Plan my ' + d + ' days', 'My exam is in ' + d + ' days. Using my weak areas and progress, build a realistic plan for the time I have left.']);
+  if((DATA.missed || []).length >= 2) items.push(['Walk me through my misses', '__mw']);
   items.push([`How should I pace ${FULL_EXAM_QUESTION_COUNT} questions?`, `How should I pace the ${FULL_EXAM_QUESTION_COUNT} questions across the two 3-hour sections, and how do I handle a question I am stuck on?`]);
   if(d !== null && d > 0 && d <= 14) items.push(['What to review the day before', 'What is worth reviewing the day before the exam, and what is a waste of time?']);
   box.innerHTML = '';
   items.forEach(([label, text]) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'chip'; b.textContent = label;
-    b.onclick = () => askTutorAbout(text);
+    b.onclick = () => { if(text === '__mw') mwOpen(5); else askTutorAbout(text); };
     box.appendChild(b);
   });
 }
@@ -17640,7 +17657,7 @@ function mwYourPick(q){
   Object.keys(picks).forEach(k => { const i = +k; if(i !== q.correct && i >= 0 && i < 4 && picks[k] >= bn){ bn = picks[k]; best = i; } });
   return best;
 }
-function mwPick(n){
+function mwPick(n, prefer){
   const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
   const now = Date.now(), done = DATA.mwDone || {};
   const acc = {}, wt = {};
@@ -17648,7 +17665,7 @@ function mwPick(n){
   const scored = (DATA.missed || []).map(id => byId[id]).filter(q => q && !isGenQ(q) && Array.isArray(q.choices) && q.choices.length === 4).map(q => {
     const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; const stuck = Math.max(0, ...Object.values(picks).map(Number));
     const d = done[q.id]; const recent = d && now - d.t < 86400000 ? 1 : 0;
-    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 6 };
+    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 6 + (prefer && prefer.includes(q.id) ? 50 : 0) };
   }).sort((a, b) => b.s - a.s);
   const out = [], rest = scored.slice();
   while(out.length < n && rest.length){
@@ -17673,9 +17690,9 @@ function mwSibling(q, used){
   });
   return bs >= 0.08 ? best : null;
 }
-function mwOpen(n){
+function mwOpen(n, prefer){
   const host = document.getElementById('mwHost'); if(!host) return false;
-  const qs = mwPick(n || 5);
+  const qs = mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
   mw = { items: qs.map(q => ({ q, pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
@@ -17688,13 +17705,18 @@ function mwOpen(n){
   const c = host.querySelector('.dp-close'); if(c) c.focus({ preventScroll:true });
   return true;
 }
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('mw-active')) mwClose(); });
 function mwClose(){
   const was = document.body.classList.contains('mw-active');
   document.body.classList.remove('mw-active');
   const host = document.getElementById('mwHost');
   if(mw && mw.home && host && host.parentElement === document.body) mw.home.appendChild(host);
-  const opener = mw && mw.opener; mw = null;
+  const opener = mw && mw.opener;
+  try{ if(mw && !mw.planDone && mw.items.filter(x => x.stage === 'done').length >= Math.min(3, mw.items.length)){ mw.planDone = true; planMarkManualDone('tutor'); } }catch(e){}
+  mw = null;
   cdUnlockIfIdle();
+  // Run from today's guided session: pick the session up again, which moves on by itself once this part is finished.
+  try{ const c = conductorState(); if(was && c && c.current && c.current.id === 'tutor') setTimeout(() => { try{ conductorOpenMenu(); }catch(e){} }, 200); }catch(e){}
   if(was){ try{ renderAll(); }catch(e){} try{ planAdvanceReveal(); }catch(e){} }
   if(was && opener && document.contains(opener) && typeof opener.focus === 'function'){ try{ opener.focus({ preventScroll:true }); }catch(e){} }
 }
@@ -17853,7 +17875,7 @@ function mwWrapHtml(){
     + `<ul class="mw-list">${done.map(x => `<li><i class="${x.ok === false ? 'no' : ''}">${x.ok === false ? '·' : '✓'}</i><span>${escapeHtml(String(x.q.q).replace(/\s+/g, ' ').slice(0, 90))}${String(x.q.q).length > 90 ? '…' : ''}</span></li>`).join('')}</ul>`
     + pattern + mix
     + `<div class="mw-actions">${cards.length ? `<button type="button" class="btn" onclick="mwCards()">Cards for these ideas (${cards.length})</button>` : ''}`
-    + `${left > 0 && done.length >= mw.items.length ? `<button type="button" class="btn ghost" onclick="mwMore()">${Math.min(5, left)} more</button>` : ''}`
+    + `${left > 0 && done.length >= mw.items.length ? `<button type="button" class="btn ghost" onclick="mwMore()">${Math.min(5, left)} more misses</button>` : ''}`
     + `<button type="button" class="btn ghost" onclick="mwClose()">Back to your plan</button></div>`;
 }
 function mwCards(){ const cs = (mw && mw.cards) || []; mwClose(); if(cs.length) startFlashcardSet(cs, 'picked'); }
@@ -24027,7 +24049,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.291';
+const BUILD_ID = '2026-10-19.292';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
