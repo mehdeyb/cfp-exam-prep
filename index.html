@@ -20678,7 +20678,7 @@ function selectAnswer(i){
     if(w){ const b = w.querySelector('.choice'); if(b) b.classList.add('tapped'); }
     document.querySelectorAll('#qChoices .choice').forEach(b => b.classList.add('locked'));
   }catch(e){}
-  requestAnimationFrame(() => setTimeout(() => { try{ selectAnswerCore(i); }catch(err){ session.locked = false; throw err; } }, 0));
+  requestAnimationFrame(() => setTimeout(() => { try{ selectAnswerCore(i); }catch(err){ if(session) session.locked = false; throw err; } }, 0));
 }
 function selectAnswerCore(i){
   hideTutorBrief();
@@ -24832,7 +24832,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-19.312';
+const BUILD_ID = '2026-10-20.313';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
