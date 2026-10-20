@@ -20681,6 +20681,7 @@ function selectAnswer(i){
   requestAnimationFrame(() => setTimeout(() => { try{ selectAnswerCore(i); }catch(err){ if(session) session.locked = false; throw err; } }, 0));
 }
 function selectAnswerCore(i){
+  if(!session || !session.queue || !session.queue[session.index]) return;
   hideTutorBrief();
   { const cc = document.getElementById('calcCue'); if(cc) cc.style.display = 'none'; }
   paceTouch();
@@ -24832,7 +24833,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-20.314';
+const BUILD_ID = '2026-10-20.315';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
