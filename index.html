@@ -7834,7 +7834,7 @@ function computeNextStep(stats){
   }
   // When today's plan already has something open, the plan and this card must say the same thing: the card shows the plan's
   // first open part (the plan is built from what is due, what is weak and what was missed), and keeps the bigger picture as a note.
-  if(step && ['Biggest opportunity','Looking strong','Rebuild the basics','Blind spot','Spaced review','Flashcards due','Calculator practice','Formula practice','Exam-style practice','Weak topic'].includes(step.kicker)){
+  if(step && ['Biggest opportunity','Looking strong','Build the base','Rebuild the basics','Blind spot','Spaced review','Flashcards due','Calculator practice','Formula practice','Exam-style practice','Weak topic'].includes(step.kicker)){
     try{
       const plan = buildStudyPlan();
       let open = plan.steps.filter(x => !x.done && !x.manual && typeof x.run === 'function');
@@ -24832,7 +24832,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-20.313';
+const BUILD_ID = '2026-10-20.314';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
