@@ -1631,6 +1631,7 @@
   .tech-item .ti-body .btn{font-size:12px;padding:8px 14px;min-height:40px;margin-top:2px;}
   .tech-item[open] summary .ti-chev{transform:rotate(180deg);}
   .tech-item .ti-chev{color:var(--muted);transition:transform .2s var(--ease);}
+  .gl-weave{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:8px;} .gl-rel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;} .gl-rel>span{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-right:2px;} .gl-chip{font:inherit;font-size:12px;padding:6px 10px;min-height:32px;border-radius:999px;border:1px solid var(--hair);background:var(--surface2);color:var(--paper);text-align:left;cursor:pointer;} .gl-chip:active{transform:scale(.97);}
   .glossary-extra{margin-top:10px;} .glossary-extra .fc-contrast{margin-bottom:10px;} .glossary-extra .glossary-tutor{font-size:12px;padding:8px 14px;min-height:40px;}
   .glossary-def{font-size:13px;color:var(--muted);line-height:1.5;}
   .glossary-example{font-size:13px;line-height:1.55;color:var(--paper);margin-top:10px;padding:14px 16px;border-radius:10px;background:var(--teal-tint);border:1px solid var(--teal);}
@@ -11309,6 +11310,49 @@ function renderGlossaryDomainOptions(){
   });
 }
 
+// Weaving a term into the rest of the app: the practice questions that test it, and the neighbouring terms worth reading next.
+const _weaveMemo = {};
+function termQuestions(card, limit){
+  const key = card.id + ':' + allQuestions().length;
+  if(_weaveMemo[key]) return _weaveMemo[key].slice(0, limit || 99);
+  const forms = fcTermForms(card).filter(f => f.weight >= 1).map(f => ' ' + f.n.trim() + ' ');
+  const out = [];
+  if(forms.length) allQuestions().forEach(q => {
+    if(q.domain !== card.domain || isGenQ(q)) return;
+    const core = fcNorm([(q.choices || [])[q.correct] || '', (q.rationale || []).join(' ')].join(' ')), stem = fcNorm([q.q, q.scenario || ''].join(' '));
+    let sc = 0; forms.forEach(k => { if(core.indexOf(k) >= 0) sc = Math.max(sc, 2); else if(stem.indexOf(k) >= 0) sc = Math.max(sc, 1); });
+    if(sc) out.push({ q, sc });
+  });
+  out.sort((a, b) => b.sc - a.sc);
+  _weaveMemo[key] = out.map(x => x.q);
+  return _weaveMemo[key].slice(0, limit || 99);
+}
+function termRelated(card, n){
+  const stop = new Set(['the','and','for','with','rule','plan','tax','vs','act','of','a','an','to','in']);
+  const toks = t => new Set(fcNorm(t).split(' ').filter(w => w.length > 3 && !stop.has(w)));
+  const mine = toks(card.term), defHay = fcNorm(card.def);
+  if(!mine.size) return [];
+  return allFlashcards().filter(c => c.id !== card.id && c.domain === card.domain).map(c => {
+    const t = toks(c.term); let sh = 0; t.forEach(w => { if(mine.has(w)) sh += 2; });
+    const cn = fcNorm(c.term).trim(); if(cn.length > 4 && defHay.indexOf(' ' + cn + ' ') >= 0) sh += 3;
+    return { c, sh };
+  }).filter(x => x.sh >= 2).sort((a, b) => b.sh - a.sh || a.c.term.localeCompare(b.c.term)).slice(0, n || 4).map(x => x.c);
+}
+function glossaryPractice(cardId){
+  const c = allFlashcards().find(x => x.id === cardId); if(!c) return;
+  const qs = termQuestions(c, 40); if(!qs.length) return;
+  const missed = new Set(DATA.missed || []);
+  const ranked = qs.map(q => ({ q, st: getSpacedStat(DATA.questionStats, q.id), r: Math.random() })).sort((a, b) => (missed.has(b.q.id) - missed.has(a.q.id)) || ((a.st.seen === 0 ? 0 : 1) - (b.st.seen === 0 ? 0 : 1)) || a.r - b.r);
+  showTab('study');
+  beginSession(shuffle(ranked.slice(0, 6).map(x => x.q)), 'drill', null);
+}
+function glossaryGoTo(term){
+  const si = document.getElementById('glossarySearch'); if(!si) return;
+  const df = document.getElementById('glossaryDomainFilter'); if(df) df.value = '';
+  const ft = document.getElementById('glossaryFocusToggle'); if(ft && ft.checked){ ft.checked = false; }
+  si.value = term; filterGlossary();
+  const it = document.querySelector('#glossaryList .glossary-item'); if(it){ it.click(); try{ it.scrollIntoView({ block:'nearest', behavior:'smooth' }); }catch(e){} }
+}
 async function toggleGlossaryExample(item, f){
   const box = item.querySelector('.glossary-example');
   const chevron = item.querySelector('.glossary-chevron');
@@ -11564,6 +11608,16 @@ function filterGlossary(){
       tb.type = 'button'; tb.className = 'btn ghost glossary-tutor'; tb.textContent = 'Talk it through with the tutor';
       tb.onclick = (ev) => { ev.stopPropagation(); askTutorAbout('Help me really understand "' + f.term + '" (' + f.def + ') Ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.'); };
       extra.appendChild(tb);
+      // Built when the term opens, so the counts always reflect today's question bank.
+      item.addEventListener('click', () => { setTimeout(() => {
+        if(!item.classList.contains('expanded') || extra.querySelector('.gl-weave')) return;
+        const qn = termQuestions(f).length, rel = termRelated(f, 4);
+        if(!qn && !rel.length) return;
+        const w = document.createElement('div'); w.className = 'gl-weave';
+        if(qn){ const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'btn ghost glossary-tutor'; pb.textContent = `Practice it: ${qn} question${qn === 1 ? '' : 's'}`; pb.onclick = ev => { ev.stopPropagation(); glossaryPractice(f.id); }; w.appendChild(pb); }
+        if(rel.length){ const rl = document.createElement('div'); rl.className = 'gl-rel'; const lb = document.createElement('span'); lb.textContent = 'Related'; rl.appendChild(lb); rel.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.className = 'gl-chip'; b.textContent = c.term; b.onclick = ev => { ev.stopPropagation(); glossaryGoTo(c.term); }; rl.appendChild(b); }); w.appendChild(rl); }
+        extra.appendChild(w);
+      }, 0); });
       extra.onclick = (ev) => ev.stopPropagation();
       item.appendChild(extra);
       item.onclick = () => toggleGlossaryExample(item, f);
@@ -25665,7 +25719,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.321';
+const BUILD_ID = '2026-10-21.322';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
