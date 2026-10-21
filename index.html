@@ -1246,6 +1246,8 @@
   .session-insight{font-size:12px;line-height:1.5;color:var(--paper);margin:10px 0;padding:10px 14px;border-radius:8px;background:var(--teal-tint);border:1px solid var(--teal);}
   .simplify-row{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
   .simplify-row .btn.ghost{font-size:12px;padding:9px 16px;min-height:44px;}
+  .take-row .btn.suggest{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .take-row .take-note{flex:1 0 100%;font-size:12px;color:var(--muted);line-height:1.4;}
   .calc-steps-row{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
   .calc-steps-row .btn.ghost{font-size:12px;padding:9px 16px;min-height:44px;}
   .calc-steps-row .btn.ghost{flex:1 1 auto;text-align:center;justify-content:center;}
@@ -3071,6 +3073,10 @@
             <div class="simplify-row" id="simplifyRow" style="display:none;">
               <button class="btn ghost" id="simplifyBtn" onclick="requestSimplerExplanation()">Explain this more simply</button>
               <button class="btn ghost" id="qChatBtn" onclick="toggleQuestionChat()" aria-expanded="false" aria-controls="qChatBox">Ask the tutor about this</button>
+            </div>
+            <div class="simplify-row take-row" id="takeRow" style="display:none;">
+              <button class="btn ghost" id="takeEasierBtn" onclick="questionTake('easier')">An easier take</button>
+              <button class="btn ghost" id="takeHarderBtn" onclick="questionTake('harder')">A harder take</button>
             </div>
             <div class="simplified-explanation" id="simplifiedExplanation" style="display:none;"></div>
             <div class="qchat-box" id="qChatBox" style="display:none;" role="region" aria-label="Ask the tutor about this question">
@@ -5661,7 +5667,7 @@ function defaultData(){
     domainStage: {},
     domainTierLog: {},
     fcRetell: {},
-    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [],
+    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [], figStats: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5853,7 +5859,7 @@ function sanitizeLoadedData(d){
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.tutorFlags = (Array.isArray(d.tutorFlags) ? d.tutorFlags : []).filter(x => isObj(x) && typeof x.at === 'number').slice(-12);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','figStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -8012,7 +8018,6 @@ function tutorFlagAdd(topic, reason){
   persist(); return flag;
 }
 // What the student has and has not been shown, and how they did on what they were shown, for the tutor.
-let _covTopicCards = null;
 function tutorCoverageBlock(){
   try{
     const qs = allQuestions(), cards = allFlashcards();
@@ -8023,14 +8028,10 @@ function tutorCoverageBlock(){
       return `${d.name}: ${seen} of ${nq} questions seen${att ? ' (' + Math.round(cor / att * 100) + '% right)' : ''}, ${cs} of ${nc} cards seen (${ck} marked known)`;
     });
     // Per official topic: has anything about it been put in front of them yet?
-    if(!_covTopicCards || _covTopicCards.n !== cards.length){
-      const m = {}; Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((nm, i) => { let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[k][i]; }catch(e){} m[k + '-' + i] = pat ? cards.filter(c => c.domain === k && pat.test((c.term + ' ' + c.def).toLowerCase())).map(c => c.id) : []; }));
-      _covTopicCards = { n: cards.length, m };
-    }
     const untouched = [], strong = [];
     Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((name, i) => {
-      const st = subtopicStats(k, i); const cardSeen = (_covTopicCards.m[k + '-' + i] || []).some(id => getSpacedStat(DATA.flashcardStats, id).seen > 0);
-      if(st.seen === 0 && !cardSeen && (st.size > 0 || (_covTopicCards.m[k + '-' + i] || []).length > 0)) untouched.push(name);
+      const st = subtopicStats(k, i); const cardSeen = (covTopicCards()[k + '-' + i] || []).some(id => getSpacedStat(DATA.flashcardStats, id).seen > 0);
+      if(st.seen === 0 && !cardSeen && (st.size > 0 || (covTopicCards()[k + '-' + i] || []).length > 0)) untouched.push(name);
       else if(st.attempts >= 6 && st.acc >= 0.85) strong.push(`${name} ${Math.round(st.acc * 100)}%`);
     }));
     const ts = DATA.teachStats || {}, tk = Object.keys(ts);
@@ -8038,10 +8039,13 @@ function tutorCoverageBlock(){
     const byId = {}; cards.forEach(c => { byId['c:' + c.id] = c; });
     const shaky = tk.filter(k => (ts[k].grade === 'missed' || ts[k].grade === 'partly') && byId[k] && Date.now() - ts[k].last < 14 * 86400000).sort((a, b) => ts[b].last - ts[a].last).slice(0, 4).map(k => byId[k].term);
     const flags = tutorFlagsActive();
+    let balText = '';
+    try{ const u = coverageUnderserved(3), m = coverageModel(); if(u.length) balText = ` Balance against the exam blueprint over the last 14 days: least attention for their weight is ${u.map(d => d.name + ' (' + Math.round(m.dom[d.key].share * 100) + '% of study vs ' + Math.round(m.dom[d.key].target * 100) + '% of the exam)').join('; ')}; the app is already weighting practice toward them.`; const fr = figFreshness(); balText += ` Key figures (limits, thresholds): ${fr.due} of ${fr.total} are due for a refresh, ${fr.never} never drilled; offer start_plan_step with step_id "figures" when they ask about numbers.`; }catch(e){}
     return ' WHAT THEY HAVE AND HAVE NOT BEEN SHOWN (live from the app): ' + rows.join('; ') + '.' +
       (untouched.length ? ` Official topics with nothing shown yet (no question and no card seen): ${untouched.slice(0, 10).join('; ')}${untouched.length > 10 ? '; and ' + (untouched.length - 10) + ' more' : ''}.` : ' Every official topic has had at least a card or a question put in front of them.') +
       (strong.length ? ` Shown and going well: ${strong.slice(0, 4).join('; ')}.` : '') +
       (tk.length ? ` Explain-it-back so far: ${tk.length} ideas (${cnt('nailed')} nailed, ${cnt('partly')} partly, ${cnt('missed')} missed)${shaky.length ? '; shaky lately: ' + shaky.join(', ') : ''}.` : ' They have not tried Explain it back yet.') +
+      balText +
       (flags.length ? ` Topics you flagged for review that they have not drilled yet: ${flags.map(f => f.name + (f.reason ? ' (' + f.reason + ')' : '')).join('; ')}.` : '') +
       ' Use this for any "what have I not covered" or "what should I review" question: say plainly when something has not been shown yet instead of assuming they have seen it, bring in unshown topics (cards first) before re-drilling ones they already own, and when you see them struggle with a specific topic in conversation, call flag_for_review so it leads tomorrow\'s plan.';
   }catch(e){ return ''; }
@@ -8098,7 +8102,7 @@ function buildStudyPlanCore(minutes){
         run: () => { const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : `Adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
-      why: dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.',
+      why: (() => { const u = coverageUnderserved(2); return u.length ? `Weighted toward ${u.map(d => d.name).join(' and ')}, which have had the least attention lately for their share of the exam, so nothing on the blueprint goes cold.` : null; })() || (dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.'),
       need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
     weak: () => {
       if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
@@ -8261,6 +8265,15 @@ function buildStudyPlanCore(minutes){
         why:'Trying questions before you study a topic, even getting them wrong, shows what to read closely and makes the later review stick.',
         run: () => { showTab('study'); startDrill(weakDom.key); } };
     },
+    figures: () => {
+      const fr = figFreshness();
+      if(fr.due < 6 && !L.targets.figGoal) return null;
+      const goal = Math.max(4, Math.min(8, planTarget('figGoal', Math.min(8, fr.due))));
+      const have = Math.min(goal, (L.figs || []).length);
+      return { id:'figures', title:`Refresh ${goal} key figures`, minutes: Math.max(4, Math.ceil(goal * 0.8)), need:goal, have, unit:'figures',
+        why: fr.never >= fr.total * 0.5 ? `${fr.never} of the ${fr.total} limits and thresholds have not come up in a drill yet. A few a day, newest and shakiest first, keeps them from blurring together.` : `${fr.due} of the ${fr.total} limits and thresholds are due to come back. Figures fade fastest, so a few each day keep them sharp for the exam.`,
+        run: () => { showTab('study'); startFigureDrill(goal - have > 0 ? goal - have : goal); } };
+    },
     tutor: () => {
       if(missedN < 3 && !L.targets.tutorMiss) return null;
       planTarget('tutorMiss', 1);
@@ -8277,10 +8290,10 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','checkpoint','teach','newcards'],
-    taper:      ['cards','missed','calc','keys','logistics','listen'],
+    foundation: ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
+    taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
   }[phase.key];
   const steps = [];
@@ -8372,6 +8385,7 @@ const CONDUCTOR_CUES = {
   checkpoint: 'Treat this like the real thing: no looking things up, and keep to the pace.',
   calc: 'Do the key presses by hand. The habit matters more than the answer.',
   teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.',
+  figures: 'Say the number before you look at the choices. If it is a range, say both ends.',
   tool: 'Pick the answer at each fork yourself before you read why. The reasoning is what transfers to the exam.',
   listen: 'Listen without a screen if you can, and pause to say the key idea back before the episode does.'
 };
@@ -12058,7 +12072,7 @@ function renderToolPracticeButtons(){
   });
 }
 
-function isGenQ(q){ return !!q && (!!q.tvmGen || !!q.treeGen); }
+function isGenQ(q){ return !!q && (!!q.tvmGen || !!q.treeGen || !!q.figGen); }
 
 /* ===========================================================
    DECISION TREES, WORKED THROUGH QUESTIONS
@@ -14261,6 +14275,102 @@ function stagePromptLine(key){
   })[domainStageOf(key)];
 }
 
+// ---- Key figures drill ----
+// Limits, thresholds and rates go stale fastest. Each key number becomes a short multiple-choice question; ones you have not met,
+// got wrong, or not seen in a while come first, and ones you keep getting right rest for longer.
+function figStatOf(label){ return (DATA.figStats || {})[label]; }
+function figRest(s){ return s.lastOk === false ? 1 : s.streak >= 3 ? 30 : s.streak === 2 ? 14 : s.streak === 1 ? 7 : 3; }
+function figDue(item){ const s = figStatOf(item.label); if(!s) return true; return (Date.now() - s.last) / ONE_DAY_MS >= figRest(s); }
+function figFreshness(){ return { due: KEY_NUMBERS.filter(figDue).length, never: KEY_NUMBERS.filter(k => !figStatOf(k.label)).length, total: KEY_NUMBERS.length }; }
+function figRecordOutcome(q, ok){
+  try{
+    DATA.figStats = DATA.figStats || {};
+    const p = DATA.figStats[q.figLabel] || { n: 0, ok: 0, streak: 0 };
+    DATA.figStats[q.figLabel] = { n: p.n + 1, ok: p.ok + (ok ? 1 : 0), streak: ok ? p.streak + 1 : 0, last: Date.now(), lastOk: !!ok };
+    const L = planDayLog(); L.figs = L.figs || []; L.figs.push(q.figLabel);
+    try{ updatePlanChip(); }catch(e){}
+  }catch(e){}
+}
+function figNums(v){ return String(v).match(/\d[\d,]*(\.\d+)?/g) || []; }
+function figShape(v){ return String(v).replace(/\d[\d,]*(\.\d+)?/g, '#'); }
+function figNear(v){
+  // The same figure nudged: what a student who half remembers it would pick (last year's figure, a neighbouring round number).
+  const nums = figNums(v); if(!nums.length) return null;
+  const raw = nums[0], x = parseFloat(raw.replace(/,/g, '')); if(!isFinite(x) || x === 0) return null;
+  let y;
+  if(x >= 1000) y = Math.round(x * 0.96 / 100) * 100;
+  else if(x >= 100) y = Math.round(x * 0.95 / 10) * 10;
+  else if(x >= 10) y = x + (x % 5 === 0 ? 5 : 10 - (x % 10 || 10)) || x + 5;
+  else y = x + 1;
+  if(y === x) y = x + (x >= 1000 ? 500 : 5);
+  const txt = raw.indexOf(',') >= 0 ? y.toLocaleString('en-US') : String(y);
+  return String(v).replace(raw, txt);
+}
+function figBuildQuestion(item){
+  const others = KEY_NUMBERS.filter(k => k.label !== item.label && k.value !== item.value);
+  const shape = figShape(item.value), mag = x => { const n = parseFloat((figNums(x)[0] || '1').replace(/,/g, '')); return Math.log10(Math.max(1, n)); };
+  const m0 = mag(item.value);
+  const same = others.filter(k => figShape(k.value) === shape).sort((a, b) => Math.abs(mag(a.value) - m0) - Math.abs(mag(b.value) - m0));
+  const chosen = []; const seen = new Set([item.value]);
+  const near = figNear(item.value); if(near && !seen.has(near)){ chosen.push({ text: near, from: null }); seen.add(near); }
+  same.forEach(k => { if(chosen.length < 3 && !seen.has(k.value)){ chosen.push({ text: k.value, from: k.label }); seen.add(k.value); } });
+  if(chosen.length < 3){ others.slice().sort((a, b) => Math.abs(a.value.length - item.value.length) - Math.abs(b.value.length - item.value.length)).forEach(k => { if(chosen.length < 3 && !seen.has(k.value)){ chosen.push({ text: k.value, from: k.label }); seen.add(k.value); } }); }
+  const choices = [item.value].concat(chosen.map(c => c.text));
+  const rationale = [`Correct — ${item.value}. ${item.hook || ''}`.trim()].concat(chosen.map(c => c.from ? `Wrong — that is the figure for "${c.from}". ${item.label} is ${item.value}.` : `Wrong — close, but ${item.label} is ${item.value}.`));
+  const q = { id: 'fig-' + Math.random().toString(36).slice(2, 8), domain: item.domain, q: `2026 law: which is right for "${item.label}"?`, choices, correct: 0, rationale, figGen: true, figLabel: item.label, difficulty: 1 };
+  return shuffleQuestionChoices(q);
+}
+function startFigureDrill(n){
+  n = Math.max(3, Math.min(12, n || 6));
+  const w = d => (DOMAINS.find(x => x.key === d) || { weight: 10 }).weight / 100;
+  const scored = KEY_NUMBERS.map(k => { const s = figStatOf(k.label); const age = s ? (Date.now() - s.last) / ONE_DAY_MS : 30; return { k, sc: (s ? 0 : 3) + (s && s.lastOk === false ? 2.5 : 0) + Math.min(3, age / figRest(s || { streak: 0 })) + w(k.domain) * 4 + Math.random() }; }).sort((a, b) => b.sc - a.sc);
+  const picks = []; const perDom = {};
+  scored.forEach(x => { if(picks.length < n && (perDom[x.k.domain] || 0) < Math.ceil(n / 2)){ picks.push(x.k); perDom[x.k.domain] = (perDom[x.k.domain] || 0) + 1; } });
+  if(!picks.length) return false;
+  beginSession(picks.map(figBuildQuestion), 'drill', null);
+  if(session) session.figDrill = true;
+  return true;
+}
+// ---- Coverage balance ----
+// Where the last two weeks of attention went, set against each domain's share of the exam, and how long each official topic
+// has gone untouched. Question picking leans toward what is under-served or stale, so no part of the blueprint goes cold.
+let _covMemo = null, _covCards = null;
+function covTopicCards(){
+  const cards = allFlashcards();
+  if(_covCards && _covCards.n === cards.length) return _covCards.m;
+  const m = {};
+  Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((nm, i) => { let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[k][i]; }catch(e){} m[k + '-' + i] = pat ? cards.filter(c => c.domain === k && pat.test((c.term + ' ' + c.def).toLowerCase())).map(c => c.id) : []; }));
+  _covCards = { n: cards.length, m }; return m;
+}
+function coverageModel(){
+  const sig = (DATA.answerCounter || 0) + '|' + Math.floor(Date.now() / 300000) + '|' + allQuestions().length;
+  if(_covMemo && _covMemo.sig === sig) return _covMemo;
+  const now = Date.now(), W = 14 * ONE_DAY_MS, dom = {};
+  DOMAINS.forEach(d => { dom[d.key] = { touched: 0, w: d.weight }; });
+  allQuestions().forEach(q => { const st = DATA.questionStats[q.id]; if(st && st.lastSeenAt && now - st.lastSeenAt <= W && dom[q.domain]) dom[q.domain].touched += 1; });
+  allFlashcards().forEach(c => { const st = DATA.flashcardStats[c.id]; if(st && st.lastSeenAt && now - st.lastSeenAt <= W && dom[c.domain]) dom[c.domain].touched += 0.5; });
+  const total = DOMAINS.reduce((a, d) => a + dom[d.key].touched, 0), wsum = DOMAINS.reduce((a, d) => a + d.weight, 0) || 100;
+  DOMAINS.forEach(d => { const o = dom[d.key]; o.target = d.weight / wsum; o.share = total ? o.touched / total : o.target; o.ratio = o.share / o.target; o.factor = total < 12 ? 1 : (o.ratio < 1 ? 1 + (1 - o.ratio) * 0.8 : 1 - Math.min(0.3, (o.ratio - 1) * 0.2)); });
+  const cardsBy = covTopicCards(), qTopic = {}, topicLast = {};
+  Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((nm, i) => {
+    const key = k + '-' + i; let last = 0;
+    subtopicPool(k, i).forEach(q => { if(!qTopic[q.id]) qTopic[q.id] = key; const st = DATA.questionStats[q.id]; if(st && st.lastSeenAt) last = Math.max(last, st.lastSeenAt); });
+    (cardsBy[key] || []).forEach(id => { const st = DATA.flashcardStats[id]; if(st && st.lastSeenAt) last = Math.max(last, st.lastSeenAt); });
+    topicLast[key] = last;
+  }));
+  _covMemo = { sig, dom, total, qTopic, topicLast }; return _covMemo;
+}
+// A multiplier for a question's pick weight: up for an under-served domain or a topic left alone for a while, down a little for one that is getting more than its share.
+function coverageFactor(q){
+  try{
+    const m = coverageModel(); const d = m.dom[q.domain]; let f = d ? d.factor : 1;
+    const tk = m.qTopic[q.id]; if(tk !== undefined){ const last = m.topicLast[tk]; const days = last ? (Date.now() - last) / ONE_DAY_MS : Infinity; f *= days === Infinity ? 1.35 : days > 14 ? 1.3 : days > 7 ? 1.12 : 1; }
+    return Math.max(0.7, Math.min(2.2, f));
+  }catch(e){ return 1; }
+}
+function coverageUnderserved(n){
+  try{ const m = coverageModel(); if(m.total < 12) return []; return DOMAINS.filter(d => m.dom[d.key].ratio < 0.7).sort((a, b) => m.dom[a.key].ratio - m.dom[b.key].ratio).slice(0, n || 2); }catch(e){ return []; }
+}
 function questionPriority(q){
   const dMeta = DOMAINS.find(d=>d.key===q.domain) || { weight: 10 };
   const domainWeightFactor = dMeta.weight/100;
@@ -14270,7 +14380,7 @@ function questionPriority(q){
   const missedBoost = DATA.missed.includes(q.id) ? 1.6 : 1;
   const stageF = stageDifficultyFactor(q);
   const mixFactor = stageF !== null ? stageF : estimateDifficultyWeights()[questionDifficulty(q)] * domainNewnessFactor(q) * foundationDifficultyFactor(q);
-  return Math.max(0.05, domainWeightFactor*3 * weaknessFactor * dueFactor * missedBoost * mixFactor);
+  return Math.max(0.05, domainWeightFactor*3 * weaknessFactor * dueFactor * missedBoost * mixFactor * coverageFactor(q));
 }
 
 function weightedDrawWithoutReplacement(sourcePool, count){
@@ -20079,6 +20189,7 @@ function renderQuestion(){
 
   const simplifyRow = document.getElementById('simplifyRow');
   if(simplifyRow) simplifyRow.style.display = 'none'; // re-shown by selectAnswer() only when this mode actually shows feedback
+  { const tr = document.getElementById('takeRow'); if(tr) tr.style.display = 'none'; _takeBusy = false; }
   const simplifiedBox = document.getElementById('simplifiedExplanation');
   if(simplifiedBox){ simplifiedBox.style.display = 'none'; simplifiedBox.innerHTML = ''; }
 
@@ -20133,7 +20244,7 @@ function renderQuestion(){
   };
   const reasonCode = session.selectionReasons ? session.selectionReasons[q.id] : null;
   const reasonFlag = reasonCode && reasonLabels[reasonCode] ? ` <span class="gen-flag" title="Why this question, right now">· ${reasonLabels[reasonCode]}</span>` : '';
-  document.getElementById('qDomain').innerHTML = '<span class="qd-name">' + domainMeta.code + ' — ' + domainMeta.name + '</span>' + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + reasonFlag;
+  document.getElementById('qDomain').innerHTML = '<span class="qd-name">' + domainMeta.code + ' — ' + domainMeta.name + '</span>' + (q.generated ? ' <span class="gen-flag">· AI-generated</span>' : '') + (q.takeDir ? ' <span class="gen-flag">· ' + (q.takeDir === 'easier' ? 'easier take' : 'harder take') + '</span>' : '') + (q.figGen ? ' <span class="gen-flag">· key figure</span>' : '') + reasonFlag;
   session.cueRevealed = false;
   paintScenario(q, false);
   const qTextDisplay = document.getElementById('qText');
@@ -20313,7 +20424,73 @@ async function prefetchNewForMiss(q, pickedIdx){
   }catch(e){}
   finally{ delete pfMissInFlight[key]; pfActive = Math.max(0, pfActive - 1); }
 }
-async function genVariant(q, wantNew){
+// ---- Easier or harder take on a question ----
+// After an answer, one tap writes the same idea at a gentler or tougher level and puts it next in the session. With no AI connection
+// the app falls back to the closest question in the bank that sits one step easier or harder. The suggested direction follows the
+// answer just given and how the last twenty have gone; the other direction stays one tap away.
+let _takeBusy = false;
+function takeSuggest(q, isCorrect){
+  const cur = questionDifficulty(q);
+  const log = DATA.recentAccuracyLog || [];
+  const acc = log.length >= 5 ? log.filter(e => e.correct).length / log.length : null;
+  if(!isCorrect) return cur > 1 ? 'easier' : null;
+  if(cur >= 3 && acc !== null && acc < 0.5) return null;
+  return 'harder';
+}
+function renderTakeRow(q, isCorrect){
+  const row = document.getElementById('takeRow'); if(!row) return;
+  if(!isStudyMode() || isGenQ(q) || !session || session.mode === 'case'){ row.style.display = 'none'; return; }
+  const sug = takeSuggest(q, isCorrect);
+  const e = document.getElementById('takeEasierBtn'), h = document.getElementById('takeHarderBtn');
+  [e, h].forEach(b => { if(b){ b.disabled = false; b.classList.remove('suggest'); b.classList.add('ghost'); } });
+  e.textContent = 'An easier take'; h.textContent = 'A harder take';
+  const sb = sug === 'easier' ? e : sug === 'harder' ? h : null; if(sb){ sb.classList.add('suggest'); sb.classList.remove('ghost'); }
+  const old = row.querySelector('.take-note'); if(old) old.remove();
+  row.style.display = '';
+}
+function takeFromBank(q, dir){
+  const cur = questionDifficulty(q);
+  const inQ = new Set((session.queue || []).map(x => x.id));
+  let best = null, bs = -1;
+  allQuestions().forEach(c => {
+    if(c.id === q.id || c.domain !== q.domain || inQ.has(c.id) || isGenQ(c)) return;
+    const d = questionDifficulty(c);
+    if(dir === 'easier' ? d >= cur : d <= cur) return;
+    let sim = 0; try{ sim = factSimilarity(q, c); }catch(e){}
+    if(sim < 0.08) return;
+    const unseen = getSpacedStat(DATA.questionStats, c.id).seen === 0 ? 0.15 : 0;
+    const sc = sim + unseen + Math.random() * 0.02;
+    if(sc > bs){ bs = sc; best = c; }
+  });
+  return best ? shuffleQuestionChoices(Object.assign({}, best)) : null;
+}
+async function questionTake(dir){
+  if(_takeBusy || !session) return;
+  const q = session.queue[session.index]; if(!q) return;
+  const row = document.getElementById('takeRow'), btn = document.getElementById(dir === 'easier' ? 'takeEasierBtn' : 'takeHarderBtn'), other = document.getElementById(dir === 'easier' ? 'takeHarderBtn' : 'takeEasierBtn');
+  const note = txt => { if(!row) return; let n = row.querySelector('.take-note'); if(!n){ n = document.createElement('div'); n.className = 'take-note'; n.setAttribute('role', 'status'); row.appendChild(n); } n.textContent = txt; };
+  const cur = questionDifficulty(q);
+  const target = dir === 'easier' ? Math.max(1, cur - 1) : Math.min(3, cur + 1);
+  if(dir === 'easier' && cur <= 1 && q.takeDir !== 'harder' && !q.isVariant && !aiFeaturesAvailable){ note('This is already a plain recall question. The flashcard below is the simpler version of the same idea.'); return; }
+  _takeBusy = true; const label = btn.textContent; btn.disabled = true; other.disabled = true; btn.textContent = 'Writing…';
+  let made = null, how = '';
+  try{
+    if(aiFeaturesAvailable && !genBackoffActive() && !isGenQ(q)){
+      const r = await genVariant(q, { orig: q.id, why: dir === 'easier' ? 'the student asked for an easier take on this idea' : 'the student asked for a harder take on this idea', wrongText: '' }, { dir, target });
+      if(r && r.variant){ made = buildVariantQuestion(q, r.variant); made.difficulty = target; made.takeDir = dir; how = 'written for you'; }
+    }
+  }catch(e){}
+  if(!session || session.queue[session.index] !== q){ _takeBusy = false; return; }
+  if(!made){ try{ made = takeFromBank(q, dir); if(made) how = 'from the question bank'; }catch(e){} }
+  _takeBusy = false;
+  btn.textContent = label; btn.disabled = false; other.disabled = false;
+  if(!made){ note(dir === 'easier' ? 'Nothing simpler on this idea yet. The flashcard below covers the basics.' : 'Nothing tougher on this idea yet.'); return; }
+  session.queue.splice(session.index + 1, 0, made);
+  try{ saveInProgressSession(); }catch(e){}
+  btn.disabled = true; btn.textContent = dir === 'easier' ? 'Easier take added' : 'Harder take added';
+  note(`${dir === 'easier' ? 'An easier' : 'A harder'} take on this idea is next (${how}). Tap Next.`);
+}
+async function genVariant(q, wantNew, take){
   const domainMeta = DOMAINS.find(d=>d.key===q.domain);
   const inFoundation = !!DATA.domainFoundationMode[q.domain];
   const masteryRow = domainMasteryList().find(d=>d.key===q.domain);
@@ -20324,6 +20501,11 @@ async function genVariant(q, wantNew){
     skillContext = `The student is performing well in this domain (around ${masteryRow.mastery}% accuracy), so this can be at a similar or slightly HARDER difficulty than the original, if that genuinely still fits the same concept.`;
   } else {
     skillContext = "Keep this at a similar difficulty to the original.";
+  }
+  if(take){
+    skillContext = take.dir === 'easier'
+      ? `The student asked for an EASIER version. Keep the same rule that makes the answer correct, but make this ${take.target <= 1 ? 'a plain, single-step check of the rule: round numbers, no extra complications, and wrong choices that are clearly different from the right one' : 'a simpler application: one client fact, one step, and no tricky near-miss choices'}. It must still be a real exam-style question, just gentler.`
+      : `The student asked for a HARDER version. Keep the same rule that makes the answer correct, but apply it the way the exam does: ${take.target >= 3 ? 'a realistic client situation with a second consideration or an exception to apply, and wrong choices that are the believable mistakes' : 'a short client situation where a detail has to be used to pick the answer'}. Do not change which rule makes the answer correct.`;
   }
 
   const letters = ['A','B','C','D'];
@@ -20874,8 +21056,10 @@ function selectAnswerCore(i){
   if(isCorrect){ dt.correct++; session.correct++; }
   session.answerLog.push({index: session.index, correct: isCorrect});
 
-  DATA.domainStats[q.domain].total++;
-  if(isCorrect) DATA.domainStats[q.domain].correct++;
+  if(q.takeDir !== 'easier'){
+    DATA.domainStats[q.domain].total++;
+    if(isCorrect) DATA.domainStats[q.domain].correct++;
+  }
 
   DATA.answerCounter++;
   planLogAnswer(session.mode);
@@ -20894,20 +21078,26 @@ function selectAnswerCore(i){
     if(isCorrect) DATA.confidenceStats[level].correct++;
   }
 
+  // An easier take must not credit the harder original, and a miss on a harder take must not blame it: only a clean harder take counts.
+  const takeV = !!q.takeDir, takeCounts = takeV && q.takeDir === 'harder' && isCorrect;
   if(!isGenQ(q)){
-    const prevStat = getSpacedStat(DATA.questionStats, q.id);
-    DATA.questionStats[q.id] = advanceSpacedStat(prevStat, isCorrect);
+    if(!takeV || takeCounts){
+      const prevStat = getSpacedStat(DATA.questionStats, q.id);
+      DATA.questionStats[q.id] = advanceSpacedStat(prevStat, isCorrect);
+    }
   } else if(q.treeGen){
     treeRecordOutcome(q, isCorrect);
+  } else if(q.figGen){
+    figRecordOutcome(q, isCorrect);
   } else {
     tvmRecordQuizOutcome(q, i, isCorrect);
   }
   recordStudyDay();
   if(!isGenQ(q) && session.siblingOf && session.siblingOf[q.id]) creditConceptRetest(session.siblingOf[q.id], isCorrect);
 
-  if(!isGenQ(q)) recordDomainAnswer(q.domain, isCorrect, q);
-  const foundationChange = isGenQ(q) ? null : updateFoundationMode(q.domain);
-  const stageChange = isGenQ(q) ? null : updateDomainStage(q.domain);
+  if(!isGenQ(q) && q.takeDir !== 'easier') recordDomainAnswer(q.domain, isCorrect, q);
+  const foundationChange = (isGenQ(q) || q.takeDir === 'easier') ? null : updateFoundationMode(q.domain);
+  const stageChange = (isGenQ(q) || q.takeDir === 'easier') ? null : updateDomainStage(q.domain);
   if(foundationChange === 'entered'){
     const domainName = DOMAINS.find(d=>d.key===q.domain).name;
     setCoach(`Easing up on ${domainName} for a bit — foundational questions until it feels solid, then we'll build back up.`, false);
@@ -20921,6 +21111,7 @@ function selectAnswerCore(i){
 
   const wasPreviouslyMissed = DATA.missed.includes(q.id);
   if(isGenQ(q)){ /* no missed-list entry: the question will not exist next time, a fresh one is generated */ }
+  else if(takeV && !takeCounts){ /* a take on the idea: the original's missed status stays as it was */ }
   else if(!isCorrect){
     if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
     prefetchNewForMiss(q, i);
@@ -20969,6 +21160,7 @@ function selectAnswerCore(i){
     simplifiedBox.innerHTML = '';
   }
 
+  try{ renderTakeRow(q, isCorrect); }catch(e){}
   try{ showCardForQuestion(q, isCorrect); }catch(e){}
   try{ showToolForQuestion(q, isCorrect); }catch(e){}
   const calcStepsRow = document.getElementById('calcStepsRow');
@@ -24955,7 +25147,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-20.318';
+const BUILD_ID = '2026-10-21.319';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
