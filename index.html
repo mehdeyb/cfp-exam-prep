@@ -5661,7 +5661,7 @@ function defaultData(){
     domainStage: {},
     domainTierLog: {},
     fcRetell: {},
-    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {},
+    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [],
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5851,6 +5851,7 @@ function sanitizeLoadedData(d){
   Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && !rationaleAgreesWithKey(v)){ qHealKey(v); if(!rationaleAgreesWithKey(v)) delete d.readyNew[k]; } });
   d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q); }); // drops any saved item whose key contradicts its own explanation
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
+  d.tutorFlags = (Array.isArray(d.tutorFlags) ? d.tutorFlags : []).filter(x => isObj(x) && typeof x.at === 'number').slice(-12);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
   ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
@@ -7984,6 +7985,67 @@ function planTodayActivity(){
   const modes = Object.keys(L.modes).filter(m => L.modes[m] > 0);
   return { modes, counts: L.modes, cards, tvm: L.tvm, formula: L.formula, L };
 }
+// Topics the tutor has flagged for review after seeing the student struggle. They move to the front of the plan's drill until drilled.
+function tutorFlagMatch(topic){
+  try{
+    const want = new Set(ebKeywords(topic)); if(!want.size) return null;
+    let best = null, bs = 0;
+    Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((name, i) => {
+      const kw = ebKeywords(name); const hit = kw.filter(x => want.has(x)).length;
+      const sc = hit / Math.sqrt((kw.length * want.size) || 1);
+      if(hit >= 1 && sc > bs){ bs = sc; best = { key:k, idx:i, name }; }
+    }));
+    return bs >= 0.3 ? best : null;
+  }catch(e){ return null; }
+}
+function tutorFlagsActive(){
+  const dr = DATA.subtopicDrillAt || {};
+  return (DATA.tutorFlags || []).filter(f => f && Date.now() - f.at < 10 * 86400000 && !(f.key && dr[f.key + '-' + f.idx] > f.at));
+}
+function tutorFlagAdd(topic, reason){
+  topic = String(topic || '').replace(/\s+/g, ' ').trim().slice(0, 80); if(!topic) return null;
+  reason = String(reason || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  const m = tutorFlagMatch(topic);
+  const flag = { at: Date.now(), topic, reason, key: m ? m.key : null, idx: m ? m.idx : null, name: m ? m.name : topic };
+  DATA.tutorFlags = (DATA.tutorFlags || []).filter(f => !(m ? (f.key === m.key && f.idx === m.idx) : f.topic === topic));
+  DATA.tutorFlags.push(flag); DATA.tutorFlags = DATA.tutorFlags.slice(-12);
+  persist(); return flag;
+}
+// What the student has and has not been shown, and how they did on what they were shown, for the tutor.
+let _covTopicCards = null;
+function tutorCoverageBlock(){
+  try{
+    const qs = allQuestions(), cards = allFlashcards();
+    const rows = DOMAINS.map(d => {
+      let seen = 0, att = 0, cor = 0, nq = 0, cs = 0, ck = 0, nc = 0;
+      qs.forEach(q => { if(q.domain !== d.key) return; nq++; const st = getSpacedStat(DATA.questionStats, q.id); if(st.seen > 0){ seen++; att += st.seen; cor += Math.min(st.correct, st.seen); } });
+      cards.forEach(c => { if(c.domain !== d.key) return; nc++; const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen > 0){ cs++; const raw = DATA.flashcardStats[c.id]; if(raw && raw.known === true) ck++; } });
+      return `${d.name}: ${seen} of ${nq} questions seen${att ? ' (' + Math.round(cor / att * 100) + '% right)' : ''}, ${cs} of ${nc} cards seen (${ck} marked known)`;
+    });
+    // Per official topic: has anything about it been put in front of them yet?
+    if(!_covTopicCards || _covTopicCards.n !== cards.length){
+      const m = {}; Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((nm, i) => { let pat; try{ pat = SYLLABUS_COVERAGE_PATTERNS[k][i]; }catch(e){} m[k + '-' + i] = pat ? cards.filter(c => c.domain === k && pat.test((c.term + ' ' + c.def).toLowerCase())).map(c => c.id) : []; }));
+      _covTopicCards = { n: cards.length, m };
+    }
+    const untouched = [], strong = [];
+    Object.keys(SUBTOPICS).forEach(k => SUBTOPICS[k].forEach((name, i) => {
+      const st = subtopicStats(k, i); const cardSeen = (_covTopicCards.m[k + '-' + i] || []).some(id => getSpacedStat(DATA.flashcardStats, id).seen > 0);
+      if(st.seen === 0 && !cardSeen && (st.size > 0 || (_covTopicCards.m[k + '-' + i] || []).length > 0)) untouched.push(name);
+      else if(st.attempts >= 6 && st.acc >= 0.85) strong.push(`${name} ${Math.round(st.acc * 100)}%`);
+    }));
+    const ts = DATA.teachStats || {}, tk = Object.keys(ts);
+    const cnt = g => tk.filter(k => ts[k].grade === g).length;
+    const byId = {}; cards.forEach(c => { byId['c:' + c.id] = c; });
+    const shaky = tk.filter(k => (ts[k].grade === 'missed' || ts[k].grade === 'partly') && byId[k] && Date.now() - ts[k].last < 14 * 86400000).sort((a, b) => ts[b].last - ts[a].last).slice(0, 4).map(k => byId[k].term);
+    const flags = tutorFlagsActive();
+    return ' WHAT THEY HAVE AND HAVE NOT BEEN SHOWN (live from the app): ' + rows.join('; ') + '.' +
+      (untouched.length ? ` Official topics with nothing shown yet (no question and no card seen): ${untouched.slice(0, 10).join('; ')}${untouched.length > 10 ? '; and ' + (untouched.length - 10) + ' more' : ''}.` : ' Every official topic has had at least a card or a question put in front of them.') +
+      (strong.length ? ` Shown and going well: ${strong.slice(0, 4).join('; ')}.` : '') +
+      (tk.length ? ` Explain-it-back so far: ${tk.length} ideas (${cnt('nailed')} nailed, ${cnt('partly')} partly, ${cnt('missed')} missed)${shaky.length ? '; shaky lately: ' + shaky.join(', ') : ''}.` : ' They have not tried Explain it back yet.') +
+      (flags.length ? ` Topics you flagged for review that they have not drilled yet: ${flags.map(f => f.name + (f.reason ? ' (' + f.reason + ')' : '')).join('; ')}.` : '') +
+      ' Use this for any "what have I not covered" or "what should I review" question: say plainly when something has not been shown yet instead of assuming they have seen it, bring in unshown topics (cards first) before re-drilling ones they already own, and when you see them struggle with a specific topic in conversation, call flag_for_review so it leads tomorrow\'s plan.';
+  }catch(e){ return ''; }
+}
 var _podPlanBusy = false, _inPlanBuild = false;
 function buildStudyPlan(minutes){
   const _wasBuilding = _inPlanBuild; _inPlanBuild = true;
@@ -8001,10 +8063,15 @@ function buildStudyPlanCore(minutes){
   const missedN = (DATA.missed || []).length;
   const L = act.L, cnt = act.counts;
   // Topics already drilled today keep their place, so progress on them is never lost when your accuracy shifts.
-  let freshWeak = []; try{ freshWeak = weakSubtopics(8); }catch(e){}
+  let freshWeak = []; try{ freshWeak = weakSubtopics(12); }catch(e){}
+  // Day to day: a topic drilled in the last couple of days steps aside for an equally shaky one that has waited longer, so the plan does not hand you the same drill every morning.
+  try{ const dr = DATA.subtopicDrillAt || {}; const pen = w => { const t = dr[w.key + '-' + w.idx]; if(!t) return 0; const d = (Date.now() - t) / ONE_DAY_MS; return d < 2 ? 0.15 : d < 4 ? 0.07 : 0; }; freshWeak.sort((a, b) => (a.st.acc + pen(a)) - (b.st.acc + pen(b))); }catch(e){}
+  freshWeak = freshWeak.slice(0, 8);
+  let tutorFlagged = []; try{ tutorFlagged = tutorFlagsActive().filter(f => f.key).map(f => { let st = null; try{ st = subtopicStats(f.key, f.idx); }catch(e){} return { key:f.key, idx:f.idx, name:f.name, flag:f, st: st || { acc:null, attempts:0 } }; }); }catch(e){}
   const workedKeys = Object.keys(L.drill).filter(k => L.drill[k] > 0 && L.meta[k]);
   const wkList = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
-    .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx)));
+    .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx)))
+    .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !tutorFlagged.some(t => t.key === w.key && t.idx === w.idx)));
   const wkAt = n => wkList[n] || null;
   const wk = wkAt(0);
   const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
@@ -8035,7 +8102,7 @@ function buildStudyPlanCore(minutes){
       need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
     weak: () => {
       if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
-        why:`You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
+        why: wk.flag ? `Your tutor flagged this after your last conversation${wk.flag.reason ? ': ' + wk.flag.reason : ''}. A short drill now shows whether it has settled.` : `You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
         run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
       if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)){
         // Pinned for the day, so answering questions never swaps the step's topic out from under the count.
@@ -22744,6 +22811,7 @@ function buildTutorSystemPrompt(){
     const fw = (typeof FD_NAMES !== 'undefined' ? FD_NAMES : []).map(n => ({ n, st: fdStats(n) })).filter(x => x.st.attempts >= 3 && x.st.correct / x.st.attempts < 0.6).sort((a, b) => a.st.correct / a.st.attempts - b.st.correct / b.st.attempts).slice(0, 3);
     if(fw.length) timeContext += ` Calculation drills they get wrong most: ${fw.map(x => `${x.n} (${Math.round(x.st.correct / x.st.attempts * 100)}% over ${x.st.attempts})`).join(', ')}. Offer open_formula_drill on these when it fits.`;
   }catch(e){}
+  timeContext += tutorCoverageBlock();
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   try{ const lv = DATA.treeLevel || {}; const ks = Object.keys(lv).filter(k => DECISION_TREES[k]); if(ks.length) timeContext += ' Decision-tool scenario levels (1 Build, 2 Apply, 3 Tell apart, 4 Transfer; new clients are written at that level): ' + ks.map(k => k + ' L' + lv[k].lvl).join(', ') + '. When you open a tool for them, match your coaching to the level.'; }catch(e){}
@@ -23097,6 +23165,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_study_guide') return 'Opened your study guide';
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Study tab)';
+    if(name === 'flag_for_review') return 'Flagged for review: ' + String(inp.topic || '').slice(0, 50);
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
     if(name === 'start_my_session') return 'Opened today\'s guided session';
     if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
@@ -23549,6 +23618,11 @@ const TUTOR_TOOLS = [
     },
   },
   {
+    name: 'flag_for_review',
+    description: "Mark one specific topic for review when you have seen the student struggle with it in this conversation (they got it wrong, mixed it up, or could not explain it). It moves that topic to the front of today's drill in the plan until they have drilled it. Use it sparingly, at most two per conversation, and only for a concrete topic, never for a vague area. Tell them you did it in one short sentence.",
+    input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'The topic in a few words, close to the official topic name, for example "Required minimum distributions".' }, reason: { type: 'string', description: 'What went wrong, under 100 characters, for example "mixed up RMD ages".' } }, required: ['topic'] },
+  },
+  {
     name: 'plan_my_study',
     description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (60 to 360), or the suggested pace from the app if they ask you to set it; otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
     input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 60 to 360. Optional.' } } },
@@ -23814,6 +23888,12 @@ async function executeTutorTool(toolName, toolInput){
       const numMatch = KEY_NUMBERS.find(n => n.label.toLowerCase().includes(q) || q.includes(n.label.toLowerCase()));
       if(numMatch) return `That's not a glossary term, but here's the figure: ${numMatch.label} is ${numMatch.value}. ${numMatch.hook || ''}`;
       return `Opened the glossary and searched for "${toolInput.term}," but nothing matched.`;
+    }
+    if(toolName === 'flag_for_review'){
+      const f = tutorFlagAdd(toolInput && toolInput.topic, toolInput && toolInput.reason);
+      if(!f) return 'Error: say which topic to flag.';
+      try{ renderTodayPlan(); refreshCoachSurfaces(); }catch(e){}
+      return f.key ? `Flagged "${f.name}" for review. It now leads the drill in today's plan until they have drilled it.` : `Noted "${f.topic}" for review. It did not match an official topic, so it will not change the plan; mention it in your own advice.`;
     }
     if(toolName === 'plan_my_study'){
       const m = Math.round(Number(toolInput && toolInput.minutes));
@@ -24875,7 +24955,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-20.317';
+const BUILD_ID = '2026-10-20.318';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
