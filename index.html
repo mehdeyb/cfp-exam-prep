@@ -9511,6 +9511,9 @@ function ebBuildCues(st){
   }
   let order = tier === 'strong' ? ['ex','contrast','trap','num'] : tier === 'building' ? ['what','when','num','contrast'] : ['what','when','num'];
   if(st.kind === 'question') order = tier === 'strong' ? ['trap','num','when'] : ['what','when','num','trap'];
+  // Same idea, a different emphasis each time: the cue list starts one step further along after every attempt, and a card you keep missing leads with the plain definition.
+  { const rot = ts && ts.n ? (ts.streak || 0) : 0; if(tier === 'strong' && rot > 0){ const k = rot % order.length; order = order.slice(k).concat(order.slice(0, k)); }
+    if(ts && ts.grade === 'missed' && order.indexOf('what') > 0){ order = ['what'].concat(order.filter(x => x !== 'what')); } }
   const cues = order.filter(k => C[k] && (k !== 'num' || hasNum)).slice(0, 4).map(k => Object.assign({ k }, C[k]));
   return { cues, tier, contrast: cons };
 }
@@ -9645,7 +9648,7 @@ function ebGrade(g){
     DATA.teachStats = DATA.teachStats || {};
     const prev = DATA.teachStats[st.key] || { n:0, best:0 };
     const got = (st.result || []).filter(r => r.ok).length, n = (st.result || []).length || 1;
-    DATA.teachStats[st.key] = { n: prev.n + 1, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)), missN: n - got, hints: (st.result || []).filter(r => !r.ok).map(r => ebHintWords(r.text, 1)[0]).filter(Boolean).slice(0, 3) };
+    DATA.teachStats[st.key] = { n: prev.n + 1, streak: g === 'nailed' ? (prev.streak || (prev.grade === 'nailed' ? 1 : 0)) + 1 : 0, last: Date.now(), grade: g, score: Math.round(100 * got / n), best: Math.max(prev.best || 0, Math.round(100 * got / n)), missN: n - got, hints: (st.result || []).filter(r => !r.ok).map(r => ebHintWords(r.text, 1)[0]).filter(Boolean).slice(0, 3) };
     const keys = Object.keys(DATA.teachStats);
     if(keys.length > 400){ keys.sort((a, b) => DATA.teachStats[a].last - DATA.teachStats[b].last).slice(0, keys.length - 400).forEach(k => delete DATA.teachStats[k]); }
     if(st.kind === 'card'){
@@ -9682,9 +9685,17 @@ function ebPromptFor(card){
   const ts = (DATA.teachStats || {})['c:' + card.id];
   let lvl = 'building'; try{ lvl = fcCardLevel(card); }catch(e){}
   if(!ts) return lvl === 'strong' ? 'You know this one. Say it in your own words, then add the detail the exam is most likely to twist.' : 'Without looking, say what this means and when it matters, as if a client asked you.';
-  if(ts.grade === 'nailed') return 'You covered this before. Go one step further: give a quick example, or say what people most often confuse it with.';
+  if(ts.grade === 'nailed'){
+    // A different ask each clean time, so a idea you own is not drilled the same way twice.
+    const asks = ['You covered this before. Go one step further: give a quick example, or say what people most often confuse it with.',
+      'Teach it to a client in two sentences, then name the trap the exam sets around it.',
+      'Skip the definition. Use it: describe a client for whom this changes the advice, and what you would say.',
+      'Say it with the numbers and the exceptions, as if you were correcting a colleague who had it slightly wrong.'];
+    return asks[((ts.streak || 1) - 1) % asks.length];
+  }
   const n = ts.missN || 0;
-  const hw = (ts.hints || []).length ? ' (think ' + ts.hints.map(w => '\u201c' + w + '\u201d').join(', ') + ')' : '';
+  const hw = (ts.hints || []).length ? ' (think ' + ts.hints.map(w => '“' + w + '”').join(', ') + ')' : '';
+  if(ts.grade === 'partly' && (ts.n || 1) >= 3) return 'Third try at this one. Do not start from the definition: say the one thing that makes it different' + hw + ', then build around it.';
   return 'Last time ' + (n ? n + ' key idea' + (n === 1 ? ' was' : 's were') + ' missing' + hw : 'it fell a little short') + '. Start with the main idea, then fill in the rest.';
 }
 function ebOpenCard(card, opts){
@@ -9713,6 +9724,32 @@ function ebFrontClick(){
   const wasFlipped = fcFlipped;
   ebOpenCard(card, { onClose: st => { if(!wasFlipped && st.graded && !fcFlipped){ try{ flipFlashcard(); }catch(e){} } } });
 }
+// How long a clean explanation rests: each clean run in a row stretches the gap, so what you own stops coming back, and a shortfall returns within a day or two.
+function ebRestDays(t){
+  if(!t) return 0;
+  if(t.grade === 'missed') return 1;
+  if(t.grade === 'partly') return 2;
+  const k = t.streak || 1;
+  return k >= 4 ? 45 : k === 3 ? 21 : k === 2 ? 10 : 4;
+}
+function ebResting(c){
+  const t = (DATA.teachStats || {})['c:' + c.id]; if(!t || !t.last) return false;
+  return (Date.now() - t.last) < ebRestDays(t) * 86400000;
+}
+function ebDoneToday(c){ try{ return ((planDayLog().explains) || []).indexOf('c:' + c.id) >= 0; }catch(e){ return false; } }
+// Words from the questions you missed lately: an idea that explains one of those is worth saying aloud before a topic you only skimmed.
+function ebMissWords(){
+  try{
+    if(ebMissWords._at && Date.now() - ebMissWords._at < 60000) return ebMissWords._set;
+    const set = new Set(); const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
+    (DATA.missed || []).slice(-15).forEach(id => { const q = byId[id]; if(q) ebKeywords(q.q + ' ' + (q.choices ? q.choices[q.correct] : '')).forEach(k => set.add(k)); });
+    ebMissWords._set = set; ebMissWords._at = Date.now(); return set;
+  }catch(e){ return new Set(); }
+}
+function ebMissHits(c){
+  const W = ebMissWords(); if(!W.size) return 0;
+  return ebKeywords(c.term).filter(k => W.has(k)).length;
+}
 // A run of explain-it-back ideas picked for you: ones you fell short on before first, then ones not tried yet, then the rest; no repeats.
 let ebRun = null; // { cards:[], i, goal, stepId, from, note }
 function ebCurate(wk, weakDom, n, pool0){
@@ -9724,9 +9761,13 @@ function ebCurate(wk, weakDom, n, pool0){
   }
   if(cards.length < n) cards = cards.concat(allFlashcards().filter(c => !cards.includes(c)));
   const ts = c => (DATA.teachStats || {})['c:' + c.id];
-  const score = c => { const t = ts(c); let sc = flashcardPriority(c); if(!t) sc += 2; else if(t.grade === 'missed') sc += 6; else if(t.grade === 'partly') sc += 4; else if(Date.now() - t.last < 3 * 86400000) sc -= 8; else sc -= 1; return sc + Math.random(); };
-  const out = []; const seenTerm = new Set();
-  cards.sort((a, b) => score(b) - score(a)).forEach(c => { if(out.length < n && !seenTerm.has(c.term)){ seenTerm.add(c.term); out.push(c); } });
+  const score = c => { const t = ts(c); let sc = flashcardPriority(c); if(!t) sc += 2; else if(t.grade === 'missed') sc += 6; else if(t.grade === 'partly') sc += 4; else sc -= 1; if(ebResting(c)) sc -= 12; if(ebDoneToday(c)) sc -= 30; sc += Math.min(3, ebMissHits(c)) * 1.5; return sc + Math.random(); };
+  const out = []; const seenTerm = new Set(); const picked = [];
+  // Ideas in one run should not be near-twins: skip a card that mostly repeats one already chosen, and mix shaky ideas with a stronger one so the run is not all struggle.
+  const ranked = cards.slice().sort((a, b) => score(b) - score(a));
+  const twin = c => { const kw = ebKeywords(c.term + ' ' + c.def); return picked.some(p => { const o = new Set(p); const hit = kw.filter(k => o.has(k)).length; return hit / Math.max(1, Math.min(kw.length, o.size)) > 0.6; }); };
+  ranked.forEach(c => { if(out.length < n && !seenTerm.has(c.term) && !twin(c)){ seenTerm.add(c.term); out.push(c); picked.push(ebKeywords(c.term + ' ' + c.def)); } });
+  if(out.length < n) ranked.forEach(c => { if(out.length < n && !seenTerm.has(c.term)){ seenTerm.add(c.term); out.push(c); } });
   return out;
 }
 function ebStartRun(cards, o){
@@ -9758,9 +9799,10 @@ function ebOpenForTopic(wk, weakDom){
     if(pat){ const m = cards.filter(c => pat.test((c.term + ' ' + c.def).toLowerCase())); if(m.length) cards = m; }
   }
   if(!cards.length) cards = allFlashcards();
-  const recentNailed = c => { const t = (DATA.teachStats || {})['c:' + c.id]; return t && t.grade === 'nailed' && Date.now() - t.last < 3*86400000; };
-  const pool = cards.filter(c => !recentNailed(c)); if(pool.length >= 4) cards = pool;
-  const ranked = cards.slice().sort((a, b) => flashcardPriority(b) - flashcardPriority(a)).slice(0, 6);
+  const fresh = c => !ebResting(c) && !ebDoneToday(c);
+  const pool = cards.filter(fresh); if(pool.length >= 4) cards = pool;
+  const need = c => { const t = (DATA.teachStats || {})['c:' + c.id]; return flashcardPriority(c) + (t ? (t.grade === 'missed' ? 6 : t.grade === 'partly' ? 4 : -1) : 2) + Math.min(3, ebMissHits(c)) * 1.5; };
+  const ranked = cards.slice().sort((a, b) => need(b) - need(a)).slice(0, 6);
   const pick = ranked[Math.floor(Math.random() * ranked.length)];
   return ebOpenCard(pick, { again: () => ebOpenForTopic(wk, weakDom) });
 }
@@ -24833,7 +24875,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-20.316';
+const BUILD_ID = '2026-10-20.317';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
