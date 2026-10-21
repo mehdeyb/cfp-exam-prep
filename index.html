@@ -1829,6 +1829,25 @@
   .tutor-thread{display:flex;flex-direction:column;gap:12px;max-height:440px;overflow-y:auto;padding:4px 2px 8px;margin-bottom:14px;}
   .tutor-msg{display:flex;}
   .tutor-msg-user{justify-content:flex-end;}
+  .tutor-visual-row{display:block;}
+  .tutor-visual{margin:2px 0;padding:12px 12px 10px;max-width:min(100%,380px);background:var(--surface2);border:1px solid var(--hair);border-radius:14px;}
+  .tutor-visual figcaption{font-size:13px;font-weight:600;color:var(--paper);margin-bottom:8px;line-height:1.3;}
+  .tutor-visual svg{display:block;max-width:100%;height:auto;}
+  .tv-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .tv-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+  .tv-legend-col{flex-direction:column;margin:0;gap:5px;}
+  .tv-legend b{color:var(--paper);font-weight:600;}
+  .tv-pie{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .tv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tv-table{border-collapse:collapse;width:100%;font-size:12.5px;}
+  .tv-table th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.02em;padding:4px 8px 6px 0;border-bottom:1px solid var(--hair);}
+  .tv-table td{padding:6px 8px 6px 0;border-bottom:1px solid var(--hair);color:var(--paper);vertical-align:top;line-height:1.35;}
+  .tv-table tr:last-child td{border-bottom:0;}
+  .tv-steps{list-style:none;margin:0;padding:0;counter-reset:tv;display:flex;flex-direction:column;gap:9px;}
+  .tv-steps li{counter-increment:tv;position:relative;padding-left:30px;font-size:13px;line-height:1.4;color:var(--paper);}
+  .tv-steps li::before{content:counter(tv);position:absolute;left:0;top:0;width:21px;height:21px;border-radius:50%;background:var(--teal);color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .tv-steps li span{display:block;color:var(--muted);font-size:12.5px;margin-top:1px;}
+  .tv-note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4;}
   .tutor-msg-bot{justify-content:flex-start;}
   .tutor-bubble{max-width:82%;padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;}
   .tutor-msg-bot .tutor-bubble{background:var(--surface2);border:1px solid var(--hair);color:var(--paper);border-bottom-left-radius:4px;}
@@ -1846,6 +1865,7 @@
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:8px 6px;cursor:pointer;}
   @keyframes tgIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
   /* Focus: one thing on screen. Everything else in the panel, the header, the tab bar and the floating pill step aside. */
+  body.cd-flow #qCardLink,body.cd-flow #qToolLink{display:none !important;}
   body.focus-mode #appHeader,body.focus-mode #appTabbar,body.focus-mode #conductorPill,body.focus-mode .storage-warning{display:none !important;}
   body.focus-mode .focus-path > *:not(.focus-path):not(.focus-target):not(.focus-bar):not(.tutor-guide){display:none !important;}
   body.focus-mode .tutor-guide .tg-next{display:none;}
@@ -2409,9 +2429,10 @@
   #quizView .quiz-actions::before{background:linear-gradient(to top,var(--ink),transparent);}
   #resultsView .quiz-actions::before{background:linear-gradient(to top,var(--surface),transparent);}
   /* No band behind the action bar: just the two buttons floating over the page. */
-  #quizView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
+  #quizView .quiz-actions{background:var(--ink) !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:auto;}
+  #quizView .quiz-actions::before{height:28px;}
   #quizView .quiz-actions > *{pointer-events:auto;}
-  #quizView .quiz-actions::before{display:none;}
+  #quizView .quiz-actions::before{display:block;height:22px;background:linear-gradient(to top,var(--ink),transparent);}
   /* The results page works the same way: no band, just the buttons, with room left under the content so nothing is hidden behind them. */
   #resultsView .quiz-actions{background:none !important;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:none;box-shadow:none;pointer-events:none;}
   #resultsView .quiz-actions > *{pointer-events:auto;background-color:color-mix(in srgb,var(--surface) 94%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
@@ -2437,7 +2458,7 @@
   /* Solid buttons on a soft fade: text scrolling underneath never shows through them. */
   #quizView .quiz-actions .btn,#quizView .quiz-actions .btn.ghost,#quizView .quiz-actions .btn:disabled{background-color:var(--ink) !important;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 2px 10px rgba(0,0,0,.10);}
   @media (orientation:portrait) and (max-width:640px){
-    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions{background:none !important;background-color:transparent !important;}
+    body.quiz-active:not(.exam-sim-mode) #quizView .quiz-actions{background:var(--ink) !important;}
   }
   /* Phones (upright): keep the tagline on one line and the readiness block narrow enough that the
      countdown card sits beside the ring instead of dropping below it with empty space left over. */
@@ -2598,7 +2619,7 @@
     body.quiz-active .confidence-pills{flex-wrap:nowrap;gap:5px;}
     body.quiz-active .confidence-pill{padding:10px 11px;min-height:38px;font-size:10.5px;}
     /* Slim Exit/Next bar */
-    body.quiz-active #quizView .quiz-actions{padding:4px max(14px, env(safe-area-inset-right)) max(4px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 14px)) max(14px, env(safe-area-inset-left));align-items:center;background:transparent !important;border:0 !important;box-shadow:none !important;}
+    body.quiz-active #quizView .quiz-actions{padding:4px max(14px, env(safe-area-inset-right)) max(4px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 14px)) max(14px, env(safe-area-inset-left));align-items:center;background:var(--ink) !important;border:0 !important;box-shadow:none !important;}
     body.quiz-active #quizView .quiz-actions::before{display:none !important;}
     body.quiz-active #quizView .quiz-actions .btn{background-color:var(--ink);}
     body.quiz-active #quizView .quiz-actions .btn:disabled{background-color:var(--ink);}
@@ -3071,12 +3092,8 @@
             <div class="qcard-link" id="qCardLink" style="display:none;"></div>
             <div class="qcard-link" id="qToolLink" style="display:none;"></div>
             <div class="simplify-row" id="simplifyRow" style="display:none;">
-              <button class="btn ghost" id="simplifyBtn" onclick="requestSimplerExplanation()">Explain this more simply</button>
-              <button class="btn ghost" id="qChatBtn" onclick="toggleQuestionChat()" aria-expanded="false" aria-controls="qChatBox">Ask the tutor about this</button>
-            </div>
-            <div class="simplify-row take-row" id="takeRow" style="display:none;">
-              <button class="btn ghost" id="takeEasierBtn" onclick="questionTake('easier')">An easier take</button>
-              <button class="btn ghost" id="takeHarderBtn" onclick="questionTake('harder')">A harder take</button>
+              <button class="btn ghost" id="simplifyBtn" onclick="requestSimplerExplanation()">Explain simply</button>
+              <button class="btn ghost" id="qChatBtn" onclick="toggleQuestionChat()" aria-expanded="false" aria-controls="qChatBox">Ask the tutor</button>
             </div>
             <div class="simplified-explanation" id="simplifiedExplanation" style="display:none;"></div>
             <div class="qchat-box" id="qChatBox" style="display:none;" role="region" aria-label="Ask the tutor about this question">
@@ -3087,6 +3104,10 @@
                 <textarea class="qchat-input" id="qChatInput" rows="2" placeholder="Ask anything about this question…" aria-label="Your question for the tutor" maxlength="1200"></textarea>
                 <button class="btn" id="qChatSend" onclick="sendQuestionChat()">Send</button>
               </div>
+            </div>
+            <div class="simplify-row take-row" id="takeRow" style="display:none;">
+              <button class="btn ghost" id="takeEasierBtn" onclick="questionTake('easier')">An easier take</button>
+              <button class="btn ghost" id="takeHarderBtn" onclick="questionTake('harder')">A harder take</button>
             </div>
             <div class="flag-row" id="flagRow" style="display:none;">
               <button class="flag-btn" id="flagBtn" onclick="toggleFlag()">
@@ -3808,6 +3829,7 @@ function backToPractice(){
 }
 function showTab(name, opts){
   opts = opts || {};
+  if(name !== 'flashcards' && document.body.classList.contains('flashcard-fullscreen')){ try{ exitFlashcardFullscreen(); }catch(e){} }
   const curEl = document.querySelector('.tab-panel.active');
   const curName = curEl ? curEl.id.replace(/^tab-/, '') : null;
   const same = curName === name;
@@ -5667,7 +5689,7 @@ function defaultData(){
     domainStage: {},
     domainTierLog: {},
     fcRetell: {},
-    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [], figStats: {},
+    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [], figStats: {}, planHistory: {},
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -5859,7 +5881,7 @@ function sanitizeLoadedData(d){
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.tutorFlags = (Array.isArray(d.tutorFlags) ? d.tutorFlags : []).filter(x => isObj(x) && typeof x.at === 'number').slice(-12);
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
-  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','figStats','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
+  ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','figStats','planHistory','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
   });
   Object.keys(d.questionStats).forEach(id=>{ if(!isObj(d.questionStats[id])) delete d.questionStats[id]; });
@@ -7625,6 +7647,7 @@ function renderReadinessExtras(stats){
       <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
     ${estimateBlock}
+    ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
     <div class="rb-rows">${rows}</div>
     ${penaltyRow}
     <div class="rb-foot">An estimate of readiness, not a pass prediction: nobody outside the exam knows where the cut score will fall. It moves whenever you answer, and it fades on its own if you stop reviewing, because forgotten material counts for less. Tap any row to drill that domain.</div>`;
@@ -8046,6 +8069,7 @@ function tutorCoverageBlock(){
       (strong.length ? ` Shown and going well: ${strong.slice(0, 4).join('; ')}.` : '') +
       (tk.length ? ` Explain-it-back so far: ${tk.length} ideas (${cnt('nailed')} nailed, ${cnt('partly')} partly, ${cnt('missed')} missed)${shaky.length ? '; shaky lately: ' + shaky.join(', ') : ''}.` : ' They have not tried Explain it back yet.') +
       balText +
+      (() => { try{ const e = exposureModel(); return ` Topic exposure for passing: ${e.total - e.nNew} of ${e.total} topics seen (${e.seenPct}% of exam weight), ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried. Steer toward ${e.nNew ? 'unseen' : 'barely-tried and shaky'} topics, heaviest weight first.`; }catch(err){ return ''; } })() +
       (flags.length ? ` Topics you flagged for review that they have not drilled yet: ${flags.map(f => f.name + (f.reason ? ' (' + f.reason + ')' : '')).join('; ')}.` : '') +
       ' Use this for any "what have I not covered" or "what should I review" question: say plainly when something has not been shown yet instead of assuming they have seen it, bring in unshown topics (cards first) before re-drilling ones they already own, and when you see them struggle with a specific topic in conversation, call flag_for_review so it leads tomorrow\'s plan.';
   }catch(e){ return ''; }
@@ -8054,6 +8078,29 @@ var _podPlanBusy = false, _inPlanBuild = false;
 function buildStudyPlan(minutes){
   const _wasBuilding = _inPlanBuild; _inPlanBuild = true;
   try{ return buildStudyPlanCore(minutes); }finally{ _inPlanBuild = _wasBuilding; }
+}
+// ---- Day focus ----
+// Each day leans toward one kind of work, chosen from what needs it most and never the same as yesterday unless nothing else
+// needs it, so the plan reads differently from day to day: repair what is weak, widen coverage, apply ideas, or sharpen recall.
+const PLAN_FOCI = {
+  repair:  { label:'Repair day',      first:['weak','missed','tutor'],       why: c => `${c.missedN >= 3 ? c.missedN + ' misses to clear' : 'Shaky topics to fix'}: today goes to repairing what is weak before adding more.` },
+  breadth: { label:'Breadth day',     first:['gap','gap2','adaptive','newcards','figures'], why: c => c.under.length ? `${c.under.map(d => d.name).join(' and ')} ${c.under.length === 1 ? 'has' : 'have'} had the least attention for ${c.under.length === 1 ? 'its' : 'their'} share of the exam, so today widens coverage.` : `${c.untouched} official topics have not come up yet, so today widens coverage.` },
+  apply:   { label:'Application day', first:['case','tool','teach'],          why: () => 'You have the basics down. Today uses them the way the exam asks: in client situations.' },
+  recall:  { label:'Recall day',      first:['figures','calc','cards'],       why: c => `${c.figDue} key figures are due and formulas fade fast, so today sharpens recall.` }
+};
+function planFocusPick(c){
+  const hist = DATA.planHistory || {}, today = localDayKey();
+  const days = Object.keys(hist).filter(k => k < today).sort();
+  const last = days.length ? hist[days[days.length - 1]] : null;
+  const score = {
+    repair: Math.min(3, c.missedN / 5) + Math.min(2, c.weakCount / 2),
+    breadth: c.under.length * 1.2 + Math.min(2, c.untouched / 8),
+    apply: c.answered >= 80 ? 1.4 + (c.accAvg >= 0.6 ? 0.8 : 0) : 0,
+    recall: Math.min(2, c.figDue / 20) + (c.formulaWeak ? 1 : 0)
+  };
+  if(last && last.focus && score[last.focus] !== undefined) score[last.focus] *= 0.5; // yesterday's focus yields unless it clearly needs the most
+  const keys = Object.keys(score).sort((a, b) => score[b] - score[a]);
+  return score[keys[0]] > 0.3 ? keys[0] : null;
 }
 function buildStudyPlanCore(minutes){
   minutes = minutes || planMinutes();
@@ -8104,6 +8151,24 @@ function buildStudyPlanCore(minutes){
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : `Adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
       why: (() => { const u = coverageUnderserved(2); return u.length ? `Weighted toward ${u.map(d => d.name).join(' and ')}, which have had the least attention lately for their share of the exam, so nothing on the blueprint goes cold.` : null; })() || (dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.'),
       need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
+    gap: () => {
+      const g = exposureGaps(1)[0], pinned = planDayLog().targets.gapKey;
+      const key = pinned || (g ? planTarget('gapKey', g.key) : null);
+      const t = key ? exposureModel().topics.find(x => x.key === key) : null;
+      if(!t) return null;
+      const need = Math.min(8, t.size);
+      return { id:'gap', title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+        why: t.state === 'new' ? `You have not seen this one yet, and it is part of what the exam can ask. A first pass now beats meeting it cold.` : `Only a few tries so far, not enough to know if it holds. A real pass makes it count.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
+    },
+    gap2: () => {
+      const first = planDayLog().targets.gapKey; const g = exposureGaps(1, [first])[0]; if(!first || !g) return null;
+      const key = planTarget('gapKey2', g.key), t = exposureModel().topics.find(x => x.key === key); if(!t) return null;
+      const need = Math.min(8, t.size);
+      return { id:'gap2', title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+        why:`Next on the list of topics not yet covered well. With today's time there is room to widen the net a bit more.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
+    },
     weak: () => {
       if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
         why: wk.flag ? `Your tutor flagged this after your last conversation${wk.flag.reason ? ': ' + wk.flag.reason : ''}. A short drill now shows whether it has settled.` : `You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
@@ -8251,6 +8316,7 @@ function buildStudyPlanCore(minutes){
         why:'Two cases in a day builds the reading stamina the real exam asks for. Flag the deciding facts again with fresh eyes.', run: () => { showTab('study'); startCase(pick.id); } };
     },
     newcards: () => {
+      { const c0 = mk.cards(); if(c0 && /new/i.test(c0.title)) return null; } // the flashcard step already brings in new cards
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
       if(!(unseen >= 8 && dueCards < 5 && !L.targets.newcards) && !L.targets.newcards) return null;
       const n = planTarget('newcards', Math.min(unseen, 15));
@@ -8290,12 +8356,28 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','weak','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','pretest','gap','weak','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','gap','weak','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','gap','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
   }[phase.key];
+  // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
+  let focus = null;
+  if(phase.key !== 'taper' && phase.key !== 'rest'){
+    try{
+      const cm = coverageModel();
+      const ctx = { missedN, answered, weakCount: freshWeak.filter(w => w.st.acc < 0.6).length, under: coverageUnderserved(2), untouched: Object.keys(cm.topicLast).filter(k => !cm.topicLast[k]).length, figDue: figFreshness().due, formulaWeak: !!((typeof fdWeakest === 'function') && fdWeakest()), accAvg: (() => { const l = DATA.recentAccuracyLog || []; return l.length ? l.filter(e => e.correct).length / l.length : 0; })() };
+      const fk = planTarget('focus', planFocusPick(ctx) || '');
+      if(fk && PLAN_FOCI[fk]){
+        focus = { key: fk, label: PLAN_FOCI[fk].label, why: PLAN_FOCI[fk].why(ctx) };
+        const first = PLAN_FOCI[fk].first.filter(k => order.includes(k));
+        const keepCardsFirst = order[0] === 'cards' && fk !== 'recall' && !first.includes('cards');
+        const rest = order.filter(k => !first.includes(k) && !(keepCardsFirst && k === 'cards'));
+        order.splice(0, order.length, ...(keepCardsFirst ? ['cards'] : []), ...first, ...rest);
+      }
+    }catch(e){}
+  }
   const steps = [];
   let used = 0;
   const finish = (k, st) => {
@@ -8323,7 +8405,7 @@ function buildStudyPlanCore(minutes){
   };
   order.forEach(k => place(k));
   if(phase.key !== 'taper' && phase.key !== 'rest'){
-    ['weak2','adaptive2','weak3'].forEach(k => {
+    ['gap2','weak2','adaptive2','weak3'].forEach(k => {
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
       if(!worked && used + st.minutes > minutes) return;
@@ -8359,7 +8441,17 @@ function buildStudyPlanCore(minutes){
       why:'Sitting the whole exam once shows where stamina and pacing slip. Pick a day with six free hours, then spend the next day on what it exposed.',
       run: () => { showTab('study'); startFullExam(); } });
   }
-  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter };
+  try{
+    const day = localDayKey(); DATA.planHistory = DATA.planHistory || {};
+    const rec = { focus: focus ? focus.key : null, ids: steps.map(x => x.id) };
+    const prev = DATA.planHistory[day];
+    if(!prev || prev.focus !== rec.focus || prev.ids.join() !== rec.ids.join()){
+      DATA.planHistory[day] = rec;
+      Object.keys(DATA.planHistory).sort().slice(0, -10).forEach(k => delete DATA.planHistory[k]);
+      persist();
+    }
+  }catch(e){}
+  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter, focus };
 }
 
 function setPlanMinutes(m){
@@ -8549,6 +8641,7 @@ function conductorBreakDue(c){
 }
 function conductorBreakDone(){ const c = conductorState(); if(!c) return; c.breakTaken = true; persist(); clearInterval(window._cdBrk); conductorShow('between'); }
 function conductorShow(kind){
+  if(document.body.classList.contains('flashcard-fullscreen')){ try{ exitFlashcardFullscreen(); }catch(e){} }
   const c = conductorState(); const o = document.getElementById('conductorOverlay'); const panel = document.getElementById('conductorPanel');
   if(!c || !o || !panel) return;
   clearTimeout(_cdHideTimer); o.classList.remove('cd-out');
@@ -8664,6 +8757,7 @@ function conductorOpenMenu(){
 function conductorRefreshPill(){
   const pill = document.getElementById('conductorPill'); if(!pill) return;
   const c = conductorState();
+  document.body.classList.toggle('cd-flow', !!(c && c.current));
   const ov = document.getElementById('conductorOverlay');
   const overlayOpen = ov && ov.style.display === 'flex' && !ov.classList.contains('cd-out');
   if(!c || overlayOpen || (c.log.length === 0 && !c.current)){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
@@ -8818,9 +8912,10 @@ function renderTodayPlan(){
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, 10 min</b> Stand up, water, no screen. The second half sticks better after it.</div>` : ''); });
   const rows = stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
+    ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
     ${(plan.phase.key === 'taper' || plan.phase.key === 'rest') && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${(runwayTxt || lateNote) ? `<p class="pt-sub">${escapeHtml((runwayTxt || '') + lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
@@ -9022,10 +9117,10 @@ function planRefForSession(sess){
   else if(sess.mode === 'drill'){
     let want = null;
     try{
-      if(sess.drillTopic){ const m = planDayLog().meta[sess.drillTopic]; if(m) want = 'Drill: ' + m.name; }
+      if(sess.drillTopic){ const m = planDayLog().meta[sess.drillTopic]; if(m) want = m.name; }
     }catch(e){}
-    const weak = ['weak','weak2','weak3','weak4'].map(byId).filter(Boolean);
-    st = (want && weak.find(x => x.title === want)) || weak.find(x => !x.done) || weak[0] || null;
+    const weak = ['weak','gap','gap2','weak2','weak3','weak4'].map(byId).filter(Boolean);
+    st = (want && weak.find(x => x.title === 'Drill: ' + want || x.title === 'New ground: ' + want)) || weak.find(x => !x.done) || weak[0] || null;
   }
   if(!st) return null;
   return { id: st.id, title: st.title, need: st.need, base: st.have || 0, unit: st.unit || 'questions' };
@@ -9067,7 +9162,7 @@ function planNextHtml(nxt){
 function planGoNext(id){
   try{
     const inQuiz = document.body.classList.contains('quiz-active');
-    const sessionIds = ['adaptive','adaptive2','weak','weak2','weak3','weak4','missed','case','case2','checkpoint'];
+    const sessionIds = ['adaptive','adaptive2','weak','gap','gap2','weak2','weak3','weak4','missed','case','case2','checkpoint'];
     if(inQuiz && !sessionIds.includes(id)) exitToMenu();
     runPlanStep(id);
   }catch(e){}
@@ -12989,7 +13084,9 @@ function startFlashcardSet(cards, kind){
   fcQueue = cards.slice(); fcCustomQueue = true; fcCustomKind = kind || null;
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
   fcIndex = 0; renderFlashcard(); renderFlashcardStats();
-  const c = document.getElementById('fcCard'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'});
+  // A set started from today's plan runs on its own screen, with nothing else around it.
+  if(kind === 'plan'){ try{ enterFlashcardFullscreen(); }catch(e){} }
+  else { const c = document.getElementById('fcCard'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'}); }
   return true;
 }
 function startGapFlashcards(){ const b = fcBalanced(20, { kind:'gap' }); window._fcLastMix = b.mix; return startFlashcardSet(b.cards.length ? b.cards : fcGapCards().slice(0,20), 'gap'); }
@@ -14334,6 +14431,34 @@ function startFigureDrill(n){
 // ---- Coverage balance ----
 // Where the last two weeks of attention went, set against each domain's share of the exam, and how long each official topic
 // has gone untouched. Question picking leans toward what is under-served or stale, so no part of the blueprint goes cold.
+// ---- Exposure: has every official topic been shown AND practiced enough to pass? ----
+// States per topic: new (nothing seen), thin (seen but under 4 tries), shaky (4+ tries under 65%), solid. Priority is the exam weight
+// of the topic's domain split across its topics, so the heaviest untouched ground comes first.
+let _expMemo = null;
+function exposureModel(){
+  const sig = (DATA.sessions || []).length + ':' + Object.keys(DATA.questionStats || {}).length + ':' + Object.keys(DATA.flashcardStats || {}).length + ':' + (_covMemo ? _covMemo.sig : '') + ':' + allQuestions().length;
+  if(_expMemo && _expMemo.sig === sig && Date.now() - _expMemo.at < 30000) return _expMemo;
+  const cards = covTopicCards(), topics = [];
+  DOMAINS.forEach(d => { const names = SUBTOPICS[d.key] || []; names.forEach((name, idx) => {
+    const key = d.key + '-' + idx; let st = { size: 0, seen: 0, attempts: 0, acc: null }; try{ st = subtopicStats(d.key, idx); }catch(e){}
+    const cardsSeen = (cards[key] || []).filter(id => { const c = DATA.flashcardStats[id]; return c && c.lastSeenAt; }).length;
+    const state = (!st.attempts && !cardsSeen) ? 'new' : (st.attempts < 4 ? 'thin' : (st.acc < 0.65 ? 'shaky' : 'solid'));
+    topics.push({ key, dom: d.key, idx, name, st, state, cardsSeen, size: st.size, w: d.weight / Math.max(1, names.length) });
+  }); });
+  const count = k => topics.filter(t => t.state === k).length;
+  const wsum = topics.reduce((a, t) => a + t.w, 0) || 1;
+  const wpct = fn => Math.round(topics.filter(fn).reduce((a, t) => a + t.w, 0) / wsum * 100);
+  _expMemo = { sig, at: Date.now(), topics, total: topics.length, nNew: count('new'), nThin: count('thin'), nShaky: count('shaky'), nSolid: count('solid'),
+    seenPct: wpct(t => t.state !== 'new'), solidPct: wpct(t => t.state === 'solid') };
+  return _expMemo;
+}
+// The next topics to put in front of the student: heaviest never-seen first, then barely-tried, skipping any with too few questions to drill.
+function exposureGaps(n, skipKeys){
+  const m = exposureModel(), skip = new Set(skipKeys || []);
+  const rank = { new: 0, thin: 1 };
+  return m.topics.filter(t => (t.state === 'new' || t.state === 'thin') && t.size >= 3 && !skip.has(t.key))
+    .sort((a, b) => rank[a.state] - rank[b.state] || b.w - a.w).slice(0, n || 3);
+}
 let _covMemo = null, _covCards = null;
 function covTopicCards(){
   const cards = allFlashcards();
@@ -14621,7 +14746,7 @@ function strongestDomains(count){
   return rows.slice(0,count).map(d=>d.key);
 }
 
-async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}){
+async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools, grown}){
   if(aiMode === 'none'){
     const err = new Error('No API key connected.');
     err.code = 'NO_API_KEY';
@@ -14710,6 +14835,10 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools}
       DATA.aiTokenUsage.requestCount += 1;
       persist();
     }catch(e){ /* usage tracking is best-effort; never let it break a real response */ }
+  }
+  // A reply that stopped because it ran out of room would end mid-thought on screen: ask again with more room, once.
+  if(!tools && !grown && data && data.stop_reason === 'max_tokens' && (maxTokens || 1000) < 4000){
+    try{ return await anthropicMessagesRequestOnce({system, messages, maxTokens: Math.min(4000, Math.round((maxTokens || 1000) * 2.5)), tools, grown:true}); }catch(e){ /* fall through to the shorter reply */ }
   }
   if(tools) return data.content || [];
   const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text);
@@ -21141,7 +21270,7 @@ function selectAnswerCore(i){
   const correctLabel = wasPreviouslyMissed ? 'Correct — you\'ve got this one now.' : 'Correct!';
   const missTipText = missType ? missTipFor(missType, q) : '';
   const missTip = (missType && MISS_TYPES[missType] && missTipText) ? `<small class="miss-tip">${MISS_TYPES[missType].label}: ${missTipText}</small>` : '';
-  fb.innerHTML = fbIcon + '<span>' + (isCorrect ? correctLabel : `Not quite — the correct answer is ${letters[q.correct]}. See why below.` + missTip + (mixPair ? mixupContrastHtml(mixPair) : '')) + '</span>' + speakBtnHtml;
+  fb.innerHTML = fbIcon + '<span>' + (isCorrect ? correctLabel : `Not quite — the answer is ${letters[q.correct]}.` + missTip + (mixPair ? mixupContrastHtml(mixPair) : '')) + '</span>' + speakBtnHtml;
   fb.className = 'quiz-feedback ' + (isCorrect ? 'good' : 'bad');
   fb.style.display = 'flex';
   quizRevealFeedback(fb);
@@ -21151,9 +21280,9 @@ function selectAnswerCore(i){
   const simplifyRow = document.getElementById('simplifyRow');
   const simplifiedBox = document.getElementById('simplifiedExplanation');
   if(simplifyRow){
-    simplifyRow.style.display = (confShown && aiFeaturesAvailable) ? 'block' : 'none'; // both buttons need the API key, so without one they stay out of the way
+    simplifyRow.style.display = (confShown && aiFeaturesAvailable) ? '' : 'none'; // both buttons need the API key, so without one they stay out of the way
     document.getElementById('simplifyBtn').disabled = false;
-    document.getElementById('simplifyBtn').textContent = 'Explain this more simply';
+    document.getElementById('simplifyBtn').textContent = 'Explain simply';
   }
   if(simplifiedBox){
     simplifiedBox.style.display = 'none';
@@ -21267,7 +21396,7 @@ function resetQuestionChat(){
   const th = document.getElementById('qChatThread'); if(th) th.innerHTML = '';
   const inp = document.getElementById('qChatInput'); if(inp){ inp.value = ''; inp.disabled = false; }
   const send = document.getElementById('qChatSend'); if(send) send.disabled = false;
-  const btn = document.getElementById('qChatBtn'); if(btn){ btn.setAttribute('aria-expanded','false'); btn.textContent = 'Ask the tutor about this'; }
+  const btn = document.getElementById('qChatBtn'); if(btn){ btn.setAttribute('aria-expanded','false'); btn.textContent = 'Ask the tutor'; }
 }
 
 function qChatSuggestions(q, wasCorrect){
@@ -21288,7 +21417,7 @@ function toggleQuestionChat(){
   if(!box || !session) return;
   const q = session.queue[session.index]; if(!q) return;
   const open = box.style.display === 'block';
-  if(open){ box.style.display = 'none'; btn.setAttribute('aria-expanded','false'); btn.textContent = 'Ask the tutor about this'; return; }
+  if(open){ box.style.display = 'none'; btn.setAttribute('aria-expanded','false'); btn.textContent = 'Ask the tutor'; return; }
   if(qChat.qid !== q.id){ qChat = { qid:q.id, messages:[], busy:false, token:qChat.token }; }
   const wasCorrect = session.lastSelectedIndex === q.correct;
   const chips = document.getElementById('qChatChips');
@@ -21309,7 +21438,7 @@ function toggleQuestionChat(){
     qChatBubble('bot', "I need an API key to chat. Add one in Settings and I'll be ready to talk through this question with you.");
   }
   box.style.display = 'block';
-  btn.setAttribute('aria-expanded','true'); btn.textContent = 'Hide the tutor chat';
+  btn.setAttribute('aria-expanded','true'); btn.textContent = 'Hide chat';
   const inp = document.getElementById('qChatInput');
   try{ box.scrollIntoView({ block:'nearest', behavior:'smooth' }); }catch(e){}
   if(inp && !(window.matchMedia && matchMedia('(pointer:coarse)').matches)) inp.focus({ preventScroll:true });
@@ -21509,7 +21638,7 @@ Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${let
 They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences, under 70 words, always finishing the last sentence. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
 
   try{
-    let reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 650 }))
+    let reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 }))
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(reply);
     if(hitCalcConventionGuard){
@@ -21521,7 +21650,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
     }
     if(!stillOnSameQuestion()) return;
     renderSimplifiedExplanation(box, reply, false);
-    btn.textContent = hitCalcConventionGuard ? 'Explain this more simply' : 'Try a different explanation';
+    btn.textContent = hitCalcConventionGuard ? 'Explain simply' : 'Try a different explanation';
     btn.disabled = false;
   }catch(e){
     if(!stillOnSameQuestion()) return;
@@ -21536,7 +21665,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
     errSpan.className = 'simplify-err';
     errSpan.textContent = `Couldn't get a simpler explanation: ${msg} — ${describeAiError(e)}`;
     box.appendChild(errSpan);
-    btn.textContent = 'Explain this more simply';
+    btn.textContent = 'Explain simply';
     btn.disabled = false;
   }
 }
@@ -22986,7 +23115,7 @@ function buildTutorSystemPrompt(){
     if(pl && pl.steps && pl.steps.length){
       const done = pl.steps.filter(x => x.done).length, nxt = pl.steps.find(x => !x.done);
       const cs = conductorState();
-      timeContext += ` TODAY'S PLAN (the same one shown on the Study tab): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
+      timeContext += ` TODAY'S PLAN (the same one shown on the Study tab${pl.focus ? ', ' + pl.focus.label.toLowerCase() + ': ' + pl.focus.why : ''}): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
         pl.steps.map(x => `[${x.id}] ${x.title}${x.done ? ' (done)' : (x.need > 0 && (x.have || 0) > 0 ? ` (${x.have}/${x.need})` : '')}`).join('; ') + '.' +
         (nxt ? ` Next part: [${nxt.id}] ${nxt.title}. Point them to it, or start it with start_plan_step, rather than inventing a different task.` : ' Every part is done: acknowledge it and suggest only light review or rest.') +
         (cs ? ' A guided session is running right now, so keep replies short and let it lead.' : '') +
@@ -23004,6 +23133,7 @@ function buildTutorSystemPrompt(){
     if(fw.length) timeContext += ` Calculation drills they get wrong most: ${fw.map(x => `${x.n} (${Math.round(x.st.correct / x.st.attempts * 100)}% over ${x.st.attempts})`).join(', ')}. Offer open_formula_drill on these when it fits.`;
   }catch(e){}
   timeContext += tutorCoverageBlock();
+  timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   try{ const lv = DATA.treeLevel || {}; const ks = Object.keys(lv).filter(k => DECISION_TREES[k]); if(ks.length) timeContext += ' Decision-tool scenario levels (1 Build, 2 Apply, 3 Tell apart, 4 Transfer; new clients are written at that level): ' + ks.map(k => k + ' L' + lv[k].lvl).join(', ') + '. When you open a tool for them, match your coaching to the level.'; }catch(e){}
@@ -23202,6 +23332,53 @@ function tutorLockChoices(){ document.querySelectorAll('#tutorThread .tutor-choi
 // A decision tree shown right in the conversation: the student walks it without leaving the chat. Diagram tools
 // (options matrix, plan family tree) cannot run inline, so they get a button to the Tools tab instead.
 let _tutorTreeN = 0, _tutorTreeShown = {};
+// A small, safe chart/table/step renderer for the tutor. Everything is clamped and escaped; drawn as inline SVG/HTML in the chat flow.
+function tutorVisualRow(spec){
+  const thread = document.getElementById('tutorThread'); if(!thread) return false;
+  const kind = String(spec.kind || ''), title = String(spec.title || '').slice(0, 70), unit = String(spec.unit || '').slice(0, 10), note = String(spec.note || '').slice(0, 140);
+  const E = escapeHtml, clip = (t, n) => String(t == null ? '' : t).slice(0, n);
+  const labels = Array.isArray(spec.labels) ? spec.labels.slice(0, 8).map(l => clip(l, 18)) : [];
+  const series = (Array.isArray(spec.series) ? spec.series : []).slice(0, kind === 'pie' ? 1 : 3).map(sr => ({ name: clip(sr && sr.name, 24), values: (Array.isArray(sr && sr.values) ? sr.values : []).slice(0, 8).map(Number).map(v => isFinite(v) ? v : 0) })).filter(sr => sr.values.length);
+  const fmt = v => { const a = Math.abs(v); const t = a >= 1e6 ? (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : a >= 1e4 ? Math.round(v / 1e3) + 'K' : (Math.round(v * 100) / 100).toLocaleString('en-US'); return (unit === '$' ? '$' : '') + t + (unit && unit !== '$' ? (unit.length > 1 ? ' ' : '') + unit : ''); };
+  const COL = ['var(--teal)', 'var(--gold, #c9a14a)', 'var(--paper-dim, #9aa3b2)'];
+  let body = '';
+  const n = Math.min(labels.length || 99, ...series.map(x => x.values.length));
+  if((kind === 'bar' || kind === 'line') && series.length && n >= 2 && n < 99){
+    const W = 320, H = 170, L = 8, R = 8, T = 10, B = 34, pw = W - L - R, ph = H - T - B;
+    const all = series.flatMap(x => x.values.slice(0, n)); let lo = Math.min(0, ...all), hi = Math.max(0, ...all); if(hi === lo) hi = lo + 1;
+    const y = v => T + ph - (v - lo) / (hi - lo) * ph, z = y(0);
+    let g = `<line x1="${L}" x2="${W - R}" y1="${z}" y2="${z}" stroke="var(--hair)"/>`;
+    if(kind === 'bar'){
+      const gw = pw / n, bw = Math.min(34, gw * 0.7 / series.length);
+      series.forEach((sr, si) => sr.values.slice(0, n).forEach((v, i) => { const x = L + gw * i + (gw - bw * series.length) / 2 + bw * si, yy = y(v); g += `<rect x="${x.toFixed(1)}" y="${Math.min(yy, z).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(z - yy)).toFixed(1)}" rx="3" fill="${COL[si]}"/>`; if(series.length === 1) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(Math.min(yy, z) - 4).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--paper)">${E(fmt(v))}</text>`; }));
+    } else {
+      series.forEach((sr, si) => { const pts = sr.values.slice(0, n).map((v, i) => [L + 8 + (pw - 16) * i / (n - 1), y(v)]); g += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${COL[si]}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`; pts.forEach((p, i) => { g += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.8" fill="${COL[si]}"/>`; if(series.length === 1 && (i === 0 || i === n - 1 || n <= 5)) g += `<text x="${p[0].toFixed(1)}" y="${(p[1] - 7).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--paper)">${E(fmt(sr.values[i]))}</text>`; }); });
+    }
+    for(let i = 0; i < n; i++){ const cx = kind === 'bar' ? L + pw / n * (i + 0.5) : L + 8 + (pw - 16) * i / (n - 1); g += `<text x="${cx.toFixed(1)}" y="${H - 14}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${E(labels[i] || '')}</text>`; }
+    const legend = series.length > 1 ? `<div class="tv-legend">${series.map((sr, si) => `<span><i style="background:${COL[si]}"></i>${E(sr.name || 'Series ' + (si + 1))}</span>`).join('')}</div>` : '';
+    body = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${E(title)}">${g}</svg>${legend}`;
+  } else if(kind === 'pie' && series.length && n >= 2 && n < 99){
+    const vals = series[0].values.slice(0, n).map(v => Math.max(0, v)), tot = vals.reduce((a, b) => a + b, 0);
+    if(tot > 0){
+      const PAL = ['var(--teal)', 'var(--gold, #c9a14a)', '#7a8bd1', '#c76f6f', '#6fb58a', '#b08ad1', '#d19a5f', '#8aa0a8'];
+      let a0 = -Math.PI / 2, g = '';
+      vals.forEach((v, i) => { const a1 = a0 + v / tot * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0, r = 60, cx = 70, cy = 70; if(v / tot > 0.9995) g += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${PAL[i]}"/>`; else if(v > 0) g += `<path d="M${cx},${cy} L${(cx + r * Math.cos(a0)).toFixed(2)},${(cy + r * Math.sin(a0)).toFixed(2)} A${r},${r} 0 ${big} 1 ${(cx + r * Math.cos(a1)).toFixed(2)},${(cy + r * Math.sin(a1)).toFixed(2)} Z" fill="${PAL[i]}" stroke="var(--surface2)" stroke-width="1.5"/>`; a0 = a1; });
+      body = `<div class="tv-pie"><svg viewBox="0 0 140 140" width="132" height="132" role="img" aria-label="${E(title)}">${g}</svg><div class="tv-legend tv-legend-col">${vals.map((v, i) => `<span><i style="background:${PAL[i]}"></i>${E(labels[i] || '')} <b>${Math.round(v / tot * 100)}%</b></span>`).join('')}</div></div>`;
+    }
+  } else if(kind === 'table'){
+    const cols = (Array.isArray(spec.columns) ? spec.columns : []).slice(0, 4).map(c => clip(c, 24)), rows = (Array.isArray(spec.rows) ? spec.rows : []).slice(0, 8).map(r => (Array.isArray(r) ? r : []).slice(0, cols.length || 4).map(c => clip(c, 60)));
+    if(cols.length && rows.length) body = `<div class="tv-scroll"><table class="tv-table"><thead><tr>${cols.map(c => `<th>${E(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map((_, i) => `<td>${E(r[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  } else if(kind === 'steps'){
+    const st = (Array.isArray(spec.steps) ? spec.steps : []).slice(0, 7).map(x => ({ t: clip(x && x.title, 60), d: clip(x && x.detail, 160) })).filter(x => x.t);
+    if(st.length) body = `<ol class="tv-steps">${st.map(x => `<li><b>${E(x.t)}</b>${x.d ? `<span>${E(x.d)}</span>` : ''}</li>`).join('')}</ol>`;
+  }
+  if(!body) return false;
+  const row = document.createElement('div'); row.className = 'tutor-msg tutor-msg-bot tutor-visual-row';
+  const box = document.createElement('figure'); box.className = 'tutor-visual';
+  box.innerHTML = `<figcaption>${E(title)}</figcaption>${body}${note ? `<div class="tv-note">${E(note)}</div>` : ''}`;
+  row.appendChild(box); thread.appendChild(row); thread.scrollTop = thread.scrollHeight;
+  return true;
+}
 function tutorTreeRow(key, practice){
   const thread = document.getElementById('tutorThread'); if(!thread) return null;
   const meta = RESULT_TOOL_MATCH.find(t => t.key === key); const name = meta ? meta.name : key;
@@ -23357,6 +23534,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_study_guide') return 'Opened your study guide';
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Study tab)';
+    if(name === 'show_visual') return 'Drew: ' + String(inp.title || 'a visual').slice(0, 50);
     if(name === 'flag_for_review') return 'Flagged for review: ' + String(inp.topic || '').slice(0, 50);
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
     if(name === 'start_my_session') return 'Opened today\'s guided session';
@@ -23810,6 +23988,21 @@ const TUTOR_TOOLS = [
     },
   },
   {
+    name: 'show_visual',
+    description: "Draw a small chart, table or step diagram in the chat to teach something. Use it when a picture makes the idea clearer: comparing amounts (bar), change over time (line), shares of a whole (pie), side-by-side facts (table), or a process in order (steps). Use only correct figures. Keep it small: at most 8 labels, 3 series, 8 rows, 7 steps. After calling it, write one or two sentences on what to notice.",
+    input_schema: { type: 'object', properties: {
+      kind: { type: 'string', enum: ['bar','line','pie','table','steps'] },
+      title: { type: 'string', description: 'Short title, under 60 characters.' },
+      labels: { type: 'array', items: { type: 'string' }, description: 'bar/line/pie: the category or x-axis labels.' },
+      series: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, values: { type: 'array', items: { type: 'number' } } }, required: ['values'] }, description: 'bar/line/pie: one or more series; values line up with labels. Pie uses only the first.' },
+      unit: { type: 'string', description: 'Unit shown with values, for example "$", "%", "years". Optional.' },
+      columns: { type: 'array', items: { type: 'string' }, description: 'table: column headings.' },
+      rows: { type: 'array', items: { type: 'array', items: { type: 'string' } }, description: 'table: rows of cell text.' },
+      steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' } }, required: ['title'] }, description: 'steps: ordered steps.' },
+      note: { type: 'string', description: 'One short line under the visual, for example the source or a caveat. Optional.' }
+    }, required: ['kind','title'] },
+  },
+  {
     name: 'flag_for_review',
     description: "Mark one specific topic for review when you have seen the student struggle with it in this conversation (they got it wrong, mixed it up, or could not explain it). It moves that topic to the front of today's drill in the plan until they have drilled it. Use it sparingly, at most two per conversation, and only for a concrete topic, never for a vague area. Tell them you did it in one short sentence.",
     input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'The topic in a few words, close to the official topic name, for example "Required minimum distributions".' }, reason: { type: 'string', description: 'What went wrong, under 100 characters, for example "mixed up RMD ages".' } }, required: ['topic'] },
@@ -24080,6 +24273,10 @@ async function executeTutorTool(toolName, toolInput){
       const numMatch = KEY_NUMBERS.find(n => n.label.toLowerCase().includes(q) || q.includes(n.label.toLowerCase()));
       if(numMatch) return `That's not a glossary term, but here's the figure: ${numMatch.label} is ${numMatch.value}. ${numMatch.hook || ''}`;
       return `Opened the glossary and searched for "${toolInput.term}," but nothing matched.`;
+    }
+    if(toolName === 'show_visual'){
+      const ok = tutorVisualRow(toolInput || {});
+      return ok ? 'Drawn in the chat. Now say in one or two sentences what to notice.' : 'Error: that visual had no usable data. Check kind, labels and values, or just explain in words.';
     }
     if(toolName === 'flag_for_review'){
       const f = tutorFlagAdd(toolInput && toolInput.topic, toolInput && toolInput.reason);
@@ -24425,7 +24622,7 @@ async function sendTutorMessage(presetText){
   typingBubble.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
 
   try{
-    const response = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS });
+    const response = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS, maxTokens: 2500 });
     if(tutorConversationId !== conversationIdAtRequestTime) return; // the conversation was reset while this was in flight
 
     const toolUseBlocks = response.filter(b => b.type === 'tool_use');
@@ -24449,7 +24646,7 @@ async function sendTutorMessage(presetText){
       tutorMessages.push({role:'user', content: toolResults});
       status.textContent = 'Tutor is wrapping up…';
       try{ tutorGuidePending(); }catch(e){}
-      const followUp = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS });
+      const followUp = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS, maxTokens: 2500 });
       if(tutorConversationId !== conversationIdAtRequestTime) return;
       finalTextBlocks = followUp.filter(b => b.type === 'text').map(b => b.text);
       tutorMessages.push({role:'assistant', content: followUp});
@@ -25147,7 +25344,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.319';
+const BUILD_ID = '2026-10-21.320';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -25679,7 +25876,8 @@ requestDurableStorage();
         const bar=document.querySelector('#quizView .quiz-actions');
         let limit=window.innerHeight;
         if(bar){const br=bar.getBoundingClientRect(); if(br.height<window.innerHeight*0.6) limit=br.top;} // a full-screen overlay bar (landscape) holds only floating buttons
-        show = last.bottom > limit+2 && !document.querySelector('#qChoices .answered, #qChoices [disabled]');
+        const nb = document.getElementById('nextBtn'); const answeredNow = !!(nb && !nb.disabled && nb.offsetParent !== null);
+        show = last.bottom > limit+2 && !answeredNow && !document.querySelector('#qChoices .answered, #qChoices [disabled]');
       }
       cue.classList.toggle('show',show);
     }catch(e){}
