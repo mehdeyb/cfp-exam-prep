@@ -6019,7 +6019,7 @@ function defaultData(){
     domainStage: {},
     domainTierLog: {},
     fcRetell: {},
-    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [], figStats: {}, planHistory: {},
+    teachStats: {}, fcShown: {}, treeStats: {}, treeWalk: {}, tutorFlags: [], figStats: {}, planHistory: {}, planOverride: null,
     fcAdapt: true,
     hypercorrectionQueue: [],
     domainRecentLog: {},
@@ -6210,6 +6210,8 @@ function sanitizeLoadedData(d){
   d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q); }); // drops any saved item whose key contradicts its own explanation
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.tutorFlags = (Array.isArray(d.tutorFlags) ? d.tutorFlags : []).filter(x => isObj(x) && typeof x.at === 'number').slice(-12);
+  { const o = d.planOverride; d.planOverride = (isObj(o) && typeof o.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.day)) ? { day:o.day, at:+o.at || 0, focus: typeof o.focus === 'string' ? o.focus : null, reason: String(o.reason || '').slice(0, 160),
+    pins: (Array.isArray(o.pins) ? o.pins : []).filter(x => isObj(x) && typeof x.key === 'string' && typeof x.idx === 'number').slice(0, 3), refresh: (Array.isArray(o.refresh) ? o.refresh : []).filter(x => isObj(x) && typeof x.key === 'string' && typeof x.idx === 'number').slice(0, 3) } : null; }
   d.studyDates = d.studyDates.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x));
   ['questionStats','readyNew','wrongChoiceHistory','podcastEpisodes','podcastGeneratedAt','podcastPersonalized','podcastMeta','simplifiedExplanations','calcStepsCache','speechOptimizedText','glossaryExamples','flashcardMnemonics','teachStats','figStats','planHistory','treeStats','treeWalk','fcShown','domainRecentLog','domainFoundationMode','flashcardStats','tvmProblemStats'].forEach(k=>{
     if(!isObj(d[k])) d[k] = {};
@@ -8370,6 +8372,97 @@ function tutorFlagAdd(topic, reason){
   DATA.tutorFlags.push(flag); DATA.tutorFlags = DATA.tutorFlags.slice(-12);
   persist(); return flag;
 }
+
+// ---- Diagnosis and plan control for the tutor ----
+function planOverrideToday(){ const o = DATA.planOverride; return (o && o.day === localDayKey()) ? o : null; }
+function topicLastSeenAt(dom, idx){ let last = 0; try{ subtopicPool(dom, idx).forEach(q => { const st = DATA.questionStats[q.id]; if(st && st.lastSeenAt) last = Math.max(last, st.lastSeenAt); }); }catch(e){} return last; }
+function staleSolidTopics(n, minDays){
+  const md = minDays || 10, out = [];
+  exposureModel().topics.forEach(t => { if(t.state !== 'solid') return; const at = topicLastSeenAt(t.dom, t.idx); if(!at) return; const d = (Date.now() - at) / ONE_DAY_MS; if(d >= md) out.push(Object.assign({}, t, { days: Math.round(d) })); });
+  return out.sort((a, b) => (b.days * b.w) - (a.days * a.w)).slice(0, n || 5);
+}
+function diagnosisModel(){
+  const e = exposureModel(), missed = new Set(DATA.missed || []), wch = DATA.wrongChoiceHistory || {};
+  const rows = e.topics.map(t => {
+    let pool = []; try{ pool = subtopicPool(t.dom, t.idx); }catch(err){}
+    const ids = new Set(pool.map(q => q.id));
+    let missedN = 0; missed.forEach(id => { if(ids.has(id)) missedN++; });
+    let repeat = 0; Object.keys(wch).forEach(id => { if(ids.has(id)) Object.keys(wch[id]).forEach(c => { if(wch[id][c] >= 2) repeat++; }); });
+    const last = topicLastSeenAt(t.dom, t.idx), days = last ? Math.round((Date.now() - last) / ONE_DAY_MS) : null;
+    const acc = t.st.acc === null ? 0 : t.st.acc;
+    let need = t.state === 'new' ? 1 : t.state === 'thin' ? 0.7 : t.state === 'shaky' ? 0.5 + (0.8 - Math.min(0.8, acc)) : ((days !== null && days >= 10) ? Math.min(0.4, days / 60) : 0);
+    if(t.state !== 'solid' || need > 0) need += Math.min(0.3, missedN * 0.05 + repeat * 0.1);
+    return Object.assign({}, t, { missedN, repeat, days, need, score: t.w * need });
+  });
+  const ty = { 'plain recall questions': [0, 0], 'scenario questions': [0, 0], 'calculation questions': [0, 0] };
+  allQuestions().forEach(q => { const st = getSpacedStat(DATA.questionStats, q.id); if(!st.seen) return; const k = (q.calcSteps || isGenQ(q)) ? 'calculation questions' : q.scenario ? 'scenario questions' : 'plain recall questions'; ty[k][0] += Math.min(st.correct, st.seen); ty[k][1] += st.seen; });
+  return { e, rows, ty };
+}
+function learnerDiagnosis(topicQuery){
+  const dm = diagnosisModel(), e = dm.e, domName = k => (DOMAINS.find(d => d.key === k) || {}).name || k;
+  const days = getDaysUntilExam();
+  if(topicQuery){
+    const m = tutorFlagMatch(topicQuery); if(!m) return `Error: "${topicQuery}" did not match an official topic. Try the topic name as it appears in the blueprint.`;
+    const r = dm.rows.find(x => x.key === m.key + '-' + m.idx); if(!r) return 'Error: no data for that topic.';
+    const all = allQuestions(), ids = new Set(); try{ subtopicPool(m.key, m.idx).forEach(q => ids.add(q.id)); }catch(err){}
+    const mq = (DATA.missed || []).filter(id => ids.has(id)).slice(0, 4).map(id => all.find(x => x.id === id)).filter(Boolean).map(q => '"' + q.q.slice(0, 110) + '"');
+    const rp = []; Object.keys(DATA.wrongChoiceHistory || {}).forEach(id => { if(!ids.has(id)) return; const q = all.find(x => x.id === id); if(!q) return; Object.keys(DATA.wrongChoiceHistory[id]).forEach(c => { if(DATA.wrongChoiceHistory[id][c] >= 2 && rp.length < 3) rp.push(`on "${q.q.slice(0, 80)}" they twice chose "${(q.choices[c] || '').slice(0, 80)}" instead of "${q.choices[q.correct].slice(0, 80)}"`); }); });
+    const cardIds = (covTopicCards()[r.key] || []), unseen = cardIds.map(id => allFlashcards().find(c => c.id === id)).filter(c => c && !getSpacedStat(DATA.flashcardStats, c.id).seen).slice(0, 6).map(c => c.term);
+    return `TOPIC DIAGNOSIS: ${r.name} (${domName(r.dom)}, ${Math.round(r.w * 10) / 10}% of the exam). State: ${r.state}. Questions: ${r.st.seen} of ${r.size} seen, ${r.st.attempts} attempts, ${r.st.acc === null ? 'no accuracy yet' : Math.round(r.st.acc * 100) + '% right'}. Last practiced: ${r.days === null ? 'never' : r.days + ' day(s) ago'}. Cards seen: ${r.cardsSeen} of ${cardIds.length}.` +
+      (mq.length ? ` Currently missed: ${mq.join('; ')}.` : '') + (rp.length ? ` Repeated mistakes: ${rp.join('; ')}.` : '') + (unseen.length ? ` Terms not yet seen: ${unseen.join(', ')}.` : '') +
+      ` Next moves: ${r.state === 'new' ? 'teach it first with a short explanation and a worked example, then run_diagnostic on it' : r.state === 'thin' ? 'run_diagnostic on it to find out whether it holds' : r.state === 'shaky' ? 'find the exact misconception with one question, teach that, then shape_today_plan with pin_topics for a repair drill' : 'keep it fresh with a spaced check, not a full re-teach'}.`;
+  }
+  const gaps = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 6);
+  const unprobed = dm.rows.filter(r => r.state === 'new' || r.state === 'thin').sort((a, b) => b.w - a.w).slice(0, 5);
+  const stale = staleSolidTopics(4);
+  const tys = Object.keys(dm.ty).filter(k => dm.ty[k][1] >= 5).map(k => `${k} ${Math.round(dm.ty[k][0] / dm.ty[k][1] * 100)}% over ${dm.ty[k][1]}`);
+  const doms = domainMasteryList().map(d => `${d.name} ${d.mastery === null ? 'untested' : d.mastery + '%'}`).join(', ');
+  const ov = planOverrideToday();
+  const od = (r) => `${r.name} (${domName(r.dom)}; ${r.state}${r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '% over ' + r.st.attempts : ''}${r.missedN ? ', ' + r.missedN + ' still missed' : ''}${r.repeat ? ', same wrong answer repeated' : ''}${r.days !== null ? ', last ' + r.days + 'd ago' : ''})`;
+  return `LEARNER DIAGNOSIS (live). ${days === null ? 'No exam date set.' : days + ' day(s) to the exam.'} ${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight): ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen. ` +
+    (gaps.length ? `Biggest gaps by exam weight and evidence: ${gaps.map((r, i) => (i + 1) + '. ' + od(r)).join('; ')}. ` : 'No clear gaps on the evidence so far. ') +
+    (unprobed.length ? `Least is known about: ${unprobed.map(r => r.name + ' (' + r.state + ')').join('; ')}; run_diagnostic would measure these. ` : '') +
+    (stale.length ? `Solid but going stale (keep fresh with spaced checks): ${stale.map(r => r.name + ' ' + r.days + 'd').join('; ')}. ` : 'Nothing solid is going stale yet. ') +
+    (tys.length ? `By question type: ${tys.join('; ')}. ` : '') + `By domain: ${doms}. ` +
+    (ov ? `Today's plan was already reshaped by you (${ov.reason || 'no reason given'}). ` : '') +
+    'To act: run_diagnostic where evidence is thin, teach the cause of any gap in the chat, then shape_today_plan so the plan matches what you found, and diagnose again after they practice.';
+}
+function tutorRunDiagnostic(inp){
+  inp = inp || {};
+  const cnt = Math.max(6, Math.min(16, parseInt(inp.count, 10) || 10));
+  let topics = [];
+  (Array.isArray(inp.topics) ? inp.topics : []).slice(0, 5).forEach(t => { const m = tutorFlagMatch(t); if(m && !topics.some(x => x.key === m.key && x.idx === m.idx)) topics.push({ dom: m.key, idx: m.idx, name: m.name }); });
+  if(!topics.length){
+    const dm = diagnosisModel();
+    topics = dm.rows.filter(r => (r.state === 'new' || r.state === 'thin' || (r.state === 'solid' && r.need > 0.15) || (r.state === 'shaky' && r.st.attempts < 8)) && r.size >= 3).sort((a, b) => (b.w * (b.state === 'solid' ? 0.5 : 1)) - (a.w * (a.state === 'solid' ? 0.5 : 1))).slice(0, cnt).map(r => ({ dom: r.dom, idx: r.idx, name: r.name }));
+  }
+  if(!topics.length) return 'Nothing needs probing right now: every topic has real evidence behind it. Use diagnose_learner to see what to repair instead.';
+  const per = Math.max(1, Math.round(cnt / topics.length)), queue = [], used = new Set();
+  topics.forEach(t => {
+    let pool = []; try{ pool = subtopicPool(t.dom, t.idx); }catch(err){}
+    pool.map(q => ({ q, st: getSpacedStat(DATA.questionStats, q.id), r: Math.random() })).sort((a, b) => (a.st.seen === 0 ? 0 : 1) - (b.st.seen === 0 ? 0 : 1) || a.st.lastSeenAt - b.st.lastSeenAt || a.r - b.r)
+      .slice(0, per).forEach(x => { if(!used.has(x.q.id)){ used.add(x.q.id); queue.push(x.q); } });
+  });
+  if(queue.length < 3) return 'Error: not enough questions on those topics to run a diagnostic.';
+  showTab('study');
+  DATA.recentAdaptiveIds = (DATA.recentAdaptiveIds || []).concat(queue.map(q => q.id)).slice(-40);
+  beginSession(shuffle(queue).slice(0, cnt), 'drill', null);
+  try{ session.diagnostic = true; }catch(err){}
+  return `Started a ${Math.min(cnt, queue.length)}-question diagnostic across ${topics.length} topic(s): ${topics.map(t => t.name).join('; ')}. When they finish, call diagnose_learner again to read what it showed, then shape_today_plan.`;
+}
+function tutorShapePlan(inp){
+  inp = inp || {};
+  if(inp.clear){ DATA.planOverride = null; persist(); try{ renderTodayPlan(); }catch(e){} return "Cleared. Today's plan is back to automatic."; }
+  const o = { day: localDayKey(), at: Date.now(), focus: (inp.focus && PLAN_FOCI[inp.focus]) ? inp.focus : null, reason: String(inp.reason || '').replace(/\s+/g, ' ').trim().slice(0, 160), pins: [], refresh: [] }, miss = [];
+  const add = (arr, out) => (Array.isArray(arr) ? arr : []).slice(0, 3).forEach(t => { const m = tutorFlagMatch(t); if(m && !out.some(x => x.key === m.key && x.idx === m.idx)) out.push({ key: m.key, idx: m.idx, name: m.name }); else if(!m) miss.push(t); });
+  add(inp.pin_topics, o.pins); add(inp.refresh_topics, o.refresh);
+  if(!o.focus && !o.pins.length && !o.refresh.length) return 'Error: give a focus (repair, breadth, apply or recall), pin_topics, or refresh_topics' + (miss.length ? ' (none of "' + miss.join('", "') + '" matched an official topic)' : '') + '.';
+  DATA.planOverride = o;
+  { const L = planDayLog(); delete L.targets.freshKey; delete L.targets.focus; }
+  persist();
+  const plan = buildStudyPlan(); try{ renderTodayPlan(); refreshCoachSurfaces(); }catch(e){}
+  return `Today's plan reshaped${o.focus ? ' to a ' + PLAN_FOCI[o.focus].label.toLowerCase() : ''}${o.pins.length ? ', repairing ' + o.pins.map(x => x.name).join('; ') : ''}${o.refresh.length ? ', keeping fresh ' + o.refresh.map(x => x.name).join('; ') : ''}. Steps now: ${plan.steps.map((st, i) => (i + 1) + '. [' + st.id + '] ' + st.title).join(' ')}${miss.length ? ' Could not match to an official topic: ' + miss.join('; ') + '.' : ''} Tell them in one sentence what changed and why.`;
+}
 // What the student has and has not been shown, and how they did on what they were shown, for the tutor.
 function tutorCoverageBlock(){
   try{
@@ -8449,10 +8542,13 @@ function buildStudyPlanCore(minutes){
   try{ const dr = DATA.subtopicDrillAt || {}; const pen = w => { const t = dr[w.key + '-' + w.idx]; if(!t) return 0; const d = (Date.now() - t) / ONE_DAY_MS; return d < 2 ? 0.15 : d < 4 ? 0.07 : 0; }; freshWeak.sort((a, b) => (a.st.acc + pen(a)) - (b.st.acc + pen(b))); }catch(e){}
   freshWeak = freshWeak.slice(0, 8);
   let tutorFlagged = []; try{ tutorFlagged = tutorFlagsActive().filter(f => f.key).map(f => { let st = null; try{ st = subtopicStats(f.key, f.idx); }catch(e){} return { key:f.key, idx:f.idx, name:f.name, flag:f, st: st || { acc:null, attempts:0 } }; }); }catch(e){}
+  const ov = planOverrideToday();
+  const ovPins = ov ? ov.pins.map(x => { let st = null; try{ st = subtopicStats(x.key, x.idx); }catch(e){} return { key:x.key, idx:x.idx, name:x.name, flag:{ reason: ov.reason }, st: st || { acc:null, attempts:0 } }; }) : [];
   const workedKeys = Object.keys(L.drill).filter(k => L.drill[k] > 0 && L.meta[k]);
   const wkList = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
-    .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx)))
-    .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !tutorFlagged.some(t => t.key === w.key && t.idx === w.idx)));
+    .concat(ovPins.filter(w => !workedKeys.includes(w.key + '-' + w.idx)))
+    .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)))
+    .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !tutorFlagged.some(t => t.key === w.key && t.idx === w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)));
   const wkAt = n => wkList[n] || null;
   const wk = wkAt(0);
   const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
@@ -8601,6 +8697,21 @@ function buildStudyPlanCore(minutes){
         run: () => { showTab('flashcards'); if(!ebStartRun(ebCurate(wk, weakDom, goal - have > 0 ? goal - have : goal), { stepId:'teach', goal: goal - have > 0 ? goal - have : goal })) ebOpenForTopic(wk, weakDom); } };
     },
     // Longer days have room for a second round. These only appear once the first pass leaves time.
+    refresh: () => {
+      if(!(answered >= 30 || (ov && ov.refresh.length))) return null;
+      const E = exposureModel();
+      const cand = (ov ? ov.refresh.map(r => E.topics.find(x => x.key === r.key + '-' + r.idx)).filter(Boolean) : []).concat(staleSolidTopics(3, phase.key === 'sharpen' ? 6 : 10));
+      const pinned = L.targets.freshKey, first = cand[0];
+      let t = pinned ? E.topics.find(x => x.key === pinned) : null;
+      if(!t || ((L.drill[t.key] || 0) === 0 && first && ov && ov.refresh.length && !ov.refresh.some(r => r.key + '-' + r.idx === t.key))) t = first || null;
+      if(!t) return null;
+      if(L.targets.freshKey !== t.key){ L.targets.freshKey = t.key; try{ persist(); }catch(e){} }
+      const need = Math.min(6, t.size); if(need < 3) return null;
+      const d = topicLastSeenAt(t.dom, t.idx), ago = d ? Math.round((Date.now() - d) / ONE_DAY_MS) : null;
+      return { id:'refresh', title:`Keep fresh: ${t.name}`, minutes:8, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+        why: ov && ov.refresh.some(r => r.key + '-' + r.idx === t.key) ? `Your tutor wants this kept sharp${ov.reason ? ': ' + ov.reason : ''}.` : `This one was solid${ago !== null ? ', but you last practiced it ' + ago + ' days ago' : ''}. A short spaced check now keeps it from fading while you work on weaker areas.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
+    },
     weak2: () => { const t = wkAt(1); if(!t) return null;
       return { id:'weak2', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Your next weakest topic (${accTxt(t)}). With the time you have today, it is worth a second repair.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
@@ -8686,9 +8797,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','gap','weak','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','gap','weak','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','gap','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','refresh','gap','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
   }[phase.key];
@@ -8698,9 +8809,9 @@ function buildStudyPlanCore(minutes){
     try{
       const cm = coverageModel();
       const ctx = { missedN, answered, weakCount: freshWeak.filter(w => w.st.acc < 0.6).length, under: coverageUnderserved(2), untouched: Object.keys(cm.topicLast).filter(k => !cm.topicLast[k]).length, figDue: figFreshness().due, formulaWeak: !!((typeof fdWeakest === 'function') && fdWeakest()), accAvg: (() => { const l = DATA.recentAccuracyLog || []; return l.length ? l.filter(e => e.correct).length / l.length : 0; })() };
-      const fk = planTarget('focus', planFocusPick(ctx) || '');
+      const fk = (ov && ov.focus && PLAN_FOCI[ov.focus]) ? ov.focus : planTarget('focus', planFocusPick(ctx) || '');
       if(fk && PLAN_FOCI[fk]){
-        focus = { key: fk, label: PLAN_FOCI[fk].label, why: PLAN_FOCI[fk].why(ctx) };
+        focus = { key: fk, label: PLAN_FOCI[fk].label, why: (ov && ov.focus === fk && ov.reason) ? ov.reason + ' (set by your tutor)' : PLAN_FOCI[fk].why(ctx) };
         const first = PLAN_FOCI[fk].first.filter(k => order.includes(k));
         const keepCardsFirst = order[0] === 'cards' && fk !== 'recall' && !first.includes('cards');
         const rest = order.filter(k => !first.includes(k) && !(keepCardsFirst && k === 'cards'));
@@ -8781,7 +8892,7 @@ function buildStudyPlanCore(minutes){
       persist();
     }
   }catch(e){}
-  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter, focus };
+  return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter, focus, tutorNote: (ov && !(ov.focus && focus && focus.key === ov.focus) && ov.reason) ? ov.reason : '' };
 }
 
 function setPlanMinutes(m){
@@ -9246,6 +9357,7 @@ function renderTodayPlan(){
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
+    ${plan.tutorNote ? `<p class="pt-sub pt-focus">${escapeHtml('Your tutor adjusted today: ' + plan.tutorNote)}</p>` : ''}
     ${(plan.phase.key === 'taper' || plan.phase.key === 'rest') && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${(runwayTxt || lateNote) ? `<p class="pt-sub">${escapeHtml((runwayTxt || '') + lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
@@ -9449,8 +9561,8 @@ function planRefForSession(sess){
     try{
       if(sess.drillTopic){ const m = planDayLog().meta[sess.drillTopic]; if(m) want = m.name; }
     }catch(e){}
-    const weak = ['weak','gap','gap2','weak2','weak3','weak4'].map(byId).filter(Boolean);
-    st = (want && weak.find(x => x.title === 'Drill: ' + want || x.title === 'New ground: ' + want)) || weak.find(x => !x.done) || weak[0] || null;
+    const weak = ['weak','refresh','gap','gap2','weak2','weak3','weak4'].map(byId).filter(Boolean);
+    st = (want && weak.find(x => x.title === 'Drill: ' + want || x.title === 'New ground: ' + want || x.title === 'Keep fresh: ' + want)) || weak.find(x => !x.done) || weak[0] || null;
   }
   if(!st) return null;
   return { id: st.id, title: st.title, need: st.need, base: st.have || 0, unit: st.unit || 'questions' };
@@ -9492,7 +9604,7 @@ function planNextHtml(nxt){
 function planGoNext(id){
   try{
     const inQuiz = document.body.classList.contains('quiz-active');
-    const sessionIds = ['adaptive','adaptive2','weak','gap','gap2','weak2','weak3','weak4','missed','case','case2','checkpoint'];
+    const sessionIds = ['adaptive','adaptive2','weak','refresh','gap','gap2','weak2','weak3','weak4','missed','case','case2','checkpoint'];
     if(inQuiz && !sessionIds.includes(id)) exitToMenu();
     runPlanStep(id);
   }catch(e){}
@@ -23528,6 +23640,8 @@ function buildTutorSystemPrompt(){
     if(fw.length) timeContext += ` Calculation drills they get wrong most: ${fw.map(x => `${x.n} (${Math.round(x.st.correct / x.st.attempts * 100)}% over ${x.st.attempts})`).join(', ')}. Offer open_formula_drill on these when it fits.`;
   }catch(e){}
   timeContext += tutorCoverageBlock();
+  try{ const dm = diagnosisModel(), top = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3).map(r => r.name + ' (' + r.state + (r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '%' : '') + ')'), st = staleSolidTopics(2).map(r => r.name + ' ' + r.days + 'd');
+    timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why.`; }catch(err){}
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -23930,6 +24044,9 @@ function tutorActionText(name, input, result){
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Study tab)';
     if(name === 'show_visual') return 'Drew: ' + String(inp.title || 'a visual').slice(0, 50);
+    if(name === 'diagnose_learner') return 'Checked where you stand' + (inp.topic ? ': ' + String(inp.topic).slice(0, 40) : '');
+    if(name === 'run_diagnostic') return 'Started a diagnostic quiz';
+    if(name === 'shape_today_plan') return inp.clear ? 'Reset today\'s plan to automatic' : 'Reshaped today\'s plan';
     if(name === 'flag_for_review') return 'Flagged for review: ' + String(inp.topic || '').slice(0, 50);
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
     if(name === 'start_my_session') return 'Opened today\'s guided session';
@@ -24398,6 +24515,21 @@ const TUTOR_TOOLS = [
     }, required: ['kind','title'] },
   },
   {
+    name: 'diagnose_learner',
+    description: "Read an evidence-based diagnosis of where the student stands: topics by state (new, thin, shaky, solid), the biggest gaps weighted by exam share, what is going stale, accuracy by question type (recall, scenario, calculation), repeated wrong answers, and domain scores. Call it FIRST whenever they ask where they stand, what to study, why they keep missing something, or when you are about to advise or change the plan. Pass 'topic' to diagnose one topic in depth (what is missed, which mistakes repeat, which terms are unseen). Never guess their weaknesses from a general impression when this can tell you. After they practice, call it again to see what changed.",
+    input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Optional. One official topic, in a few words, for a deep dive.' } } },
+  },
+  {
+    name: 'run_diagnostic',
+    description: "Start a short mixed probe (6 to 16 questions, about one per topic) on the topics where the least is known, to measure where they stand before you advise. Use it when diagnose_learner shows many topics as new or barely tried, or when you need to test whether a topic really holds. Pass 'topics' to probe specific ones; leave it out to probe the heaviest unknown topics. Their answers feed the plan and the diagnosis automatically. Only start it after they agree, then call diagnose_learner when they come back.",
+    input_schema: { type: 'object', properties: { topics: { type: 'array', items: { type: 'string' }, description: 'Optional. Up to 5 official topics in a few words each.' }, count: { type: 'number', description: 'How many questions, 6 to 16. Default 10.' } } },
+  },
+  {
+    name: 'shape_today_plan',
+    description: "Reshape TODAY's plan to match what you found. 'focus' sets the day's emphasis (repair = fix weak and missed, breadth = cover unseen topics, apply = case studies and tools, recall = key figures and formulas). 'pin_topics' (up to 3) puts specific weak topics first as repair drills. 'refresh_topics' (up to 3) adds a short spaced check on topics that are solid but fading, so strengths stay fresh while weaknesses get the time. 'reason' is shown to the student on the plan, so write it plainly to them in under 140 characters. Use after diagnose_learner or after you see them struggle; keep a balance, so do not pin more than you can repair today. {clear:true} returns the plan to automatic. It never removes required steps; it changes order and targets.",
+    input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
+  },
+  {
     name: 'flag_for_review',
     description: "Mark one specific topic for review when you have seen the student struggle with it in this conversation (they got it wrong, mixed it up, or could not explain it). It moves that topic to the front of today's drill in the plan until they have drilled it. Use it sparingly, at most two per conversation, and only for a concrete topic, never for a vague area. Tell them you did it in one short sentence.",
     input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'The topic in a few words, close to the official topic name, for example "Required minimum distributions".' }, reason: { type: 'string', description: 'What went wrong, under 100 characters, for example "mixed up RMD ages".' } }, required: ['topic'] },
@@ -24673,6 +24805,9 @@ async function executeTutorTool(toolName, toolInput){
       const ok = tutorVisualRow(toolInput || {});
       return ok ? 'Drawn in the chat. Now say in one or two sentences what to notice.' : 'Error: that visual had no usable data. Check kind, labels and values, or just explain in words.';
     }
+    if(toolName === 'diagnose_learner') return learnerDiagnosis(toolInput && toolInput.topic);
+    if(toolName === 'run_diagnostic') return tutorRunDiagnostic(toolInput);
+    if(toolName === 'shape_today_plan') return tutorShapePlan(toolInput);
     if(toolName === 'flag_for_review'){
       const f = tutorFlagAdd(toolInput && toolInput.topic, toolInput && toolInput.reason);
       if(!f) return 'Error: say which topic to flag.';
@@ -25739,7 +25874,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.327';
+const BUILD_ID = '2026-10-21.328';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
