@@ -12758,7 +12758,7 @@ function stageCheckHtml(sl){
   const rows = q.choices.map((c, k) => { const right = k === q.correct, mine = k === sl.pick;
     return `<li class="pst-c${has && right ? ' right' : ''}${has && mine ? ' pick' : ''}${has && mine && !right ? ' wrong' : ''}"><button type="button" class="pst-cb" ${has ? 'disabled' : ''} onclick="stageCheckPick(${k})"><b>${L[k]}</b><span>${has && mine ? '<i>You chose</i> ' : ''}${has && right ? '<i>Correct</i> ' : ''}${E(c)}</span></button></li>`; }).join('');
   const why = has ? mwFirstSentence((q.rationale || [])[q.correct] || '') : '';
-  return `<div class="pst-kicker">Your turn · work this one</div>${q.scenario ? `<div class="pst-scn">${E(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${E(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn" onclick="stageResume()">${has ? 'Continue the lesson' : 'Skip and continue'}</button>${has && sl.pick !== q.correct ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button>` : ''}</div>`;
+  return `<div class="pst-kicker">Your turn · work this one</div>${q.scenario ? `<div class="pst-scn">${E(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${E(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn" onclick="stageResume()">${has ? (stageHasLesson() ? 'Continue the lesson' : 'Done') : (stageHasLesson() ? 'Skip and continue' : 'Skip')}</button>${has && sl.pick !== q.correct ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button>` : ''}</div>`;
 }
 function stageRecordAnswer(q, k){
   try{
@@ -12778,6 +12778,7 @@ function stageCheckPick(k){
   sl.pick = k; stageRecordAnswer(q, k); try{ navigator.vibrate && navigator.vibrate(k === q.correct ? 8 : [8, 40, 8]); }catch(e){}
   stageDraw(true);
 }
+function stageHasLesson(){ return !!(naturalSpeechState.active || (stageState.deckKey && DATA.podcastEpisodes && DATA.podcastEpisodes[stageState.deckKey])); }
 function stageResume(){
   const sl = stageState.cur; if(sl) sl.passed = true;
   try{ if(naturalSpeechState.active && naturalSpeechState.paused){ togglePodcastPlayback(); } else if(!naturalSpeechState.active && stageState.deckKey && DATA.podcastEpisodes && DATA.podcastEpisodes[stageState.deckKey] && sl && sl.at !== undefined){ /* nothing playing: just move on */ stageCloseFull(); } }catch(e){}
@@ -12929,7 +12930,7 @@ function stageSlideNode(sl){
   } else if(sl.kind === 'check'){
     d.innerHTML = stageCheckHtml(sl); if(!d.innerHTML) return null;
   } else if(sl.kind === 'calc'){
-    d.innerHTML = stageCalcHtml(sl) + (sl.check ? `<div class="pst-acts"><button type="button" class="btn" onclick="stageResume()">${sl.passed ? 'Continue the lesson' : 'I have tried it. Continue'}</button></div>` : `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('calc')">Try one on the calculator</button></div>`);
+    d.innerHTML = stageCalcHtml(sl) + (sl.check ? `<div class="pst-acts"><button type="button" class="btn" onclick="stageResume()">${stageHasLesson() ? (sl.passed ? 'Continue the lesson' : 'I have tried it. Continue') : 'Done'}</button></div>` : `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('calc')">Try one on the calculator</button></div>`);
   } else if(sl.kind === 'recap'){
     const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){} return nx ? `<button type="button" class="btn ghost" onclick="stageCloseFull();planGoNext('${nx.id}')">Next: ${stageEsc(stageClip(nx.title, 34))} →</button>` : ''; })()}${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
@@ -28995,7 +28996,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.450';
+const BUILD_ID = '2026-10-22.451';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
