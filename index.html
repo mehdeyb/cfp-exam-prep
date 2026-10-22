@@ -18592,7 +18592,7 @@ function fdSetFilter(v){ fd.filter = v; fdNext(); }
 function fdNext(){
   fd.name = fdChooseName();
   fd.last = fd.name;
-  fd.prob = FD_GENS[fd.name]();
+  { const seenT = fd.recentTexts || (fd.recentTexts = []); let pr = FD_GENS[fd.name](), tries = 0; while(tries++ < 8 && pr && seenT.indexOf(pr.scenario) >= 0) pr = FD_GENS[fd.name](); fd.prob = pr; seenT.push(pr.scenario); if(seenT.length > 12) seenT.shift(); }
   fd.answered = false;
   fd.level = fdSupportLevel(fd.name); fd.peeked = false;
   fdRenderSupport();
@@ -18810,7 +18810,12 @@ function calcKindOrder(){
     return { k, i, pr: CALC_KINDS[k].w * (days / 14 + (1 - acc)) };
   }).sort((a, b) => b.pr - a.pr || a.i - b.i).map(x => x.k);
 }
+const _calcRecent = [];
 function calcPickProblemForKind(kind){
+  let g = null; for(let i = 0; i < 6; i++){ g = calcPickProblemForKindOnce(kind); const sig = g && (g.q || g.scenario || g.text || g.prompt || JSON.stringify(g.inputs || g.cashFlows || g.id)); if(!g || !g.generated || _calcRecent.indexOf(sig) < 0){ if(sig){ _calcRecent.push(sig); if(_calcRecent.length > 16) _calcRecent.shift(); } break; } }
+  return g;
+}
+function calcPickProblemForKindOnce(kind){
   try{
     if(!kind) return null;
     if(kind.indexOf('cf-') === 0){
@@ -18819,14 +18824,14 @@ function calcPickProblemForKind(kind){
       let keys = Object.keys(CF_GEN_TEMPLATES).filter(k => (want === 'IRR') === /irr/.test(k));
       const ok = keys.filter(k => CF_GEN_TEMPLATES[k].level <= tier); if(ok.length) keys = ok;
       keys.sort((a, b) => CF_GEN_TEMPLATES[a].level - CF_GEN_TEMPLATES[b].level);
-      const key = keys.length > 1 && tvmLastGenTemplate ? (keys.filter(k => k !== tvmLastGenTemplate)[0] || keys[0]) : keys[0];
+      const alt = keys.filter(k => k !== tvmLastGenTemplate), key = keys.length > 1 ? (alt[Math.floor(Math.random() * alt.length)] || keys[0]) : keys[0];
       return key ? cfGenerateProblem(tier, key) : null;
     }
     const level = Math.max(1, Math.min(4, (DATA.tvmProgress && DATA.tvmProgress.currentTier) || 1));
-    for(let i = 0; i < 40; i++){ const g = tvmGenerateProblem(level); if(g && tvmKindOf(g) === kind) return g; }
+    for(let lv = level; lv <= 4; lv++){ for(let i = 0; i < 40; i++){ const g = tvmGenerateProblem(lv); if(g && tvmKindOf(g) === kind) return g; } } // a kind that only appears at a higher tier is still generated fresh, not served from the short fixed list
     const pool = TVM_PROBLEMS.filter(p => tvmKindOf(p) === kind); if(!pool.length) return null;
     const st = DATA.tvmProblemStats || {};
-    pool.sort((a, b) => ((st[a.id] || {}).pickOrder || 0) - ((st[b.id] || {}).pickOrder || 0));
+    pool.sort((a, b) => ((st[a.id] || {}).pickOrder || 0) - ((st[b.id] || {}).pickOrder || 0) + (Math.random() - 0.5) * 0.5);
     return pool[0];
   }catch(e){ return null; }
 }
@@ -20157,8 +20162,8 @@ function mwPick(n, prefer){
   DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; acc[d.key] = st.total ? st.correct / st.total : 0.5; wt[d.key] = d.weight || 10; });
   const scored = (DATA.missed || []).map(id => byId[id]).filter(q => q && !isGenQ(q) && Array.isArray(q.choices) && q.choices.length === 4).map(q => {
     const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; const stuck = Math.max(0, ...Object.values(picks).map(Number));
-    const d = done[q.id]; const recent = d && now - d.t < 86400000 ? 1 : 0;
-    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 6 + (prefer && prefer.includes(q.id) ? 50 : 0) };
+    const d = done[q.id]; const recent = d && now - d.t < 3 * 86400000 ? 1 : 0;
+    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 12 + (prefer && prefer.includes(q.id) ? 50 : 0) };
   }).sort((a, b) => b.s - a.s);
   const out = [], rest = scored.slice();
   while(out.length < n && rest.length){
@@ -20170,18 +20175,24 @@ function mwPick(n, prefer){
 }
 function mwWords(t){ return new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 4)); }
 function mwSibling(q, used){
+  // A different question on the same idea: close enough in subject to test it, never a near-copy, never one just walked, new to the student first.
   const base = mwWords(q.q + ' ' + q.choices[q.correct] + ' ' + (q.rationale || []).join(' '));
-  const missed = new Set(DATA.missed || []);
-  let best = null, bs = 0;
+  const missed = new Set(DATA.missed || []), recent = DATA.mwSibs || {}, now = Date.now();
+  const cand = [];
   allQuestions().forEach(c => {
     if(c.id === q.id || c.domain !== q.domain || isGenQ(c) || !Array.isArray(c.choices) || c.choices.length !== 4 || missed.has(c.id) || (used && used.has(c.id))) return;
+    try{ if(!factExempt(c) && questionsSameFact(q, c)) return; }catch(e){}
+    if(c.variantOf && (c.variantOf === q.id || c.variantOf === q.variantOf)) return;
     const w = mwWords(c.q + ' ' + c.choices[c.correct] + ' ' + (c.rationale || []).join(' '));
     let inter = 0; base.forEach(x => { if(w.has(x)) inter++; });
-    const st = (DATA.questionStats || {})[c.id];
-    const sc = inter / ((base.size + w.size - inter) || 1) + (!st || !st.seen ? 0.03 : 0);
-    if(sc > bs){ bs = sc; best = c; }
+    const sim = inter / ((base.size + w.size - inter) || 1);
+    if(sim < 0.08 || sim > 0.6) return;
+    const st = (DATA.questionStats || {})[c.id], seen = st && st.seen || 0, rc = recent[c.id];
+    if(rc && now - rc < 14 * 86400000) return;
+    cand.push({ c, sc: sim + (seen ? -0.03 * Math.min(seen, 4) : 0.2) + Math.random() * 0.06 });
   });
-  return bs >= 0.08 ? best : null;
+  cand.sort((a, b) => b.sc - a.sc);
+  return cand.length ? cand[0].c : null;
 }
 function mwOpen(n, prefer){
   const host = document.getElementById('mwHost'); if(!host) return false;
@@ -20311,17 +20322,40 @@ function mwAskTutor(){
   const t = `I am walking through a question I missed: "${q.q}" Choices: ` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join(' ') + ` The right answer is ${mwLetter(q.correct)}.` + (it.pick >= 0 ? ` I chose ${mwLetter(it.pick)}${r ? ' because ' + r.label.toLowerCase() : ''}.` : '') + ' Ask me one short question that checks I now see the difference, wait for my answer, then tell me what I am still missing.';
   mwClose(); askTutorAbout(t);
 }
-function mwTry(){
+async function mwTry(){
   if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
-  const sib = mwSibling(it.q, mw.used);
+  let sib = mwSibling(it.q, mw.used);
+  if(!sib && !it.writing){
+    // Nothing fresh left in the bank on this idea: write a new one around how it was missed, if an AI connection is up.
+    let ok = false; try{ ok = !!aiFeaturesAvailable && !genBackoffActive(); }catch(e){}
+    if(ok){
+      it.writing = true;
+      const btn = document.querySelector('#mwBody .mw-actions .btn'); if(btn){ btn.disabled = true; btn.textContent = 'Writing a new one…'; }
+      const m = mw;
+      try{
+        const r = await genVariant(it.q, { why: 'walking through a miss: a new question on the same idea, from a different angle', wrongText: usualWrongChoiceText(it.q) });
+        if(mw !== m) return;
+        if(r && r.variant){ const v = r.variant; sib = shuffleQuestionChoices({ ...it.q, q: v.q, choices: v.choices, correct: v.correct, rationale: v.rationale, scenario: v.scenario, calcSteps: undefined, calcType: undefined, isVariant: true }); }
+      }catch(e){}
+      it.writing = false;
+      if(mw !== m) return;
+    }
+  }
   if(!sib){ it.ok = null; return mwNext(); }
-  mw.used.add(sib.id); it.sib = sib; it.sibPick = null; it.stage = 'try'; mwRender();
+  mw.used.add(sib.id); try{ DATA.mwSibs = DATA.mwSibs || {}; DATA.mwSibs[sib.id] = Date.now(); const cut = Date.now() - 14 * 86400000; Object.keys(DATA.mwSibs).forEach(k => { if(DATA.mwSibs[k] < cut) delete DATA.mwSibs[k]; }); persist(); }catch(e){}
+  it.sib = sib; it.sibPick = null; it.stage = 'try'; mwRender();
   const host = document.getElementById('mwHost'); if(host) host.scrollTop = 0;
 }
 function mwAnswer(k){
   if(!mw) return; const it = mw.items[mw.i]; if(!it || it.stage !== 'try' || it.sibPick !== null) return;
   const q = it.sib, right = k === q.correct;
   it.sibPick = k; it.ok = right;
+  if(q.isVariant){
+    try{ creditConceptRetest(q.id, right); const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; } DATA.answerCounter = (DATA.answerCounter || 0) + 1; try{ recordDomainAnswer(q.domain, right, q); }catch(e){} recordStudyDay(); persist(); refreshHeaderStats(); }catch(e){}
+    mwRender();
+    const v0 = document.querySelector('#mwBody .mw-verdict'); if(v0) v0.scrollIntoView({ block:'nearest', behavior:'smooth' });
+    return;
+  }
   try{
     DATA.questionStats[q.id] = advanceSpacedStat(getSpacedStat(DATA.questionStats, q.id), right);
     const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; }
@@ -20335,6 +20369,7 @@ function mwAnswer(k){
     try{ recordDomainAnswer(q.domain, right, q); }catch(e){}
     recordStudyDay(); persist(); refreshHeaderStats();
   }catch(e){}
+  if(right){ try{ creditConceptRetest(it.q.id, true); persist(); }catch(e){} } // answering a different question on the idea clears the missed one
   mwRender();
   const v = document.querySelector('#mwBody .mw-verdict'); if(v) v.scrollIntoView({ block:'nearest', behavior:'smooth' });
 }
@@ -26929,7 +26964,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.373';
+const BUILD_ID = '2026-10-22.375';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
