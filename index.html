@@ -2979,7 +2979,16 @@
   /* ---------- The stage: what the podcast is showing, and the tutor's screen ---------- */
   .pstage{margin:0 0 12px;background:var(--surface);border:1px solid var(--hair);border-radius:16px;overflow:hidden;}
   .pst-body{padding:16px 18px 12px;min-height:190px;display:flex;flex-direction:column;justify-content:center;}
-  .pst-body.pst-in > .pst-slide{animation:pstIn .32s var(--ease-out,ease);}
+  .pst-body.pst-in > .pst-slide > *{animation:pstUp .38s var(--ease-out,ease) both;animation-delay:calc(var(--i,0) * 55ms);}
+  .pst-body.pst-in.pst-back > .pst-slide > *{animation-name:pstUpB;}
+  @keyframes pstUp{from{opacity:0;transform:translateY(12px) scale(.985);}to{opacity:1;transform:none;}}
+  @keyframes pstUpB{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
+  .pst-formula{animation-name:pstPop !important;} @keyframes pstPop{from{opacity:0;transform:scale(.92);letter-spacing:.08em;}to{opacity:1;transform:none;}}
+  .pst-big{animation-name:pstBig !important;} @keyframes pstBig{from{opacity:0;transform:scale(.7);}60%{transform:scale(1.06);}to{opacity:1;transform:none;}}
+  .pcal-steps li.cur{animation:pcCur .35s ease;} @keyframes pcCur{from{transform:translateX(-8px);opacity:.3;}to{transform:none;}}
+  .pk:active{transform:scale(.9);} .pk.dn{transition:opacity .3s;}
+  .scr-ans{animation:pstUp .3s ease;}
+  @media (prefers-reduced-motion:reduce){.pst-body.pst-in > .pst-slide > *,.pk.next,.scr-ans{animation:none !important;}}
   @keyframes pstIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
   .pst-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 12px 10px;}
   .pst-dots{display:flex;gap:6px;flex-wrap:wrap;min-height:20px;align-items:center;}
@@ -3003,6 +3012,17 @@
   .pst-c.right{border-color:var(--correct);background:var(--correct-tint);} .pst-c.right i{color:var(--correct);} .pst-c.pick{border-color:var(--incorrect);background:var(--incorrect-tint);} .pst-c.pick i{color:var(--incorrect);}
   .pst-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .pst-col{background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px;} .pst-col h4{margin:0 0 8px;font-size:15px;color:var(--paper);} .pst-col ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5;}
   .pst-slide .tutor-chart-row{max-width:100%;}
+  .pcal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-top:6px;} @media (max-width:560px){.pcal{grid-template-columns:1fr;}}
+  .pcal-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:pc;} .pcal-steps li{counter-increment:pc;padding:8px 10px 8px 34px;position:relative;border-radius:10px;font-size:14px;line-height:1.4;color:var(--text-dim,inherit);opacity:.55;border:1px solid transparent;} .pcal-steps li::before{content:counter(pc);position:absolute;left:10px;top:8px;font:600 11px 'IBM Plex Mono',monospace;color:var(--gold);} .pcal-steps li.cur{opacity:1;background:var(--surface2);border-color:var(--hair);} .pcal-steps li.done{opacity:.8;}
+  .pcal-pad{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:10px;}
+  .pk{position:relative;text-align:center;border-radius:7px;padding:13px 0 6px;background:rgba(127,127,127,.16);font:600 11.5px 'IBM Plex Mono',monospace;line-height:1;transition:background .2s,transform .2s;} .pk small{position:absolute;top:3px;left:0;right:0;font-size:8px;font-weight:500;color:var(--calc-orange);opacity:.9;} .pk.on{background:var(--gold);color:#1d1d1d;transform:scale(1.06);box-shadow:0 0 0 2px var(--gold);} .pk.on small{color:#1d1d1d;} .pk.or.on{background:var(--calc-orange);box-shadow:0 0 0 2px var(--calc-orange);} .pk i{position:absolute;top:-6px;right:-4px;min-width:15px;height:15px;border-radius:8px;background:#1d1d1d;color:#fff;font:700 9px/15px 'IBM Plex Sans',sans-serif;font-style:normal;}
+  .scr-dots{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;} .scr-dots:empty{display:none;} .scr-dots button{flex:none;border:1px solid var(--hair);background:var(--surface2);color:inherit;border-radius:999px;padding:6px 12px;font:500 12px 'IBM Plex Sans',sans-serif;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;} .scr-dots button.cur{background:var(--gold);color:#1d1d1d;border-color:var(--gold);}
+  .scr-ask{margin-top:6px;border-top:1px solid var(--hair);padding-top:12px;} .scr-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;} .scr-chips button{border:1px solid var(--hair);background:transparent;color:inherit;border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;}
+  .scr-form{display:flex;gap:8px;} .scr-form input{flex:1;min-width:0;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--hair);background:var(--surface2);color:inherit;}
+  .scr-ans{margin-top:10px;font-size:15px;line-height:1.55;white-space:pre-wrap;} .scr-ans:empty{display:none;} .scr-ans .pst-acts{white-space:normal;}
+  .pk{cursor:pointer;-webkit-tap-highlight-color:transparent;} .pk.next{background:var(--gold);color:#1d1d1d;animation:pkp 1s ease-in-out infinite;} .pk.dn{opacity:.4;} .pk.bad{background:#c0392b;color:#fff;animation:none;}
+  @keyframes pkp{50%{transform:scale(1.12);}}
+  .pcal-msg{min-height:20px;font-size:13px;color:var(--gold);margin-top:8px;}
   .pst-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
   .pst-recap{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14.5px;line-height:1.4;} .pst-recap i{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gold);margin-right:8px;}
   #screenHost{display:none;}
@@ -3231,7 +3251,13 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
+        <div class="scr-dots" id="scrDots"></div>
         <div class="pst-body scr-body" id="scrBody" aria-live="polite"></div>
+        <div class="scr-ask" id="scrAsk">
+          <div class="scr-chips" id="scrChips"></div>
+          <form class="scr-form" onsubmit="event.preventDefault();stageAsk()"><input id="scrQ" type="text" placeholder="Ask about this…" autocomplete="off" enterkeyhint="send"><button type="submit" class="btn" id="scrGo">Ask</button></form>
+          <div class="scr-ans" id="scrAns" aria-live="polite"></div>
+        </div>
         <div class="scr-foot">
           <button type="button" class="btn ghost" id="scrPrev" onclick="stageStep(-1)" aria-label="Earlier">‹</button>
           <span class="scr-count" id="scrCount"></span>
@@ -3318,6 +3344,7 @@
 
         <div class="tvm-actions">
           <button class="btn ghost" id="tvmMultiStageEntryBtn" onclick="startTvmMultiStage()">Multi-part problem</button>
+          <button class="btn ghost" id="tvmScreenBtn" onclick="tvmShowKeysOnScreen()">Show the keys</button>
           <button class="btn" id="tvmContinueStageBtn" onclick="tvmContinueToStage2()" style="display:none;">Continue to Part 2</button>
           <button class="btn ghost" id="tvmNextBtn" onclick="loadTvmProblem()" style="display:none;">Try another problem</button>
         </div>
@@ -12564,11 +12591,107 @@ function stageQuestionHtml(q){
   const rows = q.choices.map((c, k) => { const right = k === q.correct, mine = k === pick;
     return `<li class="pst-c${right ? ' right' : ''}${mine ? ' pick' : ''}"><b>${L[k]}</b><span>${mine ? '<i>You chose</i> ' : ''}${right ? '<i>Correct</i> ' : ''}${stageEsc(c)}</span></li>`; }).join('');
   const why = mwFirstSentence((q.rationale || [])[q.correct] || '');
-  return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button></div>`;
+  return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button>${(q.calcSteps || (DATA.calcStepsCache || {})[q.id]) ? `<button type="button" class="btn ghost" onclick="stageShowCalc(allQuestions().find(x=>x.id==='${q.id}'))">Show the keys</button>` : ''}</div>`;
 }
 function stageWalkMiss(ids){
   try{ if(naturalSpeechState.active && !naturalSpeechState.paused){ pauseSpeechSequence(); setPodcastPlayButtonState('Resume'); } }catch(e){}
   stageCloseFull(); setTimeout(() => { try{ mwOpen(5, String(ids).split(',')); }catch(e){} }, 120);
+}
+const HP_ALIAS = { 'SHIFT':'orange', 'ORANGE':'orange', 'ORANGE SHIFT':'orange', 'ORANGE-SHIFT':'orange', '+/-':'sign', 'CHS':'sign', '+':'add', 'PLUS':'add', '-':'sub', 'MINUS':'sub', 'X':'mul', '*':'mul', 'TIMES':'mul', '/':'div', 'DIVIDE':'div', '.':'dot', 'CLEAR':'c', 'DEL':'bs', 'BACKSPACE':'bs' };
+function hpTapsFromText(text){
+  const norm = x => String(x).toUpperCase().replace(/[−–]/g, '-').replace(/\s+/g, ' ').trim();
+  const main = {}, org = {};
+  HP_ROWS.forEach(r => r.forEach(([id, lab, o]) => { main[norm(lab)] = id; if(o) org[norm(o)] = id; }));
+  const out = []; let pend = false;
+  const push = id => { if(id === 'orange' && out[out.length - 1] === 'orange') return; out.push(id); };
+  const key = (label, shifted) => {
+    const L = norm(label);
+    if(HP_ALIAS[L] === 'orange'){ push('orange'); return true; }
+    if(shifted && org[L]){ push(org[L]); return true; }
+    if(main[L]){ push(main[L]); return true; }
+    if(HP_ALIAS[L]){ push(HP_ALIAS[L]); return true; }
+    if(org[L]){ push('orange'); push(org[L]); return true; }
+    return false;
+  };
+  const re = /\[([^\]]+)\]|\b(orange[\s-]*shift|shift)\b|(?<![\w\/])(PMT|PV|FV|I\/YR|CFj|NPV|IRR\/YR|P\/YR|xP\/YR|C ALL|BEG\/END|Nj)(?![\w\/])|(-?\d[\d,]*(?:\.\d+)?)/gi;
+  let m; const t = String(text || '');
+  while((m = re.exec(t))){
+    if(m[1] !== undefined){ if(key(m[1], pend)) pend = false; }
+    else if(m[2]){ push('orange'); pend = true; }
+    else if(m[3]){ if(key(m[3], pend)) pend = false; }
+    else if(m[4]){
+      const before = t.slice(Math.max(0, m.index - 26), m.index), after = t.slice(m.index + m[0].length, m.index + m[0].length + 18);
+      if(!(/(type|enter|key in|key|input|set|store|press|then)\s*(in\s*)?(the\s*)?(number\s*)?$/i.test(before) || /^\s*(,|then)?\s*(press\s+)?(\[|PMT\b|PV\b|FV\b|N\b|I\/YR\b|CFj\b)/i.test(after))) continue;
+      let v = m[4].replace(/,/g, ''), neg = v[0] === '-'; if(neg) v = v.slice(1);
+      v.slice(0, 12).split('').forEach(ch => push(ch === '.' ? 'dot' : ch)); if(neg) push('sign');
+      pend = false;
+    }
+  }
+  return out.slice(0, 14);
+}
+function stageCalcStepText(x){ return typeof x === 'string' ? x : stageClip((x && (x.title || x.step || x.text) || '') + (x && x.detail ? ' ' + x.detail : ''), 160); }
+function stageCalcSlide(title, steps, extra){
+  const list = (Array.isArray(steps) ? steps : []).map(stageCalcStepText).map(x => stageClip(x, 170)).filter(Boolean).slice(0, 10);
+  if(!list.length) return null;
+  return Object.assign({ kind:'calc', src:'auto', title:stageClip(title || 'On the HP 10bII+', 60), steps:list, taps:list.map(hpTapsFromText), ci:0 }, extra || {});
+}
+function stageCalcGo(d){
+  const sl = stageState.cur; if(!sl || sl.kind !== 'calc') return;
+  sl.ci = Math.max(0, Math.min(sl.steps.length - 1, (sl.ci || 0) + d)); sl.ti = 0; stageDraw();
+}
+function stageCalcJump(i){ const sl = stageState.cur; if(!sl || sl.kind !== 'calc') return; sl.ci = i; sl.ti = 0; stageDraw(); }
+function stageCalcPractice(){ const sl = stageState.cur; if(!sl || sl.kind !== 'calc') return; sl.practice = !sl.practice; sl.ti = 0; stageDraw(); }
+function stageCalcTap(id){
+  const sl = stageState.cur; if(!sl || sl.kind !== 'calc' || !sl.practice) return;
+  const taps = sl.taps[sl.ci || 0] || []; if(!taps.length) return;
+  const want = taps[sl.ti || 0];
+  if(id === want){
+    sl.ti = (sl.ti || 0) + 1;
+    if(sl.ti >= taps.length){
+      stageDraw(); const m = document.querySelectorAll('.pcal-msg'); m.forEach(x => x.textContent = '✓ Step done.');
+      if(sl.ci < sl.steps.length - 1) setTimeout(() => { if(stageState.cur === sl && sl.practice) stageCalcGo(1); }, 650);
+      else setTimeout(() => document.querySelectorAll('.pcal-msg').forEach(x => x.textContent = '✓ That is the whole sequence.'), 50);
+      return;
+    }
+    stageDraw();
+  } else {
+    document.querySelectorAll('.pk[data-k="' + id + '"]').forEach(e => { e.classList.add('bad'); setTimeout(() => e.classList.remove('bad'), 450); });
+    const lab = (HP_ROWS.flat().find(r => r[0] === want) || [])[1];
+    document.querySelectorAll('.pcal-msg').forEach(x => x.textContent = 'Not that one. Next is ' + (want === 'orange' ? 'the orange Shift' : lab) + '.');
+  }
+}
+function stageCalcHtml(sl){
+  const E = stageEsc, ci = Math.min(sl.ci || 0, sl.steps.length - 1), taps = sl.taps[ci] || [];
+  const li = sl.steps.map((t, i) => `<li class="${i === ci ? 'cur' : i < ci ? 'done' : ''}" onclick="stageCalcJump(${i})" style="cursor:pointer">${E(t)}</li>`).join('');
+  const pr = !!sl.practice, ti = sl.ti || 0;
+  const pad = HP_ROWS.map(r => r.map(([id, lab, o, cls]) => {
+    const hits = []; taps.forEach((k, i) => { if(k === id) hits.push(i + 1); });
+    const cl = pr ? (taps[ti] === id ? ' next' : hits.length && hits.every(h => h <= ti) ? ' dn' : '') : (hits.length ? ' on' : '');
+    return `<div class="pk${cl}${id === 'orange' ? ' or' : ''}" data-k="${id}" onclick="stageCalcTap('${id}')" role="button">${o ? `<small>${E(o)}</small>` : ''}${E(lab)}${!pr && hits.length ? `<i>${hits.join(',')}</i>` : ''}</div>`;
+  }).join('')).join('');
+  return `<div class="pst-kicker">HP 10bII+ keys</div><div class="pst-title">${E(sl.title)}</div><div class="pcal"><ol class="pcal-steps">${li}</ol><div><div class="pcal-pad">${pad}</div><div class="pcal-msg" id="pcalMsg">${pr ? 'Tap the glowing key (' + Math.min(ti + 1, taps.length || 1) + ' of ' + (taps.length || 1) + ').' : 'Tap any key to try it.'}</div></div></div>`
+    + `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageCalcGo(-1)"${ci ? '' : ' disabled'}>Back</button><button type="button" class="btn" onclick="stageCalcGo(1)"${ci < sl.steps.length - 1 ? '' : ' disabled'}>Next step</button><button type="button" class="btn ghost" onclick="stageCalcPractice()">${pr ? 'Show the keys' : 'Practice the taps'}</button><span class="pst-dim" style="align-self:center;font-size:12.5px;">${ci + 1} of ${sl.steps.length}${taps.length ? '' : ' · no keys to light for this step'}</span></div>`;
+}
+function tvmShowKeysOnScreen(){
+  const p = tvmCurrent; if(!p || !p.known || p.cf){ hpSay(p && p.cf ? 'Cash-flow problems: clear, key each flow with CFj, then NPV or IRR.' : 'Open a problem first.'); return; }
+  const f = v => { const a = Math.abs(v), r = Math.round(a * 1e6) / 1e6; return String(r); };
+  const names = { n:'N', iy:'I/YR', pv:'PV', pmt:'PMT', fv:'FV' };
+  const sk = String(p.solveFor || '').toLowerCase();
+  const steps = ['Orange Shift, then [C ALL]'];
+  if(p.isBeginMode) steps.push('Orange Shift, then [BEG/END] so BEGIN shows');
+  steps.push('Type ' + tvmReqPpy() + ', then orange Shift and [P/YR]');
+  ['n', 'iy', 'pv', 'pmt', 'fv'].forEach(k => {
+    if(k === sk || typeof p.known[k] !== 'number') return;
+    const v = p.known[k]; steps.push('Type ' + f(v) + (v < 0 ? ', press [+/−]' : '') + ', press [' + names[k] + ']');
+  });
+  steps.push('Press [' + (names[sk] || 'FV') + '] to solve');
+  const sl = stageCalcSlide('This problem, key by key', steps); if(!sl) return;
+  stageShow(sl, 'calc'); stageOpenFull();
+}
+function stageShowCalc(q){
+  try{ hydrateCalcSteps(q); }catch(e){}
+  const sl = q && q.calcSteps ? stageCalcSlide(q.calcType === 'tvm' ? 'Financial calculator steps' : 'Calculator steps', q.calcSteps) : null;
+  if(!sl) return false; stageShow(sl, 'calc'); stageOpenFull(); return true;
 }
 function stageSlideNode(sl){
   const d = document.createElement('div'); d.className = 'pst-slide pst-' + sl.kind;
@@ -12577,6 +12700,8 @@ function stageSlideNode(sl){
     const q = allQuestions().find(x => x.id === sl.qid);
     if(!q) return null;
     d.innerHTML = stageQuestionHtml(q);
+  } else if(sl.kind === 'calc'){
+    d.innerHTML = stageCalcHtml(sl);
   } else if(sl.kind === 'recap'){
     const li = (sl.items || []).map(x => `<li><i>${x.k === 'term' ? 'Term' : x.k === 'formula' ? 'Formula' : 'Missed'}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
@@ -12606,11 +12731,17 @@ function stageSlideNode(sl){
   return d;
 }
 function stageHosts(){ return ['pstBody', 'scrBody'].map(id => document.getElementById(id)).filter(Boolean); }
-function stageDraw(){
+function stageDraw(soft){
   const sl = stageState.cur; if(!sl) return;
+  const sid = stageId(sl), same = soft === true || stageState.drawn === sid; // same slide again (a step or a tap): update in place, no re-entrance
+  const back = stageState.hi < (stageState.prevHi == null ? 0 : stageState.prevHi); stageState.prevHi = stageState.hi; stageState.drawn = sid;
   stageHosts().forEach(h => {
     const node = stageSlideNode(sl); if(!node) return;
-    h.innerHTML = ''; h.appendChild(node); h.classList.remove('pst-in'); void h.offsetWidth; h.classList.add('pst-in');
+    h.innerHTML = ''; h.appendChild(node);
+    if(same){ h.classList.remove('pst-in'); return; }
+    [...node.children].forEach((c, i) => c.style.setProperty('--i', i));
+    h.classList.toggle('pst-back', back); h.classList.remove('pst-in'); void h.offsetWidth; h.classList.add('pst-in');
+    const big = node.querySelector('.pst-big'); if(big) stageCountUp(big);
   });
   const live = stageState.hi >= stageState.hist.length - 1;
   const lb = document.getElementById('scrLive'); if(lb) lb.style.display = live ? 'none' : '';
@@ -12619,7 +12750,57 @@ function stageDraw(){
   const ct = document.getElementById('scrCount'); if(ct) ct.textContent = stageState.hist.length > 1 ? (stageState.hi + 1) + ' of ' + stageState.hist.length : '';
   stageDots();
 }
+function stageSlideSummary(sl){
+  if(!sl) return '';
+  if(sl.kind === 'question'){ const q = allQuestions().find(x => x.id === sl.qid); return q ? 'A practice question: ' + q.q + ' Choices: ' + q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join(' | ') + ' Correct: ' + 'ABCD'[q.correct] + '.' : ''; }
+  if(sl.kind === 'term') return 'Key term ' + sl.term + ': ' + sl.def;
+  if(sl.kind === 'formula') return 'Formula ' + sl.title + ': ' + sl.formula + (sl.text ? ' (' + sl.text + ')' : '');
+  if(sl.kind === 'calc') return 'HP 10bII+ steps (' + sl.title + '): ' + sl.steps.map((t, i) => (i + 1) + '. ' + t).join(' ') + ' Currently on step ' + ((sl.ci || 0) + 1) + '.';
+  if(sl.kind === 'recap') return 'A recap of: ' + (sl.items || []).map(x => x.t).join('; ');
+  return [sl.title, sl.big, sl.text, (sl.steps || []).map(stageCalcStepText).join('; ')].filter(Boolean).join(' - ');
+}
+function stageChips(){
+  const el = document.getElementById('scrChips'); if(!el) return;
+  const k = stageState.cur && stageState.cur.kind;
+  const c = k === 'question' ? ['Why is my pick wrong?', 'Give me a memory trick', 'Quiz me on this idea'] : k === 'calc' ? ['What should the display show?', 'Why this order?', 'What if payments are at the start?'] : k === 'formula' ? ['Work an example', 'When do I use this?', 'Common mistakes'] : ['Explain simply', 'Why does this matter on the exam?', 'Quiz me on this'];
+  el.innerHTML = c.map(x => `<button type="button" onclick="stageAsk(this.textContent)">${stageEsc(x)}</button>`).join('');
+}
+async function stageAsk(preset){
+  const inp = document.getElementById('scrQ'), ans = document.getElementById('scrAns'), go = document.getElementById('scrGo');
+  const q = String(preset || (inp && inp.value) || '').trim(); if(!q || !ans) return;
+  const sl = stageState.cur, ctx = stageSlideSummary(sl);
+  const handoff = '<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageToTutor()">Continue in the tutor</button></div>';
+  stageState.lastAsk = q;
+  if(!aiFeaturesAvailable){ ans.innerHTML = 'Connect the tutor to ask here.' + handoff; return; }
+  ans.textContent = 'Thinking…'; if(go) go.disabled = true; if(inp) inp.value = '';
+  try{
+    const r = await callClaude(HP_CALC_NOTE + '\n\nThe student is looking at this on their study screen: ' + ctx + '\n\nTheir question: ' + q + '\n\nAnswer for a CFP exam candidate in under 120 words, plain sentences, no markdown headings or bullets. If they ask to be quizzed, ask ONE short question and stop.', 500);
+    if(stageState.cur !== sl) return;
+    ans.textContent = String(r || '').trim() || 'No answer came back.'; ans.insertAdjacentHTML('beforeend', handoff);
+  }catch(e){ ans.textContent = 'Could not reach the tutor: ' + (typeof describeAiError === 'function' ? describeAiError(e) : 'try again') ; }
+  finally{ if(go) go.disabled = false; }
+}
+function stageToTutor(){
+  const sl = stageState.cur; const ctx = stageSlideSummary(sl), q = stageState.lastAsk || 'Walk me through this.';
+  stageCloseFull(); askTutorAbout('I am looking at this on my study screen: ' + ctx + ' ' + q);
+}
+function stageCountUp(el){
+  const t = el.textContent, m = t.match(/-?[\d,]*\.?\d+/); if(!m) return;
+  const num = parseFloat(m[0].replace(/,/g, '')); if(!isFinite(num) || Math.abs(num) < 2) return;
+  const dec = (m[0].split('.')[1] || '').length, pre = t.slice(0, m.index), post = t.slice(m.index + m[0].length), t0 = performance.now(), D = 650;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  (function f(now){ const p = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - p, 3), v = num * e; el.textContent = pre + v.toLocaleString('en-US', { minimumFractionDigits:dec, maximumFractionDigits:dec }) + post; if(p < 1) requestAnimationFrame(f); })(t0);
+}
 function stageDots(){
+  const sd = document.getElementById('scrDots');
+  if(sd){
+    const lst = stageState.deck.length > 1 ? stageState.deck : stageState.hist, isDeck = lst === stageState.deck;
+    const lab = s => s.kind === 'question' ? 'Missed question' : s.kind === 'recap' ? 'Recap' : stageClip(s.term || s.title || s.big || s.kind, 26);
+    const curId = stageState.cur ? stageId(stageState.cur) : '';
+    sd.innerHTML = lst.length > 1 ? lst.map((s, i) => `<button type="button" class="${stageId(s) === curId ? 'cur' : ''}" onclick="${isDeck ? 'stageGoDeck(' + i + ')' : 'stageState.hi=' + i + ';stageState.cur=stageState.hist[' + i + '];stageDraw()'}">${stageEsc(lab(s))}</button>`).join('') : '';
+    const c = sd.querySelector('.cur'); if(c && c.scrollIntoView) try{ c.scrollIntoView({ block:'nearest', inline:'center' }); }catch(e){}
+    if(stageState.askFor !== curId){ stageState.askFor = curId; const a = document.getElementById('scrAns'); if(a) a.innerHTML = ''; stageChips(); }
+  }
   const el = document.getElementById('pstDots'); if(!el) return;
   const deck = stageState.deck; if(deck.length < 2){ el.innerHTML = ''; return; }
   const curAt = stageState.cur && stageState.cur.src !== 'tutor' ? stageId(stageState.cur) : stageState.podId;
@@ -12730,8 +12911,9 @@ function stageSlideFromTool(a){
   else if(k === 'compare'){ if(!a.left || !a.right) return { error:'a compare slide needs left and right, each with a head and points.' }; sl.title = stageClip(a.title, 50); ['left', 'right'].forEach(s => { sl[s] = { head:stageClip(a[s].head, 40), points:(Array.isArray(a[s].points) ? a[s].points : []).slice(0, 5).map(p => stageClip(p, 80)) }; }); sl.note = stageClip(a.note, 120); }
   else if(k === 'chart'){ const r = tcBuild(a.chart || {}); if(!r || r.error) return { error:(r && r.error) || 'that chart had no usable inputs.' }; sl.chart = a.chart; }
   else if(['bar','line','pie','table','steps'].includes(k)){ Object.assign(sl, { title:stageClip(a.title, 60), labels:a.labels, series:a.series, unit:a.unit, columns:a.columns, rows:a.rows, steps:a.steps, note:stageClip(a.note, 120) }); if(!tutorVisualHtml(sl)) return { error:'that visual had no usable data.' }; }
+  else if(k === 'calc'){ const c = stageCalcSlide(a.title, a.steps); if(!c) return { error:'a calc slide needs steps: each one a short instruction with every key in [square brackets], like "Type 360, press [N]".' }; Object.assign(sl, c, { src:'tutor' }); }
   else if(k === 'idea'){ if(!a.text) return { error:'an idea slide needs text.' }; sl.title = stageClip(a.title, 40); sl.text = stageClip(a.text, 260); }
-  else return { error:'kind must be one of term, formula, number, compare, steps, bar, line, pie, table, chart, question, idea.' };
+  else return { error:'kind must be one of term, formula, number, compare, steps, bar, line, pie, table, chart, calc, question, idea.' };
   return { slide:sl };
 }
 function stageInlineVisible(){
@@ -12743,7 +12925,7 @@ function tutorScreenText(){
   if(!playing && !stageState.fullOpen) return '';
   const what = sl.kind === 'question' ? 'a question they missed: "' + stageClip(((allQuestions().find(q => q.id === sl.qid) || {}).q || ''), 140) + '"' : sl.kind === 'term' ? 'the term ' + sl.term : sl.kind === 'formula' ? 'the formula ' + sl.title : stageClip(sl.title || sl.big || sl.text || sl.kind, 80);
   const line = playing ? stageClip(((naturalSpeechState.chunks[naturalSpeechState.index] || {}).text || ''), 160) : '';
-  return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are listening to "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a podcast episode', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen, so use it to show what you are explaining instead of describing it. Treat questions as likely about what is playing or showing.`;
+  return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are listening to "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a podcast episode', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen (including kind calc, which lights each step's keys on an HP 10bII+ keypad), so use it to show what you are explaining instead of describing it. Treat questions as likely about what is playing or showing.`;
 }
 function tutorShowOnScreen(a){
   const r = stageSlideFromTool(a); if(r.error) return 'Error: ' + r.error;
@@ -12764,6 +12946,7 @@ function stageOpenFull(){
   const host = document.getElementById('screenHost'); if(!host) return;
   if(host.parentElement !== document.body) document.body.appendChild(host);
   stageState.fullOpen = true; document.body.classList.add('screen-active'); try{ lockBodyScroll(); }catch(e){}
+  stageState.drawn = null; stageChips();
   if(!stageState.cur && stageState.deck[0]) stageShow(stageState.deck[0], 'podcast'); else stageDraw();
   stageTransportSync();
   const h = document.getElementById('scrClose'); if(h) h.focus({ preventScroll:true });
@@ -24279,6 +24462,7 @@ async function toggleCalcSteps(){
   const stepsHtml = q.calcSteps.map(step => `<li>${escapeHtml(step)}</li>`).join('');
   box.className = 'calc-steps-box';
   box.innerHTML = `<span class="simplify-label">${typeLabel}</span><ol class="calc-steps-list">${stepsHtml}</ol>`;
+  box.innerHTML += '<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageShowCalc(session.queue[session.index])">Show on the keypad</button></div>';
   box.style.display = 'block';
   btn.textContent = 'Hide calculator steps';
 }
@@ -26953,7 +27137,7 @@ const TUTOR_TOOLS = [
     name: 'show_on_screen',
     description: "Put something on the student's screen, a second screen that sits beside the podcast (and opens full size if they are not looking at it). Use it to SHOW what you are talking about: a question they missed (kind question, leave question_id out for their latest miss), a key term, a formula, one big number, two things side by side, steps, a chart or a table. While a podcast plays it appears with the audio and returns when they replay that part. Prefer it over describing in words whenever seeing it helps, and when they ask to see something.",
     input_schema: { type: 'object', properties: {
-      kind: { type: 'string', enum: ['question','term','formula','number','compare','steps','bar','line','pie','table','chart','idea'] },
+      kind: { type: 'string', enum: ['question','term','formula','number','compare','steps','bar','line','pie','table','chart','calc','idea'] },
       title: { type: 'string', description: 'Short title.' },
       question_id: { type: 'string', description: 'question: the id of a question from their misses (optional; defaults to the latest miss).' },
       term: { type: 'string', description: 'term: the term; the definition is looked up from their flashcards if you leave def out.' },
@@ -26966,7 +27150,7 @@ const TUTOR_TOOLS = [
       right: { type: 'object', properties: { head: { type: 'string' }, points: { type: 'array', items: { type: 'string' } } }, description: 'compare: right column.' },
       labels: { type: 'array', items: { type: 'string' } }, series: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, values: { type: 'array', items: { type: 'number' } } }, required: ['values'] } }, unit: { type: 'string' },
       columns: { type: 'array', items: { type: 'string' } }, rows: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
-      steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' } }, required: ['title'] } },
+      steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string', description: 'For kind calc: the instruction with every key in [square brackets], for example "Orange Shift, then [C ALL]" or "Type 360, press [N]".' }, detail: { type: 'string' } }, required: ['title'] }, description: 'steps/calc: the ordered steps. For calc the student sees the HP 10bII+ keypad with each step\'s keys lit and numbered.' },
       chart: { type: 'object', description: "chart: the same input as show_chart (kind growth, amortization or bond_price plus its numbers)." },
       note: { type: 'string', description: 'One short line under the visual. Optional.' }
     }, required: ['kind'] },
@@ -28400,7 +28584,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.426';
+const BUILD_ID = '2026-10-22.427';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
