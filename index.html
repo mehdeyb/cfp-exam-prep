@@ -1983,6 +1983,10 @@
   .api-key-connected > span{flex:1 1 100%;line-height:1.45;}
   .api-key-connected .linklike{color:var(--correct);text-decoration:underline;padding:6px 4px;min-height:36px;margin-right:16px;}
   .api-key-connected .linklike:hover{color:var(--paper);}
+  .pt-how{margin:6px 0 4px;font-size:12.5px;line-height:1.45;}
+  .pt-how > summary{cursor:pointer;color:var(--gold);font-weight:600;font-size:12px;padding:2px 0;list-style:revert;}
+  .pt-how ol{margin:4px 0 0 18px;padding:0;}
+  .pt-how li{margin:3px 0;color:var(--muted, inherit);}
   .api-key-connected > span{display:block;}
   .api-key-connected .akc-name{margin-right:4px;}
   .api-key-connected .akc-actions{display:flex;gap:8px;flex:1 1 100%;}
@@ -6444,7 +6448,7 @@ async function loadData(){
       if(typeof DATA.flashcardRatingCount !== 'number') DATA.flashcardRatingCount = 0;
       if(typeof DATA.lastFlashcardAutoGenAt !== 'number') DATA.lastFlashcardAutoGenAt = 0;
       if(typeof DATA.lastGapCardGenAt !== 'number') DATA.lastGapCardGenAt = 0;
-      { const L = DATA.dayLog; if(!L || typeof L !== 'object' || typeof L.day !== 'string'){ DATA.dayLog = null; } else { ['modes','drill','meta','manual','targets','snap'].forEach(k => { if(!L[k] || typeof L[k] !== 'object' || Array.isArray(L[k])) L[k] = {}; }); L.tvm = Math.max(0, +L.tvm || 0); L.formula = Math.max(0, +L.formula || 0); } }
+      { const L = DATA.dayLog; if(!L || typeof L !== 'object' || typeof L.day !== 'string'){ DATA.dayLog = null; } else { ['modes','drill','meta','manual','targets','snap','tvmKinds'].forEach(k => { if(!L[k] || typeof L[k] !== 'object' || Array.isArray(L[k])) L[k] = {}; }); L.tvm = Math.max(0, +L.tvm || 0); L.formula = Math.max(0, +L.formula || 0); } }
       { const c = DATA.conductor; if(!c || typeof c !== 'object' || !Array.isArray(c.ran) || !Array.isArray(c.skipped) || !Array.isArray(c.log) || typeof c.day !== 'string') DATA.conductor = null; }
       if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {};
       if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
@@ -8471,7 +8475,7 @@ function planPhaseFor(days){
 /* What was really done today, counted from answers as they happen (not from opening a mode). */
 function planDayLog(){
   const d = localDayKey();
-  if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvm:0, formula:0 };
+  if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvmKinds:{}, tvm:0, formula:0 };
   return DATA.dayLog;
 }
 function planLogAnswer(mode){
@@ -8769,6 +8773,7 @@ function tutorCoverageBlock(){
         const ws = wsList().slice(-4).map(c => c.title); const pl = buildStudyPlan(); const tool = pl.steps.find(x => x.id === 'tool');
         return ' Their decision tools (practice them with start_plan_step "tool" or point_to): ' + bits.join('; ') + '.' + (tool ? ' Today\'s plan already has a tool step: ' + tool.title + '.' : '') + (ws.length ? ' Already made for them in the workshop (do not remake): ' + ws.join('; ') + '.' : '');
       }catch(e){ return ''; } })() +
+      (() => { try{ const lg = calcKindLog(), now = Date.now(); const bits = Object.keys(CALC_KINDS).map(k => { const e = lg[k]; return CALC_KINDS[k].label + ': ' + (e && e.n ? e.ok + ' of ' + e.n + ' clean, last ' + Math.max(0, Math.round((now - e.at) / ONE_DAY_MS)) + ' days ago' : 'not tried'); }); const cs = buildStudyPlan().steps.filter(x => (x.id === 'calc' || x.id === 'calc2')).map(x => x.title + (x.done ? ' (done)' : (x.have ? ' (' + x.have + '/' + x.need + ')' : ''))); return ' Calculator problem types (HP 10bII+): ' + bits.join('; ') + '.' + (cs.length ? ' Today\'s plan has: ' + cs.join('; ') + '.' : ''); }catch(e){ return ''; } })() +
       (flags.length ? ` Topics you flagged for review that they have not drilled yet: ${flags.map(f => f.name + (f.reason ? ' (' + f.reason + ')' : '')).join('; ')}.` : '') +
       ' Use this for any "what have I not covered" or "what should I review" question: say plainly when something has not been shown yet instead of assuming they have seen it, bring in unshown topics (cards first) before re-drilling ones they already own, and when you see them struggle with a specific topic in conversation, call flag_for_review so it leads tomorrow\'s plan.';
   }catch(e){ return ''; }
@@ -8840,6 +8845,25 @@ function buildStudyPlanCore(minutes){
   const accTxt = w => (w.st && w.st.acc !== null && w.st.attempts) ? `${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts` : 'a weak spot';
   const weakDom = (() => { let fk = null; try{ fk = focusDomainKey(stats.parts); }catch(e){} const list = domainMasteryList(); return list.find(d => d.key === fk) || list.map(d => ({...d, pr: d.weight * (0.3 + 0.7 * (1 - (d.mastery === null ? 0 : d.mastery / 100))) * (1 + 0.15 * (4 - (d.total ? domainStageOf(d.key) : 1)))})).sort((a, b) => b.pr - a.pr)[0]; })();
 
+  const mkCalcPractice = (id, pin) => {
+    const order = calcKindOrder(), other = id === 'calc2' ? (L.targets.calcKind || null) : null;
+    const kind = planTarget(pin, order.find(k => k !== other) || order[0]), K = CALC_KINDS[kind];
+    if(!K) return null;
+    return { id, kindKey: kind, title:`Calculator practice: ${K.label}`, minutes:10, need:3, have: Math.min(3, (L.tvmKinds || {})[kind] || 0), unit:'problems',
+      why: K.why + ' Three problems on the HP 10bII+ keys; the numbers change every time.', how: calcStepHow(kind),
+      run: () => { tvmKindFocus = kind; const p = calcPickProblemForKind(kind); if(p && p.cf) tvmMode = 'cf'; else if(p) tvmMode = 'tvm'; showTab('study'); openTvmTool(p || undefined); } };
+  };
+  const mkFormulaPractice = (id, pin, idx) => {
+    const wf = (typeof fdWeakest === 'function') ? fdWeakest() : null;
+    const byUse = FD_NAMES.slice().sort((a, b) => fdStats(a).attempts - fdStats(b).attempts);
+    const name = planTarget(pin, (idx === 0 && wf) ? wf : (byUse.find(n => n !== L.targets.calcFormula) || byUse[0]));
+    if(!name) return null;
+    const weak = (id === 'calc' && wf === name);
+    return { id, title:`Formula practice: ${name}`, minutes:8, need:4, have: Math.min(4, act.formula), unit:'problems',
+      why: weak ? 'A handful of fresh problems on a formula you keep missing usually settles it.' : 'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.',
+      how: ['Read the formula and what each letter stands for.','Work the problem with the numbers shown, on the calculator or on paper.','Enter your answer, then read the explanation, including when you were right.','Do four problems; each one has new numbers.'],
+      run: () => { showTab('study'); openFormulaDrill(name); } };
+  };
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
@@ -8901,20 +8925,11 @@ function buildStudyPlanCore(minutes){
         run: () => { showTab('study'); startMissedReview(); } };
     },
     calc: () => {
-      const tq = DATA.tvmQuizStats;
-      if(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6) return { id:'calc', title:'Calculator practice (HP 10bII+)', minutes:8,
-        why:`You have ${tq.correct} of ${tq.asked} calculation questions right. Key-press habits come from doing a few problems by hand.`, need:3, have: Math.min(act.tvm, 3), unit:'problems', run: () => { showTab('study'); openTvmTool(); } };
-      const wf = (typeof fdWeakest === 'function') ? fdWeakest() : null;
-      if(wf) return { id:'calc', title:`Formula practice: ${wf}`, minutes:8,
-        why:'A handful of fresh problems on a formula you keep missing usually settles it.', need:4, have: Math.min(act.formula, 4), unit:'problems', run: () => { showTab('study'); openFormulaDrill(wf); } };
-      // No shaky formula yet: keep the math warm every few days with the one you have practised least.
-      const lastCalc = Math.max(DATA.formulaDrillLastAt || 0, DATA.tvmToolLastAt || 0);
-      if(answered >= 30 && (Date.now() - lastCalc > 4 * ONE_DAY_MS || act.formula > 0)){
-        const pickF = planTarget('calcFormula', FD_NAMES.slice().sort((a, b) => fdStats(a).attempts - fdStats(b).attempts)[0]);
-        return { id:'calc', title:`Formula practice: ${pickF}`, minutes:6,
-          why:'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.', need:4, have: Math.min(act.formula, 4), unit:'problems', run: () => { showTab('study'); openFormulaDrill(pickF); } };
-      }
-      return null;
+      // Each day pairs the calculator (time value, cash flows) with formula practice, and leads with whichever has waited longer
+      // or is going worse. The first pick is pinned so doing it does not flip the order.
+      const tq = DATA.tvmQuizStats, poorCalc = !!(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6);
+      const first = answered < 10 ? 'calculator' : planTarget('calcFirst', (poorCalc || (Date.now() - (DATA.tvmToolLastAt || 0)) >= (Date.now() - (DATA.formulaDrillLastAt || 0))) ? 'calculator' : 'formula');
+      return first === 'calculator' ? mkCalcPractice('calc', 'calcKind') : mkFormulaPractice('calc', 'calcFormula', 0);
     },
     tool: () => {
       // The decision tree that matches the ideas you keep missing.
@@ -9027,9 +9042,8 @@ function buildStudyPlanCore(minutes){
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     calc2: () => {
       if(answered < 30) return null;
-      const f2 = planTarget('calcFormula2', FD_NAMES.slice().sort((a, b) => fdStats(a).attempts - fdStats(b).attempts)[1] || FD_NAMES[0]);
-      return { id:'calc2', title:`Formula practice: ${f2}`, minutes:6, need:4, have: Math.max(0, Math.min(act.formula - 4, 4)), unit:'problems',
-        why:'A second formula for the day. Numbers change every time, so it is real recall, and the exam wants several of these to be automatic.', run: () => { showTab('study'); openFormulaDrill(f2); } };
+      const first = planTarget('calcFirst', 'calculator');
+      return first === 'calculator' ? mkFormulaPractice('calc2', 'calcFormula2', 1) : mkCalcPractice('calc2', 'calcKind2');
     },
     cards2: () => {
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
@@ -9178,11 +9192,12 @@ function buildStudyPlanCore(minutes){
   // so a finished review of 25 cards does not also tick off "learn 15 new cards" a few rows down.
   { let attributed = 0; Object.keys(L.drill).forEach(k => { attributed += L.drill[k] || 0; });
     const pool = { cards: act.cards || 0, tvm: act.tvm || 0, formula: act.formula || 0, drill: Math.max(0, (cnt.drill || 0) - attributed) };
-    const tpool = Object.assign({}, L.drill);
-    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : st.id === 'calc' ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.id === 'calc2' ? 'formula' : st.domPool ? 'drill' : null;
+    const tpool = Object.assign({}, L.drill), kpool = Object.assign({}, L.tvmKinds || {});
+    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : (st.id === 'calc' || st.id === 'calc2') ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.domPool ? 'drill' : null;
     steps.forEach(st => {
       if(st.kept || st.manual || !(st.need > 0)){ const kk = poolOf(st); if(kk && st.kept) pool[kk] = Math.max(0, pool[kk] - (st.need || 0)); return; }
-      if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
+      if(st.kindKey){ const h = Math.max(0, Math.min(st.need, kpool[st.kindKey] || 0)); kpool[st.kindKey] = (kpool[st.kindKey] || 0) - h; st.have = h; st.done = h >= st.need; }
+      else if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
       else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }
       const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have){ sn.have = st.have; try{ persist(); }catch(e){} }
     }); }
@@ -9660,7 +9675,7 @@ function renderTodayPlan(){
       : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
     return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext && doneN > 0 ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div><div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, 10 min</b> Stand up, water, no screen. The second half sticks better after it.</div>` : ''); });
   const rows = stepRows.join('');
@@ -18448,6 +18463,7 @@ function openTvmTool(problem){
   if(closeBtn) closeBtn.focus({ preventScroll:true });
 }
 function closeTvmTool(){
+  tvmKindFocus = null;
   const wasOpen = document.body.classList.contains('tvm-active');
   document.body.classList.remove('tvm-active');
   const host = document.getElementById('tvmHost');
@@ -18465,7 +18481,74 @@ function closeTvmTool(){
   try{ planAdvanceReveal(); }catch(e){}
 }
 
+/* ---------- Calculator problem types the exam asks ----------
+   Today's plan rotates through these by what has gone longest without practice and what has gone worst. */
+const CALC_KINDS = {
+  'tvm-lump':    { label:'a lump sum (find FV or PV)',        w:0.8, why:'One amount, one rate, one time span. Nearly every other time-value problem builds on this one.',
+    extra:['N is the number of years when interest compounds once a year. A rate is entered as a plain number (7 for 7%).'] },
+  'tvm-annuity': { label:'level payments (find PMT, PV or FV)', w:1.2, why:'Retirement savings, loan payments and income streams all work this way, so it shows up in many questions.',
+    extra:['Payments at the end of each period is the default. If the problem says payments are made at the start (rent, an annuity due), turn BEGIN on first with Shift, then BEG/END.','Match N and the rate to how often payments are made: monthly payments mean months, not years.'] },
+  'tvm-solve':   { label:'solving for time or rate (N or I/YR)', w:1.0, why:'The exam asks how long a goal takes or what return is needed, not only what a sum will grow to.',
+    extra:['PV and FV (or PV and PMT) must have opposite signs, or the calculator shows an error. Money out is negative, money in is positive.'] },
+  'cf-npv':      { label:'uneven cash flows (NPV)',            w:1.1, why:'Comparing an investment or project against a required return is tested directly, and the keystrokes are different from the time-value keys.',
+    steps:['Clear with the orange Shift key, then C ALL. Set P/YR to 1 (type 1, Shift, P/YR) so yearly flows are not treated as monthly.','Enter each cash flow in time order with CFj, starting with the cost at time 0 as a negative.','If a flow repeats, type how many times and press Shift, then Nj.','Type the discount rate and press I/YR, then press Shift, then NPV.','Check: a positive NPV means the project earns more than the required return.'] },
+  'cf-irr':      { label:'uneven cash flows (IRR)',            w:1.0, why:'IRR is the return a series of cash flows actually earns. You compare it with a required return to accept or reject.',
+    steps:['Clear with the orange Shift key, then C ALL. Set P/YR to 1 (type 1, Shift, P/YR).','Enter each cash flow in time order with CFj, starting with the cost at time 0 as a negative.','If a flow repeats, type how many times and press Shift, then Nj.','Press Shift, then IRR/YR. No rate is entered; the calculator finds it.','Check: IRR above the required return means accept.'] }
+};
+let tvmKindFocus = null;
+function tvmKindOf(p){
+  if(!p) return null;
+  if(p.cf || /^cf-/.test(p.id || '')) return p.solveFor === 'IRR' ? 'cf-irr' : 'cf-npv';
+  const sf = p.solveFor;
+  if(sf === 'N' || sf === 'IY') return 'tvm-solve';
+  if(sf === 'PMT') return 'tvm-annuity';
+  const k = p.known || {};
+  return (k.pmt && k.pmt !== 0) ? 'tvm-annuity' : 'tvm-lump';
+}
+function calcKindLog(){ if(!DATA.calcKindLog || typeof DATA.calcKindLog !== 'object') DATA.calcKindLog = {}; return DATA.calcKindLog; }
+function calcNoteKind(clean){
+  try{
+    const k = tvmKindOf(tvmCurrent); if(!k) return;
+    const e = calcKindLog()[k] || (calcKindLog()[k] = { at:0, n:0, ok:0 });
+    e.at = Date.now(); e.n++; if(clean) e.ok++;
+    const L = planDayLog(); L.tvmKinds[k] = (L.tvmKinds[k] || 0) + 1;
+  }catch(e){}
+}
+// Longest-unpracticed and worst-going types first, so over a week every kind the exam asks comes around.
+function calcKindOrder(){
+  const lg = calcKindLog(), now = Date.now();
+  return Object.keys(CALC_KINDS).map((k, i) => {
+    const e = lg[k], days = e && e.at ? Math.min(14, (now - e.at) / ONE_DAY_MS) : 14, acc = e && e.n >= 2 ? e.ok / e.n : 0.5;
+    return { k, i, pr: CALC_KINDS[k].w * (days / 14 + (1 - acc)) };
+  }).sort((a, b) => b.pr - a.pr || a.i - b.i).map(x => x.k);
+}
+function calcPickProblemForKind(kind){
+  try{
+    if(!kind) return null;
+    if(kind.indexOf('cf-') === 0){
+      const want = kind === 'cf-irr' ? 'IRR' : 'NPV';
+      const tier = Math.max(1, Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1));
+      let keys = Object.keys(CF_GEN_TEMPLATES).filter(k => (want === 'IRR') === /irr/.test(k));
+      const ok = keys.filter(k => CF_GEN_TEMPLATES[k].level <= tier); if(ok.length) keys = ok;
+      keys.sort((a, b) => CF_GEN_TEMPLATES[a].level - CF_GEN_TEMPLATES[b].level);
+      const key = keys.length > 1 && tvmLastGenTemplate ? (keys.filter(k => k !== tvmLastGenTemplate)[0] || keys[0]) : keys[0];
+      return key ? cfGenerateProblem(tier, key) : null;
+    }
+    const level = Math.max(1, Math.min(4, (DATA.tvmProgress && DATA.tvmProgress.currentTier) || 1));
+    for(let i = 0; i < 40; i++){ const g = tvmGenerateProblem(level); if(g && tvmKindOf(g) === kind) return g; }
+    const pool = TVM_PROBLEMS.filter(p => tvmKindOf(p) === kind); if(!pool.length) return null;
+    const st = DATA.tvmProblemStats || {};
+    pool.sort((a, b) => ((st[a.id] || {}).pickOrder || 0) - ((st[b.id] || {}).pickOrder || 0));
+    return pool[0];
+  }catch(e){ return null; }
+}
+function calcStepHow(kind){
+  const K = CALC_KINDS[kind]; if(!K) return null;
+  if(K.steps) return K.steps;
+  return ['Read the problem and find the one thing it asks for. That is the value you solve for.','Type each value you know and press its key (N, I/YR, PV, PMT, FV). Use 0 for any value the problem does not have.','Money you pay out is negative; money you receive is positive.'].concat(K.extra || []).concat(['Press the key marked ? to solve, then check that the sign and the size make sense.']);
+}
 function tvmPickProblem(){
+  if(tvmKindFocus && tvmKindFocus.indexOf('tvm-') === 0){ const fp = calcPickProblemForKind(tvmKindFocus); if(fp){ DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1; if(!fp.generated){ if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {}; DATA.tvmProblemStats[fp.id] = { lastSeenAt: Date.now(), pickOrder: DATA.tvmPickCounter }; } return fp; } }
   if(!DATA.tvmProgress) DATA.tvmProgress = { currentTier:1, correctStreak:0 };
   if(!DATA.tvmProblemStats) DATA.tvmProblemStats = {};
   if(typeof DATA.tvmPickCounter !== 'number') DATA.tvmPickCounter = 0;
@@ -18512,6 +18595,7 @@ function tvmRecordOutcome(cleanSolve){
   DATA.tvmSolvedCount = (DATA.tvmSolvedCount || 0) + 1;
   DATA.tvmToolLastAt = Date.now();
   try{ planDayLog().tvm++; }catch(e){}
+  calcNoteKind(cleanSolve);
   try{ if(tvmCurrent && tvmCurrent.template) tvmNoteTemplate(tvmCurrent.template, cleanSolve); }catch(e){}
   if(cleanSolve){
     prog.correctStreak = (prog.correctStreak||0) + 1;
@@ -18782,12 +18866,13 @@ function tvmRenderStatus(){
   tvmRenderStatusCore();
   try{
     const el = document.getElementById('tvmStatus'); if(!el) return;
-    const st = buildStudyPlan().steps.find(x => x.id === 'calc' && !x.manual && /^Calculator practice/.test(x.title));
+    const cands = buildStudyPlan().steps.filter(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && /^Calculator practice/.test(x.title));
+    const st = cands.find(x => x.kindKey === tvmKindFocus) || cands.find(x => !x.done) || cands[0];
     if(!st) return;
-    const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('calc');
+    const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id);
     el.insertAdjacentHTML('beforeend', st.done
       ? `<span class="tvm-chip">Today's plan: calculator practice done ✓</span>${nx ? `<button type="button" class="fc-plan-next" onclick="closeTvmThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}`
-      : `<span class="tvm-chip">Today's plan: ${st.have || 0} of ${st.need} solved</span>`);
+      : `<span class="tvm-chip">Today's plan: ${st.have || 0} of ${st.need} solved · ${escapeHtml((CALC_KINDS[st.kindKey] || {}).label || 'calculator')}</span>`);
   }catch(e){}
 }
 function closeTvmThen(id){ try{ closeTvmTool(); }catch(e){} setTimeout(() => { try{ planGoNext(id); }catch(e){} }, 60); }
@@ -19328,6 +19413,7 @@ function cfGenerateProblem(level, templateKey){
   return cfSpecToProblem(spec, key, CF_GEN_TEMPLATES[key].level);
 }
 function cfPickProblem(){
+  if(tvmKindFocus && tvmKindFocus.indexOf('cf-') === 0){ const fp = calcPickProblemForKind(tvmKindFocus); if(fp){ DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1; return fp; } }
   if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
   const p = cfGenerateProblem(Math.min(3, DATA.cfProgress.currentTier || 1));
   DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1;
@@ -19385,7 +19471,8 @@ function tvmApplyModeUI(){
   const seg = document.getElementById('tvmModeSeg');
   if(seg) seg.querySelectorAll('button').forEach(b => { const on = b.dataset.mode === tvmMode; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   const ht = document.getElementById('tvmHowtoText');
-  if(ht) ht.textContent = cf
+  if(ht && tvmKindFocus && CALC_KINDS[tvmKindFocus]){ ht.textContent = 'Step by step: ' + calcStepHow(tvmKindFocus).map((x, i) => (i + 1) + '. ' + x).join(' '); }
+  else if(ht) ht.textContent = cf
     ? 'Press C ALL and make sure P/YR is 1 (orange Shift, P/YR), then enter each cash flow in time order, the cost at time 0 first and as a negative, pressing CFj after each one. If a flow repeats, type the count and press Nj. For NPV, type the rate and press I/YR, then NPV. For IRR, just press IRR. On the real calculator the keys marked ⇧ (Nj, NPV, IRR/YR) are orange-shift functions.'
     : 'Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you\'re solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.';
 }
@@ -19503,6 +19590,7 @@ function cfRecordOutcome(clean){
   DATA.tvmSolvedCount = (DATA.tvmSolvedCount || 0) + 1;
   DATA.tvmToolLastAt = Date.now();
   try{ planDayLog().tvm++; }catch(e){}
+  calcNoteKind(clean);
   try{ if(tvmCurrent && tvmCurrent.template) tvmNoteTemplate(tvmCurrent.template, clean); }catch(e){}
   if(clean){ prog.correctStreak = (prog.correctStreak || 0) + 1; if(prog.correctStreak >= 2 && prog.currentTier < 3){ prog.currentTier++; prog.correctStreak = 0; } }
   else { prog.correctStreak = 0; if(tvmErrorsThisProblem >= 3 && prog.currentTier > 1) prog.currentTier--; }
@@ -26508,7 +26596,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.352';
+const BUILD_ID = '2026-10-21.354';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
