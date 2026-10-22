@@ -2974,6 +2974,10 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols{column-count:2;column-gap:20px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > *{break-inside:avoid;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > .card{margin-bottom:20px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #todayPlanCard{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .pt-rows{column-count:2;column-gap:36px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .pt-rows > *{break-inside:avoid;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .plan-fold > p{max-width:78ch;}
   /* Practice options sit under today's plan, condensed to what fits the column. */
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols #modePanel .mode-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols #modePanel .mode-card{padding:11px 12px;}
@@ -10644,7 +10648,7 @@ function renderTodayPlan(){
     ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Just today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
     ${paceLine}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
-    ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
+    ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
   try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = (plan.days !== null && plan.days >= 2) ? 'none' : ''; }catch(e){} // the countdown lives in the plan's header now
   try{ conductorRefreshPill(); }catch(e){}
@@ -29003,7 +29007,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.452';
+const BUILD_ID = '2026-10-22.453';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
