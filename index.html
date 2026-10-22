@@ -3633,50 +3633,6 @@
 
   <!-- ================= REFERENCE TAB ================= -->
   <div class="tab-panel" id="tab-reference">
-    <div class="card" id="techCard">
-      <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
-      <div id="techPick"></div>
-      <div id="techList"></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2>Glossary</h2><div class="note" id="glossaryCountNote">search all terms</div></div>
-      <p class="hint">Every term from your flashcards, always visible for quick lookup — no flipping, no rating, just a fast way to check a definition while you're reading something else.</p>
-      <input type="text" id="glossarySearch" placeholder="Search terms or definitions..." oninput="filterGlossary()" aria-label="Search glossary terms">
-      <select id="glossaryDomainFilter" class="fc-domain-select" onchange="filterGlossary()" aria-label="Filter glossary by domain">
-        <option value="">All domains</option>
-      </select>
-      <div class="fc-filter" id="glossaryFocusToggleWrap" style="margin-top:10px;">
-        <input type="checkbox" id="glossaryFocusToggle" onchange="filterGlossary()">
-        <label for="glossaryFocusToggle" id="glossaryFocusToggleLabel">Show my current focus areas only</label>
-      </div>
-      <div class="ref-scroll"><div id="glossaryList"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2>Key numbers — 2026</h2><div class="note">reordered around your weak spots</div></div>
-      <div class="ref-scroll"><table class="ref-table" id="keyNumbersTable"></table></div>
-    </div>
-    <div class="card" id="refTablesCard">
-      <div class="card-head"><h2>Tables to have at hand</h2><div class="note">looked up on the exam, so know where to find them</div></div>
-      <p class="hint">The Uniform Lifetime Table sets your own RMD divisor: balance at the prior year-end divided by the factor for the age you reach this year.</p>
-      <div class="ref-scroll"><table class="ref-table"><thead><tr><th>Age</th><th>Factor</th><th>Age</th><th>Factor</th><th>Age</th><th>Factor</th></tr></thead><tbody><tr><td>73</td><td>26.5</td><td>83</td><td>17.7</td><td>93</td><td>10.1</td></tr><tr><td>74</td><td>25.5</td><td>84</td><td>16.8</td><td>94</td><td>9.5</td></tr><tr><td>75</td><td>24.6</td><td>85</td><td>16.0</td><td>95</td><td>8.9</td></tr><tr><td>76</td><td>23.7</td><td>86</td><td>15.2</td><td>96</td><td>8.4</td></tr><tr><td>77</td><td>22.9</td><td>87</td><td>14.4</td><td>97</td><td>7.8</td></tr><tr><td>78</td><td>22.0</td><td>88</td><td>13.7</td><td>98</td><td>7.3</td></tr><tr><td>79</td><td>21.1</td><td>89</td><td>12.9</td><td>99</td><td>6.8</td></tr><tr><td>80</td><td>20.2</td><td>90</td><td>12.2</td><td>100</td><td>6.4</td></tr><tr><td>81</td><td>19.4</td><td>91</td><td>11.5</td><td></td><td></td></tr><tr><td>82</td><td>18.5</td><td>92</td><td>10.8</td><td></td><td></td></tr></tbody></table></div>
-      <p class="hint" style="margin-top:14px;">Full retirement age for Social Security, by birth year. Claiming earlier cuts the benefit for life; waiting past it adds 8% a year up to age 70.</p>
-      <div class="ref-scroll"><table class="ref-table"><thead><tr><th>Born</th><th>Full retirement age</th></tr></thead><tbody><tr><td>1943–1954</td><td>66</td></tr><tr><td>1955</td><td>66 and 2 months</td></tr><tr><td>1956</td><td>66 and 4 months</td></tr><tr><td>1957</td><td>66 and 6 months</td></tr><tr><td>1958</td><td>66 and 8 months</td></tr><tr><td>1959</td><td>66 and 10 months</td></tr><tr><td>1960 or later</td><td>67</td></tr></tbody></table></div>
-    </div>
-    <div class="card" id="calcKeysCard">
-      <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
-      <div class="ck-walks" id="ckWalks"><span class="ck-walks-l">Walk it on the keypad</span><button type="button" class="btn ghost" onclick="ckWalk('pvann')">Loan payment</button><button type="button" class="btn ghost" onclick="ckWalk('fv')">Future value</button><button type="button" class="btn ghost" onclick="ckWalk('npv')">NPV and IRR</button><button type="button" class="btn ghost" onclick="ckWalk('eff')">Nominal to effective</button><button type="button" class="btn ghost" onclick="ckWalk('amort')">Loan balance</button></div>
-      <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then set P/YR to match the problem: <span class="ck-k">12</span> Shift <span class="ck-k">PMT</span> (P/YR) for monthly, 4 quarterly, 2 semiannual, 1 yearly. The factory setting is 12. With P/YR set, I/YR is always the annual rate, and N is the years then Shift <span class="ck-k">N</span> (xP/YR), which multiplies by P/YR. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
-      <div class="ed-item" data-ck="tvm"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
-      <div class="ed-item" data-ck="cf"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
-      <div class="ed-item"><b>Nominal to effective rate</b>10 Shift <span class="ck-k">I/YR</span> (NOM%), 12 Shift <span class="ck-k">PMT</span> (P/YR), Shift <span class="ck-k">PV</span> (EFF%) gives 10.47. Reset P/YR to 1 afterwards.</div>
-      <div class="ed-item"><b>Loan balance and interest</b>Solve the payment first, with P/YR matching the payment frequency. Then <span class="ck-k">1</span> <span class="ck-k">INPUT</span> <span class="ck-k">12</span> Shift <span class="ck-k">FV</span> (AMORT) shows payments 1 to 12. Press <span class="ck-k">=</span> to step through principal, interest, then balance.</div>
-      <div class="ed-item"><b>Powers and reciprocals</b>Shift <span class="ck-k">×</span> is yˣ, Shift <span class="ck-k">÷</span> is 1/x, Shift <span class="ck-k">−</span> is √x, Shift <span class="ck-k">1</span> is eˣ, Shift <span class="ck-k">2</span> is LN.</div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2>Core formulas</h2><div class="note">the ones that show up again and again</div></div>
-      <p class="hint">Know what each variable means, not just the shape.</p>
-      <div class="ref-scroll"><div id="formulasList"></div></div>
-    </div>
     <div class="card" id="lessonsCard">
       <div class="card-head"><h2>Lessons</h2><div class="note">a tutor walks you through it, with slides</div></div>
       <div class="pod-hero" id="podcastHero">
@@ -3755,6 +3711,50 @@
         </div>
         <div id="podcastLibraryList" style="display:none;"></div>
       </div>
+    </div>
+    <div class="card" id="techCard">
+      <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
+      <div id="techPick"></div>
+      <div id="techList"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Glossary</h2><div class="note" id="glossaryCountNote">search all terms</div></div>
+      <p class="hint">Every term from your flashcards, always visible for quick lookup — no flipping, no rating, just a fast way to check a definition while you're reading something else.</p>
+      <input type="text" id="glossarySearch" placeholder="Search terms or definitions..." oninput="filterGlossary()" aria-label="Search glossary terms">
+      <select id="glossaryDomainFilter" class="fc-domain-select" onchange="filterGlossary()" aria-label="Filter glossary by domain">
+        <option value="">All domains</option>
+      </select>
+      <div class="fc-filter" id="glossaryFocusToggleWrap" style="margin-top:10px;">
+        <input type="checkbox" id="glossaryFocusToggle" onchange="filterGlossary()">
+        <label for="glossaryFocusToggle" id="glossaryFocusToggleLabel">Show my current focus areas only</label>
+      </div>
+      <div class="ref-scroll"><div id="glossaryList"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Key numbers — 2026</h2><div class="note">reordered around your weak spots</div></div>
+      <div class="ref-scroll"><table class="ref-table" id="keyNumbersTable"></table></div>
+    </div>
+    <div class="card" id="refTablesCard">
+      <div class="card-head"><h2>Tables to have at hand</h2><div class="note">looked up on the exam, so know where to find them</div></div>
+      <p class="hint">The Uniform Lifetime Table sets your own RMD divisor: balance at the prior year-end divided by the factor for the age you reach this year.</p>
+      <div class="ref-scroll"><table class="ref-table"><thead><tr><th>Age</th><th>Factor</th><th>Age</th><th>Factor</th><th>Age</th><th>Factor</th></tr></thead><tbody><tr><td>73</td><td>26.5</td><td>83</td><td>17.7</td><td>93</td><td>10.1</td></tr><tr><td>74</td><td>25.5</td><td>84</td><td>16.8</td><td>94</td><td>9.5</td></tr><tr><td>75</td><td>24.6</td><td>85</td><td>16.0</td><td>95</td><td>8.9</td></tr><tr><td>76</td><td>23.7</td><td>86</td><td>15.2</td><td>96</td><td>8.4</td></tr><tr><td>77</td><td>22.9</td><td>87</td><td>14.4</td><td>97</td><td>7.8</td></tr><tr><td>78</td><td>22.0</td><td>88</td><td>13.7</td><td>98</td><td>7.3</td></tr><tr><td>79</td><td>21.1</td><td>89</td><td>12.9</td><td>99</td><td>6.8</td></tr><tr><td>80</td><td>20.2</td><td>90</td><td>12.2</td><td>100</td><td>6.4</td></tr><tr><td>81</td><td>19.4</td><td>91</td><td>11.5</td><td></td><td></td></tr><tr><td>82</td><td>18.5</td><td>92</td><td>10.8</td><td></td><td></td></tr></tbody></table></div>
+      <p class="hint" style="margin-top:14px;">Full retirement age for Social Security, by birth year. Claiming earlier cuts the benefit for life; waiting past it adds 8% a year up to age 70.</p>
+      <div class="ref-scroll"><table class="ref-table"><thead><tr><th>Born</th><th>Full retirement age</th></tr></thead><tbody><tr><td>1943–1954</td><td>66</td></tr><tr><td>1955</td><td>66 and 2 months</td></tr><tr><td>1956</td><td>66 and 4 months</td></tr><tr><td>1957</td><td>66 and 6 months</td></tr><tr><td>1958</td><td>66 and 8 months</td></tr><tr><td>1959</td><td>66 and 10 months</td></tr><tr><td>1960 or later</td><td>67</td></tr></tbody></table></div>
+    </div>
+    <div class="card" id="calcKeysCard">
+      <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
+      <div class="ck-walks" id="ckWalks"><span class="ck-walks-l">Walk it on the keypad</span><button type="button" class="btn ghost" onclick="ckWalk('pvann')">Loan payment</button><button type="button" class="btn ghost" onclick="ckWalk('fv')">Future value</button><button type="button" class="btn ghost" onclick="ckWalk('npv')">NPV and IRR</button><button type="button" class="btn ghost" onclick="ckWalk('eff')">Nominal to effective</button><button type="button" class="btn ghost" onclick="ckWalk('amort')">Loan balance</button></div>
+      <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then set P/YR to match the problem: <span class="ck-k">12</span> Shift <span class="ck-k">PMT</span> (P/YR) for monthly, 4 quarterly, 2 semiannual, 1 yearly. The factory setting is 12. With P/YR set, I/YR is always the annual rate, and N is the years then Shift <span class="ck-k">N</span> (xP/YR), which multiplies by P/YR. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
+      <div class="ed-item" data-ck="tvm"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
+      <div class="ed-item" data-ck="cf"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
+      <div class="ed-item"><b>Nominal to effective rate</b>10 Shift <span class="ck-k">I/YR</span> (NOM%), 12 Shift <span class="ck-k">PMT</span> (P/YR), Shift <span class="ck-k">PV</span> (EFF%) gives 10.47. Reset P/YR to 1 afterwards.</div>
+      <div class="ed-item"><b>Loan balance and interest</b>Solve the payment first, with P/YR matching the payment frequency. Then <span class="ck-k">1</span> <span class="ck-k">INPUT</span> <span class="ck-k">12</span> Shift <span class="ck-k">FV</span> (AMORT) shows payments 1 to 12. Press <span class="ck-k">=</span> to step through principal, interest, then balance.</div>
+      <div class="ed-item"><b>Powers and reciprocals</b>Shift <span class="ck-k">×</span> is yˣ, Shift <span class="ck-k">÷</span> is 1/x, Shift <span class="ck-k">−</span> is √x, Shift <span class="ck-k">1</span> is eˣ, Shift <span class="ck-k">2</span> is LN.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Core formulas</h2><div class="note">the ones that show up again and again</div></div>
+      <p class="hint">Know what each variable means, not just the shape.</p>
+      <div class="ref-scroll"><div id="formulasList"></div></div>
     </div>
     <div class="card">
       <div class="card-head"><h2>Syllabus checklist</h2><div class="note">all 70 official subtopics — reordered weakest-first</div></div>
@@ -13352,6 +13352,7 @@ function togglePodcastPlayback(){
   podcastPlayingKey = podcastCacheKey();
   const cb = podcastPlaybackCallbacks();
   speakChunkedSequence(text, null, cb.onDone, cb.onChunkStart, podcastSpeedValue(), podcastSavedPos(podcastPlayingKey) || undefined, podcastMediaSessionOpts());
+  setTimeout(() => { try{ if(naturalSpeechState.active && !stageState.fullOpen && typeof stageOpenFull === 'function') stageOpenFull(); }catch(e){} }, 400); // a lesson opens on the full screen; close it to see the card
 }
 
 // Leave and come back: the episode remembers the sentence you stopped at and picks up there.
@@ -28991,7 +28992,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.446';
+const BUILD_ID = '2026-10-22.447';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
