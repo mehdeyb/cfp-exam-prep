@@ -5776,6 +5776,7 @@ async function checkAIAvailability(){
   renderApiKeyUI();
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
   if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
+  if(aiMode === 'direct' && geminiKey) setTimeout(() => { testGeminiConnection().catch(() => {}); }, 4000);
 }
 
 function renderApiKeyUI(){
@@ -5863,7 +5864,7 @@ async function handleSaveGeminiKey(){
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
-  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; }catch(e){}
+  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; geminiOk(true); }catch(e){}
 }
 async function handleClearGeminiKey(){
   if(!confirm('Disconnect Gemini? Your Claude key, if any, keeps working.')) return;
@@ -5871,11 +5872,12 @@ async function handleClearGeminiKey(){
   geminiKey = null; _claudeDownUntil = 0;
   await checkAIAvailability();
 }
+function geminiOk(ok){ try{ const b = document.getElementById('geminiConnected'); if(b) b.classList.toggle('warn', !ok); }catch(e){} }
 async function testGeminiConnection(){
   const el = document.getElementById('geminiHealthText'); if(!geminiKey) return;
   if(el) el.textContent = 'Testing Gemini…'; const t0 = Date.now();
-  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; }
-  catch(e){ if(el) el.textContent = '⚠ Gemini not working: ' + describeAiError(e); }
+  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; geminiOk(true); }
+  catch(e){ if(el) el.textContent = '⚠ Not working: ' + describeAiError(e); geminiOk(false); }
 }
 async function handleClearApiKey(){
   if(!confirm('Disconnect your API key? AI features will pause until you reconnect one.')) return;
@@ -26600,7 +26602,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.355';
+const BUILD_ID = '2026-10-22.356';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
