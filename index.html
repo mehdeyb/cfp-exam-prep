@@ -11974,7 +11974,7 @@ Describe a brief, concrete scenario (a client situation, a number, or a specific
     box.appendChild(label);
     const errSpan = document.createElement('span');
     errSpan.className = 'simplify-err';
-    errSpan.textContent = `Couldn't get one: ${msg} — ${describeAiError(e)}`;
+    errSpan.textContent = aiFailText(e);
     box.appendChild(errSpan);
   }
 }
@@ -14796,7 +14796,7 @@ The trick should help them connect the term to its meaning — wordplay, a vivid
     box.appendChild(label);
     const errSpan = document.createElement('span');
     errSpan.className = 'simplify-err';
-    errSpan.textContent = `Couldn't get one: ${msg} — ${describeAiError(e)}`;
+    errSpan.textContent = aiFailText(e);
     box.appendChild(errSpan);
     btn.textContent = 'Give me a memory trick for this';
     btn.disabled = false;
@@ -14843,7 +14843,7 @@ async function requestFlashcardExplain(){
     paint(reply || "Sorry, I couldn't put one together just now. Try again in a moment.", 'Worked example');
   }catch(e){
     if(!same()) return;
-    paint("Couldn't get one: " + ((e && e.message) || 'Unknown error') + ' — ' + describeAiError(e), 'Worked example');
+    paint(aiFailText(e), 'Worked example');
   }
   btn.textContent = 'Explain it with an example'; btn.disabled = false;
 }
@@ -15944,12 +15944,16 @@ function aiReplyText(r){
   return '';
 }
 
+function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1); }
 function describeAiError(err){
   const status = err && err.status;
   if(err && err.provider === 'gemini'){
     if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
     if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
-    if(status === 401 || status === 403) return 'the Gemini key was rejected — check it in Settings.' + (_geminiDiag.length ? '' : '');
+    const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
+    if(/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured|not enabled/i.test(_gtxt)) return "Google's Gemini service is switched off for the project this key belongs to. Easiest fix: open aistudio.google.com/apikey, tap Create API key (choose a new project), and paste that key in Settings. A key made there has the service on already.";
+    if(status === 403 && /referer|referrer|restrict|blocked|IP address/i.test(_gtxt)) return 'this Gemini key has restrictions (website or app limits) that block the app. Make a new unrestricted key at aistudio.google.com/apikey and paste it in Settings.';
+    if(status === 401 || status === 403) return 'Google refused the Gemini key — check it in Settings, or make a new one at aistudio.google.com/apikey.';
     if(status === 429) return 'Gemini is rate-limiting this key — wait a bit and try again.';
     if(status && status >= 500) return "a temporary issue on Google's end — try again in a moment.";
     const gd = ((err && err.message) || '').replace(/^AI request failed \(\d+\):?\s*/, '').slice(0, 160);
@@ -22696,7 +22700,7 @@ async function sendQuestionChat(presetText){
     if(qChat.token !== token || qChat.qid !== qid) return;
     qChat.messages.pop();
     bubble.classList.remove('typing'); bubble.classList.add('tutor-bubble-err');
-    bubble.textContent = "Couldn't get a response: " + ((e && e.message) || 'Unknown error') + ' — ' + describeAiError(e);
+    bubble.textContent = "Couldn't get a response. " + (d0 => d0.charAt(0).toUpperCase() + d0.slice(1))(describeAiError(e) || 'try again in a moment.');
   }
   qChat.busy = false;
   if(send) send.disabled = false;
@@ -22815,7 +22819,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
     box.appendChild(label);
     const errSpan = document.createElement('span');
     errSpan.className = 'simplify-err';
-    errSpan.textContent = `Couldn't get a simpler explanation: ${msg} — ${describeAiError(e)}`;
+    errSpan.textContent = "Couldn't get a simpler explanation. " + (d0 => d0.charAt(0).toUpperCase() + d0.slice(1))(describeAiError(e) || 'try again in a moment.');
     box.appendChild(errSpan);
     btn.textContent = 'Explain simply';
     btn.disabled = false;
@@ -26596,7 +26600,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.354';
+const BUILD_ID = '2026-10-22.355';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
