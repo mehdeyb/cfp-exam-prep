@@ -3705,6 +3705,7 @@
             </div>
             <div class="tutor-status" id="geminiKeyStatus" role="alert"></div>
           </div>
+          <div class="hint" id="aiBuildLine" style="margin-top:10px;font-size:11.5px;"></div>
           <div class="api-key-connected" id="geminiConnected" style="display:none;margin-top:12px;">
             <span id="geminiHealthText">✓ Gemini connected as your backup AI.</span>
             <button class="linklike" onclick="testGeminiConnection()">Test</button>
@@ -5782,6 +5783,7 @@ function renderApiKeyUI(){
 
   if(apiKeyBox) apiKeyBox.style.display = (aiMode === 'none') ? 'block' : 'none';
   if(apiKeyConnected) apiKeyConnected.style.display = (aiMode === 'direct') ? 'flex' : 'none';
+  try{ const bl = document.getElementById('aiBuildLine'); if(bl) bl.textContent = 'App build ' + BUILD_ID + (geminiKey ? ' · Gemini ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] : ''); }catch(e){}
   try{ const gb = document.getElementById('geminiBox'), gc = document.getElementById('geminiConnected'); if(gb) gb.style.display = geminiKey ? 'none' : 'block'; if(gc) gc.style.display = geminiKey ? 'flex' : 'none'; }catch(e){}
   const tutorApiKeyHint = document.getElementById('tutorApiKeyHint');
   if(tutorApiKeyHint) tutorApiKeyHint.style.display = (aiMode === 'none') ? 'flex' : 'none';
@@ -26476,7 +26478,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.348';
+const BUILD_ID = '2026-10-21.349';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
