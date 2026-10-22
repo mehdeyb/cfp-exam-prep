@@ -2714,7 +2714,7 @@
   .fc-progress.has-bar{position:relative;}
   body.flashcard-fullscreen .fc-progress.has-bar::after{content:'';position:absolute;left:12%;right:12%;bottom:2px;height:3px;border-radius:2px;background:linear-gradient(to right,var(--gold) var(--p,0%),var(--hair) var(--p,0%));transition:background .3s var(--ease);}
   @media not ((orientation:landscape) and (max-height:520px) and (min-width:520px)){
-    body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:max(96px, calc(86px + env(safe-area-inset-bottom,0px)));}
+    body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px));}
     body.flashcard-fullscreen .fc-fullscreen-inner{align-self:stretch;display:flex;flex-direction:column;padding-top:0;}
     body.flashcard-fullscreen .fc-card{flex:1 0 auto;min-height:240px;padding:36px 26px;}
     body.flashcard-fullscreen .fc-card .fc-front{font-size:clamp(26px,4.2vh,34px);}
@@ -2723,7 +2723,7 @@
     body.flashcard-fullscreen .fc-card .fc-domain{font-size:11px;margin-bottom:20px;}
     body.flashcard-fullscreen .fc-card .fc-hint{margin-top:22px;}
     body.flashcard-fullscreen .fc-contrast,body.flashcard-fullscreen .fc-retell{font-size:14px;}
-    body.flashcard-fullscreen .fc-actions{position:sticky;bottom:-8px;margin-top:14px;padding:10px 0 4px;gap:12px;}
+    body.flashcard-fullscreen .fc-actions{position:sticky;bottom:calc(-100px - env(safe-area-inset-bottom,0px));margin-top:14px;padding:10px 0 4px;gap:12px;background:var(--ink);box-shadow:0 160px 0 0 var(--ink),0 -12px 14px 2px var(--ink);}
     body.flashcard-fullscreen .fc-actions .btn.learning,body.flashcard-fullscreen .fc-actions .btn.know{flex:1 1 0;min-height:54px;font-size:16px;border-radius:16px;}
     body.flashcard-fullscreen .fc-actions .speak-btn{width:54px;height:54px;flex:0 0 54px;}
     body.flashcard-fullscreen .fc-actions .btn.learning,body.flashcard-fullscreen .fc-actions .btn.know,body.flashcard-fullscreen .fc-actions .speak-btn{background-color:var(--ink);}
@@ -26660,7 +26660,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.366';
+const BUILD_ID = '2026-10-22.367';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
