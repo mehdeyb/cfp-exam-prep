@@ -8610,6 +8610,8 @@ function planChipChoices(cur){
 }
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
+  if(days < 0) return { key:'after', label:'After the exam' };
+  if(days === 0) return { key:'exam', label:'Exam day' };
   if(days <= 1) return { key:'rest', label:'Light day' };
   if(days <= 3) return { key:'taper', label:'Taper' };
   if(days <= 14) return { key:'sharpen', label:'Sharpen' };
@@ -9479,11 +9481,13 @@ function buildStudyPlanCore(minutes){
     build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach','listen'],
     sharpen:    ['cards','missed','weak','refresh','gap','calc','tool','mytool','tutor','adaptive','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
-    rest:       ['keys','logistics','cards']
+    rest:       ['keys','logistics','cards'],
+    exam:       ['logistics','keys'],
+    after:      []
   }[phase.key];
   // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
   let focus = null;
-  if(phase.key !== 'taper' && phase.key !== 'rest'){
+  if(!['taper','rest','exam','after'].includes(phase.key)){
     try{
       const cm = coverageModel();
       const ctx = { missedN, answered, weakCount: freshWeak.filter(w => w.st.acc < 0.6).length, under: coverageUnderserved(2), untouched: Object.keys(cm.topicLast).filter(k => !cm.topicLast[k]).length, figDue: figFreshness().due, formulaWeak: !!((typeof fdWeakest === 'function') && fdWeakest()), accAvg: (() => { const l = DATA.recentAccuracyLog || []; return l.length ? l.filter(e => e.correct).length / l.length : 0; })() };
@@ -9523,7 +9527,7 @@ function buildStudyPlanCore(minutes){
     steps.push(st); used += st.minutes;
   };
   order.forEach(k => place(k));
-  if(phase.key !== 'taper' && phase.key !== 'rest'){
+  if(!['taper','rest','exam','after'].includes(phase.key)){
     ['gap2','weak2','adaptive2','weak3'].forEach(k => {
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
@@ -9532,7 +9536,7 @@ function buildStudyPlanCore(minutes){
     });
   }
   // A long day: once the first pass is placed and time is left, add more of what helps most, still within the budget.
-  if(minutes >= 200 && phase.key !== 'taper' && phase.key !== 'rest'){
+  if(minutes >= 200 && !['taper','rest','exam','after'].includes(phase.key)){
     ['read','weak4','cards2','calc2','case2'].forEach(k => {
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
@@ -10025,7 +10029,9 @@ function renderTodayPlan(){
   const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
     ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
   const runwayTxt = freshRunwayLine();
-    const sub = plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
+    const sub = plan.phase.key === 'after' ? 'The exam is behind you. Rest, and be proud of the work you put in.'
+    : plan.phase.key === 'exam' ? 'Today is the exam. No studying: a calm morning, the checklist, and trust the work.'
+    : plan.phase.key === 'rest' ? 'Nothing new today. Keep it calm and light.'
     : plan.phase.key === 'taper' ? 'Consolidate what you know. No big new pushes now.'
     : plan.phase.key === 'sharpen' ? 'Repair weak spots and rehearse the real exam conditions.'
     : plan.phase.key === 'foundation' ? 'There is time to build. Cover ground first, then mix it all together.'
@@ -10056,7 +10062,7 @@ function renderTodayPlan(){
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
     ${plan.tutorNote ? `<p class="pt-sub pt-focus">${escapeHtml('Your tutor adjusted today: ' + plan.tutorNote)}</p>` : ''}
-    ${(plan.phase.key === 'taper' || plan.phase.key === 'rest') && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
+    ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${(runwayTxt || lateNote) ? `<p class="pt-sub">${escapeHtml((runwayTxt || '') + lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
     ${paceLine}
@@ -27451,7 +27457,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.397';
+const BUILD_ID = '2026-10-22.398';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
