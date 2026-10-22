@@ -2617,7 +2617,7 @@
   .syl-chip.on{border-color:var(--gold);color:var(--gold);}
   .syl-next{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--gold-tint);border:1px solid var(--gold);font-size:12px;color:var(--muted);line-height:1.4;}
   .syl-next b{color:var(--paper);}
-  .syl-next em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);margin-left:4px;}
+  .syl-next em{display:inline-block;font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);margin-left:4px;}
   details.syllabus-domain > summary.syllabus-head{cursor:pointer;list-style:none;gap:10px;min-height:44px;align-items:center;margin-bottom:0;}
   details.syllabus-domain > summary.syllabus-head::-webkit-details-marker{display:none;}
   details.syllabus-domain > summary.syllabus-head::after{content:"▾";color:var(--muted);font-size:12px;flex:none;transition:transform var(--t-fast) var(--ease);}
@@ -2749,6 +2749,8 @@
     body.flashcard-fullscreen .fc-card .fc-hint{margin-top:22px;}
     body.flashcard-fullscreen .fc-contrast,body.flashcard-fullscreen .fc-retell{font-size:14px;}
     body.flashcard-fullscreen .fc-actions{position:sticky;bottom:calc(-100px - env(safe-area-inset-bottom,0px));margin-top:14px;padding:10px 0 4px;gap:12px;background:var(--ink);box-shadow:0 160px 0 0 var(--ink),0 -12px 14px 2px var(--ink);}
+    /* The pinned answer bar paints an opaque block below itself, so it has to come last on screen: the memory-trick buttons and the example box sit above it instead of underneath it. */
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{order:20;}
     body.flashcard-fullscreen .fc-actions .btn.learning,body.flashcard-fullscreen .fc-actions .btn.know{flex:1 1 0;min-height:54px;font-size:16px;border-radius:16px;}
     body.flashcard-fullscreen .fc-actions .speak-btn{width:54px;height:54px;flex:0 0 54px;}
     body.flashcard-fullscreen .fc-actions .btn.learning,body.flashcard-fullscreen .fc-actions .btn.know,body.flashcard-fullscreen .fc-actions .speak-btn{background-color:var(--ink);}
@@ -27139,7 +27141,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.388';
+const BUILD_ID = '2026-10-22.390';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
