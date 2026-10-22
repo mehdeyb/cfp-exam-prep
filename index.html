@@ -1631,7 +1631,7 @@
   .bar-mini{height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;width:90px;display:inline-block;vertical-align:middle;}
   .bar-mini i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--teal));}
 
-  /* ---------- Reference tab ---------- */
+  /* ---------- Learn tab ---------- */
   .ref-table{width:100%;border-collapse:collapse;}
   .ref-scroll{max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--hair);border-radius:10px;padding:2px 10px;transition:height var(--t-med) var(--ease);}
   .ref-table td{padding:9px 8px;border-bottom:1px solid var(--hair);font-size:13px;}
@@ -2335,7 +2335,7 @@
   .pt-more > summary::-webkit-details-marker{display:none;}
   .pt-more > summary::after{content:" ▾";}
   .pt-more[open] > summary::after{content:" ▴";}
-  /* Study tab order: score, next step, today's plan, then the Blueprint bar, and the ways to practice under it. */
+  /* Today tab order: score, next step, today's plan, then the Blueprint bar, and the ways to practice under it. */
   #tab-study.active{display:flex;flex-direction:column;}
   #studyCols{display:flex;flex-direction:column;}
   #studyCols > #blueprintCard{order:2;}
@@ -2975,6 +2975,14 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > *{break-inside:avoid;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > .card{margin-bottom:20px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #todayPlanCard{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard,html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #modePanel{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard{order:1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:36px;align-items:start;grid-auto-flow:row dense;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > *{grid-column:1;min-width:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .card-head,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-focus,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-fold,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-guide-row,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .source-note,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .pattern-callout{grid-column:1 / -1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > #progressCard{grid-column:2;grid-row:2 / span 4;margin-top:0;border-top:0;padding-top:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard .progress-plot{height:150px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #modePanel{order:2;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .pt-rows{column-count:2;column-gap:36px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .pt-rows > *{break-inside:avoid;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .plan-fold > p{max-width:78ch;}
@@ -3100,8 +3108,8 @@
   </div>
 
   <div class="tabbar" id="appTabbar">
-    <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Study</span></button>
-    <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Reference</span></button>
+    <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Today</span></button>
+    <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Learn</span></button>
     <button class="tab-btn" data-tab="examday" onclick="showTab('examday',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
     <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
   </div>
@@ -3162,61 +3170,6 @@
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
     <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
 
-    <div class="panel card" id="modePanel">
-      <h2>Practice a specific way</h2>
-      <p class="hint">For when you want just one thing.</p>
-
-      <div class="more-modes" id="moreModes">
-      <div class="mode-grid">
-        <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
-          <h3>Adaptive session</h3>
-          <div class="mode-when"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
-          <div class="mode-meta" data-mm="adaptive"></div>
-        </div>
-        <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
-          <h3>Domain drill</h3>
-          <div class="mode-when">One domain, at your level.</div>
-          <div class="mode-meta" data-mm="drill"></div>
-        </div>
-        <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
-          <h3>Practice exam</h3>
-          <div class="mode-when"><span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
-          <div class="mode-meta" data-mm="exam"></div>
-        </div>
-        <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
-          <h3>Case studies</h3>
-          <div class="mode-when" id="caseCardText">One client, several questions.</div>
-          <div class="mode-meta" data-mm="case"></div>
-        </div>
-        <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
-          <h3>Missed questions</h3>
-          <div class="mode-when" id="missedCardText">What you have gotten wrong.</div>
-          <button type="button" class="mode-alt" id="missedWalkBtn" style="display:none;" onclick="event.stopPropagation(); mwOpen();">Talk through them</button>
-          <div class="mode-meta" data-mm="review"></div>
-        </div>
-        <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
-          <h3>Calculator practice</h3>
-          <div class="mode-when">Formula drills and the HP 10bII+ steps.</div>
-          <div class="mode-meta" data-mm="calc"></div>
-        </div>
-        <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
-          <h3>Flashcards</h3>
-          <div class="mode-when">Quick recall, spaced for you.</div>
-          <div class="mode-meta" data-mm="flashcards"></div>
-        </div>
-        <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
-          <h3>Decision tools</h3>
-          <div class="mode-when">"Which one fits?" walk-throughs.</div>
-          <div class="mode-meta" data-mm="tools"></div>
-        </div>
-        <div class="mode-card" onclick="openPodcastFromStudy()" tabindex="0" role="button">
-          <h3>Lessons</h3>
-          <div class="mode-when">A tutor walks you through it, with slides.</div>
-          <div class="mode-meta" data-mm="podcast"></div>
-        </div>
-      </div>
-      </div>
-    </div>
     <div class="card" id="blueprintCard">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
@@ -3717,6 +3670,56 @@
         <div id="podcastLibraryList" style="display:none;"></div>
       </div>
     </div>
+    <div class="panel card" id="modePanel">
+      <h2>Practice a specific way</h2>
+      <p class="hint">For when you want just one thing.</p>
+
+      <div class="more-modes" id="moreModes">
+      <div class="mode-grid">
+        <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
+          <h3>Adaptive session</h3>
+          <div class="mode-when"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
+          <div class="mode-meta" data-mm="adaptive"></div>
+        </div>
+        <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
+          <h3>Domain drill</h3>
+          <div class="mode-when">One domain, at your level.</div>
+          <div class="mode-meta" data-mm="drill"></div>
+        </div>
+        <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
+          <h3>Practice exam</h3>
+          <div class="mode-when"><span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
+          <div class="mode-meta" data-mm="exam"></div>
+        </div>
+        <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
+          <h3>Case studies</h3>
+          <div class="mode-when" id="caseCardText">One client, several questions.</div>
+          <div class="mode-meta" data-mm="case"></div>
+        </div>
+        <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
+          <h3>Missed questions</h3>
+          <div class="mode-when" id="missedCardText">What you have gotten wrong.</div>
+          <button type="button" class="mode-alt" id="missedWalkBtn" style="display:none;" onclick="event.stopPropagation(); mwOpen();">Talk through them</button>
+          <div class="mode-meta" data-mm="review"></div>
+        </div>
+        <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
+          <h3>Calculator practice</h3>
+          <div class="mode-when">Formula drills and the HP 10bII+ steps.</div>
+          <div class="mode-meta" data-mm="calc"></div>
+        </div>
+        <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
+          <h3>Flashcards</h3>
+          <div class="mode-when">Quick recall, spaced for you.</div>
+          <div class="mode-meta" data-mm="flashcards"></div>
+        </div>
+        <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
+          <h3>Decision tools</h3>
+          <div class="mode-when">"Which one fits?" walk-throughs.</div>
+          <div class="mode-meta" data-mm="tools"></div>
+        </div>
+      </div>
+      </div>
+    </div>
     <div class="card" id="techCard">
       <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
       <div id="techPick"></div>
@@ -3855,7 +3858,7 @@
       <div class="card-head"><h2>Where you stand</h2><div class="note">updates from your practice history</div></div>
       <div id="edCountdown" style="display:none;"></div>
       <div class="ed-readiness" id="edReadiness" style="display:none;"></div>
-      <p class="hint" id="edStandingText">Start answering practice questions in the Study tab and this panel will track how your prep compares heading into exam day.</p>
+      <p class="hint" id="edStandingText">Start answering practice questions in the Today tab and this panel will track how your prep compares heading into exam day.</p>
       <div id="edPacing" style="display:none;"></div>
       <div class="ed-tutor" id="edTutor" style="display:none;">
         <div class="note" style="margin-top:14px;font-size:12px;">Talk it through with your tutor</div>
@@ -4218,19 +4221,19 @@ function _scrollPageTo(y){
   if(bodyIsLocked()) savedBodyScrollY = y;
   try{ window.scrollTo({ top: y, left: 0, behavior: 'instant' }); }catch(e){ window.scrollTo(0, y); }
 }
-// Flashcards and the decision tools are sub-screens of Study (Practice a specific way), so the Study tab stays lit while they are open.
+// Flashcards and the decision tools are sub-screens of Study (Practice a specific way), so the Today tab stays lit while they are open.
 // The back link returns to wherever you came from (Study, Reference, Tutor...) and says so.
 const SUB_SCREENS = ['flashcards', 'tools'];
-const SUB_ORIGIN_LABEL = { study: 'Practice', reference: 'Reference', tutor: 'Tutor', examday: 'Exam Day' };
-let _subOrigin = 'study';
+const SUB_ORIGIN_LABEL = { study: 'Today', reference: 'Learn', tutor: 'Tutor', examday: 'Exam Day' };
+let _subOrigin = 'reference';
 function updateSubBack(){
-  const lbl = SUB_ORIGIN_LABEL[_subOrigin] || 'Practice';
+  const lbl = SUB_ORIGIN_LABEL[_subOrigin] || 'Learn';
   document.querySelectorAll('.sub-back .sb-l').forEach(el => { el.textContent = lbl; });
 }
 function backToPractice(){
-  const to = SUB_ORIGIN_LABEL[_subOrigin] ? _subOrigin : 'study';
+  const to = SUB_ORIGIN_LABEL[_subOrigin] ? _subOrigin : 'reference';
   showTab(to);
-  if(to === 'study' && !(_tabScroll && _tabScroll.study)){
+  if(to === 'reference' && !(_tabScroll && _tabScroll.reference)){
     requestAnimationFrame(() => { const p = document.getElementById('modePanel'); if(p) p.scrollIntoView({block:'start'}); });
   }
 }
@@ -4255,7 +4258,7 @@ function showTab(name, opts){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   if(!same){ const _p = document.getElementById('tab-'+name); _p.classList.add('tab-enter'); setTimeout(() => _p.classList.remove('tab-enter'), 600); }
-  { const btnName = (name === 'tools' || name === 'flashcards') ? 'study' : name; const b = document.querySelector(`.tab-btn[data-tab="${btnName}"]`); if(b) b.classList.add('active'); }
+  { const btnName = (name === 'tools' || name === 'flashcards') ? 'reference' : name; const b = document.querySelector(`.tab-btn[data-tab="${btnName}"]`); if(b) b.classList.add('active'); }
   const hero = document.getElementById('heroIntro');
   if(hero) hero.style.display = (name === 'study') ? 'block' : 'none';
   try{ conductorRefreshPill(); }catch(e){}
@@ -6747,7 +6750,7 @@ function sanitizeLoadedData(d){
     d.domainStats[k] = isObj(s) ? { correct: Math.max(0, num(s.correct, 0)), total: Math.max(0, num(s.total, 0)) } : {correct:0,total:0};
   });
   // Written questions and cards come from the AI and from older saves, so keep only well-formed ones. A single
-  // malformed entry used to break the Reference tab for good.
+  // malformed entry used to break the Learn tab for good.
   { const okDom = k => typeof k === 'string' && DOMAINS.some(x => x.key === k);
     const str = x => typeof x === 'string' && x.trim().length > 0;
     d.generatedFlashcards = (d.generatedFlashcards || []).filter(c => isObj(c) && str(c.id) && str(c.term) && str(c.def) && okDom(c.domain));
@@ -7791,7 +7794,7 @@ function computeStats(){
 
 // Every domain, weakest-mastery-first (domains with real data), then
 // untested domains ordered by exam weight. Powers ordering in the
-// Blueprint focus pills, the Reference tab, and Flashcards.
+// Blueprint focus pills, the Learn tab, and Flashcards.
 function allDomainsWeakestFirst(){
   const rows = domainMasteryList();
   const inFoundation = DATA.domainFoundationMode || {};
@@ -8150,7 +8153,7 @@ function applyBlueprintCompactStyling(){
   //
   // This must be re-run whenever the bar genuinely becomes visible, not
   // just whenever renderBlueprint() happens to run -- if it runs while the
-  // Study tab is hidden (display:none), every measurement reads as zero,
+  // Today tab is hidden (display:none), every measurement reads as zero,
   // which would silently skip applying the fix even though it's needed.
   const bar = document.getElementById('bpBar');
   const codeRow = document.getElementById('bpCodeRow');
@@ -9296,7 +9299,7 @@ function renderWorkshop(){
 function wsChatRow(c){
   const thread = document.getElementById('tutorThread'); if(!thread) return;
   const row = document.createElement('div'); row.className = 'tutor-msg tutor-msg-bot tutor-visual-row';
-  const box = document.createElement('div'); box.className = 'tutor-visual ws-chat'; box.innerHTML = wsCardHtml(c, true) + '<div class="tv-note">Saved to your workshop on the Study tab.</div>';
+  const box = document.createElement('div'); box.className = 'tutor-visual ws-chat'; box.innerHTML = wsCardHtml(c, true) + '<div class="tv-note">Saved to your workshop on the Today tab.</div>';
   row.appendChild(box); thread.appendChild(row); thread.scrollTop = thread.scrollHeight;
 }
 async function tutorCreateMaterial(inp){
@@ -9360,7 +9363,7 @@ async function tutorCreateMaterial(inp){
     return `Saved and started a ${qs.length}-question practice set "${title}"${notes.length ? ' (' + notes.join('; ') + ')' : ''}. The questions are also in their bank now. After they finish, diagnose_learner to see what held.`;
   }
   wsChatRow(made);
-  return `Created "${title}" (${WS_KINDS[kind]}) and showed it in the chat; it is saved in their workshop on the Study tab${made.cards ? ', with ' + made.cards.length + ' new flashcard(s) in their deck' : ''}${made.qn ? ', with ' + made.qn + ' new question(s) in their bank' : ''}${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Say in one sentence how to use it, and offer a quick check on it.`;
+  return `Created "${title}" (${WS_KINDS[kind]}) and showed it in the chat; it is saved in their workshop on the Today tab${made.cards ? ', with ' + made.cards.length + ' new flashcard(s) in their deck' : ''}${made.qn ? ', with ' + made.qn + ' new question(s) in their bank' : ''}${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Say in one sentence how to use it, and offer a quick check on it.`;
 }
 /* ---------- Tools the tutor builds for this student ----------
    The tutor can design a small interactive tool when a plain answer would not stick: a sorter (put each item in the right
@@ -10482,7 +10485,7 @@ function conductorRefreshPill(){
   if(c.current){ try{ const st = buildStudyPlan().steps.find(x => x.id === c.current.id); finished = !!(st && st.done); }catch(e){} }
   // Already on this part's own screen, still working: the screen shows its own progress ("Today's plan: 8 of 20 cards"),
   // so the pill would only sit on top of the card. It comes back when the part is finished or when you leave.
-  { // The Next best step card on the Study tab already says this, so the pill would only repeat it on top of the page.
+  { // The Next best step card on the Today tab already says this, so the pill would only repeat it on top of the page.
     const act0 = document.querySelector('.tab-panel.active'), nc = document.getElementById('nextStepCard'), ld = document.querySelector('.pt-lead');
     if(act0 && act0.id === 'tab-study' && currentNextStep && currentNextStep.kicker === 'Your session' && ((nc && nc.style.display !== 'none' && nc.offsetParent !== null) || (ld && ld.offsetParent !== null))){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   }
@@ -10594,7 +10597,7 @@ function renderTodayPlan(){
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   let plan;
-  try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = ''; }catch(_){} return; } // never let the plan break the Study tab
+  try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = ''; }catch(_){} return; } // never let the plan break the Today tab
   const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
   try{ planAdvanceUpdate(plan); }catch(e){}
   const doneN = plan.steps.filter(x => x.done).length;
@@ -10696,7 +10699,7 @@ function runNextStep(){
   currentNextStep.run();
 }
 
-// Single entry point for everything on the Study tab that depends on
+// Single entry point for everything on the Today tab that depends on
 // "right now": called on tab switches, exam-date changes, and when the app
 // comes back to the foreground (so a day-old card never lingers).
 function modeAgoText(ts){
@@ -11887,7 +11890,7 @@ function renderExamDayCallout(){
     }
   }
   if(stats.totalAnswered === 0){
-    el.textContent = "Start answering practice questions in the Study tab and this panel will track how your prep compares heading into exam day.";
+    el.textContent = "Start answering practice questions in the Today tab and this panel will track how your prep compares heading into exam day.";
   } else {
     const weakName = stats.weakestMeta.name;
     const weakPct = stats.weakestMastery===null ? 'untested' : stats.weakestMastery+'%';
@@ -11903,7 +11906,7 @@ function renderExamDayCallout(){
     if(daysLeft > 1){ numText = daysLeft; subText = `days until your exam (${examDateObj.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})})`; }
     else if(daysLeft === 1){ numText = '1'; subText = 'day until your exam — tomorrow.'; }
     else if(daysLeft === 0){ numText = '0'; subText = "Today's the day."; }
-    else { numText = '—'; subText = 'Exam date has passed — update it in the Study tab if you\'ve rescheduled.'; }
+    else { numText = '—'; subText = 'Exam date has passed — update it in the Today tab if you\'ve rescheduled.'; }
     countdownEl.innerHTML = `<div class="ed-countdown"><span class="num">${numText}</span><span class="txt">${subText}</span></div>`;
     countdownEl.style.display = 'block';
   } else {
@@ -15365,9 +15368,9 @@ function renderStudyGuide(){
   sections.push(`<div class="sg-section" id="sg-socialsecurity"><h3>When should Social Security be claimed?</h3><p class="hint" style="margin-top:0;">Not a single "right age" — income need, work status, spousal situation, and longevity expectations each point in different directions. Tap through this interactively in Decision tools.</p>${sgSocialSecurityFlowchartSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-options"><h3>Options matrix</h3><p class="hint" style="margin-top:0;">Four positions, four different risk profiles — buying caps the loss at the premium; selling doesn't. Tap through each one in Decision tools for more detail.</p>${sgOptionsMatrixSvg()}</div>`);
   sections.push(`<div class="sg-section" id="sg-plans"><h3>Qualified plan family tree</h3><p class="hint" style="margin-top:0;">Where each specific plan name actually sits in the bigger picture. Tap through each branch in Decision tools for more detail.</p>${sgQualifiedPlansTreeSvg()}</div>`);
-  sections.push(`<div class="sg-section" id="sg-formulas"><h3>Formulas you'll need</h3><p class="hint" style="margin-top:0;">Know what each variable means, not just the shape of the equation. This is a fixed snapshot for printing — the Reference tab has the same formulas live, on screen.</p>${formulasHtml}</div>`);
-  sections.push(`<div class="sg-section" id="sg-numbers"><h3>Key numbers to know cold</h3><p class="hint" style="margin-top:0;">All ${KEY_NUMBERS.length}, organized by domain — try answering before your eye reaches the number. This is a fixed snapshot for printing — the Reference tab has these reordered live around your own weak spots.</p>${numbersHtml}</div>`);
-  sections.push(`<div class="sg-section" id="sg-syllabus"><h3>Full syllabus, explained</h3><p class="hint" style="margin-top:0;">Every topic across all 8 domains, with what it actually covers. Read the explanation, then cover it and see if you can recite it back. This is a fixed snapshot for printing — the Reference tab has a live checklist version, sorted weakest-first, with its own recall test.</p>${subtopicsHtml}</div>`);
+  sections.push(`<div class="sg-section" id="sg-formulas"><h3>Formulas you'll need</h3><p class="hint" style="margin-top:0;">Know what each variable means, not just the shape of the equation. This is a fixed snapshot for printing — the Learn tab has the same formulas live, on screen.</p>${formulasHtml}</div>`);
+  sections.push(`<div class="sg-section" id="sg-numbers"><h3>Key numbers to know cold</h3><p class="hint" style="margin-top:0;">All ${KEY_NUMBERS.length}, organized by domain — try answering before your eye reaches the number. This is a fixed snapshot for printing — the Learn tab has these reordered live around your own weak spots.</p>${numbersHtml}</div>`);
+  sections.push(`<div class="sg-section" id="sg-syllabus"><h3>Full syllabus, explained</h3><p class="hint" style="margin-top:0;">Every topic across all 8 domains, with what it actually covers. Read the explanation, then cover it and see if you can recite it back. This is a fixed snapshot for printing — the Learn tab has a live checklist version, sorted weakest-first, with its own recall test.</p>${subtopicsHtml}</div>`);
   if(recurringItems.length){
     sections.push(`<div class="sg-section"><h3>Recurring mistakes</h3>${recurringItems.map(i => `<div class="sg-item">${i.q.scenario ? `<i>${sgTruncate(i.q.scenario, 160)}</i><br>` : ''}${sgTruncate(i.q.q, 110)}<br><b>Keep picking:</b> ${sgTruncate(i.wrongChoice, 50)} (${i.count}×) — <b>correct:</b> ${sgTruncate(i.q.choices[i.q.correct], 50)}<br><i>${sgTruncate(i.q.rationale && i.q.rationale[i.q.correct] ? i.q.rationale[i.q.correct] : '', 150)}</i>${i.q.calcSteps ? `<ol style="margin:8px 0 0;padding-left:20px;">${i.q.calcSteps.map(s => `<li style="margin-bottom:4px;">${escapeHtml(s)}</li>`).join('')}</ol>` : ''}</div>`).join('')}</div>`);
   }
@@ -20510,7 +20513,7 @@ function openTvmTool(problem){
   tvmPresetProblem = (problem && problem.solveFor) ? problem : null;
   if(tvmPresetProblem) tvmMode = tvmPresetProblem.cf ? 'cf' : 'tvm';
   tvmOpenedOverQuiz = !!(session && document.getElementById('quizView') && document.getElementById('quizView').style.display !== 'none');
-  // The tool lives inside the Study tab, whose stacking context can sit below
+  // The tool lives inside the Today tab, whose stacking context can sit below
   // the fullscreen quiz. Parking it directly under <body> while open keeps it on top.
   const host = document.getElementById('tvmHost');
   if(host && host.parentElement !== document.body){ tvmHostHome = host.parentElement; document.body.appendChild(host); }
@@ -26575,12 +26578,12 @@ function buildTutorSystemPrompt(){
   try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.need)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
   try{ const x = lastSitting(); if(x) timeContext += ` Their last timed ${x.mode === 'mock' ? 'checkpoint' : 'full exam'} (${modeAgoText(new Date(x.date).getTime())}): ${sittingClockLine(x)}. Checkpoints run under exam conditions with no feedback until submitting, and the app shows the allowance per question (about 2 minutes) with the time they have banked against an even pace. Use this when they ask about pacing or time management; never push speed at the cost of accuracy.`; }catch(e){}
   try{
-    // Today's plan, live, so the tutor never has to guess where the student is in it or contradict the Study tab.
+    // Today's plan, live, so the tutor never has to guess where the student is in it or contradict the Today tab.
     const pl = buildStudyPlan();
     if(pl && pl.steps && pl.steps.length){
       const done = pl.steps.filter(x => x.done).length, nxt = pl.steps.find(x => !x.done);
       const cs = conductorState();
-      timeContext += ` TODAY'S PLAN (the same one shown on the Study tab${pl.focus ? ', ' + pl.focus.label.toLowerCase() + ': ' + pl.focus.why : ''}): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
+      timeContext += ` TODAY'S PLAN (the same one shown on the Today tab${pl.focus ? ', ' + pl.focus.label.toLowerCase() + ': ' + pl.focus.why : ''}): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
         pl.steps.map(x => `[${x.id}] ${x.title}${x.done ? ' (done)' : (x.need > 0 && (x.have || 0) > 0 ? ` (${x.have}/${x.need})` : '')}`).join('; ') + '.' +
         (nxt ? ` Next part: [${nxt.id}] ${nxt.title}. Point them to it, or start it with start_plan_step, rather than inventing a different task.` : ' Every part is done: acknowledge it and suggest only light review or rest.') +
         (cs ? ' A guided session is running right now, so keep replies short and let it lead.' : '') +
@@ -26621,7 +26624,7 @@ function buildTutorSystemPrompt(){
       .map(p=>`${p.name} (${p.earned.toFixed(1)} of ${p.weight} possible points; ${p.attempted===0 ? 'not started' : p.attempted+' of about '+p.coverageTarget+' questions tried'})`).join('; ');
     const ns = computeNextStep(stats);
     const ps = paceSummary(stats);
-    readinessContext = ` The readiness score measures how far above guessing the student is likely to score, weighted by each domain's exam share. It combines first-attempt accuracy on questions (balanced by difficulty against the untried material, with thin evidence pulled toward guessing), how well tried questions have stuck in spaced review (fading when overdue), flashcards, formula drills and timed mock sittings (recent ones weigh more)${stats.accuracyMargin !== null && stats.totalAnswered >= 10 ? `; it implies roughly ${stats.expectedAccuracy}% accuracy on exam-style questions, give or take ${stats.accuracyMargin} points` : ''}. It is an estimate, not a pass prediction. The biggest gaps are ${topGaps}.${stats.calibration.penalty >= 0.5 ? ` About ${stats.calibration.penalty.toFixed(1)} points are being lost to overconfidence.` : ''} ${ps ? ' Pace toward exam day: ' + ps.text : ''} The Study tab is currently recommending: "${ns.title}" (${ns.why})`;
+    readinessContext = ` The readiness score measures how far above guessing the student is likely to score, weighted by each domain's exam share. It combines first-attempt accuracy on questions (balanced by difficulty against the untried material, with thin evidence pulled toward guessing), how well tried questions have stuck in spaced review (fading when overdue), flashcards, formula drills and timed mock sittings (recent ones weigh more)${stats.accuracyMargin !== null && stats.totalAnswered >= 10 ? `; it implies roughly ${stats.expectedAccuracy}% accuracy on exam-style questions, give or take ${stats.accuracyMargin} points` : ''}. It is an estimate, not a pass prediction. The biggest gaps are ${topGaps}.${stats.calibration.penalty >= 0.5 ? ` About ${stats.calibration.penalty.toFixed(1)} points are being lost to overconfidence.` : ''} ${ps ? ' Pace toward exam day: ' + ps.text : ''} The Today tab is currently recommending: "${ns.title}" (${ns.why})`;
   }catch(e){ readinessContext = ''; }
   let calibrationContext = '';
   const cs = DATA.confidenceStats || {};
@@ -26729,7 +26732,7 @@ Guidelines:
 - When the student asks what to do, how to use their time, or what the best next move is, call plan_my_study (pass minutes if they said how long they have; if they have not said, use the default and mention they can change it). Then coach them through it in order: say what step one is and the reason in a sentence, offer to start it (start_plan_step once they say yes), and when they come back, check how it went before moving to the next step. Do not dump the whole list unless they ask for it.
 - Ground the reasoning in what the research on studying supports, and keep claims modest: testing yourself (retrieval practice) and spacing reviews over time are the best-supported methods; mixing topics in practice helps you choose the right idea, even though it feels harder; going back over mistakes with the correct explanation in front of you works; explaining a concept in your own words shows gaps; full practice under exam-like conditions builds stamina and pacing; sleep and a light final day help recall. Rereading and highlighting are weaker. Say so plainly when it helps them decide, but never overstate the evidence or invent studies.
 - Teaching method (use these moves, do not lecture about them; keep claims about research modest and never invent studies):\n${TEACHING_METHOD}\n- Adjust to the exam countdown: with many weeks left, build coverage and spaced review; in the last two weeks, repair weak topics, review misses and rehearse the full exam; in the last few days, consolidate and skim key figures; on the day before and the day of, keep it light and rest.
-- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); show_chart draws one small chart in the chat when a picture teaches faster than words (compounding, loan principal versus interest, bond price against yield, a cash-flow timeline, risk against return, a few numbers compared), so use it sparingly, once per idea, never as decoration, and always say in a line or two what to notice; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Reference tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
+- Whatever you recommend, you can set up for them rather than only describe it: start_plan_step with an id from today's plan above; start_quiz_session for adaptive, drill, review, case, checkpoint, full exam or weak-spot sessions; start_flashcards for gap, new, still-learning, domain or due cards (every set is already balanced between cards to review and cards they have never seen, so do not override that without a reason; to choose specific cards, call find_flashcards and pass the ids as card_ids); show_chart draws one small chart in the chat when a picture teaches faster than words (compounding, loan principal versus interest, bond price against yield, a cash-flow timeline, risk against return, a few numbers compared), so use it sparingly, once per idea, never as decoration, and always say in a line or two what to notice; the formula drills, calculator walkthrough, decision tools, podcast and study guide; and point_to for anything on the Learn tab (key numbers, formulas, glossary, syllabus, toolkit) or Exam Day tab (where they stand, pacing, checklist, what to bring). When there is a clear follow-on, queue it with queue_next_stop so a Next button is waiting where they land (for example key numbers, then a formula drill on them). Offer it in one line and run it when they say yes, or run it straight away if they asked you to take them there.
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way. When you take the student to a decision tool as part of working through today's plan, use open_decision_tool with isolate:true and a short note (add practice:true and scenarios:2 to 4 for a counted run of client scenarios): it opens that one tool alone, and when they finish you can offer the next plan step.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
@@ -26737,14 +26740,14 @@ Guidelines:
 - When a tool takes them to another screen, your reply appears on that screen as a short note with a way back to the chat. So write it for where they now are: one line on what they are looking at, then one clear next action, in two or three short sentences. Do not stack several moves in one turn.\n- Official exam facts (CFP Board Candidate Handbook, October 2026; the Exam Day tab has them too, so point there for the full list): 170 multiple-choice questions in two 3-hour sections, each split into two subsections (43 and 42 questions) that share one timer; a free optional break between subsections (the clock keeps running) and a 40-minute break between sections that can be skipped with Resume Test; once a subsection is submitted it cannot be reopened, and if time is left only the last subsection can be reviewed. Items are stand-alone questions, short scenarios (about 3 questions) and case histories (about 8 to 12 questions). Arrive 30 minutes early with an unexpired government photo ID whose name matches the registration. Approved calculators include the HP 10BII+; memory must be cleared by the student before each section, and any notes on the calculator covered with tape. Only a clear unlabeled water bottle is allowed; no food, notes, phones or watches in the room. Scoring is pass or fail against a standard the Board does not publish, so never quote a pass mark. The October 2026 window tests 2026 tax law. A retake needs the whole exam in a later window, with at most three attempts in 24 months. The official CFP Board Practice Exam comes free with registration and reports results by domain. Per CFP Board, four new tax-law items still need more guidance before being tested: mortgage interest and PMI, tips, overtime and car-loan interest, so do not spend their time on them.\n- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
 - If they mention the TVM walkthrough tool or ask for help with a time-value-of-money calculation, you can reference their current tier there — and their most common setup mistake, if one is mentioned above — to calibrate how much you explain and what to watch for. Don't bring any of it up if they haven't asked about calculator practice.
-- Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing. Verified HP 10bII+ keystrokes (also on the Reference tab as ref_calc_keys): clear = orange Shift then C; P/YR = n, Shift, PMT (factory 12; set 1 for yearly problems and for cash-flow NPV/IRR, since NPV divides I/YR by P/YR and IRR/YR multiplies by it); BEG/END = Shift then MAR; Nj = Shift then CFj; NPV = Shift then PRC; IRR/YR = Shift then CST; NOM% = Shift I/YR, P/YR = Shift PMT, EFF% = Shift PV; AMORT = Shift FV after INPUT-ing the payment range (1 INPUT 12), then = steps through principal, interest, balance; yˣ = Shift ×, 1/x = Shift ÷, √x = Shift −.
+- Both the TVM walkthrough tool and the calc-steps walkthroughs are built specifically around the HP 10bII+ (the calculator this app assumes) — no separate compute/CPT key, the interest key labeled I/YR, and the calculator's factory default of 12 P/YR needing to be set to 1 for an annual-rate problem. If a student asks why a step doesn't match their own calculator, or seems to be using a TI BA II Plus or another model, you can explain the HP 10bII+ difference directly rather than guessing. Verified HP 10bII+ keystrokes (also on the Learn tab as ref_calc_keys): clear = orange Shift then C; P/YR = n, Shift, PMT (factory 12; set 1 for yearly problems and for cash-flow NPV/IRR, since NPV divides I/YR by P/YR and IRR/YR multiplies by it); BEG/END = Shift then MAR; Nj = Shift then CFj; NPV = Shift then PRC; IRR/YR = Shift then CST; NOM% = Shift I/YR, P/YR = Shift PMT, EFF% = Shift PV; AMORT = Shift FV after INPUT-ing the payment range (1 INPUT 12), then = steps through principal, interest, balance; yˣ = Shift ×, 1/x = Shift ÷, √x = Shift −.
 - If a student asks whether they should be in BEG or END mode: End is the standard default and what an ordinary annuity (payments at the end of each period) requires — the vast majority of TVM problems. BEG (annuity due, payments at the start of each period) only comes up when a problem explicitly says payments occur in advance, like a lease or a retirement withdrawal taken at the start of each year rather than the end. There's no "END" indicator on the display at all — only "BEGIN" shows when that mode is active, so its absence means the calculator is already in End mode. BEG/END has zero effect on a pure lump-sum FV or PV calculation with no payment involved.
 - Separately from the TVM tool: a handful of regular practice questions (tax brackets, present/future value, debt ratios, bond yields, and similar calculations) are genuinely computational rather than conceptual. If a student gets one of these wrong during an adaptive session, a "Show calculator steps" button appears right below the answer feedback with an exact, pre-verified walkthrough — point them to that button by name rather than re-deriving the calculation yourself in chat, since the steps already there are exact and specific to the numbers in that question.
 - Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - If a domain is listed above as currently rebuilding fundamentals, let that shape your answer naturally when that domain comes up — don't open by pointing out they're struggling there.
 - The recurring mistakes above (if any) are a genuinely stronger signal than a single missed question, since the same wrong answer being picked more than once usually points to a real, specific misconception rather than a one-off slip — worth proactively addressing if the conversation opens naturally (e.g., "how am I doing," "what should I focus on"), but not a reason to interrupt a question about something else.
-- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
-${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice(0, 4); return f.length ? '\nThe Study tab shows the student this ranked diagnosis, so refer to it rather than contradicting it: ' + f.map((x, i) => (i + 1) + '. ' + x.title + (x.line ? ' (' + x.line + ')' : '')).join(' ') + '\n' : ''; }catch(e){ return ''; } })()}
+- When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Today tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
+${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice(0, 4); return f.length ? '\nThe Today tab shows the student this ranked diagnosis, so refer to it rather than contradicting it: ' + f.map((x, i) => (i + 1) + '. ' + x.title + (x.line ? ' (' + x.line + ')' : '')).join(' ') + '\n' : ''; }catch(e){ return ''; } })()}
 ${tutorFiguresText()}
 ${(() => { try{ return tutorScreenText(); }catch(e){ return ''; } })()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
@@ -26978,7 +26981,7 @@ function tutorMaybeOfferTree(userText, replyText){
 function tutorActionText(name, input, result){
   const r = String(result || '');
   const inp = input || {};
-  const tabName = { study:'Study', tools:'Decision tools', reference:'Reference', flashcards:'Flashcards', examday:'Exam Day', tutor:'Tutor' };
+  const tabName = { study:'Today', tools:'Decision tools', reference:'Learn', flashcards:'Flashcards', examday:'Exam Day', tutor:'Tutor' };
   const domName = k => { const d = DOMAINS.find(x => x.key === k); return d ? d.name : ''; };
   const you = t => t.replace(/\bthe student's\b/gi, 'your').replace(/\bthe student\b/gi, 'you').replace(/\s+/g, ' ').trim();
   try{
@@ -27007,7 +27010,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
     if(name === 'open_study_guide') return 'Opened your study guide';
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
-    if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Study tab)';
+    if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Today tab)';
     if(name === 'show_on_screen') return /^Error/.test(r) ? '' : 'On your screen: ' + String(inp.title || inp.term || inp.kind || 'a visual').slice(0, 50);
     if(name === 'show_visual') return 'Drew: ' + String(inp.title || 'a visual').slice(0, 50);
     if(name === 'diagnose_learner') return 'Checked where you stand' + (inp.topic ? ': ' + String(inp.topic).slice(0, 40) : '');
@@ -27020,10 +27023,10 @@ function tutorActionText(name, input, result){
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
     if(name === 'start_my_session') return 'Opened today\'s guided session';
     if(name === 'set_exam_date') return /^Exam date set/.test(r) ? 'Set your exam date to ' + (/^\d{4}-\d{2}-\d{2}$/.test(String(inp.date)) ? new Date(inp.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : String(inp.date || '')) : you(r);
-    if(name === 'lookup_term') return 'Looked up “' + String(inp.term || '').slice(0, 40) + '” in the glossary (Reference tab)';
+    if(name === 'lookup_term') return 'Looked up “' + String(inp.term || '').slice(0, 40) + '” in the glossary (Learn tab)';
     if(name === 'explain_it_back') return inp.topic ? 'Explain it back: ' + String(inp.topic).slice(0, 40) : 'Explain it back';
     if(name === 'open_decision_tool') return inp.isolate || inp.scenarios ? 'Opened a decision tool on its own' : 'Opened a decision tool (Decision tools)';
-    if(name === 'play_podcast' || name === 'open_podcast') return 'Opened your lesson (Reference tab)';
+    if(name === 'play_podcast' || name === 'open_podcast') return 'Opened your lesson (Learn tab)';
     if(name === 'lesson_control') return /^Error/.test(r) ? '' : ({ pause:'Paused the lesson', resume:'Resumed the lesson', work_question:'Your turn: a question on screen', work_keys:'Your turn: tap the keys', say_back:'Your turn: say it back' }[inp.action] || 'Ran the lesson');
     if(name === 'create_lesson') return /^Error/.test(r) ? '' : (inp.add_to_plan ? 'Wrote a lesson and added it to today\'s plan: ' : 'Wrote a lesson: ') + String(inp.title || '').slice(0, 44);
     if(name === 'generate_practice') return /^(Error|Can't|Already)/.test(r) ? you(r).replace(/\.$/, '') : 'Writing new practice questions for you';
@@ -27241,7 +27244,7 @@ function renderTutorActionIndicator(text){
 
 const TUTOR_POINT_TARGETS = {
   next_step:      { tab:'study',      sel:'#nextStepCard',    label:'Your next best step' },
-  start_session:  { tab:'study',      sel:'#modePanel',       label:'Start a session here' },
+  start_session:  { tab:'reference',  sel:'#modePanel',       label:'Start a session here' },
   todays_plan:    { tab:'study',      sel:'#todayPlanCard',   label:"Today's plan" },
   tool_trust:     { tab:'tools', sel:'.card:has(#dt-full-trust)',          label:'Which trust fits?' },
   tool_entity:    { tab:'tools', sel:'.card:has(#dt-full-entity)',         label:'Which business entity fits?' },
@@ -27280,7 +27283,7 @@ const TUTOR_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        tab: { type: 'string', enum: ['study','tools','reference','flashcards','examday'], description: 'Which tab to switch to. flashcards and tools are sub-screens under Practice a specific way on the Study tab.' },
+        tab: { type: 'string', enum: ['study','tools','reference','flashcards','examday'], description: 'Which tab to switch to. flashcards and tools are sub-screens under Practice a specific way on the Learn tab.' },
       },
       required: ['tab'],
     },
@@ -27415,7 +27418,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'mark_subtopic_reviewed',
-    description: "Mark one specific official subtopic as self-reviewed in the student's own syllabus checklist -- the same checklist shown in the Reference tab and used to build the study guide. Only use this after you've actually, substantively taught the student that specific subtopic in this conversation AND they've confirmed they want it marked (e.g. they say \"yes, mark that done,\" \"got it, check that off\") -- never mark something reviewed on your own initiative without them agreeing first, since this changes their own saved progress. It's fine to offer (\"want me to check that off your list?\") after a real explanation, but wait for a yes. The subtopic name doesn't need to match the official wording exactly -- a close, unambiguous match against the real list is enough.",
+    description: "Mark one specific official subtopic as self-reviewed in the student's own syllabus checklist -- the same checklist shown in the Learn tab and used to build the study guide. Only use this after you've actually, substantively taught the student that specific subtopic in this conversation AND they've confirmed they want it marked (e.g. they say \"yes, mark that done,\" \"got it, check that off\") -- never mark something reviewed on your own initiative without them agreeing first, since this changes their own saved progress. It's fine to offer (\"want me to check that off your list?\") after a real explanation, but wait for a yes. The subtopic name doesn't need to match the official wording exactly -- a close, unambiguous match against the real list is enough.",
     input_schema: {
       type: 'object',
       properties: {
@@ -27453,7 +27456,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'lookup_term',
-    description: "Look up a specific CFP term, concept, or dollar figure/limit in the app's reference material and show it to the student, rather than just explaining it yourself in the chat. Use this when they ask what a specific term means (e.g. \"what's a GRAT,\" \"define coinsurance clause\") -- it opens the Reference tab with that term already searched and visible, so they see it in context with related terms nearby and can find it again later. Also use this when they ask about a specific number or limit (e.g. \"what's the RMD age,\" \"what's the FDIC limit\") -- if it's not a glossary term, the app checks its own verified key-numbers reference and returns the figure directly, often with a memory hook. Still give a brief, direct answer in your own reply too; this is in addition to that, not instead of it.",
+    description: "Look up a specific CFP term, concept, or dollar figure/limit in the app's reference material and show it to the student, rather than just explaining it yourself in the chat. Use this when they ask what a specific term means (e.g. \"what's a GRAT,\" \"define coinsurance clause\") -- it opens the Learn tab with that term already searched and visible, so they see it in context with related terms nearby and can find it again later. Also use this when they ask about a specific number or limit (e.g. \"what's the RMD age,\" \"what's the FDIC limit\") -- if it's not a glossary term, the app checks its own verified key-numbers reference and returns the figure directly, often with a memory hook. Still give a brief, direct answer in your own reply too; this is in addition to that, not instead of it.",
     input_schema: {
       type: 'object',
       properties: {
@@ -27464,7 +27467,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'show_readiness_breakdown',
-    description: "Open the 'Why this score' panel under the student's readiness gauge on the Study tab, which shows how many points each exam domain contributes, what is holding each one back, and any points lost to overconfidence. Use this when they ask why their readiness score is what it is, what is dragging it down, or what would raise it fastest -- it is different from show_progress, which shows accuracy details rather than how the score itself is built.",
+    description: "Open the 'Why this score' panel under the student's readiness gauge on the Today tab, which shows how many points each exam domain contributes, what is holding each one back, and any points lost to overconfidence. Use this when they ask why their readiness score is what it is, what is dragging it down, or what would raise it fastest -- it is different from show_progress, which shows accuracy details rather than how the score itself is built.",
     input_schema: { type: 'object', properties: {} },
   },
   {
@@ -27591,12 +27594,12 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'plan_my_study',
-    description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (60 to 360), or the suggested pace from the app if they ask you to set it; otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
+    description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (60 to 360), or the suggested pace from the app if they ask you to set it; otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Today tab under Today's plan.",
     input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 30 to 360. Optional. Applies to today only.' } } },
   },
   {
     name: 'schedule_check_in',
-    description: "Leave the student a short note that appears at the top of the Study tab the next time they open the app on or after a chosen day. Use it only when a follow-up has real value: they asked you to check back, a concept you just worked through is still shaky and a re-test in 1 to 3 days would help, or something time-sensitive needs a nudge. At most one per conversation unless they ask for more. The note is written by you, one or two specific sentences. It is not a phone notification, so never promise a time.",
+    description: "Leave the student a short note that appears at the top of the Today tab the next time they open the app on or after a chosen day. Use it only when a follow-up has real value: they asked you to check back, a concept you just worked through is still shaky and a re-test in 1 to 3 days would help, or something time-sensitive needs a nudge. At most one per conversation unless they ask for more. The note is written by you, one or two specific sentences. It is not a phone notification, so never promise a time.",
     input_schema: { type: 'object', properties: { text: { type: 'string', description: 'The note itself, in your voice to the student, one or two sentences, under 180 characters.' }, days: { type: 'number', description: 'Days from now, 1 to 14.' }, topic: { type: 'string', description: 'The topic to re-test when they tap Quiz me, a few words.' } }, required: ['text', 'days'] },
   },
   {
@@ -27819,7 +27822,7 @@ async function executeTutorTool(toolName, toolInput){
       openPodcastFromStudy();
       const ask = toolInput && toolInput.request ? 'The student asked for this episode specifically; make sure it covers: ' + String(toolInput.request).slice(0, 400) : undefined;
       generatePodcastEpisode(true, ask).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} });
-      return 'Started writing the episode; it will appear in the Reference tab Lessons card in a few seconds; the student taps play (the phone only allows sound after a tap).';
+      return 'Started writing the episode; it will appear in the Learn tab Lessons card in a few seconds; the student taps play (the phone only allows sound after a tap).';
     }
     if(toolName === 'open_formula_drill'){
       showTab('study');
@@ -27924,7 +27927,7 @@ async function executeTutorTool(toolName, toolInput){
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
-      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} ${(() => { const f = fmtStats(); return f.n ? 'Statement-style questions (I, II, III, IV with choices like "I and III only"): ' + f.n + ' answered, ' + Math.round(100 * f.ok / f.n) + '% correct. ' : ''; })()}Time budget: ${plan.minutes} minutes${planTodayOverride() ? ' (set for today only)' : ''} (plan uses about ${plan.used}).${(() => { const pa = studyPaceAdvice(); return pa && pa.rampLed ? ' Days are deliberately lengthening toward a six-hour day with a break in the middle, to build stamina for the real exam.' : ''; })()}${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a ' + (plan.minutes >= 300 ? '15' : '10') + ' minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} ${(() => { const f = fmtStats(); return f.n ? 'Statement-style questions (I, II, III, IV with choices like "I and III only"): ' + f.n + ' answered, ' + Math.round(100 * f.ok / f.n) + '% correct. ' : ''; })()}Time budget: ${plan.minutes} minutes${planTodayOverride() ? ' (set for today only)' : ''} (plan uses about ${plan.used}).${(() => { const pa = studyPaceAdvice(); return pa && pa.rampLed ? ' Days are deliberately lengthening toward a six-hour day with a break in the middle, to build stamina for the real exam.' : ''; })()}${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a ' + (plan.minutes >= 300 ? '15' : '10') + ' minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Today tab under Today's plan.`;
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'queue_next_stop'){
@@ -27960,7 +27963,7 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'show_readiness_breakdown'){
       openReadinessBreakdown();
-      return `Opened the readiness breakdown on the Study tab.`;
+      return `Opened the readiness breakdown on the Today tab.`;
     }
     if(toolName === 'show_progress'){
       showTab('study');
@@ -28038,7 +28041,7 @@ async function executeTutorTool(toolName, toolInput){
 }
 
 // ---- Local guide ------------------------------------------------------------
-// "What should I do next" is answered from the same data the Study tab uses, so it works with or
+// "What should I do next" is answered from the same data the Today tab uses, so it works with or
 // without an API key, and every answer comes with buttons that actually do the thing.
 function tutorGuideBubble(text, actions){
   const bubble = renderTutorMessage('assistant', text);
@@ -28162,7 +28165,7 @@ function tutorLocalGuide(text){
       if(!row || cards.length < 3){ tutorGuideBubble('I could not match that to an official topic with enough cards to build a sheet. Try the topic as it appears in the blueprint, or open Reference to browse.', [{ label: 'Open Reference', primary: true, run: () => showTab('reference') }]); }
       else {
         tutorCreateMaterial({ kind: 'cheat_sheet', title: row.name + ': cheat sheet', topic: row.name, content: cards.map(c => '- **' + c.term + '**: ' + String(c.def).slice(0, 170)).join('\n') })
-          .then(res => { if(/^Created/.test(res)) tutorGuideBubble('Built from your own cards on ' + row.name + ' and saved to your workshop on the Study tab. Reading it, then drilling the topic, is the quickest way to make it stick.', [{ label: 'Drill ' + row.name, primary: true, run: () => { showTab('study'); startSubtopicDrill(row.dom, row.idx); } }]); else tutorGuideBubble(String(res).replace(/^Error: /, '')); });
+          .then(res => { if(/^Created/.test(res)) tutorGuideBubble('Built from your own cards on ' + row.name + ' and saved to your workshop on the Today tab. Reading it, then drilling the topic, is the quickest way to make it stick.', [{ label: 'Drill ' + row.name, primary: true, run: () => { showTab('study'); startSubtopicDrill(row.dom, row.idx); } }]); else tutorGuideBubble(String(res).replace(/^Error: /, '')); });
       }
     } else if(kind === 'quiz'){
       tutorGuideBubble('A mixed adaptive session is the best default: it blends domains, leans on your weak areas and brings back what is due.', [
@@ -28185,7 +28188,7 @@ function tutorLocalGuide(text){
     } else if(kind === 'guide'){
       tutorGuideBubble('Your study guide follows the official topic list and tracks what you have reviewed.', [{ label: 'Open my study guide', primary: true, run: () => openStudyGuide() }]);
     } else if(kind === 'tools'){
-      tutorGuideBubble('Decision tools (under Practice a specific way on the Study tab) has seven tools: trusts, business entities, IRA deductibility, Roth IRA eligibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open Decision tools', primary: true, run: () => showTab('tools') }]);
+      tutorGuideBubble('Decision tools (under Practice a specific way on the Learn tab) has seven tools: trusts, business entities, IRA deductibility, Roth IRA eligibility, Social Security claiming, an options matrix and a plan family tree.', [{ label: 'Open Decision tools', primary: true, run: () => showTab('tools') }]);
     } else if(kind === 'date'){
       const pd = tutorParseDate(text);
       if(pd && pd.days >= 0){
@@ -28346,7 +28349,7 @@ async function askTutorQuick(kind){
     return sendTutorMessage(`What is the best use of my time today? Build me a plan based on where I am and how many days I have left, and walk me through it one step at a time.`);
   } else if(kind==='nextStep'){
     const ns = computeNextStep(stats);
-    return sendTutorMessage(`The Study tab is recommending "${ns.title}". Why is that the right thing for me to do next, and how should I approach it?`);
+    return sendTutorMessage(`The Today tab is recommending "${ns.title}". Why is that the right thing for me to do next, and how should I approach it?`);
   } else if(kind==='weakest'){
     return sendTutorMessage(`Can you explain the key concepts in ${stats.weakestMeta.name} that I should know for the exam?`);
   } else if(kind==='missed'){
@@ -28674,7 +28677,7 @@ function tnActive(){
   return tnList().filter(n => n.state === 'new' && (n.due || n.t) <= now && now - (n.due || n.t) < (TN_EXPIRE[tnKind(n)] || 2 * 86400000) && tnNoteStill(n))
     .sort((a, b) => (TN_PRIORITY[tnKind(a)] - TN_PRIORITY[tnKind(b)]) || (a.t - b.t));
 }
-// Called whenever the app comes to the foreground or the Study tab refreshes. Cheap and quiet.
+// Called whenever the app comes to the foreground or the Today tab refreshes. Cheap and quiet.
 function tnTick(){
   try{
     if(!DATA || !DATA.domainStats) return;
@@ -28782,7 +28785,7 @@ function tnScheduleCheckIn(input){
   tnList().push({ id: 'c' + Date.now().toString(36), key: 'checkin', t: Date.now(), due: due.getTime(), from: 'tutor', topic, text,
     act: { kind: 'ask', label: 'Quiz me', arg: `Check-in${topic ? ' on ' + topic : ''}: ask me one question to see whether it stuck, wait for my answer, then fill in anything I am missing.` }, state: 'new' });
   persist();
-  return `Scheduled for ${due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. It appears as a note at the top of the Study tab the next time they open the app on or after that day. It does not send a phone notification, so say it that way: "I'll have a note waiting for you." Do not promise a time.`;
+  return `Scheduled for ${due.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. It appears as a note at the top of the Today tab the next time they open the app on or after that day. It does not send a phone notification, so say it that way: "I'll have a note waiting for you." Do not promise a time.`;
 }
 
 /* ===========================================================
@@ -29007,7 +29010,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.453';
+const BUILD_ID = '2026-10-22.454';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
