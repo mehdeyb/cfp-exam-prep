@@ -16417,6 +16417,7 @@ function strongestDomains(count){
   return rows.slice(0,count).map(d=>d.key);
 }
 
+let directCacheRejected = false;
 async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
   if(aiMode === 'none'){
     const err = new Error('No API key connected.');
@@ -16435,6 +16436,13 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
     body.model = DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)];
     // Newer models can spend the whole token budget on hidden thinking and return no text at all.
     if(!directThinkingRejected) body.thinking = { type: 'disabled' };
+    // The tutor re-sends ~20k tokens of tools and instructions on every turn and again after each tool call. Marking them cacheable makes repeats faster and far cheaper.
+    if(!directCacheRejected && (tools || body.system.length > 6000)){
+      try{
+        if(tools && tools.length) body.tools = tools.map((t, i) => i === tools.length - 1 ? Object.assign({}, t, { cache_control: { type: 'ephemeral' } }) : t);
+        if(body.system.length > 6000) body.system = [{ type: 'text', text: body.system, cache_control: { type: 'ephemeral' } }];
+      }catch(e){}
+    }
   } else {
     body.model = ARTIFACT_MODEL;
   }
@@ -16477,6 +16485,10 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
   if(!response.ok){
     let detail = '';
     try{ const errJson = await response.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
+    if(aiMode === 'direct' && response.status === 400 && /cache_control|cache/i.test(detail) && !directCacheRejected){
+      directCacheRejected = true;
+      return anthropicCoreOnce({system, messages, maxTokens, tools});
+    }
     if(aiMode === 'direct' && response.status === 400 && /thinking/i.test(detail) && !directThinkingRejected){
       directThinkingRejected = true;
       return anthropicCoreOnce({system, messages, maxTokens, tools});
@@ -26574,7 +26586,9 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'start_my_session') return conductorMaybeStartFromTutor();
     if(toolName === 'walk_through_misses'){
       if(!(DATA.missed || []).length) return `Nothing is on their missed list yet, so there is nothing to walk through. Suggest an adaptive session first.`;
+      const mwBack = !!(DATA.mwProgress && DATA.mwProgress.items && DATA.mwProgress.items.length);
       setTimeout(() => { try{ mwOpen(5); }catch(e){} }, 400);
+      if(mwBack) return `Reopened the guided miss walkthrough where they left off (miss ${(DATA.mwProgress.i || 0) + 1} of ${DATA.mwProgress.items.length}). Say so in a sentence, then stop; it leaves the chat.`;
       return `Opened the guided miss walkthrough (${Math.min(5, DATA.missed.length)} of their ${DATA.missed.length} misses). Tell them in a sentence what it will do, then stop; it leaves the chat.`;
     }
     if(toolName === 'show_chart'){
@@ -27894,7 +27908,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.421';
+const BUILD_ID = '2026-10-22.422';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
