@@ -3549,7 +3549,7 @@
         <button type="button" class="chip" onclick="askTutorAbout('Build me a new custom tool or study mode for whatever I most need to pass the exam. Say what it is for first.')">Build me a custom tool</button>
         <button type="button" class="chip" onclick="askTutorAbout('Walk me through a time value of money problem on my HP 10bII+, one step at a time, and check my setup as we go.')">Practice a TVM problem</button>
       </div>
-      <p class="hint">Five trees give you a client scenario to walk: read the facts, choose the branch at each question, and get told right or wrong at every turn. Switch any tree to Explore to tap through without a scenario. The options matrix and plan tree are for exploring.</p>
+      <p class="hint">Walk a client scenario, pick the branch at each question, and get told why. Switch a tree to Explore to tap through freely.</p>
     </div>
 
     <div class="card" id="customToolsCard" style="display:none;">
@@ -23179,7 +23179,7 @@ function renderPaceCard(){
   const ps = DATA.paceStats;
   const per = PACE_REAL_SECONDS;
   const marks = [30,60,90,120,150,180].map(m => ({ m, q: Math.round(m/FULL_EXAM_SECTION_MINUTES*FULL_EXAM_SECTION_SIZE) }));
-  let html = `<p class="hint" style="margin-top:0;">Each 3-hour section holds about ${FULL_EXAM_SECTION_SIZE} questions, which works out to roughly <b>${paceFmt(per)} per question</b>. Each section has its own three-hour clock, so plan to use the time in each. The clock is pooled across the section, so a quick question gives time to a harder one. A simple rule: if you are not at these question numbers by these minutes, speed up.</p>`;
+  let html = `<p class="hint" style="margin-top:0;">Each 3-hour section has about ${FULL_EXAM_SECTION_SIZE} questions: roughly <b>${paceFmt(per)} per question</b>. The clock is pooled, so a quick one buys time for a hard one. Behind these marks? Speed up.</p>`;
   html += `<div class="pace-marks">${marks.map(x => `<div><b>${x.m} min</b><span>question ${x.q}</span></div>`).join('')}</div>`;
   if(ps && ps.n >= 15){
     const avg = ps.ms/ps.n/1000;
@@ -28965,7 +28965,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.443';
+const BUILD_ID = '2026-10-22.444';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
