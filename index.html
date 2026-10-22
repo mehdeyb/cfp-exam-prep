@@ -12507,9 +12507,11 @@ async function generatePodcastEpisode(forceNew, refine){
   try{
     prompt += '\n\nA screen beside the audio shows each key term, formula, figure and missed question as it comes up, so say the full name of each one the first time you use it and state exact figures plainly. Write for the ear: the first time you use an acronym, say what it stands for and then the letters, in capitals (for example, Required Minimum Distribution, R M D); write IRS forms and code sections as Form 1040 or Section 529 (never as a long number), use no symbols, tables or parentheses, and keep every dollar limit, rate and date to figures you are certain of for the current tax year, saying so plainly when something changes each year instead of guessing.';
     if(refine) prompt += '\n\nRevision brief from the student: ' + refine;
-    const requestArgs = { messages: [{role:'user', content: prompt}], maxTokens: lengthConfig.maxTokens };
+    prompt += PODCAST_DECK_BRIEF.replace('SLIDECOUNT', String(episodeLength === 'short' ? '4 to 6' : episodeLength === 'deep' ? '9 to 13' : '6 to 9'));
+    const requestArgs = { messages: [{role:'user', content: prompt}], maxTokens: lengthConfig.maxTokens + 1400 };
     if(systemPrompt) requestArgs.system = systemPrompt;
-    const reply = (await anthropicMessagesRequest(requestArgs)).trim();
+    const rawReply = (await anthropicMessagesRequest(requestArgs)).trim();
+    const deckParts = podcastExtractDeck(rawReply), reply = deckParts.script || rawReply.replace(/^\s*SLIDE:.*$/gim, '').trim();
     if((episodeType === 'formulas' || episodeType === 'mistakes') && usesWrongCalculatorConventionInProse(reply)){
       const err = new Error('Podcast script used the wrong calculator convention');
       err.code = 'CALC_CONVENTION_MISMATCH';
@@ -12518,6 +12520,7 @@ async function generatePodcastEpisode(forceNew, refine){
     if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {};
     if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {};
     DATA.podcastEpisodes[cacheKey] = reply;
+    DATA.podcastSlides = DATA.podcastSlides || {}; if(deckParts.slides.length >= 3) DATA.podcastSlides[cacheKey] = { ai: deckParts.slides, tutor: [], co: true }; else delete DATA.podcastSlides[cacheKey];
     DATA.podcastGeneratedAt[cacheKey] = Date.now();
     if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
     DATA.podcastPersonalized[cacheKey] = wasPersonalized;
@@ -12612,11 +12615,6 @@ function podcastAutoSlides(text, key, domainKey, label){
     if(bi > 0){ seenQ.add(id); out.push({ at:bi, kind:'question', src:'auto', qid:id }); }
   });
   out.sort((a, b) => a.at - b.at);
-  // At the end: what was covered, with the next move.
-  if(chunks.length > 6){
-    const cov = out.filter(o => o.kind === 'term' || o.kind === 'formula' || o.kind === 'question');
-    if(cov.length) out.push({ at: chunks.length - 1, kind:'recap', src:'auto', items: cov.slice(0, 8).map(o => ({ k:o.kind, t:o.term || o.title || ((allQuestions().find(q => q.id === o.qid) || {}).q || 'A missed question') })), qids: out.filter(o => o.kind === 'question').map(o => o.qid) });
-  }
   _stageAutoCache[ck] = out;
   return out;
 }
@@ -12624,8 +12622,19 @@ function podcastStoredSlides(key){ const s = (DATA.podcastSlides || {})[key]; re
 function podcastDeck(key, text, domainKey, label){
   const st = podcastStoredSlides(key), auto = podcastAutoSlides(text, key, domainKey, label);
   const ai = Array.isArray(st.ai) ? st.ai : [];
-  const keepAuto = auto.filter(a => a.kind === 'intro' || !ai.some(x => Math.abs(x.at - a.at) <= 2));
-  return keepAuto.concat(ai, st.tutor || []).sort((a, b) => (a.at - b.at) || ((a.src === 'tutor') - (b.src === 'tutor')));
+  const keepAuto = st.co
+    ? auto.filter(a => (a.kind === 'intro' && !ai.some(x => x.at === 0)) || a.kind === 'question' || a.kind === 'recap')   // the deck was written with the script: only the misses and the recap are added
+    : auto.filter(a => a.kind === 'intro' || !ai.some(x => Math.abs(x.at - a.at) <= 2));
+  const all = keepAuto.concat(ai, st.tutor || []).sort((a, b) => (a.at - b.at) || ((a.src === 'tutor') - (b.src === 'tutor')));
+  // At the very end: what was covered, with the next move. Shown when the episode finishes (or from the dots).
+  const cov = all.filter(o => o.src !== 'tutor' && ['term', 'formula', 'question', 'calc', 'chart', 'number', 'compare', 'table', 'bar'].includes(o.kind));
+  if(cov.length >= 2){
+    const nm = o => o.kind === 'question' ? ((allQuestions().find(q => q.id === o.qid) || {}).q || 'A missed question') : (o.term || o.title || o.big || o.kind);
+    const lab = { term:'Term', formula:'Formula', question:'Missed', calc:'Keys', chart:'Chart', number:'Figure', compare:'Compare', table:'Table', bar:'Chart' };
+    let n = 0; try{ n = splitIntoSpeechChunks(text).length; }catch(e){}
+    all.push({ at: n || 9999, kind:'recap', src:'auto', items: cov.slice(0, 8).map(o => ({ k: lab[o.kind] || 'Idea', t: nm(o) })), qids: cov.filter(o => o.kind === 'question').map(o => o.qid) });
+  }
+  return all;
 }
 function podcastSlideAtIndex(deck, idx){ let best = deck[0] || null; deck.forEach(s => { if(s.at <= idx) best = s; }); return best; }
 // ---- drawing a slide ----
@@ -12635,6 +12644,17 @@ function stageQuestionHtml(q){
     return `<li class="pst-c${right ? ' right' : ''}${mine ? ' pick' : ''}"><b>${L[k]}</b><span>${mine ? '<i>You chose</i> ' : ''}${right ? '<i>Correct</i> ' : ''}${stageEsc(c)}</span></li>`; }).join('');
   const why = mwFirstSentence((q.rationale || [])[q.correct] || '');
   return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button>${(q.calcSteps || (DATA.calcStepsCache || {})[q.id]) ? `<button type="button" class="btn ghost" onclick="stageShowCalc(allQuestions().find(x=>x.id==='${q.id}'))">Show the keys</button>` : ''}</div>`;
+}
+function stageGo(what, arg){
+  try{ if(naturalSpeechState.active && !naturalSpeechState.paused){ pauseSpeechSequence(); setPodcastPlayButtonState('Resume'); } }catch(e){}
+  stageCloseFull();
+  setTimeout(() => {
+    try{
+      if(what === 'card'){ const c = allFlashcards().find(x => x.term === arg); if(c) startFlashcardSet([c], 'custom'); }
+      else if(what === 'formula'){ showTab('study'); openFormulaDrill(arg); }
+      else if(what === 'calc'){ openTvmTool(); }
+    }catch(e){}
+  }, 120);
 }
 function stageWalkMiss(ids){
   try{ if(naturalSpeechState.active && !naturalSpeechState.paused){ pauseSpeechSequence(); setPodcastPlayButtonState('Resume'); } }catch(e){}
@@ -12754,17 +12774,17 @@ function stageSlideNode(sl){
     if(!q) return null;
     d.innerHTML = stageQuestionHtml(q);
   } else if(sl.kind === 'calc'){
-    d.innerHTML = stageCalcHtml(sl);
+    d.innerHTML = stageCalcHtml(sl) + `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('calc')">Try one on the calculator</button></div>`;
   } else if(sl.kind === 'recap'){
-    const li = (sl.items || []).map(x => `<li><i>${x.k === 'term' ? 'Term' : x.k === 'formula' ? 'Formula' : 'Missed'}</i>${E(stageClip(x.t, 80))}</li>`).join('');
+    const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
     d.innerHTML = `<div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This episode'}</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
   } else if(sl.kind === 'term'){
-    d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>`;
+    d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
   } else if(sl.kind === 'formula'){
     const vars = (Array.isArray(sl.vars) ? sl.vars : []).slice(0, 6).map(v => `<li><b>${E(stageClip(v.sym || v[0], 12))}</b><span>${E(stageClip(v.meaning || v[1], 70))}</span></li>`).join('');
-    d.innerHTML = `<div class="pst-kicker">Formula</div><div class="pst-title">${E(sl.title)}</div><div class="pst-formula">${E(sl.formula)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : ''}${vars ? `<ul class="pst-vars">${vars}</ul>` : ''}`;
+    d.innerHTML = `<div class="pst-kicker">Formula</div><div class="pst-title">${E(sl.title)}</div><div class="pst-formula">${E(sl.formula)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : ''}${vars ? `<ul class="pst-vars">${vars}</ul>` : ''}${typeof FD_GENS !== 'undefined' && FD_GENS[sl.title] ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('formula',${stageEsc(JSON.stringify(sl.title)).replace(/'/g, '&#39;')})">Drill this formula</button></div>` : ''}`;
   } else if(sl.kind === 'number'){
     d.innerHTML = `<div class="pst-kicker">${E(sl.title || 'By the numbers')}</div><div class="pst-big">${E(sl.big)}</div><div class="pst-text">${E(sl.text || '')}</div>`;
   } else if(sl.kind === 'compare'){
@@ -12880,7 +12900,7 @@ function stageShow(sl, src){
   stageState.hi = stageState.hist.length - 1;
   stageDraw();
 }
-function stageGoDeck(i){ const sl = stageState.deck[i]; if(!sl) return; if(naturalSpeechState.active && sl.src !== 'tutor'){ podcastJumpToSentence(sl.at); } else { stageState.podId = stageId(sl); stageShow(sl, 'browse'); } }
+function stageGoDeck(i){ const sl = stageState.deck[i]; if(!sl) return; if(sl.kind === 'recap'){ stageState.podId = stageId(sl); stageShow(sl, 'browse'); return; } if(naturalSpeechState.active && sl.src !== 'tutor'){ podcastJumpToSentence(sl.at); } else { stageState.podId = stageId(sl); stageShow(sl, 'browse'); } }
 function stageStep(dir){
   const j = stageState.hi + dir; if(j < 0 || j >= stageState.hist.length) return;
   stageState.hi = j; stageState.cur = stageState.hist[j]; stageDraw();
@@ -12928,6 +12948,19 @@ function podcastStagePrepare(){
 }
 // ---- slides written by the AI for this episode (once per episode, in the background) ----
 const _stageAiBusy = {};
+function podcastBuildAiSlide(x, at, qset){
+  const k = String(x.kind || ''); const sl = { at, kind:k, src:'ai' };
+      if(k === 'term' && x.term && x.def){ sl.term = stageClip(x.term, 60); sl.def = stageClip(x.def, 200); }
+      else if(k === 'formula' && x.formula){ sl.title = stageClip(x.title, 50); sl.formula = stageClip(x.formula, 90); sl.text = stageClip(x.text, 140); sl.vars = (Array.isArray(x.vars) ? x.vars : []).slice(0, 6).map(v => ({ sym:stageClip(v && v.sym, 12), meaning:stageClip(v && v.meaning, 70) })); }
+      else if(k === 'number' && x.big){ sl.title = stageClip(x.title, 40); sl.big = stageClip(x.big, 24); sl.text = stageClip(x.text, 150); }
+      else if(k === 'compare' && x.left && x.right){ sl.title = stageClip(x.title, 50); sl.left = { head:stageClip(x.left.head, 40), points:(x.left.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; sl.right = { head:stageClip(x.right.head, 40), points:(x.right.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; }
+      else if(['steps','bar','table','line','pie'].includes(k)){ Object.assign(sl, { title:stageClip(x.title, 60), labels:x.labels, series:x.series, unit:x.unit, columns:x.columns, rows:x.rows, steps:x.steps }); if(!tutorVisualHtml(sl)) return null; }
+      else if(k === 'calc'){ const c = stageCalcSlide(x.title, x.steps, { src:'ai', at }); if(!c) return null; Object.assign(sl, c); }
+      else if(k === 'chart' && x.chart){ let r = null; try{ r = tcBuild(x.chart); }catch(e){} if(!r || r.error) return null; sl.chart = x.chart; sl.title = stageClip(x.chart.title || x.title, 60); }
+      else if(k === 'question' && qset.has(x.qid)){ sl.qid = x.qid; }
+      else return null;
+  return sl;
+}
 async function podcastStageAi(key, text, domainKey, label){
   try{
     const st = podcastStoredSlides(key);
@@ -12947,17 +12980,7 @@ async function podcastStageAi(key, text, domainKey, label){
     (Array.isArray(arr) ? arr : []).slice(0, 14).forEach(x => {
       if(!x || typeof x !== 'object') return;
       const at = Math.max(1, Math.min(chunks.length - 1, parseInt(x.at, 10) || 0)); if(!at) return;
-      const k = String(x.kind || ''); const sl = { at, kind:k, src:'ai' };
-      if(k === 'term' && x.term && x.def){ sl.term = stageClip(x.term, 60); sl.def = stageClip(x.def, 200); }
-      else if(k === 'formula' && x.formula){ sl.title = stageClip(x.title, 50); sl.formula = stageClip(x.formula, 90); sl.text = stageClip(x.text, 140); sl.vars = (Array.isArray(x.vars) ? x.vars : []).slice(0, 6).map(v => ({ sym:stageClip(v && v.sym, 12), meaning:stageClip(v && v.meaning, 70) })); }
-      else if(k === 'number' && x.big){ sl.title = stageClip(x.title, 40); sl.big = stageClip(x.big, 24); sl.text = stageClip(x.text, 150); }
-      else if(k === 'compare' && x.left && x.right){ sl.title = stageClip(x.title, 50); sl.left = { head:stageClip(x.left.head, 40), points:(x.left.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; sl.right = { head:stageClip(x.right.head, 40), points:(x.right.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; }
-      else if(['steps','bar','table','line','pie'].includes(k)){ Object.assign(sl, { title:stageClip(x.title, 60), labels:x.labels, series:x.series, unit:x.unit, columns:x.columns, rows:x.rows, steps:x.steps }); if(!tutorVisualHtml(sl)) return; }
-      else if(k === 'calc'){ const c = stageCalcSlide(x.title, x.steps, { src:'ai', at }); if(!c) return; Object.assign(sl, c); }
-      else if(k === 'chart' && x.chart){ let r = null; try{ r = tcBuild(x.chart); }catch(e){} if(!r || r.error) return; sl.chart = x.chart; }
-      else if(k === 'question' && qset.has(x.qid)){ sl.qid = x.qid; }
-      else return;
-      ok.push(sl);
+      const sl = podcastBuildAiSlide(x, at, qset); if(sl) ok.push(sl);
     });
     ok.sort((a, b) => a.at - b.at);
     DATA.podcastSlides = DATA.podcastSlides || {}; DATA.podcastSlides[key] = Object.assign(podcastStoredSlides(key), { ai: ok });
@@ -12966,6 +12989,30 @@ async function podcastStageAi(key, text, domainKey, label){
     if(podcastCacheKey() === key) podcastStagePrepare();
   }catch(e){ try{ _stageAiBusy[key] = false; }catch(_){} }
 }
+
+// A script written together with its deck: lines that start with SLIDE: carry the slide for the idea that follows and are never spoken.
+function podcastExtractDeck(reply){
+  const lines = String(reply || '').split('\n'), spoken = [], marks = [];
+  lines.forEach(l => {
+    const m = l.match(/^\s*(?:\*\*)?SLIDE:?(?:\*\*)?\s*(\{.*\})\s*$/i);
+    if(m){ try{ marks.push({ line: spoken.length, x: JSON.parse(m[1]) }); }catch(e){} }
+    else if(!/^\s*(?:\*\*)?SLIDE:/i.test(l)) spoken.push(l);
+  });
+  const script = spoken.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  let total = 0; try{ total = splitIntoSpeechChunks(script).length; }catch(e){}
+  const qset = new Set((allQuestions() || []).map(q => q.id)), slides = [];
+  marks.slice(0, 16).forEach(mk => {
+    let at = 0; try{ at = mk.line ? splitIntoSpeechChunks(spoken.slice(0, mk.line).join('\n')).length : 0; }catch(e){}
+    at = Math.max(0, Math.min(Math.max(0, total - 1), at));
+    const sl = podcastBuildAiSlide(mk.x || {}, at, qset); if(sl) slides.push(sl);
+  });
+  slides.sort((a, b) => a.at - b.at);
+  // Two slides cannot share a sentence (consecutive lines from one host are said as one): nudge the earlier one back, drop it if there is no room.
+  for(let i = slides.length - 1; i > 0; i--){ if(slides[i - 1].at >= slides[i].at) slides[i - 1].at = slides[i].at - 1; }
+  const fin = slides.filter(x => x.at >= 0);
+  return { script, slides: fin };
+}
+const PODCAST_DECK_BRIEF = '\n\nLAY IT OUT AS A SLIDE DECK. You are a tutor walking a student through a slide deck, so write the script and the deck together. Before each new idea, put one line by itself that starts with SLIDE: followed by one JSON object on that same line: the slide the student sees while you talk about that idea. These lines are never spoken. The very first line of your reply is the agenda slide, {"kind":"steps","title":"What we will cover","steps":[{"title":"..."}]}. After that, about one slide per idea (SLIDECOUNT slides in all). Kinds and shapes: {"kind":"term","term":"..","def":"one plain sentence"}; {"kind":"formula","title":"..","formula":"plain text","text":"when to use it","vars":[{"sym":"r","meaning":".."}]}; {"kind":"number","title":"..","big":"$16,100","text":"what it means"}; {"kind":"compare","title":"A vs B","left":{"head":"A","points":[".."]},"right":{"head":"B","points":[".."]}}; {"kind":"steps","title":"..","steps":[{"title":"..","detail":".."}]}; {"kind":"table","title":"..","columns":[".."],"rows":[[".."]]}; {"kind":"bar","title":"..","labels":[".."],"series":[{"name":"x","values":[1,2]}],"unit":"%"}; {"kind":"calc","title":"..","steps":[{"title":"Type 360, press [N]"}]} for any HP 10bII+ problem you work (every key in [square brackets], start with Orange Shift then [C ALL]); {"kind":"chart","chart":{"kind":"growth","title":"..","principal":10000,"rates":[4,7],"years":20}} (or kind amortization with loan, rate and years). Rules: each slide must show exactly what you say next, never something you do not discuss; every figure on a slide must be one you say aloud or are certain of; prefer a worked-numbers visual (calc, chart, table, compare, number) over a bare definition; keep every text field short. Every line that does not start with SLIDE: is spoken aloud.';
 // ---- the tutor's own pushes ----
 function stageSlideFromTool(a){
   a = a || {};
@@ -13112,7 +13159,7 @@ function setPodcastPlayButtonState(state){
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
-    onDone: () => { podcastClearPos(); setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
+    onDone: () => { try{ const rc = stageState.deck.find(x => x.kind === 'recap'); if(rc){ stageState.podId = stageId(rc); stageShow(rc, 'podcast'); } }catch(e){} podcastClearPos(); setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
     onChunkStart: (index) => { podcastSavePos(index); setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ podcastStageSync(index); stageTransportSync(); }catch(e){} try{ podcastSetCaption(index); podcastUpdateProgress(index); }catch(e){} try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
   };
 }
@@ -28675,7 +28722,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.432';
+const BUILD_ID = '2026-10-22.433';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
