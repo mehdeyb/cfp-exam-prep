@@ -16038,6 +16038,18 @@ function salvageJsonObjects(text){
   return out;
 }
 
+function stripAiJson(raw){
+  let t = String(raw == null ? '' : raw).trim().replace(/^```(?:json)?/i,'').replace(/```\s*$/,'').trim();
+  if(t && t[0] !== '[' && t[0] !== '{'){
+    const f = t.search(/[\[{]/);
+    if(f >= 0){
+      const close = t[f] === '[' ? ']' : '}';
+      const l = t.lastIndexOf(close);
+      if(l > f) t = t.slice(f, l + 1);
+    }
+  }
+  return t;
+}
 function parseJsonArrayResilient(cleaned){
   try{ const arr = JSON.parse(cleaned); return Array.isArray(arr) ? arr : []; }
   catch(e){ return salvageJsonObjects(cleaned); }
@@ -16098,7 +16110,7 @@ function generatedDuplicatesBank(item, domainKey){
 // used to steer a retry instead of repeating the same mistake.
 function diagnoseRejectedQuestion(rawText){
   try{
-    const cleaned = String(rawText||'').trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    const cleaned = stripAiJson(rawText);
     const arr = parseJsonArrayResilient(cleaned);
     const item = arr && arr[0];
     if(!item) return 'It was not a valid JSON array with one question object.';
@@ -16139,7 +16151,7 @@ function qHealKey(q){
 }
 function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
   opts = opts || {};
-  let cleaned = rawText.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  let cleaned = stripAiJson(rawText);
   const arr = parseJsonArrayResilient(cleaned);
   if(!arr.length) return [];
   const out = [];
@@ -16216,7 +16228,7 @@ Output nothing except the JSON array.`;
 }
 
 function safeParseFlashcards(rawText, domainKey){
-  let cleaned = rawText.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  let cleaned = stripAiJson(rawText);
   const arr = parseJsonArrayResilient(cleaned);
   if(!arr.length) return [];
   const out = [];
@@ -16675,7 +16687,7 @@ Return ONLY a raw JSON object, no markdown fences, in exactly this shape:
 {"title":"Client names — short descriptor","scenario":"the case text","questions":[{"domain":"key","q":"question text","choices":["","","",""],"correct":0,"rationale":["","","",""],"cue":{"ev":["exact phrase"],"noise":["exact phrase"],"note":"one sentence"}}]}`;
 }
 function parseGeneratedCase(raw, wantedDomains, lenient){
-  let t = String(raw).trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  let t = stripAiJson(raw);
   let obj = null;
   try{ obj = JSON.parse(t); }catch(e){
     const a = t.indexOf('{'), b = t.lastIndexOf('}');
@@ -26478,7 +26490,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.349';
+const BUILD_ID = '2026-10-21.350';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
