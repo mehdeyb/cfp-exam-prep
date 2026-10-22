@@ -9418,6 +9418,42 @@ function buildStudyPlanCore(minutes){
     adaptive3: () => { if(answered === 0) return null;
       return { id:'adaptive3', title:`Third adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
         why:'A six-hour day ends with a late mixed round on purpose. The real exam asks for your best thinking in its last hour, and practicing that while tired is the training.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - 2 * ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
+    checkpoint2: () => {
+      if(answered < 100 || !steps.some(x => x.id === 'checkpoint')) return null;
+      return { id:'checkpoint2', title:`Second timed set (${MOCK_QUESTION_COUNT} questions)`, minutes:MOCK_MINUTES,
+        why:'Two timed sets in one day, the second one while you are tired, is practice for the second half of the real exam, where careless misses creep in. Same pace, same rules, no looking things up.',
+        need:MOCK_QUESTION_COUNT, have: Math.max(0, Math.min((cnt.mock || 0) - MOCK_QUESTION_COUNT, MOCK_QUESTION_COUNT)), unit:'questions', run: () => { showTab('study'); startMock(); } };
+    },
+    case3: () => {
+      if(answered < 100) return null;
+      const f1 = L.targets.caseId, f2 = L.targets.caseId2;
+      const stats = DATA.caseStats || {};
+      const pool = allCases().filter(c => c.id !== f1 && c.id !== f2 && caseQuestions(c.id).length).sort((a, b) => ((stats[a.id] || {}).attempts || 0) - ((stats[b.id] || {}).attempts || 0));
+      const pickId = planTarget('caseId3', (pool[0] || {}).id || null);
+      const pick = pickId ? caseById(pickId) : null; if(!pick) return null;
+      const caseN = Math.max(1, caseQuestions(pick.id).length);
+      const prior = ((L.snap.case || {}).need || 0) + ((L.snap.case2 || {}).need || 0);
+      return { id:'case3', title:`Third case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(Math.max(0, (cnt.case || 0) - prior), caseN), unit:'questions',
+        why:'The real exam is built from client cases. A third one late in a long day trains the hardest part: reading carefully when you are tired.', run: () => { showTab('study'); startCase(pick.id); } };
+    },
+    figures2: () => {
+      const fr = figFreshness(); const g1 = L.targets.figGoal || 0;
+      if(!g1 || fr.due - g1 < 4) return null;
+      const goal = Math.max(4, Math.min(8, planTarget('figGoal2', Math.min(8, fr.due - g1))));
+      const have = Math.min(goal, Math.max(0, (L.figs || []).length - g1));
+      return { id:'figures2', title:`Refresh ${goal} more key figures`, minutes: Math.max(4, Math.ceil(goal * 0.8)), need:goal, have, unit:'figures',
+        why:'Limits and thresholds fade fastest, and a second short round after a long stretch of other work is a spaced repeat that locks them in.',
+        run: () => { showTab('study'); startFigureDrill(goal - have > 0 ? goal - have : goal); } };
+    },
+    tutor2: () => {
+      if(missedN < 8 || !steps.some(x => x.id === 'tutor')) return null;
+      return { id:'tutor2', title:'Walk through 5 more of your misses', minutes: 8,
+        why:'A second pass at the end of a long day, when the same mistakes tend to show up again, shows which reasoning slips are habits.',
+        manual:true, run: () => { mwOpen(5); } };
+    },
+    weak6: () => { const t = wkAt(5); if(!t) return null;
+      return { id:'weak6', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Sixth on your list of weak topics (${accTxt(t)}).`,
+        run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     weak5: () => { const t = wkAt(4); if(!t) return null;
       return { id:'weak5', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fifth on your list of weak topics (${accTxt(t)}). A six-hour day has room for it.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
@@ -9568,9 +9604,18 @@ function buildStudyPlanCore(minutes){
       steps.push(st); used += st.minutes;
     });
   }
+  // Which extras a long day gets first depends on where you are: shaky accuracy or many misses put repair first;
+  // strong accuracy puts exam-style work (timed sets, cases) first; a close exam date favors timed work too.
+  const longDayExtras = () => {
+    const l = (DATA.recentAccuracyLog || []), acc = l.length ? l.filter(e => e.correct).length / l.length : 0;
+    const repair = ['weak4','tutor2','weak5','weak6'], exam = ['checkpoint2','case2','case3','adaptive3'], rest = ['read','cards2','calc2','figures2'];
+    const strong = answered >= 100 && acc >= 0.72 && missedN < 12 && (days === null || days <= 10);
+    const lead = strong ? exam.concat(repair, rest) : (missedN >= 10 || acc < 0.62) ? repair.concat(rest.slice(0, 1), exam, rest.slice(1)) : rest.slice(0, 1).concat(exam.slice(0, 2), repair.slice(0, 1), rest.slice(1), exam.slice(2), repair.slice(1));
+    return lead;
+  };
   // A long day: once the first pass is placed and time is left, add more of what helps most, still within the budget.
   if(minutes >= 200 && !['taper','rest','exam','after'].includes(phase.key)){
-    ['read','weak4','cards2','calc2','case2'].concat(minutes >= 300 ? ['adaptive3','weak5'] : []).forEach(k => {
+    (minutes >= 300 ? longDayExtras() : ['read','weak4','cards2','calc2','case2']).forEach(k => {
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
       if(!worked && used + st.minutes > minutes) return;
@@ -9645,6 +9690,11 @@ const CONDUCTOR_CUES = {
   tool: 'Pick the answer at each fork yourself before you read why. The reasoning is what transfers to the exam.',
   listen: 'Listen without a screen if you can, and pause to say the key idea back before the episode does.'
 };
+['adaptive2','adaptive3'].forEach(k => { CONDUCTOR_CUES[k] = CONDUCTOR_CUES.adaptive; });
+['weak2','weak3','weak4','weak5','weak6'].forEach(k => { CONDUCTOR_CUES[k] = CONDUCTOR_CUES.weak; });
+['case2','case3'].forEach(k => { CONDUCTOR_CUES[k] = CONDUCTOR_CUES.case; });
+CONDUCTOR_CUES.checkpoint2 = 'Same pace and rules as the first one. Notice where your focus slips when you are tired, and slow down on the qualifiers.';
+CONDUCTOR_CUES.figures2 = CONDUCTOR_CUES.figures; CONDUCTOR_CUES.tutor2 = 'Name the slip out loud each time. Habits show up as the same reason twice.';
 function conductorState(){
   const c = (typeof DATA !== 'undefined' && DATA) ? DATA.conductor : null;
   if(!c) return null;
@@ -10310,16 +10360,16 @@ function planRefForSession(sess){
   const all = plan.steps.concat(plan.blocks || []).filter(x => x && !x.manual && x.need > 0);
   const byId = id => all.find(x => x.id === id);
   let st = null;
-  if(sess.mode === 'adaptive'){ const a = byId('adaptive'), b = byId('adaptive2'); st = (a && !a.done) ? a : ((b && !b.done) ? b : (a || b)); }
+  if(sess.mode === 'adaptive'){ const l = ['adaptive','adaptive2','adaptive3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
   else if(sess.mode === 'review') st = byId('missed');
-  else if(sess.mode === 'case'){ const a = byId('case'), b = byId('case2'); st = (a && !a.done) ? a : ((b && !b.done) ? b : (a || b)); }
-  else if(sess.mode === 'mock') st = byId('checkpoint');
+  else if(sess.mode === 'case'){ const l = ['case','case2','case3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
+  else if(sess.mode === 'mock'){ const l = ['checkpoint','checkpoint2'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
   else if(sess.mode === 'drill'){
     let want = null;
     try{
       if(sess.drillTopic){ const m = planDayLog().meta[sess.drillTopic]; if(m) want = m.name; }
     }catch(e){}
-    const weak = ['weak','refresh','gap','gap2','weak2','weak3','weak4'].map(byId).filter(Boolean);
+    const weak = ['weak','refresh','gap','gap2','weak2','weak3','weak4','weak5','weak6'].map(byId).filter(Boolean);
     st = (want && weak.find(x => x.title === 'Drill: ' + want || x.title === 'New ground: ' + want || x.title === 'Keep fresh: ' + want)) || weak.find(x => !x.done) || weak[0] || null;
   }
   if(!st) return null;
@@ -10362,7 +10412,7 @@ function planNextHtml(nxt){
 function planGoNext(id){
   try{
     const inQuiz = document.body.classList.contains('quiz-active');
-    const sessionIds = ['adaptive','adaptive2','weak','refresh','gap','gap2','weak2','weak3','weak4','missed','case','case2','checkpoint'];
+    const sessionIds = ['adaptive','adaptive2','adaptive3','weak','refresh','gap','gap2','weak2','weak3','weak4','weak5','weak6','missed','case','case2','case3','checkpoint','checkpoint2'];
     if(inQuiz && !sessionIds.includes(id)) exitToMenu();
     runPlanStep(id);
   }catch(e){}
@@ -27491,7 +27541,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.400';
+const BUILD_ID = '2026-10-22.401';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
