@@ -8826,10 +8826,13 @@ function buildStudyPlanCore(minutes){
   const ov = planOverrideToday();
   const ovPins = ov ? ov.pins.map(x => { let st = null; try{ st = subtopicStats(x.key, x.idx); }catch(e){} return { key:x.key, idx:x.idx, name:x.name, flag:{ reason: ov.reason }, st: st || { acc:null, attempts:0 } }; }) : [];
   const workedKeys = Object.keys(L.drill).filter(k => L.drill[k] > 0 && L.meta[k]);
-  const wkList = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
+  const wkList0 = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
     .concat(ovPins.filter(w => !workedKeys.includes(w.key + '-' + w.idx)))
     .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)))
     .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !tutorFlagged.some(t => t.key === w.key && t.idx === w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)));
+  // A topic that already has its own step today (new ground, keep fresh) is not offered again as a drill, so one set of answers can never count twice.
+  const claimedTopics = new Set([L.targets.gapKey, L.targets.gapKey2, L.targets.freshKey].filter(Boolean));
+  const wkList = wkList0.filter(w => !claimedTopics.has(w.key + '-' + w.idx));
   const wkAt = n => wkList[n] || null;
   const wk = wkAt(0);
   const haveFor = w => (L.drill[w.key + '-' + w.idx] || 0);
@@ -8859,32 +8862,32 @@ function buildStudyPlanCore(minutes){
       why: (() => { const u = coverageUnderserved(2); return u.length ? `Weighted toward ${u.map(d => d.name).join(' and ')}, which have had the least attention lately for their share of the exam, so nothing on the blueprint goes cold.` : null; })() || (dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.'),
       need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
     gap: () => {
-      const g = exposureGaps(1)[0], pinned = planDayLog().targets.gapKey;
+      const wkSkip = wkList.slice(0, 4).map(w => w.key + '-' + w.idx), g = exposureGaps(1, wkSkip)[0], pinned = planDayLog().targets.gapKey;
       const key = pinned || (g ? planTarget('gapKey', g.key) : null);
       const t = key ? exposureModel().topics.find(x => x.key === key) : null;
       if(!t) return null;
       const need = Math.min(8, t.size);
-      return { id:'gap', title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+      return { id:'gap', topic:t.key, title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
         why: t.state === 'new' ? `You have not seen this one yet, and it is part of what the exam can ask. A first pass now beats meeting it cold.` : `Only a few tries so far, not enough to know if it holds. A real pass makes it count.`,
         run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
     },
     gap2: () => {
-      const first = planDayLog().targets.gapKey; const g = exposureGaps(1, [first])[0]; if(!first || !g) return null;
+      const first = planDayLog().targets.gapKey; const g = exposureGaps(1, [first].concat(wkList.slice(0, 4).map(w => w.key + '-' + w.idx)))[0]; if(!first || !g) return null;
       const key = planTarget('gapKey2', g.key), t = exposureModel().topics.find(x => x.key === key); if(!t) return null;
       const need = Math.min(8, t.size);
-      return { id:'gap2', title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+      return { id:'gap2', topic:t.key, title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
         why:`Next on the list of topics not yet covered well. With today's time there is room to widen the net a bit more.`,
         run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
     },
     weak: () => {
-      if(wk) return { id:'weak', title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
+      if(wk) return { id:'weak', topic:wk.key + '-' + wk.idx, title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
         why: wk.flag ? `Your tutor flagged this after your last conversation${wk.flag.reason ? ': ' + wk.flag.reason : ''}. A short drill now shows whether it has settled.` : `You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
         run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
       if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)){
         // Pinned for the day, so answering questions never swaps the step's topic out from under the count.
         let wd = weakDom;
         try{ const k = planTarget('weakDomKey', weakDom.key); wd = domainMasteryList().find(d => d.key === k) || weakDom; }catch(e){}
-        return { id:'weak', title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
+        return { id:'weak', domPool:true, title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
         why:`${wd.name} is ${wd.weight}% of the exam and ${wd.mastery === null ? 'not yet started' : 'at ' + wd.mastery + '% (' + STAGES[domainStageOf(wd.key) - 1].name + ')'}. It is where the most points are waiting.`,
         run: () => { showTab('study'); startDrill(wd.key); } };
       }
@@ -9005,22 +9008,22 @@ function buildStudyPlanCore(minutes){
       if(L.targets.freshKey !== t.key){ L.targets.freshKey = t.key; try{ persist(); }catch(e){} }
       const need = Math.min(6, t.size); if(need < 3) return null;
       const d = topicLastSeenAt(t.dom, t.idx), ago = d ? Math.round((Date.now() - d) / ONE_DAY_MS) : null;
-      return { id:'refresh', title:`Keep fresh: ${t.name}`, minutes:8, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
+      return { id:'refresh', topic:t.key, title:`Keep fresh: ${t.name}`, minutes:8, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
         why: ov && ov.refresh.some(r => r.key + '-' + r.idx === t.key) ? `Your tutor wants this kept sharp${ov.reason ? ': ' + ov.reason : ''}.` : `This one was solid${ago !== null ? ', but you last practiced it ' + ago + ' days ago' : ''}. A short spaced check now keeps it from fading while you work on weaker areas.`,
         run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
     },
     weak2: () => { const t = wkAt(1); if(!t) return null;
-      return { id:'weak2', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Your next weakest topic (${accTxt(t)}). With the time you have today, it is worth a second repair.`,
+      return { id:'weak2', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Your next weakest topic (${accTxt(t)}). With the time you have today, it is worth a second repair.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     adaptive2: () => { if(answered === 0) return null;
       return { id:'adaptive2', title:`Second adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
         why:'A second mixed round later in the day, after a break, helps more than one long push. Spacing the practice makes it stick.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
     weak3: () => { const t = wkAt(2); if(!t) return null;
-      return { id:'weak3', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
+      return { id:'weak3', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     // Long days (3.5 to 4 hours) get a third and fourth block of the same kind of work, never just longer versions of the same thing.
     weak4: () => { const t = wkAt(3); if(!t) return null;
-      return { id:'weak4', title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fourth on your list of weak topics (${accTxt(t)}). A long day has room to give it a proper turn.`,
+      return { id:'weak4', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fourth on your list of weak topics (${accTxt(t)}). A long day has room to give it a proper turn.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     calc2: () => {
       if(answered < 30) return null;
@@ -9071,7 +9074,7 @@ function buildStudyPlanCore(minutes){
     },
     pretest: () => {
       if(answered >= 20 || !weakDom) return null;
-      return { id:'pretest', title:`Pretest: ${weakDom.name}`, minutes:10, need:8, have: Math.min(cnt.drill || 0, 8), unit:'questions',
+      return { id:'pretest', domPool:true, title:`Pretest: ${weakDom.name}`, minutes:10, need:8, have: Math.min(cnt.drill || 0, 8), unit:'questions',
         why:'Trying questions before you study a topic, even getting them wrong, shows what to read closely and makes the later review stick.',
         run: () => { showTab('study'); startDrill(weakDom.key); } };
     },
@@ -9173,10 +9176,16 @@ function buildStudyPlanCore(minutes){
   }
   // One activity can only count toward one step. Flashcards seen today, formula problems and the like are shared out in plan order,
   // so a finished review of 25 cards does not also tick off "learn 15 new cards" a few rows down.
-  { const pool = { cards: act.cards || 0, tvm: act.tvm || 0, formula: act.formula || 0, drill: cnt.drill || 0 };
-    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : st.id === 'calc' ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.id === 'calc2' ? 'formula' : st.id === 'pretest' ? 'drill' : null;
-    steps.forEach(st => { const k = poolOf(st); if(!k || st.kept || !(st.need > 0)) { if(k && st.kept) pool[k] = Math.max(0, pool[k] - (st.need || 0)); return; }
-      const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }); }
+  { let attributed = 0; Object.keys(L.drill).forEach(k => { attributed += L.drill[k] || 0; });
+    const pool = { cards: act.cards || 0, tvm: act.tvm || 0, formula: act.formula || 0, drill: Math.max(0, (cnt.drill || 0) - attributed) };
+    const tpool = Object.assign({}, L.drill);
+    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : st.id === 'calc' ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.id === 'calc2' ? 'formula' : st.domPool ? 'drill' : null;
+    steps.forEach(st => {
+      if(st.kept || st.manual || !(st.need > 0)){ const kk = poolOf(st); if(kk && st.kept) pool[kk] = Math.max(0, pool[kk] - (st.need || 0)); return; }
+      if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
+      else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }
+      const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have){ sn.have = st.have; try{ persist(); }catch(e){} }
+    }); }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -26499,7 +26508,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.351';
+const BUILD_ID = '2026-10-21.352';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
