@@ -18515,6 +18515,186 @@ const FD_GENS = {
       keys:[`Enter ${fdNum(liab,0).replace(/,/g,'')}, press [÷], enter ${assets}, press [×], enter 100, press [=] — the display shows ${pct}.`], steps:[`Debt ratio = total liabilities ÷ total assets`, `${fdMoney(liab)} ÷ ${fdMoney(assets)} = ${pct}%`] };
   },
 };
+// ===== More exam calculations: perpetuity, retirement nest egg, insurance needs, capital budgeting, returns, Social Security, margin, estate and self-employment tax, and more =====
+FORMULAS.push(
+  {name:"Perpetuity (Present Value)", domain:"general", formula:"PV = PMT ÷ r", note:"A level payment that never ends is worth the payment divided by the required rate. Used for preferred stock and endowments."},
+  {name:"Retirement Nest Egg (Inflation-Adjusted)", domain:"retirement", formula:"Need at retirement = Today's need × (1 + inflation)^years. Nest egg = PV of an annuity due at the real rate, (1 + r) ÷ (1 + inflation) − 1", note:"Step 1: inflate today's need to the first retirement year. Step 2: find the real rate. Step 3: set BEGIN, use the real rate, and solve for PV."},
+  {name:"Human Life Value", domain:"risk", formula:"PV of (income − taxes − personal consumption) over the remaining working years", note:"Values the person by what the family would lose. Discount the yearly contribution to the family at a chosen rate."},
+  {name:"Insurance Needs Approach", domain:"risk", formula:"Need = Debts + final expenses + education + PV of income needs − existing resources", note:"Adds up what the family would need and subtracts the assets and insurance already in place."},
+  {name:"Payback Period", domain:"general", formula:"Full years before recovery + (unrecovered cost ÷ next year's cash flow)", note:"How long until cumulative cash flows repay the outlay. It ignores the time value of money and any cash flows after payback."},
+  {name:"Profitability Index", domain:"general", formula:"PI = PV of future cash flows ÷ initial outlay", note:"Above 1 means NPV is positive. It equals 1 + NPV ÷ outlay, and ranks projects when funds are limited."},
+  {name:"Time-Weighted Return", domain:"invest", formula:"[(1 + r₁)(1 + r₂)…(1 + rₙ)] − 1", note:"Links each sub-period's return, so the timing and size of deposits and withdrawals do not matter. Best for judging a manager."},
+  {name:"Money-Weighted Return (IRR)", domain:"invest", formula:"The rate that sets PV of all deposits and the ending value to zero (calculator IRR)", note:"Reflects the investor's own timing of deposits and withdrawals, so it differs from the time-weighted return."},
+  {name:"Provisional Income (Social Security)", domain:"retirement", formula:"AGI (before Social Security) + tax-exempt interest + 50% of Social Security benefits", note:"Compare it with the thresholds: single $25,000 / $34,000; married filing jointly $32,000 / $44,000. Up to 50% then up to 85% of benefits become taxable."},
+  {name:"Social Security Early Claiming Reduction", domain:"retirement", formula:"5/9 of 1% per month for the first 36 months early, plus 5/12 of 1% per month beyond that", note:"Claiming 60 months before full retirement age (FRA) cuts the benefit by 30%."},
+  {name:"Delayed Retirement Credit", domain:"retirement", formula:"2/3 of 1% per month (8% per year) after FRA, up to age 70", note:"Waiting from a 67 FRA to age 70 raises the benefit by 24%."},
+  {name:"Margin Call Price", domain:"invest", formula:"Call price = Loan ÷ [Shares × (1 − maintenance margin)]", note:"The loan stays fixed; the call comes when equity falls below the maintenance percentage of the stock's value."},
+  {name:"Estate Tax (Above the Exclusion)", domain:"estate", formula:"40% × (Taxable estate + adjusted taxable gifts − basic exclusion amount)", note:"Taxable estate = gross estate − debts, expenses, marital and charitable deductions. The 2026 basic exclusion amount is $15,000,000."},
+  {name:"Self-Employment Tax", domain:"tax", formula:"Net earnings × 92.35% × 15.3% (below the Social Security wage base)", note:"15.3% is 12.4% Social Security plus 2.9% Medicare. Half of the tax is an above-the-line deduction."},
+  {name:"Debt Service Coverage Ratio", domain:"general", formula:"Net operating income ÷ annual debt service", note:"Lenders usually want about 1.25 or more on income property."},
+  {name:"Loan-to-Value Ratio", domain:"general", formula:"Loan balance ÷ appraised value", note:"Above 80% usually means private mortgage insurance on a conventional loan."},
+  {name:"Dollar-Cost Averaging (Average Cost)", domain:"invest", formula:"Average cost per share = Total dollars invested ÷ Total shares bought", note:"Equal dollars buy more shares when the price is low, so the average cost is below the average of the prices."},
+  {name:"Price-to-Earnings Ratio", domain:"invest", formula:"P/E = Price per share ÷ Earnings per share", note:"How much investors pay for each dollar of earnings."},
+  {name:"PEG Ratio", domain:"invest", formula:"PEG = P/E ÷ Expected earnings growth rate (in percent)", note:"Adjusts P/E for growth. Lower, roughly under 1, suggests more growth for the price."},
+  {name:"Refinance Break-Even", domain:"general", formula:"Months to break even = Closing costs ÷ Monthly payment savings", note:"Refinance only makes sense if you will keep the loan longer than the break-even point."},
+  {name:"Pro Rata Other Insurance", domain:"risk", formula:"Insurer pays = Its limit ÷ Total of all limits × Loss", note:"When two policies cover the same loss, each pays its share by limits, up to its own limit."},
+  {name:"Annuity Exclusion Ratio", domain:"tax", formula:"Exclusion ratio = Investment in contract ÷ Expected return (payment × years)", note:"The ratio of each payment that is tax free, until the investment is fully recovered."},
+  {name:"Unrecaptured §1250 Gain", domain:"tax", formula:"Lesser of total gain and depreciation taken", note:"Depreciation previously taken on real property is taxed at up to 25%; any gain beyond it gets capital gain rates."}
+);
+Object.assign(FD_GENS, {
+  'Perpetuity (Present Value)': () => {
+    const d = fdPick([3,4,5,6,7.5]), r = fdPick([5,6,8,10]), ans = d/(r/100);
+    return { scenario:`A preferred stock pays a fixed $${fdNum(d,2)} dividend every year, forever. If investors require a ${r}% return, what is a share worth?`, unit:'$', answer:ans, tol:Math.max(0.06, ans*0.002),
+      keys:[`Enter ${fdNum(d,2)}, press [÷], enter ${fdK(r/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`PV = PMT ÷ r`, `$${fdNum(d,2)} ÷ ${fdK(r/100)} = $${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - d*r/100) < 0.06 ? 'You multiplied by the rate. A perpetuity divides the payment by the rate.' : null };
+  },
+  'Retirement Nest Egg (Inflation-Adjusted)': () => {
+    const need = fdPick([50000,60000,72000,80000,90000]), g = fdPick([2.5,3,3.5]), yrs = fdPick([10,15,20,25]), N = fdPick([25,30]), r = fdPick([6,7,8]);
+    const first = need*Math.pow(1+g/100,yrs), ir = (1+r/100)/(1+g/100)-1, ans = first*(1-Math.pow(1+ir,-N))/ir*(1+ir);
+    return { scenario:`A client wants ${fdMoney(need)} a year in today's dollars, beginning in ${yrs} years and lasting ${N} years, with each withdrawal at the start of the year. Inflation is ${g}% and the portfolio earns ${r}% in retirement. How much must she have at retirement?`, unit:'$', answer:ans, tol:Math.max(5, ans*0.004),
+      keys:[...fdTvmStart(), `Step 1, the first year's need: enter ${yrs}, press [N]. Enter ${g}, press [I/YR]. Enter ${need}, press [+/−], then [PV]. Enter 0, press [PMT]. Press [FV] — the display shows ${fdNum(first,2)}.`, `Step 2, the real rate: enter ${fdK(1+r/100)}, press [÷], enter ${fdK(1+g/100)}, press [=], press [−], enter 1, press [=], press [×], enter 100, press [=] — the display shows ${fdNum(ir*100,4)}. Press [I/YR] now to store it.`, `Step 3: turn BEGIN on (orange Shift, then [BEG/END]). Enter ${N}, press [N]. Enter ${fdNum(first,2)}, press [PMT]. Enter 0, press [FV]. Press [PV] — the display shows −${fdNum(ans,2)}; the sign only shows direction. Turn BEGIN off afterwards.`],
+      steps:[`First-year need = ${fdMoney(need)} × (1 + ${g/100})^${yrs} = ${fdMoney(first)}`, `Real rate = (1 + ${r/100}) ÷ (1 + ${g/100}) − 1 = ${fdNum(ir*100,4)}%`, `PV of ${N} annuity-due payments of ${fdMoney(first)} at ${fdNum(ir*100,4)}% = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - need*(1-Math.pow(1+r/100,-N))/(r/100)*(1+r/100)) < Math.max(5, ans*0.004) ? 'That ignores inflation. The need grows to the retirement date and keeps growing, so use the inflated first-year amount and the real rate.' : null };
+  },
+  'Human Life Value': () => {
+    const inc = fdPick([60000,80000,100000,120000]), tax = fdPick([20,25,30]), cons = fdPick([20,25,30]), n = fdPick([20,25,30]), r = fdPick([4,5,6]);
+    const net = inc*(1-tax/100)*(1-cons/100), ans = net*(1-Math.pow(1+r/100,-n))/(r/100);
+    return { scenario:`A 40-year-old earns ${fdMoney(inc)} a year, pays ${tax}% in taxes, and spends ${cons}% of the after-tax income on himself. He will work ${n} more years with no raises. Discounted at ${r}%, what is his human life value?`, unit:'$', answer:ans, tol:Math.max(5, ans*0.004),
+      keys:[`Enter ${inc}, press [×], enter ${fdK(1-tax/100)}, press [×], enter ${fdK(1-cons/100)}, press [=] — the display shows ${fdNum(net,2)} (the yearly amount to the family).`, ...fdTvmStart(), `Enter ${n}, press [N]. Enter ${r}, press [I/YR]. Enter ${fdNum(net,2)}, press [PMT]. Enter 0, press [FV]. Press [PV] — the display shows −${fdNum(ans,2)}.`],
+      steps:[`Yearly contribution = ${fdMoney(inc)} × ${fdK(1-tax/100)} × ${fdK(1-cons/100)} = ${fdMoney(net)}`, `PV of ${n} payments at ${r}% = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - inc*(1-Math.pow(1+r/100,-n))/(r/100)) < Math.max(5, ans*0.004) ? 'That uses gross income. Subtract taxes and the person\'s own consumption first; only what reaches the family counts.' : null };
+  },
+  'Insurance Needs Approach': () => {
+    const debts = fdPick([180000,220000,260000,300000]), fin = fdPick([15000,20000,25000]), edu = fdPick([80000,120000,160000]), X = fdPick([30000,40000,50000]), m = fdPick([10,15,20]), r = fdPick([4,5,6]), have = fdPick([150000,250000,350000]);
+    const pv = X*(1-Math.pow(1+r/100,-m))/(r/100), ans = debts + fin + edu + pv - have;
+    return { scenario:`A family needs ${fdMoney(debts)} to pay off debts, ${fdMoney(fin)} for final expenses, ${fdMoney(edu)} for education, and ${fdMoney(X)} a year for ${m} years of income, discounted at ${r}%. They already have ${fdMoney(have)} in insurance and liquid assets. What additional coverage is needed?`, unit:'$', answer:ans, tol:Math.max(5, ans*0.004),
+      keys:[...fdTvmStart(), `Income need: enter ${m}, press [N]. Enter ${r}, press [I/YR]. Enter ${X}, press [PMT]. Enter 0, press [FV]. Press [PV] — the display shows −${fdNum(pv,2)}.`, `Add the rest: ${fdNum(pv,2)} + ${debts} + ${fin} + ${edu} − ${have} = ${fdNum(ans,2)}.`],
+      steps:[`PV of income need = ${fdMoney(pv)}`, `Total needs = ${fdMoney(debts)} + ${fdMoney(fin)} + ${fdMoney(edu)} + ${fdMoney(pv)} = ${fdMoney(debts+fin+edu+pv)}`, `Less existing resources ${fdMoney(have)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - (ans + have)) < Math.max(5, ans*0.004) ? 'That is the total need. Subtract what the family already has to find the additional coverage.' : null };
+  },
+  'Payback Period': () => {
+    let out, f1, f2, f3, guard = 0;
+    do { out = fdPick([30000,40000,50000,60000]); f1 = Math.round(out*fdPick([0.25,0.3,0.35])/1000)*1000; f2 = Math.round(out*fdPick([0.3,0.35,0.4])/1000)*1000; f3 = Math.round(out*fdPick([0.4,0.5,0.6])/1000)*1000; guard++; } while(!(f1+f2 < out && out < f1+f2+f3) && guard < 50);
+    const ans = 2 + (out-f1-f2)/f3;
+    return { scenario:`A project costs ${fdMoney(out)} today and returns ${fdMoney(f1)} in year 1, ${fdMoney(f2)} in year 2 and ${fdMoney(f3)} in year 3. What is the payback period in years? (Two decimals.)`, unit:'years', answer:ans, tol:0.015,
+      keys:[`Enter ${out}, press [−], enter ${f1}, press [−], enter ${f2}, press [=] — the display shows ${out-f1-f2} still unrecovered after year 2.`, `Press [÷], enter ${f3}, press [=] — the display shows ${fdNum((out-f1-f2)/f3,4)}. Add the 2 full years: ${fdNum(ans,2)}.`],
+      steps:[`After year 2 the unrecovered cost is ${fdMoney(out)} − ${fdMoney(f1)} − ${fdMoney(f2)} = ${fdMoney(out-f1-f2)}`, `Fraction of year 3 = ${fdMoney(out-f1-f2)} ÷ ${fdMoney(f3)} = ${fdNum((out-f1-f2)/f3,2)}`, `Payback = 2 + ${fdNum((out-f1-f2)/f3,2)} = ${fdNum(ans,2)} years`],
+      trap: x => Math.abs(x - (out-f1-f2)/f3) < 0.015 ? 'That is only the fraction of the last year. Add the full years already completed.' : null };
+  },
+  'Profitability Index': () => {
+    const out = fdPick([40000,50000,80000,100000]), pv = Math.round(out*fdPick([0.9,1.1,1.2,1.35,1.5])/100)*100, ans = pv/out;
+    return { scenario:`A project costs ${fdMoney(out)}. The present value of its future cash flows, at the required return, is ${fdMoney(pv)}. What is the profitability index? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
+      keys:[`Enter ${pv}, press [÷], enter ${out}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}.`], steps:[`PI = PV of future cash flows ÷ initial outlay`, `${fdMoney(pv)} ÷ ${fdMoney(out)} = ${fdNum(ans,2)}`, ans >= 1 ? `Above 1, so NPV is positive: accept.` : `Below 1, so NPV is negative: reject.`],
+      trap: x => Math.abs(x - (pv-out)/out) < 0.015 ? 'That is NPV divided by the outlay, one less than the index. The index divides the whole present value by the outlay.' : null };
+  },
+  'Time-Weighted Return': () => {
+    const pool = [-12,-6,4,8,10,15], a = fdPick(pool), b = fdPick(pool), c = fdPick(pool);
+    const ans = ((1+a/100)*(1+b/100)*(1+c/100)-1)*100;
+    return { scenario:`A fund returned ${a}% in year 1, ${b}% in year 2 and ${c}% in year 3, with clients adding and removing money along the way. What was its time-weighted return over the three years? (Total, as a percent.)`, unit:'%', answer:ans, tol:0.1,
+      keys:[`Enter ${fdK(1+a/100)}, press [×], enter ${fdK(1+b/100)}, press [×], enter ${fdK(1+c/100)}, press [=] — the display shows ${fdNum(ans/100+1,5)}.`, `Press [−], enter 1, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Link the years: (1 ${a<0?'−':'+'} ${Math.abs(a/100)}) × (1 ${b<0?'−':'+'} ${Math.abs(b/100)}) × (1 ${c<0?'−':'+'} ${Math.abs(c/100)}) = ${fdNum(ans/100+1,5)}`, `Subtract 1: ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (a+b+c)) < 0.1 && Math.abs(ans - (a+b+c)) > 0.2 ? 'Returns link by multiplication, not addition. Multiply the growth factors, then subtract 1.' : null };
+  },
+  'Money-Weighted Return (IRR)': () => {
+    const d0 = fdPick([10000,20000,30000]), d1 = fdPick([5000,10000,15000]), rr = fdPick([5,7,9,11]);
+    const V = Math.round((d0*Math.pow(1+rr/100,2) + d1*(1+rr/100))/100)*100;
+    let lo = -0.5, hi = 1; const f = r => -d0 - d1/(1+r) + V/Math.pow(1+r,2);
+    for(let i = 0; i < 80; i++){ const mid = (lo+hi)/2; if(f(mid) > 0) lo = mid; else hi = mid; }
+    const ans = (lo+hi)/2*100;
+    return { scenario:`An investor puts ${fdMoney(d0)} into a fund, adds ${fdMoney(d1)} at the end of year 1, and the account is worth ${fdMoney(V)} at the end of year 2. What is her money-weighted return (IRR)? (Percent, one decimal.)`, unit:'%', answer:ans, tol:0.12,
+      keys:[`Clear the cash flow registers: orange Shift, then [C ALL]. Set P/YR to 1.`, `Press [CFj] after entering each flow: enter ${d0}, press [+/−], [CFj]. Enter ${d1}, press [+/−], [CFj]. Enter ${V}, press [CFj].`, `Press orange Shift, then [IRR/YR] — the display shows ${fdNum(ans,2)}.`], steps:[`Cash flows: time 0 = −${fdMoney(d0)}, year 1 = −${fdMoney(d1)}, year 2 = +${fdMoney(V)}`, `The IRR of those flows is ${fdNum(ans,2)}%`, `Deposits are negative (money out of your pocket) and the ending value is positive.`] };
+  },
+  'Provisional Income (Social Security)': () => {
+    const agi = fdPick([18000,22000,26000,30000]), tei = fdPick([2000,4000,6000]), ss = fdPick([18000,24000,30000]), ans = agi + tei + ss/2;
+    return { scenario:`A single retiree has AGI of ${fdMoney(agi)} before Social Security, ${fdMoney(tei)} of tax-exempt interest, and ${fdMoney(ss)} in Social Security benefits. What is her provisional income?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${ss}, press [÷], enter 2, press [+], enter ${agi}, press [+], enter ${tei}, press [=] — the display shows ${ans}.`], steps:[`Provisional income = AGI + tax-exempt interest + 50% of benefits`, `${fdMoney(agi)} + ${fdMoney(tei)} + ${fdMoney(ss/2)} = ${fdMoney(ans)}`, ans > 34000 ? `Above $34,000 (single): up to 85% of benefits can be taxable.` : ans > 25000 ? `Between $25,000 and $34,000 (single): up to 50% of benefits can be taxable.` : `Below $25,000 (single): none of the benefits are taxable.`],
+      trap: x => Math.abs(x - (agi + tei + ss)) < 2 ? 'Only half of the Social Security benefit goes into provisional income, not all of it.' : null };
+  },
+  'Social Security Early Claiming Reduction': () => {
+    const pia = fdPick([2000,2400,2800,3200]), m = fdPick([12,24,36,48,60]);
+    const red = Math.min(m,36)*5/9 + Math.max(m-36,0)*5/12, ans = pia*(1-red/100);
+    return { scenario:`A worker with full retirement age 67 and a PIA of ${fdMoney(pia)} a month claims ${m} months early. What is her monthly benefit?`, unit:'$', answer:ans, tol:1.5,
+      keys:[`Reduction: ${Math.min(m,36)} × 5/9 = ${fdNum(Math.min(m,36)*5/9,2)}%${m > 36 ? `, plus ${m-36} × 5/12 = ${fdNum((m-36)*5/12,2)}%` : ''}, total ${fdNum(red,2)}%.`, `Enter ${pia}, press [×], enter ${fdK(1-red/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`First 36 months: 5/9 of 1% each`, m > 36 ? `Months 37 to ${m}: 5/12 of 1% each` : `No months beyond 36`, `Benefit = ${fdMoney(pia)} × (1 − ${fdNum(red/100,4)}) = ${fdMoney(ans)}`] };
+  },
+  'Delayed Retirement Credit': () => {
+    const pia = fdPick([2000,2400,2800,3200]), m = fdPick([12,24,36]), cr = m*2/3, ans = pia*(1+cr/100);
+    return { scenario:`A worker with full retirement age 67 and a PIA of ${fdMoney(pia)} a month waits ${m} months past FRA to claim. What is her monthly benefit?`, unit:'$', answer:ans, tol:1.5,
+      keys:[`Credit: ${m} × 2/3 = ${fdNum(cr,0)}%.`, `Enter ${pia}, press [×], enter ${fdK(1+cr/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Credit = ${m} months × 2/3 of 1% = ${fdNum(cr,0)}%`, `Benefit = ${fdMoney(pia)} × ${fdK(1+cr/100)} = ${fdMoney(ans)}`] };
+  },
+  'Margin Call Price': () => {
+    const sh = fdPick([100,200,500]), p = fdPick([40,50,60,80]), im = fdPick([50,60]), mm = fdPick([25,30]);
+    const loan = sh*p*(1-im/100), ans = loan/(sh*(1-mm/100));
+    return { scenario:`An investor buys ${sh} shares at $${p} on margin, putting up ${im}% of the cost. The maintenance margin is ${mm}%. At what share price will she get a margin call?`, unit:'$', answer:ans, tol:0.06,
+      keys:[`Loan: enter ${sh}, press [×], enter ${p}, press [×], enter ${fdK(1-im/100)}, press [=] — the display shows ${loan}.`, `Press [÷], enter ${sh}, press [÷], enter ${fdK(1-mm/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Loan = ${sh} × $${p} × ${fdK(1-im/100)} = ${fdMoney(loan)}`, `Call price = loan ÷ [shares × (1 − ${mm/100})]`, `${fdMoney(loan)} ÷ (${sh} × ${fdK(1-mm/100)}) = $${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - p*(1-im/100)*(1+mm/100)) < 0.06 ? 'The call comes when equity drops to the maintenance percentage of the stock\'s value, so divide the loan by shares × (1 − maintenance).' : null };
+  },
+  'Estate Tax (Above the Exclusion)': () => {
+    const G = fdPick([18,20,24,28])*1e6, D = fdPick([0.5,1,1.5,2])*1e6, A = fdPick([0,0.5,1,2])*1e6, X = 15e6;
+    const te = G - D, ans = 0.4*(te + A - X);
+    return { scenario:`An estate has a gross estate of ${fdMoney(G)} and deductions (debts, expenses and charitable gifts) of ${fdMoney(D)}. The decedent also made adjusted taxable gifts of ${fdMoney(A)}. Using the 2026 basic exclusion amount of $15,000,000 and a 40% rate above it, what is the estate tax? (Ignore state tax and gift tax paid.)`, unit:'$', answer:ans, tol:5,
+      keys:[`Enter ${G}, press [−], enter ${D}, press [+], enter ${A}, press [−], enter 15000000, press [=] — the display shows ${te + A - X}.`, `Press [×], enter 0.4, press [=] — the display shows ${fdNum(ans,0)}.`], steps:[`Taxable estate = ${fdMoney(G)} − ${fdMoney(D)} = ${fdMoney(te)}`, `Add adjusted taxable gifts: ${fdMoney(te + A)}`, `Subtract the $15,000,000 exclusion: ${fdMoney(te + A - X)}, then × 40% = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - 0.4*(te - X)) < 5 && A ? 'That leaves out the adjusted taxable gifts. They are added back to the taxable estate before the exclusion is applied.' : null };
+  },
+  'Self-Employment Tax': () => {
+    const ne = fdPick([60000,80000,100000,120000,150000]), base = ne*0.9235, ans = base*0.153;
+    return { scenario:`A sole proprietor has net profit of ${fdMoney(ne)} on Schedule C, well below the Social Security wage base. What is her self-employment tax?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${ne}, press [×], enter 0.9235, press [=] — the display shows ${fdNum(base,2)} (net earnings subject to the tax).`, `Press [×], enter 0.153, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Net earnings subject to tax = ${fdMoney(ne)} × 92.35% = ${fdMoney(base)}`, `SE tax = ${fdMoney(base)} × 15.3% = ${fdMoney(ans)}`, `Half of it, ${fdMoney(ans/2)}, is deductible above the line.`],
+      trap: x => Math.abs(x - ne*0.153) < 2 ? 'The 15.3% applies to 92.35% of net profit, not to the full amount.' : null };
+  },
+  'Debt Service Coverage Ratio': () => {
+    const ads = fdPick([48000,60000,72000,90000]), noi = Math.round(ads*fdPick([1.1,1.2,1.25,1.4,1.5])/100)*100, ans = noi/ads;
+    return { scenario:`A rental property produces net operating income of ${fdMoney(noi)} and annual debt service of ${fdMoney(ads)}. What is the debt service coverage ratio? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
+      keys:[`Enter ${noi}, press [÷], enter ${ads}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}.`], steps:[`DSCR = NOI ÷ annual debt service`, `${fdMoney(noi)} ÷ ${fdMoney(ads)} = ${fdNum(ans,2)}`, ans >= 1.25 ? `Above the usual 1.25 lender minimum.` : `Below the usual 1.25 lender minimum.`] };
+  },
+  'Loan-to-Value Ratio': () => {
+    const val = fdPick([300000,400000,500000,650000]), pct = fdPick([70,75,80,85,90,95]), loan = val*pct/100;
+    return { scenario:`A buyer borrows ${fdMoney(loan)} on a home appraised at ${fdMoney(val)}. What is the loan-to-value ratio? (Percent.)`, unit:'%', answer:pct, tol:0.15,
+      keys:[`Enter ${loan}, press [÷], enter ${val}, press [×], enter 100, press [=] — the display shows ${pct}.`], steps:[`LTV = loan ÷ appraised value`, `${fdMoney(loan)} ÷ ${fdMoney(val)} = ${pct}%`, pct > 80 ? `Above 80%, so private mortgage insurance is usually required.` : `At or below 80%: no PMI is usually required.`] };
+  },
+  'Dollar-Cost Averaging (Average Cost)': () => {
+    const amt = fdPick([300,500,600,1000]), ps = [20,25,40,50,32,16].sort(() => Math.random()-0.5).slice(0,3);
+    const sh = ps.map(p => amt/p), tot = sh.reduce((a,b) => a+b, 0), ans = amt*3/tot;
+    return { scenario:`An investor buys ${fdMoney(amt)} of a fund at the end of each of three months, when the price is $${ps[0]}, $${ps[1]} and $${ps[2]}. What is her average cost per share? (Two decimals.)`, unit:'$', answer:ans, tol:0.04,
+      keys:[`Shares each month: ${amt} ÷ ${ps[0]} = ${fdNum(sh[0],3)}, ${amt} ÷ ${ps[1]} = ${fdNum(sh[1],3)}, ${amt} ÷ ${ps[2]} = ${fdNum(sh[2],3)}. Add them: ${fdNum(tot,3)} shares.`, `Enter ${amt*3}, press [÷], enter ${fdNum(tot,4)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Total invested = 3 × ${fdMoney(amt)} = ${fdMoney(amt*3)}`, `Total shares = ${fdNum(tot,3)}`, `Average cost = ${fdMoney(amt*3)} ÷ ${fdNum(tot,3)} = $${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - (ps[0]+ps[1]+ps[2])/3) < 0.04 ? 'That is the plain average of the prices. Equal dollars buy more shares at low prices, so the average cost per share is lower.' : null };
+  },
+  'Price-to-Earnings Ratio': () => {
+    const eps = fdPick([2,2.5,3,4,5]), pe = fdPick([12,15,18,20,25]), price = eps*pe;
+    return { scenario:`A stock trades at $${fdNum(price,2)} and earned $${fdNum(eps,2)} per share last year. What is its P/E ratio? (One decimal.)`, unit:'', answer:pe, tol:0.06,
+      keys:[`Enter ${fdNum(price,2)}, press [÷], enter ${fdNum(eps,2)}, press [=] — the display shows ${fdNum(pe,2)}.`], steps:[`P/E = price ÷ earnings per share`, `$${fdNum(price,2)} ÷ $${fdNum(eps,2)} = ${fdNum(pe,1)}`] };
+  },
+  'PEG Ratio': () => {
+    const pe = fdPick([15,18,20,24,30]), gr = fdPick([8,10,12,15,20]), ans = pe/gr;
+    return { scenario:`A stock has a P/E of ${pe} and analysts expect earnings to grow ${gr}% a year. What is its PEG ratio? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
+      keys:[`Enter ${pe}, press [÷], enter ${gr}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}. (Use the growth rate as a whole number, ${gr}, not ${gr/100}.)`], steps:[`PEG = P/E ÷ growth rate in percent`, `${pe} ÷ ${gr} = ${fdNum(ans,2)}`],
+      trap: x => Math.abs(x - pe/(gr/100)) < 0.5 ? 'PEG uses the growth rate as a whole number (12, not 0.12).' : null };
+  },
+  'Refinance Break-Even': () => {
+    const cost = fdPick([2400,3000,4200,5000]), sav = fdPick([60,75,100,125,150]), ans = cost/sav;
+    return { scenario:`Refinancing a mortgage costs ${fdMoney(cost)} in closing costs and lowers the monthly payment by $${sav}. How many months until the refinance breaks even? (One decimal.)`, unit:'months', answer:ans, tol:0.06,
+      keys:[`Enter ${cost}, press [÷], enter ${sav}, press [=] — the display shows ${fdNum(ans,2)} months.`], steps:[`Break-even months = closing costs ÷ monthly savings`, `${fdMoney(cost)} ÷ $${sav} = ${fdNum(ans,1)} months`, `The refinance pays off only if the client keeps the loan longer than that.`] };
+  },
+  'Pro Rata Other Insurance': () => {
+    const loss = fdPick([40000,60000,80000]), a = fdPick([100000,150000,200000]), b = fdPick([100000,150000,300000]), ans = a/(a+b)*loss;
+    return { scenario:`A ${fdMoney(loss)} loss is covered by two policies with limits of ${fdMoney(a)} and ${fdMoney(b)}, and each has a pro rata other-insurance clause. How much does the first policy pay?`, unit:'$', answer:ans, tol:Math.max(2, ans*0.002),
+      keys:[`Enter ${a}, press [÷], enter ${a+b}, press [×], enter ${loss}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Share = ${fdMoney(a)} ÷ (${fdMoney(a)} + ${fdMoney(b)}) = ${fdNum(a/(a+b),4)}`, `${fdNum(a/(a+b),4)} × ${fdMoney(loss)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - loss/2) < Math.max(2, ans*0.002) && a !== b ? 'Pro rata splits by policy limits, not equally.' : null };
+  },
+  'Annuity Exclusion Ratio': () => {
+    let inv, pay, yrs, ratio, g = 0;
+    do { inv = fdPick([60000,90000,120000]); pay = fdPick([6000,7200,9000]); yrs = fdPick([15,20,25]); ratio = inv/(pay*yrs); g++; } while((ratio < 0.3 || ratio > 0.95) && g < 50);
+    const ans = pay*ratio;
+    return { scenario:`A retiree paid ${fdMoney(inv)} (after tax) for an annuity paying ${fdMoney(pay)} a year for life. Her life expectancy at the start date is ${yrs} years. How much of each year's payment is tax free? (Dollars.)`, unit:'$', answer:ans, tol:Math.max(2, ans*0.003),
+      keys:[`Expected return: ${pay} × ${yrs} = ${pay*yrs}. Enter ${inv}, press [÷], enter ${pay*yrs}, press [=] — the display shows ${fdNum(ratio,4)} (the exclusion ratio, ${fdNum(ratio*100,1)}%).`, `Press [×], enter ${pay}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Expected return = ${fdMoney(pay)} × ${yrs} = ${fdMoney(pay*yrs)}`, `Exclusion ratio = ${fdMoney(inv)} ÷ ${fdMoney(pay*yrs)} = ${fdNum(ratio*100,1)}%`, `Tax-free part of each payment = ${fdMoney(pay)} × ${fdNum(ratio,4)} = ${fdMoney(ans)}`] };
+  },
+  'Unrecaptured §1250 Gain': () => {
+    let cost, dep, price, gain, g = 0;
+    do { cost = fdPick([400000,500000,600000]); dep = fdPick([80000,120000,150000]); price = cost + fdPick([-60000,-30000,0,40000,90000,120000]); gain = price - (cost - dep); g++; } while(gain <= 0 && g < 50);
+    const ans = Math.min(gain, dep);
+    return { scenario:`An investor bought a rental building for ${fdMoney(cost)}, took ${fdMoney(dep)} of depreciation, and sold it for ${fdMoney(price)}. How much of the gain is unrecaptured §1250 gain, taxed at up to 25%?`, unit:'$', answer:ans, tol:2,
+      keys:[`Adjusted basis: enter ${cost}, press [−], enter ${dep}, press [=] — the display shows ${cost-dep}.`, `Total gain: enter ${price}, press [−], enter ${cost-dep}, press [=] — the display shows ${gain}.`, `Unrecaptured §1250 gain is the lesser of the total gain (${gain}) and the depreciation (${dep}): ${ans}.`], steps:[`Adjusted basis = ${fdMoney(cost)} − ${fdMoney(dep)} = ${fdMoney(cost-dep)}`, `Total gain = ${fdMoney(price)} − ${fdMoney(cost-dep)} = ${fdMoney(gain)}`, `Unrecaptured §1250 gain = lesser of ${fdMoney(gain)} and ${fdMoney(dep)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - gain) < 2 && gain !== ans ? 'Only the part of the gain that comes from depreciation is unrecaptured §1250 gain, so it is capped at the depreciation taken.' : null };
+  }
+});
 // ===== Additional exam-calculation drills (CAPM, Jensen, 1031, beta, probability returns, ratios, WACC, etc.) =====
 FORMULAS.push(
   {name:"Beta (from correlation)", domain:"invest", formula:"β = ρ(i,m) × σi ÷ σm", note:"Beta scales the asset's correlation with the market by the ratio of their standard deviations. Memory trick: the asset's σ goes on top, the market's σ underneath."},
@@ -27194,7 +27374,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.393';
+const BUILD_ID = '2026-10-22.394';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
