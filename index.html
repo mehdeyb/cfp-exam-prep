@@ -9526,21 +9526,33 @@ function conductorProgress(c, asId){
     c.minutes = plan.minutes; // follows your time setting if you change it mid-session
     const curId = asId || (c.current ? c.current.id : null);
     const logged = new Set(c.log.filter(x => x.reason !== 'skipped' && x.reason !== 'empty' && x.reason !== 'partial').map(x => x.id));
-    const used = conductorUsedMin(c) + (c.current ? (c.current.estMin || 0) : 0);
-    const cands = conductorCandidates(c, plan).filter(st => st.id !== curId);
-    const pend = new Set(conductorFit(cands, used, c.minutes).map(st => st.id));
-    const inPlay = plan.steps.filter(st => !c.skipped.includes(st.id) && (st.done || logged.has(st.id) || st.id === curId || pend.has(st.id)));
-    const isDone = st => (st.done || logged.has(st.id)) && st.id !== curId;
-    const done = inPlay.filter(isDone).length;
-    let n = done + 1;
-    if(curId){ const i = inPlay.findIndex(st => st.id === curId); if(i >= 0) n = i + 1; }
-    const total = Math.max(inPlay.length, 1);
+    // The session's own list of parts is fixed when it starts, so "Part 3 of 7" never changes its total or its order under you.
+    // A part that was not on that list (the tutor started it, or the plan gained it) is added once and stays.
+    let parts = Array.isArray(c.parts) && c.parts.length ? c.parts.slice() : null;
+    if(!parts){
+      const used = conductorUsedMin(c) + (c.current ? (c.current.estMin || 0) : 0);
+      const pend = new Set(conductorFit(conductorCandidates(c, plan).filter(st => st.id !== curId), used, c.minutes).map(st => st.id));
+      parts = plan.steps.filter(st => !c.skipped.includes(st.id) && (st.done || logged.has(st.id) || st.id === curId || pend.has(st.id))).map(st => st.id);
+    }
+    let grew = false;
+    (c.ran || []).concat(curId ? [curId] : []).forEach(id => { if(id && parts.indexOf(id) < 0){ parts.push(id); grew = true; } });
+    if(grew || !Array.isArray(c.parts)) c.parts = parts.slice();
+    const byId = {}; plan.steps.forEach(st => { byId[st.id] = st; });
+    const isDone = id => id !== curId && (logged.has(id) || !byId[id] || byId[id].done);
+    const isSkip = id => id !== curId && !isDone(id) && c.skipped.includes(id);
+    const done = parts.filter(isDone).length;
+    const marks = parts.map(id => isDone(id) ? 'done' : (id === curId ? 'now' : ''));
+    let n;
+    if(curId){ n = parts.indexOf(curId) + 1; } // the part's place in the session's own list, so it always matches the dots and the total
+    else n = parts.filter(id => isDone(id) || isSkip(id)).length + 1;
+    const total = Math.max(parts.length, 1);
     c.total = total;
-    const marks = inPlay.map(st => isDone(st) ? 'done' : (st.id === curId ? 'now' : ''));
-    if(!curId){ const f = marks.indexOf(''); if(f >= 0) marks[f] = 'now'; }
+    if(!curId){ const f = parts.findIndex(id => !isDone(id) && !isSkip(id)); if(f >= 0) marks[f] = 'now'; }
     return { total, done, n: Math.min(Math.max(n, 1), total), marks };
   }catch(e){ const t = Math.max(c.total || 0, c.log.length + (c.current ? 1 : 0)); return { total: t, done: c.log.length, n: c.log.length + 1, marks: [] }; }
 }
+// "Part 2 of 7 · " while a guided sitting is running, so every screen says where you are in today's plan and where you are inside the part.
+function cdPartTag(){ try{ const c = conductorState(); if(!c || !c.current) return ''; const pr = conductorProgress(c); return 'Part ' + pr.n + ' of ' + pr.total + ' · '; }catch(e){ return ''; } }
 function conductorTotal(c){ return conductorProgress(c).total; }
 function conductorPlanPreview(){
   const plan = buildStudyPlan();
@@ -9550,7 +9562,7 @@ function conductorPlanPreview(){
 function conductorStart(){
   const { plan, parts } = conductorPlanPreview();
   if(!parts.length) return false;
-  DATA.conductor = { day: localDayKey(), startedAt: Date.now(), minutes: plan.minutes, ran: [], skipped: [], log: [], current: null, total: parts.length };
+  DATA.conductor = { day: localDayKey(), startedAt: Date.now(), minutes: plan.minutes, ran: [], skipped: [], log: [], current: null, total: parts.length, parts: parts.map(x => x.id) };
   persist();
   conductorShow('brief');
   return true;
@@ -14705,7 +14717,7 @@ function updateFcPlanLine(){
   const progress = document.getElementById('fcProgress');
   const old = document.getElementById('fcPlanLine'); if(old) old.style.display = 'none';
   if(!progress || !fcQueue.length) return;
-  const pos = 'Card ' + (fcIndex + 1) + (fcCustomQueue ? ' of ' + fcQueue.length : '');
+  const pos = cdPartTag() + 'Card ' + (fcIndex + 1) + (fcCustomQueue ? ' of ' + fcQueue.length : '');
   const st = fcPlanState();
   progress.className = 'fc-progress' + (st && st.done ? ' plan-done' : '');
   { const fr = st ? Math.min(1, st.have / Math.max(1, st.need)) : (fcCustomQueue ? fcIndex / Math.max(1, fcQueue.length) : -1);
@@ -14714,7 +14726,7 @@ function updateFcPlanLine(){
   if(st.done){
     let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('cards'); }catch(e){}
     progress.innerHTML = escapeHtml(pos) + ` · plan done ✓ (${st.have} today)` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
-  } else progress.textContent = `${pos} · today's plan ${st.have} of ${st.need}`;
+  } else progress.textContent = `${pos} · plan ${st.have} of ${st.need} cards`;
 }
 function renderFlashcard(){
   stopSpeech();
@@ -19165,7 +19177,7 @@ function tvmRenderStatus(){
     const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id);
     el.insertAdjacentHTML('beforeend', st.done
       ? `<span class="tvm-chip">Today's plan: calculator practice done ✓</span>${nx ? `<button type="button" class="fc-plan-next" onclick="closeTvmThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}`
-      : `<span class="tvm-chip">Today's plan: ${st.have || 0} of ${st.need} solved · ${escapeHtml((CALC_KINDS[st.kindKey] || {}).label || 'calculator')}</span>`);
+      : `<span class="tvm-chip">${escapeHtml(cdPartTag())}Today's plan: ${st.have || 0} of ${st.need} solved · ${escapeHtml((CALC_KINDS[st.kindKey] || {}).label || 'calculator')}</span>`);
   }catch(e){}
 }
 function closeTvmThen(id){ try{ closeTvmTool(); }catch(e){} setTimeout(() => { try{ planGoNext(id); }catch(e){} }, 60); }
@@ -21818,8 +21830,8 @@ function renderQuestion(){
 
   const progCase = session.mode==='case' ? caseById(session.caseId) : null;
   document.getElementById('quizProgress').textContent = progCase
-    ? `${progCase.title.split(' — ')[0]} · question ${session.index+1} of ${session.queue.length}`
-    : `Question ${session.index+1} of ${session.queue.length}`;
+    ? `${cdPartTag()}${progCase.title.split(' — ')[0]} · question ${session.index+1} of ${session.queue.length}`
+    : `${cdPartTag()}Question ${session.index+1} of ${session.queue.length}`;
   const pct = Math.round(((session.index) / session.queue.length) * 100);
   document.getElementById('progressFill').style.width = pct + '%';
 
@@ -26395,7 +26407,7 @@ function focusEnter(o){
   const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
   const fromChat = _focus.origin === 'tutor';
   const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
-  bar.innerHTML = '<div class="fb-l"><div class="fb-k">Focus</div><div class="fb-t"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
+  bar.innerHTML = '<div class="fb-l"><div class="fb-k">' + (cdPartTag().replace(/ · $/, '') || 'Focus') + '</div><div class="fb-t"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
     (nx ? '<button type="button" class="fb-next">Next</button>' : '') +
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
@@ -26964,7 +26976,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.375';
+const BUILD_ID = '2026-10-22.376';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
