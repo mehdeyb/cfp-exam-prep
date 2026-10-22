@@ -11488,20 +11488,31 @@ function ebStartRun(cards, o){
   o = o || {};
   if(!cards || !cards.length) return false;
   ebRun = { cards, i: 0, goal: Math.min(cards.length, o.goal || cards.length), stepId: o.stepId || null, from: o.from || 'plan', note: o.note || '' };
+  // A run you left partway picks up on the same card; it syncs with your data.
+  try{
+    const p = DATA.ebProgress;
+    if(p && Date.now() - (p.at || 0) < 3 * 86400000 && p.stepId === ebRun.stepId && p.from === ebRun.from && Array.isArray(p.ids) && p.i > 0 && p.i < p.ids.length){
+      const byId = {}; allFlashcards().forEach(c => { byId[c.id] = c; });
+      const cs = p.ids.map(id => byId[id]).filter(Boolean);
+      if(cs.length === p.ids.length) ebRun = { cards: cs, i: p.i, goal: Math.min(cs.length, p.goal || cs.length), stepId: p.stepId, from: p.from, note: p.note || '', resumed:true };
+    }
+  }catch(e){}
   return ebOpenRunCard();
 }
+function ebSaveRun(){ try{ const r = ebRun; if(!r) return; DATA.ebProgress = r.i > 0 && r.i < r.cards.length ? { at:Date.now(), ids:r.cards.map(c => c.id), i:r.i, goal:r.goal, stepId:r.stepId, from:r.from, note:r.note } : null; persist(); }catch(e){} }
 function ebOpenRunCard(){
   const r = ebRun; if(!r) return false;
+  ebSaveRun();
   const c = r.cards[r.i];
   return ebOpenCard(c, { run: true, note: r.note, again: null });
 }
 function ebRunNext(){
   const r = ebRun; if(!r) return;
   r.i++; ebClose(); ebRun = r;
-  setTimeout(() => { try{ if(r.i < r.cards.length) ebOpenRunCard(); else ebRun = null; }catch(e){} }, 60);
+  setTimeout(() => { try{ if(r.i < r.cards.length) ebOpenRunCard(); else { ebRun = null; DATA.ebProgress = null; persist(); } }catch(e){} }, 60);
 }
 function ebRunFinish(){
-  const from = ebRun && ebRun.from; ebRun = null; ebClose();
+  const from = ebRun && ebRun.from; ebRun = null; DATA.ebProgress = null; try{ persist(); }catch(e){} ebClose();
   if(from === 'tutor'){ try{ showTab('tutor'); }catch(e){} return; }
   setTimeout(() => { try{ tutorStepDonePrompt('Explain it back'); }catch(e){} }, 120);
 }
@@ -14722,7 +14733,17 @@ function startFlashcardSet(cards, kind){
   const sel = document.getElementById('fcDomainFilter'); if(sel) sel.value = '';
   fcQueue = cards.slice(); fcCustomQueue = true; fcCustomKind = kind || null; if(kind !== 'plan') _fcStep = null;
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
-  fcIndex = 0; renderFlashcard(); renderFlashcardStats();
+  fcIndex = 0;
+  // A set you left partway comes back at the same card, with the round tally intact; it syncs with your data.
+  try{
+    const p = DATA.fcProgress;
+    if(p && kind && kind !== 'picked' && p.kind === kind && Date.now() - (p.at || 0) < 86400000 && p.i > 0 && Array.isArray(p.ids) && p.i < p.ids.length){
+      const byId = {}; allFlashcards().forEach(c => { byId[c.id] = c; });
+      const cs = p.ids.map(id => byId[id]).filter(Boolean);
+      if(cs.length === p.ids.length){ fcQueue = cs; fcIndex = p.i; fcRound = p.round && Array.isArray(p.round.missedIds) ? { total:p.round.total || 0, knew:p.round.knew || 0, missed:[], missedIds:p.round.missedIds } : fcRound; fcRound.missed = fcRound.missedIds.map(id => byId[id]).filter(Boolean).map(c => c.term); }
+    }
+  }catch(e){}
+  renderFlashcard(); renderFlashcardStats();
   // A set started from today's plan runs on its own screen, with nothing else around it.
   if(kind === 'plan'){ try{ enterFlashcardFullscreen(); }catch(e){} }
   else { const c = document.getElementById('fcCard'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'}); }
@@ -15205,8 +15226,9 @@ function renderFlashcard(){
   }
   document.getElementById('fcCard').style.display = '';
   { const rc = document.getElementById('fcRecap'); if(rc && rc.style.display !== 'none' && fcRound.total === 0){ rc.style.display = 'none'; rc.innerHTML = ''; } }
-  if(fcIndex >= fcQueue.length) fcIndex = 0;
+  window._fcWrap = fcIndex >= fcQueue.length; if(fcIndex >= fcQueue.length) fcIndex = 0;
   const card = fcQueue[fcIndex];
+  try{ if(fcCustomQueue && fcCustomKind && fcIndex > 0){ DATA.fcProgress = { at:Date.now(), kind:fcCustomKind, ids:fcQueue.map(c => c.id), i:fcIndex, round:{ total:fcRound.total, knew:fcRound.knew, missedIds:fcRound.missedIds } }; persist(); } else if(fcCustomQueue && fcIndex === 0 && DATA.fcProgress && window._fcWrap){ DATA.fcProgress = null; persist(); } }catch(e){}
   { const _el = document.getElementById('fcCard'); if(_el && window._fcShownId !== card.id){ window._fcShownId = card.id; _el.classList.remove('fc-card-in'); void _el.offsetWidth; _el.classList.add('fc-card-in'); setTimeout(() => _el.classList.remove('fc-card-in'), 420); } }
   const domainMeta = DOMAINS.find(d=>d.key===card.domain);
   updateFcPlanLine();
@@ -15645,6 +15667,7 @@ function fcRecapRefresh(){
   }catch(e){}
 }
 function continueFlashcards(){
+  DATA.fcProgress = null;
   const box = document.getElementById('fcRecap'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
   const missedIds = fcRound.missedIds.slice();
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
@@ -20006,6 +20029,12 @@ function startTvmMultiStage(){
   tvmMultiStageProblem = problem;
   tvmMultiStageIndex = 0;
   tvmMultiStageCarriedValue = null; tvmMultiStageResults = [];
+  try{
+    const p = DATA.tvmMsProgress;
+    if(p && p.problem && Date.now() - (p.at || 0) < 86400000 && p.idx > 0 && p.idx < tvmMsStages(p.problem).length && typeof p.carried === 'number'){
+      tvmMultiStageProblem = p.problem; tvmMultiStageIndex = p.idx; tvmMultiStageCarriedValue = p.carried; tvmMultiStageResults = Array.isArray(p.results) ? p.results : [];
+    }
+  }catch(e){}
   const entryBtn = document.getElementById('tvmMultiStageEntryBtn');
   if(entryBtn) entryBtn.style.display = 'none';
   loadTvmMultiStageCurrent();
@@ -20061,6 +20090,8 @@ function tvmContinueToStage2(){
   tvmMultiStageCarriedValue = tvmRegisters[solveKey];
   tvmMultiStageIndex++;
   loadTvmMultiStageCurrent();
+  // Part 2 onward is kept, so leaving between parts resumes at the same part with the carried value; it syncs with your data.
+  try{ DATA.tvmMsProgress = { at:Date.now(), problem:tvmMultiStageProblem, idx:tvmMultiStageIndex, carried:tvmMultiStageCarriedValue, results:tvmMultiStageResults }; persist(); }catch(e){}
 }
 
 function tvmClearFeedback(){
@@ -20307,7 +20338,7 @@ function tvmCalculateAndShow(){
     document.getElementById('tvmContinueStageBtn').style.display = 'none';
     document.getElementById('tvmNextBtn').style.display = 'inline-block';
     if(tvmMultiStageActive){
-      tvmMultiStageActive = false;
+      tvmMultiStageActive = false; DATA.tvmMsProgress = null; try{ persist(); }catch(e){}
       const entryBtn = document.getElementById('tvmMultiStageEntryBtn');
       if(entryBtn) entryBtn.style.display = 'inline-block';
     }
@@ -27863,7 +27894,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.420';
+const BUILD_ID = '2026-10-22.421';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
