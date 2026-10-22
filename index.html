@@ -8949,7 +8949,7 @@ function buildStudyPlanCore(minutes){
       const n = planTarget('cards2', Math.min(Math.max(0, unseen - first), 15));
       if(!n) return null;
       return { id:'cards2', title:`Learn ${n} more new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have: Math.max(0, Math.min(act.cards - first, n)), unit:'cards',
-        why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => showTab('flashcards') };
+        why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => { const remain = Math.max(4, n - Math.max(0, act.cards - first)); const b = fcBalanced(remain, { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     read: () => {
       if(!weakDom || answered >= 150) return null;
@@ -8975,7 +8975,7 @@ function buildStudyPlanCore(minutes){
       if(!n) return null;
       return { id:'newcards', title:`Learn ${n} new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have:act.cards, unit:'cards',
         why:'Meeting new cards in small batches, then letting them come back on a schedule, builds the facts the questions lean on.',
-        run: () => showTab('flashcards') };
+        run: () => { const b = fcBalanced(Math.max(4, n - act.cards), { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     pretest: () => {
       if(answered >= 20 || !weakDom) return null;
@@ -26206,7 +26206,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.335';
+const BUILD_ID = '2026-10-21.336';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
