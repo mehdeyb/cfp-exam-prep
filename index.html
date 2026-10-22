@@ -15880,7 +15880,8 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
     const last = hi === _geminiHostOrder.hosts.length - 1;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), last ? total : Math.round(total * 0.4));
+    const attemptMs = (tries || 0) < GEMINI_MODELS.length - 1 ? Math.min(total, Math.max(30000, (maxTokens || 1000) * 15)) : total; // a model that is too slow gives way to the next one
+    const timeoutId = setTimeout(() => controller.abort(), last ? attemptMs : Math.round(attemptMs * 0.4));
     try{
       response = await fetch(geminiUrl(_geminiHostOrder.hosts[0], GEMINI_MODELS[Math.min(modelIdx != null ? modelIdx : geminiModelIdx, GEMINI_MODELS.length - 1)]), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
@@ -15888,6 +15889,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
       const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
       e.provider = 'gemini'; lastErr = e;
       if(!last){ _geminiHostOrder.hosts.reverse(); continue; } // this host did not answer: try the other one
+      if(e.code === 'TIMEOUT' && (tries || 0) < GEMINI_MODELS.length - 1) return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length });
       throw e;
     }finally{ clearTimeout(timeoutId); }
     if(response.ok){ _geminiDiag = []; try{ localStorage.setItem('cfp-gemini-host', _geminiHostOrder.hosts[0]); }catch(e){} break; }
@@ -26659,7 +26661,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.364';
+const BUILD_ID = '2026-10-22.365';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
