@@ -3602,7 +3602,7 @@
         <div class="ed-item"><b>Check-in details</b>The name on your ID must match your registration; a common nickname (Catherine for Cathy) is acceptable. Your calculator is inspected, and any notes or formulas on it must be covered with solid-color tape. Noise-cancelling headphones are available on request, and soft ear plugs without wires are allowed.</div>
         <div class="ed-item"><b>Official practice exam</b>Your registration includes one CFP Board Practice Exam: 170 questions, with retired real questions, and results by domain. Take it as a rehearsal under timed conditions, and use the by-domain result to point your last days of study.</div>
         <div class="ed-item"><b>On-screen tools</b>An on-screen clock, text highlighting, a mark-for-review flag, and the exam's formula sheet and tax tables are available while you test. Scratch paper and pencils are supplied and collected at the end.</div>
-        <div class="ed-item"><b>Rescheduling</b>Within the same window it is free 61 or more days ahead, $35 at 31 to 60 days, $100 at 5 to 30 days, and not allowed in the last 5 days. A no-show forfeits the fee.</div>
+        <div class="ed-item"><b>Rescheduling</b>Within the same window it is free 61 or more days ahead, $35 at 31 to 60 days, $100 at 5 to 30 days, and not allowed in the last 5 days. A no-show forfeits the fee.<span id="edReschedNow" style="display:block;margin-top:6px;font-weight:600;"></span></div>
         <div class="ed-item"><b>Retakes and rescoring</b>A retake means the whole exam, in a later window. The limits are three attempts in any 24 months and five in a lifetime. A rescore can be requested within 30 days of results for $150, and a change from fail to pass is highly unlikely.</div>
         <div class="ed-item"><b>If you don't pass</b>You'll receive a diagnostic report showing your performance across the Principal Knowledge Topics to help target a retake.</div>
       </div>
@@ -11157,7 +11157,16 @@ function renderEdTutorChips(){
   });
 }
 
+function renderReschedNow(){
+  const el = document.getElementById('edReschedNow'); if(!el) return;
+  let d = null; try{ d = getDaysUntilExam(); }catch(e){}
+  if(d === null){ el.textContent = ''; return; }
+  el.textContent = d < 0 ? 'Your exam date has passed.' : d === 0 ? 'Your exam is today.'
+    : d < 5 ? `Your exam is in ${d} day${d === 1 ? '' : 's'}: the window to reschedule has closed.`
+    : `Your exam is in ${d} days: rescheduling to the same window would cost ${d >= 61 ? 'nothing' : d >= 31 ? '$35' : '$100'}.`;
+}
 function renderExamDayCallout(){
+  try{ renderReschedNow(); }catch(e){}
   renderEdTutorChips();
   renderPaceCard();
   renderExamChecklist();
@@ -27021,7 +27030,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.383';
+const BUILD_ID = '2026-10-22.384';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
