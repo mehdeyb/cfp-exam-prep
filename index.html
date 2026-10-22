@@ -9376,9 +9376,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','mytool','calc','figures','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','mytool','calc','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','refresh','gap','tool','mytool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','refresh','gap','calc','tool','mytool','tutor','adaptive','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
   }[phase.key];
@@ -26993,7 +26993,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.381';
+const BUILD_ID = '2026-10-22.382';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
