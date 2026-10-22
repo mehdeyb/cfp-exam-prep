@@ -1774,7 +1774,7 @@
   .cd-resultbox .cd-title{font-size:18px;}
   .cd-start{margin:0 0 12px;}
   .fc-progress{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
-  body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;min-height:44px;line-height:44px;margin-bottom:6px;}
+  body.flashcard-fullscreen .fc-progress{text-align:center;font-size:13px;min-height:44px;line-height:44px;margin-bottom:6px;padding:0 52px;}
   .fc-card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:40px 28px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:transform var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),opacity 150ms var(--ease);}
 
   .fc-card:active{transform:scale(0.98);border-color:var(--gold);}
@@ -14717,15 +14717,16 @@ function updateFcPlanLine(){
   const progress = document.getElementById('fcProgress');
   const old = document.getElementById('fcPlanLine'); if(old) old.style.display = 'none';
   if(!progress || !fcQueue.length) return;
-  const pos = cdPartTag() + 'Card ' + (fcIndex + 1) + (fcCustomQueue ? ' of ' + fcQueue.length : '');
+  let pos = cdPartTag() + 'Card ' + (fcIndex + 1) + (fcCustomQueue ? ' of ' + fcQueue.length : '');
   const st = fcPlanState();
+  { const rc = document.getElementById('fcRecap'); if(rc && rc.style.display !== 'none' && rc.innerHTML && fcRound && fcRound.total > 0 && fcCustomQueue){ pos = cdPartTag() + 'Round done · ' + fcRound.total + ' card' + (fcRound.total === 1 ? '' : 's'); progress.className = 'fc-progress' + (st && st.done ? ' plan-done' : '') + ' has-bar'; progress.style.setProperty('--p', '100%'); progress.textContent = pos + (st && st.done ? ' ✓' : ''); return; } }
   progress.className = 'fc-progress' + (st && st.done ? ' plan-done' : '');
   { const fr = st ? Math.min(1, st.have / Math.max(1, st.need)) : (fcCustomQueue ? fcIndex / Math.max(1, fcQueue.length) : -1);
     if(fr >= 0){ progress.classList.add('has-bar'); progress.style.setProperty('--p', (Math.round(fr * 1000) / 10) + '%'); } else progress.style.removeProperty('--p'); }
   if(!st){ progress.textContent = fcCustomQueue ? pos : pos + ' of ' + fcQueue.length; return; }
   if(st.done){
     let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('cards'); }catch(e){}
-    progress.innerHTML = escapeHtml(pos) + ` · plan done ✓ (${st.have} today)` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
+    progress.innerHTML = escapeHtml(pos) + ` · plan done ✓` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
   } else progress.textContent = `${pos} · plan ${st.have} of ${st.need} cards`;
 }
 function renderFlashcard(){
@@ -15256,7 +15257,7 @@ function rateFlashcard(knowsIt){
     if(box){
       document.getElementById('fcCard').style.display = 'none';
       document.getElementById('fcActions').style.display = 'none';
-      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block'; window._fcRecapAt = Date.now(); fcUndoRefresh();
+      box.innerHTML = fcRecapHtml(fcRound); box.style.display = 'block'; window._fcRecapAt = Date.now(); fcUndoRefresh(); try{ updateFcPlanLine(); }catch(e){}
       const b = box.querySelector('button'); if(b) b.focus({preventScroll:true});
     }
   }
@@ -26985,7 +26986,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.378';
+const BUILD_ID = '2026-10-22.379';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
