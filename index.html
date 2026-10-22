@@ -10545,7 +10545,8 @@ function ebCurate(wk, weakDom, n, pool0){
   }
   if(cards.length < n) cards = cards.concat(allFlashcards().filter(c => !cards.includes(c)));
   const ts = c => (DATA.teachStats || {})['c:' + c.id];
-  const score = c => { const t = ts(c); let sc = flashcardPriority(c); if(!t) sc += 2; else if(t.grade === 'missed') sc += 6; else if(t.grade === 'partly') sc += 4; else sc -= 1; if(ebResting(c)) sc -= 12; if(ebDoneToday(c)) sc -= 30; sc += Math.min(3, ebMissHits(c)) * 1.5; return sc + Math.random(); };
+  const miscon = c => (DATA.misconceptions || []).some(m => m.key === 'c:' + c.id && Date.now() - m.at < 30 * 86400000);
+  const score = c => { const t = ts(c); let sc = flashcardPriority(c) + (miscon(c) ? 5 : 0); if(!t) sc += 2; else if(t.grade === 'missed') sc += 6; else if(t.grade === 'partly') sc += 4; else sc -= 1; if(ebResting(c)) sc -= 12; if(ebDoneToday(c)) sc -= 30; sc += Math.min(3, ebMissHits(c)) * 1.5; return sc + Math.random(); };
   const out = []; const seenTerm = new Set(); const picked = [];
   // Ideas in one run should not be near-twins: skip a card that mostly repeats one already chosen, and mix shaky ideas with a stronger one so the run is not all struggle.
   const ranked = cards.slice().sort((a, b) => score(b) - score(a));
@@ -26068,7 +26069,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.332';
+const BUILD_ID = '2026-10-21.333';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
