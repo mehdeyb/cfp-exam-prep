@@ -1238,7 +1238,8 @@
   .progress-readout .pr-d{font:500 11px 'IBM Plex Mono',monospace;padding:2px 8px;border-radius:99px;border:1px solid var(--hair);color:var(--muted);}
   .progress-readout .pr-d.up{color:var(--teal);border-color:currentColor;} .progress-readout .pr-d.down{color:var(--rust,#a4472c);border-color:currentColor;}
   .progress-readout .pr-sub{margin-top:8px;font-size:12.5px;color:var(--muted);}
-  .progress-scrub{touch-action:pan-y;cursor:ew-resize;}
+  .progress-scrub{cursor:ew-resize;}
+  .pt-days{color:var(--paper);font-weight:600;}
   .progress-chart-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:6px;}
   .gen-status{font-size:12px;color:var(--muted);}
   .gen-status.loading{animation:variantLoadingPulse 1.6s ease-in-out infinite;}
@@ -10589,7 +10590,7 @@ function renderTodayPlan(){
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   let plan;
-  try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; return; } // never let the plan break the Study tab
+  try{ plan = buildStudyPlan(); }catch(e){ el.style.display = 'none'; try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = ''; }catch(_){} return; } // never let the plan break the Study tab
   const left = plan.days === null ? '' : (plan.days === 0 ? 'Exam day' : `${plan.days} day${plan.days === 1 ? '' : 's'} to go`);
   try{ planAdvanceUpdate(plan); }catch(e){}
   const doneN = plan.steps.filter(x => x.done).length;
@@ -10632,7 +10633,7 @@ function renderTodayPlan(){
       + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
   } else rows = stepRows.join('') + (stepRows.length > 11 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
@@ -10645,6 +10646,7 @@ function renderTodayPlan(){
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
+  try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = (plan.days !== null && plan.days >= 2) ? 'none' : ''; }catch(e){} // the countdown lives in the plan's header now
   try{ conductorRefreshPill(); }catch(e){}
 }
 
@@ -28992,7 +28994,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.447';
+const BUILD_ID = '2026-10-22.448';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
