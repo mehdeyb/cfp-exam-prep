@@ -594,6 +594,9 @@
   html.scroll-locked::-webkit-scrollbar, html:has(body.quiz-active)::-webkit-scrollbar, html:has(body.flashcard-fullscreen)::-webkit-scrollbar{display:none;width:0;}
   html.scroll-locked, html:has(body.quiz-active), html:has(body.flashcard-fullscreen){scrollbar-width:none;}
   body.quiz-active #quizFullscreenHost, body.flashcard-fullscreen #flashcardFullscreenHost, body.tvm-active #tvmHost, body.settings-active #settingsHost{overscroll-behavior:contain;}
+  .settings-seg{margin:14px 0 4px;}
+  .settings-section[hidden]{display:none !important;}
+  .settings-section.sg-first{padding-top:0;margin-top:16px;border-top:none;}
   .settings-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--hair);}
   .voice-pref-row{margin-bottom:16px;}
   .voice-pref-row:last-child{margin-bottom:0;}
@@ -18645,7 +18648,31 @@ function closeDomainPicker(){
   unlockBodyScroll();
 }
 
+const SETTINGS_GROUPS = [
+  { id:'study', label:'Study', h:['Exam date','Display','Voice','Tutor notes'] },
+  { id:'ai', label:'AI', h:['AI connection','AI token usage','AI-written library'] },
+  { id:'data', label:'Data', h:['Sync across devices','Backup & restore','Reset'] },
+  { id:'app', label:'App', h:['App version','About this version','Content quality check','Syllabus coverage check'] }
+];
+function settingsShowGroup(g, noPersist){
+  const host = document.getElementById('settingsHost'); if(!host) return;
+  if(!SETTINGS_GROUPS.some(x => x.id === g)) g = 'study';
+  host.querySelectorAll('.settings-section').forEach(sec => { sec.hidden = sec.dataset.grp !== g; });
+  host.querySelectorAll('#settingsSeg button').forEach(b => { const on = b.dataset.g === g; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  let first = true; host.querySelectorAll('.settings-section').forEach(sec => { if(!sec.hidden){ sec.classList.toggle('sg-first', first); first = false; } });
+  if(!noPersist) try{ localStorage.setItem('settingsGroup', g); }catch(e){}
+  host.scrollTop = 0;
+}
+function settingsRevealEl(el){ const sec = el && el.closest && el.closest('.settings-section'); if(sec && sec.dataset.grp) settingsShowGroup(sec.dataset.grp, true); }
+function settingsSetup(){
+  const host = document.getElementById('settingsHost'); if(!host || host.dataset.grouped) return; host.dataset.grouped = '1';
+  host.querySelectorAll('.settings-section').forEach(sec => { const h = (sec.querySelector('h3') || {}).textContent || ''; const g = SETTINGS_GROUPS.find(x => x.h.includes(h.replace(/\s+/g, ' ').trim())); sec.dataset.grp = g ? g.id : 'app'; });
+  const seg = document.createElement('div'); seg.id = 'settingsSeg'; seg.className = 'pod-seg settings-seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Settings sections');
+  SETTINGS_GROUPS.forEach(g => { const b = document.createElement('button'); b.type = 'button'; b.dataset.g = g.id; b.textContent = g.label; b.onclick = () => settingsShowGroup(g.id); seg.appendChild(b); });
+  const hd = host.querySelector('.dp-header'); if(hd) hd.after(seg);
+}
 function openSettings(){
+  try{ settingsSetup(); let g = 'study'; try{ g = localStorage.getItem('settingsGroup') || 'study'; }catch(e){} settingsShowGroup(g, true); }catch(e){}
   { const _h = document.getElementById('settingsHost'); if(_h) _h.classList.remove('closing'); }
   document.body.classList.add('settings-active');
   try{ window._vpNote && window._vpNote('settings'); const vh = document.getElementById('vpHistory'); if(vh && window._vpHist) vh.textContent = 'Height history: ' + window._vpHist.join(' → '); }catch(e){}
@@ -18669,17 +18696,20 @@ function openSettings(){
 function openSettingsToSync(){
   openSettings();
   const sec = document.getElementById('syncSection');
+  if(sec) settingsRevealEl(sec);
   if(sec) setTimeout(() => sec.scrollIntoView({block:'start', behavior:'smooth'}), 60);
 }
 function openSettingsToExamDate(){
   openSettings();
   const sec = document.getElementById('examDateSection');
+  if(sec) settingsRevealEl(sec);
   if(sec) setTimeout(() => sec.scrollIntoView({block:'start', behavior:'smooth'}), 60);
 }
 function openSettingsToApiKey(){
   openSettings();
   const input = document.getElementById('apiKeyInput');
   if(input){
+    settingsRevealEl(input);
     input.scrollIntoView({block:'center', behavior:'smooth'});
     setTimeout(()=> input.focus(), 150);
   }
@@ -28933,7 +28963,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.439';
+const BUILD_ID = '2026-10-22.440';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
