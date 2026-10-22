@@ -1979,7 +1979,9 @@
   /* Underline signals it's clickable without needing the opacity dimming
      that was used before — dimming a color already close to its own
      tinted background is exactly what pushed contrast down to ~2.3:1. */
-  .api-key-connected .linklike{color:var(--correct);text-decoration:underline;}
+  .api-key-connected{flex-wrap:wrap;justify-content:flex-start;}
+  .api-key-connected > span{flex:1 1 100%;line-height:1.45;}
+  .api-key-connected .linklike{color:var(--correct);text-decoration:underline;padding:6px 4px;min-height:36px;margin-right:16px;}
   .api-key-connected .linklike:hover{color:var(--paper);}
 
   #appHeader{margin-bottom:28px;}
@@ -5808,7 +5810,7 @@ async function testAiConnection(){
     const model = aiMode === 'gemini' ? GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] : aiMode === 'direct' ? DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)] : ARTIFACT_MODEL;
     aiHealth = { ok:true, msg:'✓ Working · ' + model + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's' };
   }catch(e){
-    aiHealth = { ok:false, msg:'⚠ Not working: ' + describeAiError(e) };
+    aiHealth = { ok:false, msg:(geminiKey ? '⚠ Claude is not working, so Gemini is answering: ' : '⚠ Not working: ') + describeAiError(e) };
   }
   const el2 = document.getElementById('aiHealthText'); if(el2) el2.textContent = aiHealth.msg;
   return aiHealth;
@@ -15834,8 +15836,8 @@ async function anthropicMessagesRequestOnce(args){
     _aiLastProvider = 'claude';
     return out;
   }catch(err){
-    if(geminiKey && err && err.code !== 'NO_API_KEY' && err.status !== 400){
-      if(err.status !== 401 && err.status !== 403) _claudeDownUntil = Date.now() + 4 * 60000; // a rejected key will not heal on its own; an outage might
+    if(geminiKey && err && err.code !== 'NO_API_KEY' && (err.status !== 400 || /credit|balance|billing|quota|overload/i.test(err.message || ''))){
+      if(err.status !== 401 && err.status !== 403) _claudeDownUntil = Date.now() + (err.status === 400 ? 15 : 4) * 60000; // a rejected key will not heal on its own; an outage might
       try{ return await geminiRequestOnce(args); }catch(gerr){ throw err; }
     }
     throw err;
@@ -15894,10 +15896,12 @@ function describeAiError(err){
   if(err && err.code === 'BAD_REPLY') return "this is usually a one-off — try again in a moment.";
   if(err && err.code === 'CALC_CONVENTION_MISMATCH') return "it used the wrong calculator's conventions for a walkthrough — regenerating should fix it.";
   if(aiMode === 'direct'){
+    if(/credit balance|billing|purchase credits/i.test(err && err.message || '')) return 'your Anthropic account is out of credit. Add credits under Plans & Billing at console.anthropic.com' + (geminiKey ? ' (Gemini is covering until then).' : '.');
     if(status === 401 || status === 403) return 'your API key was rejected — check it in Settings.';
     if(status === 429) return "you're sending requests a bit fast — wait a few seconds and try again.";
     if(status && status >= 500) return "a temporary issue on Anthropic's end — try again in a moment.";
-    return 'try again in a moment, or check your API key in Settings.';
+    const det = ((err && err.message) || '').replace(/^AI request failed \(\d+\):?\s*/, '').slice(0, 140);
+    return (det ? det + ' ' : '') + 'Try again in a moment, or check your API key in Settings.';
   }
   if(status === 401 || status === 403){
     return "the built-in AI connection hit a permission issue that isn't something in this app — refreshing the page sometimes clears it. If it keeps happening, connecting your own API key in Settings is a reliable fallback.";
@@ -26441,7 +26445,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.342';
+const BUILD_ID = '2026-10-21.343';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
