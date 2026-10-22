@@ -12720,7 +12720,7 @@ function stageSlideNode(sl){
     const li = (sl.items || []).map(x => `<li><i>${x.k === 'term' ? 'Term' : x.k === 'formula' ? 'Formula' : 'Missed'}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
-    d.innerHTML = `<div class="pst-kicker">Now playing</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
+    d.innerHTML = `<div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This episode'}</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
   } else if(sl.kind === 'term'){
     d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>`;
   } else if(sl.kind === 'formula'){
@@ -28624,7 +28624,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.430';
+const BUILD_ID = '2026-10-22.431';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
