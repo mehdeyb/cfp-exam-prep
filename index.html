@@ -10428,9 +10428,13 @@ function planGoNext(id){
     runPlanStep(id);
   }catch(e){}
 }
-function planNextAfter(excludeId){
+// The one rule for "what comes next" everywhere (result screens, cards, tools, the tutor, the focus bar): the next unfinished step
+// after the one you were on, in plan order, and only then anything earlier you skipped past.
+function planNextAfter(excludeId, alsoSkip){
   const plan = buildStudyPlan();
-  return plan.steps.find(x => !x.done && x.id !== excludeId) || null;
+  const ok = x => !x.done && x.id !== excludeId && x.id !== alsoSkip;
+  const i = plan.steps.findIndex(x => x.id === excludeId);
+  return plan.steps.slice(i + 1).find(ok) || plan.steps.slice(0, Math.max(0, i)).find(ok) || null;
 }
 // After a session, say where that plan step stands, read from the same place Today's plan reads it.
 function renderPlanResult(){
@@ -11806,7 +11810,7 @@ function podcastShowAfter(){
     : `<button type="button" class="btn" onclick="podcastQuizNow()">Quiz me on this</button>`;
   let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){}
   el.innerHTML = `<b>Episode done ✓</b><div style="font-size:13px;color:var(--muted);">Lock it in while it is fresh.</div><div class="pa-row">${quizBtn}<button type="button" class="btn ghost" onclick="podcastSayBack()">Say it back</button></div>`
-    + (nx ? `<div class="pa-row"><button type="button" class="btn ghost" onclick="planGoNext('${nx.id}')">Next on today’s plan: ${escapeHtml(nx.title)} →</button></div>` : '');
+    + (nx ? `<div class="pa-row"><button type="button" class="btn ghost" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button></div>` : '');
   el.style.display = 'block';
 }
 function podcastQuizNow(){
@@ -25529,8 +25533,7 @@ const TUTOR_NEXT_TOOLS = ['start_plan_step','point_to','start_flashcards','start
 function tutorNextChoice(skipId){
   if(tutorNextStop) return tutorNextStop;
   try{
-    const plan = buildStudyPlan();
-    const st = plan.steps.find(x => !x.done && x.id !== _tutorLastStepId && x.id !== skipId);
+    const st = planNextAfter(skipId || _tutorLastStepId, _tutorLastStepId);
     if(st) return { label: String(st.title).replace(/\s+/g, ' ').slice(0, 60), tool: 'start_plan_step', input: { step_id: st.id } };
   }catch(e){}
   return null;
@@ -26984,12 +26987,12 @@ function focusEnter(o){
   const fromChat = _focus.origin === 'tutor';
   const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
   bar.innerHTML = '<div class="fb-l"><div class="fb-k">' + (cdPartTag().replace(/ · $/, '') || 'Focus') + '</div><div class="fb-t"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
-    (nx ? '<button type="button" class="fb-next">Next</button>' : '') +
+    (nx ? '<button type="button" class="fb-next"></button>' : '') +
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
   { const fn = bar.querySelector('.fb-n'); if(fn) fn.textContent = String(o.note).replace(/\s+/g, ' ').trim().slice(0, 70); }
   bar.querySelector('.fb-done').onclick = () => focusExit({ done:true });
-  const nb = bar.querySelector('.fb-next'); if(nb && nx) nb.setAttribute('aria-label', 'Next: ' + nx.label);
+  const nb = bar.querySelector('.fb-next'); if(nb && nx) fbNextStyle(nb, nx);
   if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
   panel.insertBefore(bar, panel.firstChild);
   _focus.bar = bar; _focus.panel = panel;
@@ -26998,16 +27001,17 @@ function focusEnter(o){
   try{ window.scrollTo(0, 0); }catch(e){}
   return true;
 }
+function fbNextStyle(nb, nx){ nb.setAttribute('aria-label', 'Next: ' + nx.label); nb.title = nx.label; nb.style.cssText = 'max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nb.textContent = 'Next: ' + nx.label.replace(/^(Drill|New ground|Keep fresh|Learn|Review|Refresh|Explain it back): /, '').slice(0, 28) + ' \u2192'; }
 function focusRefresh(){
   const f = _focus; if(!f || !f.bar) return;
   let nx = null; try{ nx = tutorNextChoice(f.stepId); }catch(e){}
   let nb = f.bar.querySelector('.fb-next');
   if(nx && !nb){
-    nb = document.createElement('button'); nb.type = 'button'; nb.className = 'fb-next'; nb.textContent = 'Next';
+    nb = document.createElement('button'); nb.type = 'button'; nb.className = 'fb-next';
     nb.onclick = () => { focusExit({ stay:true, done:true }); tutorGoNext(); };
     f.bar.insertBefore(nb, f.bar.querySelector('.fb-done'));
   }
-  if(nb){ if(nx) nb.setAttribute('aria-label', 'Next: ' + nx.label); else nb.remove(); }
+  if(nb){ if(nx) fbNextStyle(nb, nx); else nb.remove(); }
 }
 function focusKey(e){ if(e.key === 'Escape' && _focus && !session) focusExit({}); }
 function focusExit(o){
@@ -27552,7 +27556,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.403';
+const BUILD_ID = '2026-10-22.404';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
