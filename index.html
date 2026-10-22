@@ -9156,6 +9156,17 @@ function buildStudyPlanCore(minutes){
     .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)))
     .concat(freshWeak.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !tutorFlagged.some(t => t.key === w.key && t.idx === w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)));
   // A topic that already has its own step today (new ground, keep fresh) is not offered again as a drill, so one set of answers can never count twice.
+  // Adaptive re-plan: while today is still untouched (nothing answered, no card seen, nothing ticked, no guided session started), the day's
+  // targets are re-derived whenever the inputs that matter change (exam phase, time budget, misses, due cards, answer count, weakest topic).
+  // The moment any work starts they freeze, so counts and part totals never move under you.
+  try{
+    const untouched = !Object.keys(L.modes).some(m => L.modes[m] > 0) && !act.cards && !act.tvm && !act.formula && !Object.keys(L.manual || {}).length && !(L.trees || []).length && !(L.explains || []).length && !(L.figs || []).length && !DATA.conductor;
+    const sig = [phase.key, minutes, Math.min(missedN, 15), dueCards >= 5 ? 1 : 0, dueQs >= 8 ? 1 : 0, [0,10,20,30,60,80,100,150].filter(t => answered >= t).length, freshWeak[0] ? freshWeak[0].key + '-' + freshWeak[0].idx : '', ov ? 'ov' : '', tutorFlagged.length].join('|');
+    if(L.sig !== sig){
+      if(untouched && L.sig !== undefined){ L.targets = {}; L.snap = {}; L.drill = {}; L.meta = {}; }
+      L.sig = sig; try{ persist(); }catch(e){}
+    }
+  }catch(e){}
   const claimedTopics = new Set([L.targets.gapKey, L.targets.gapKey2, L.targets.freshKey].filter(Boolean));
   const wkList = wkList0.filter(w => !claimedTopics.has(w.key + '-' + w.idx));
   const wkAt = n => wkList[n] || null;
@@ -27440,7 +27451,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.396';
+const BUILD_ID = '2026-10-22.397';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
