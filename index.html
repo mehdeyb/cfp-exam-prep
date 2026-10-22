@@ -15745,7 +15745,7 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
 
 // ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
 const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash'];
 let geminiKey = null, geminiModelIdx = 0, geminiThinkingRejected = false, _claudeDownUntil = 0, _aiLastProvider = null;
 async function loadGeminiKey(){
   try{ const v = await storageGet(GEMINI_KEY_STORAGE); if(!v || !v.length) return null; return v.startsWith('v1:') ? await openSecret(v) : v; }catch(e){ return null; }
@@ -15796,7 +15796,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
   if(!geminiThinkingRejected) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
   let response;
-  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey) _geminiHostOrder = { key: geminiKey, hosts: /^AQ\./.test(geminiKey) ? ['vertex', 'studio'] : ['studio', 'vertex'] };
+  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = /^AQ\./.test(geminiKey) ? ['vertex', 'studio'] : ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved, saved === 'studio' ? 'vertex' : 'studio'] : base }; }
   const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
   let lastErr = null;
   for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
@@ -15812,17 +15812,22 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
       if(!last){ _geminiHostOrder.hosts.reverse(); continue; } // this host did not answer: try the other one
       throw e;
     }finally{ clearTimeout(timeoutId); }
-    if(response.ok){ _geminiDiag = []; break; }
+    if(response.ok){ _geminiDiag = []; try{ localStorage.setItem('cfp-gemini-host', _geminiHostOrder.hosts[0]); }catch(e){} break; }
     let det = ''; try{ det = ((await response.clone().json()).error || {}).message || ''; }catch(e){}
     if(hi === 0) _geminiDiag = [];
     _geminiDiag.push((_geminiHostOrder.hosts[0] === 'vertex' ? 'Vertex' : 'AI Studio') + ' answered ' + response.status + (det ? ': ' + det.slice(0, 150) : ''));
     if(last || ![400, 401, 403, 404].includes(response.status)) break;
+    if(response.status === 404 && /model/i.test(det)) break; // the host is right; the model name is not
     if(response.status !== 400 || /api key|not valid|unauthenticated|permission|credential|expired/i.test(det)) _geminiHostOrder.hosts.reverse(); else break; // wrong host for this key: try the other one
   }
   if(!response.ok){
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
     if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
-    if((response.status === 404 || (response.status === 400 && /model/i.test(detail))) && geminiModelIdx < GEMINI_MODELS.length - 1){ geminiModelIdx++; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
+    if(response.status === 404 || (response.status === 400 && /model/i.test(detail))){
+      const sug = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1]; // Google names the current model when one is retired
+      if(sug && !GEMINI_MODELS.includes(sug)) GEMINI_MODELS.splice(Math.min(geminiModelIdx + 1, GEMINI_MODELS.length), 0, sug);
+      if(geminiModelIdx < GEMINI_MODELS.length - 1){ geminiModelIdx++; return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs }); }
+    }
     const err = new Error('AI request failed (' + response.status + ')' + (detail ? ': ' + detail : '')); err.status = response.status; err.provider = 'gemini'; throw err;
   }
   let data; try{ data = await response.json(); }catch(e){ const be = new Error('The AI sent back a reply this app could not read'); be.code = 'BAD_REPLY'; be.provider = 'gemini'; throw be; }
@@ -26466,7 +26471,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.346';
+const BUILD_ID = '2026-10-21.347';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
