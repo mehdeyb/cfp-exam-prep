@@ -46,6 +46,11 @@
   if(light){document.documentElement.setAttribute('data-boot-theme','light');
     var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute('content','#F6F4EE');}
 }catch(e){}})();
+/* One layout source of truth, set before first paint: html[data-lay] = compact | regular | wide | xwide (see layoutSync in the main script). */
+(function(){try{var w=document.documentElement.clientWidth,p=localStorage.getItem('cfp-layout')||'auto';
+  var m=w<640?'compact':w<960?'regular':w<1280?'wide':'xwide';
+  if(p==='single'&&m!=='compact')m='regular';else if(p==='wide'&&w>=760)m=w>=1280?'xwide':'wide';
+  document.documentElement.setAttribute('data-lay',m);}catch(e){}})();
 </script>
 <style>
   html[data-boot-theme="light"]{
@@ -2925,6 +2930,41 @@
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:sticky;bottom:0;margin-top:14px;}
     body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px));}
   }
+
+  /* ---------- Screen layout: html[data-lay] follows the real window (rotation, split view) and the Screen layout setting ---------- */
+  html:is([data-lay="wide"],[data-lay="xwide"]) .wrap{max-width:1240px;}
+  html[data-lay="xwide"] .wrap{max-width:1400px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);column-gap:20px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > *{grid-column:1 / -1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > #todayPlanCard{grid-column:1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > #blueprintCard{grid-column:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > #todayPlanCard, html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > #blueprintCard{margin-bottom:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active > #modePanel{margin-top:20px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active #bpLegend{grid-template-columns:minmax(0,1fr);}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-study.active #modePanel .mode-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  html[data-lay="xwide"] #tab-study.active #modePanel .mode-grid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #heroIntro{display:flex;align-items:flex-end;justify-content:space-between;gap:32px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #heroIntro .sub{display:none;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #heroIntro h1{font-size:34px;line-height:1.1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #heroIntro h1 br{display:none;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #heroIntro h1 em{margin-left:12px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #appHeader{margin-bottom:10px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row{flex-wrap:nowrap;gap:20px;margin-bottom:12px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .score-ring-block{flex:none;width:auto;max-width:none;min-width:0;display:grid;grid-template-columns:auto 1fr;column-gap:16px;row-gap:2px;align-items:center;justify-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .score-ring-wrap{grid-row:1 / span 6;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .score-meta .label, html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .score-band{text-align:left;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .exam-countdown-card{flex:1 1 auto;min-width:0;margin-top:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .score-row .stat-strip{flex:none;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-reference.active, html:is([data-lay="wide"],[data-lay="xwide"]) #tab-examday.active, html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active{display:block;column-width:470px;column-gap:24px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-reference.active > *, html:is([data-lay="wide"],[data-lay="xwide"]) #tab-examday.active > *, html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > *{break-inside:avoid;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > .sub-back{column-span:all;margin-bottom:12px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-flashcards.active{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);column-gap:20px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-flashcards.active > *{grid-column:1 / -1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-flashcards.active > #fcTopCard{grid-column:1;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-flashcards.active > #fcStatsCard{grid-column:2;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.settings-active #settingsHost .dp-inner{max-width:1060px;column-width:440px;column-gap:32px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.settings-active #settingsHost .dp-inner > *{break-inside:avoid;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.settings-active #settingsHost .dp-inner > .dp-header{column-span:all;}
 </style>
 </head>
 <body>
@@ -3882,6 +3922,13 @@
 
         <div class="settings-section">
           <h3>Display</h3>
+          <div class="note" style="margin-bottom:10px;">screen layout</div>
+          <div class="evening-mode-control" id="layoutControl">
+            <button class="ev-mode-btn" id="layout_auto" onclick="setLayoutPref('auto')">Auto</button>
+            <button class="ev-mode-btn" id="layout_single" onclick="setLayoutPref('single')">One column</button>
+            <button class="ev-mode-btn" id="layout_wide" onclick="setLayoutPref('wide')">Wide</button>
+          </div>
+          <div class="ev-mode-status" id="layoutStatus" style="margin-bottom:16px;"></div>
           <div class="note" style="margin-bottom:10px;">light or dark</div>
           <div class="evening-mode-control" id="themeModeControl">
             <button class="ev-mode-btn" id="themeMode_auto" onclick="setThemeMode('auto')">Auto</button>
@@ -6180,6 +6227,41 @@ function renderEveningModeControl(){
 }
 
 // Light/dark follows the phone's own setting unless the person has picked one.
+// ---- Screen layout system ----------------------------------------------------------------------------------------
+// One place decides how the app lays out: html[data-lay] = compact (<640) | regular (<960) | wide (<1280) | xwide, from the real window
+// width, so rotation, split view and Stage Manager resizing all re-flow live. The "Screen layout" setting (this device only) can
+// force a single column or the wide layout. CSS reads the attribute; code can read window.LAYOUT or listen for 'layoutchange'.
+function layoutPref(){ try{ return localStorage.getItem('cfp-layout') || 'auto'; }catch(e){ return 'auto'; } }
+function layoutCompute(){
+  const w = document.documentElement.clientWidth || window.innerWidth, h = window.innerHeight, p = layoutPref();
+  let m = w < 640 ? 'compact' : w < 960 ? 'regular' : w < 1280 ? 'wide' : 'xwide';
+  if(p === 'single' && m !== 'compact') m = 'regular';
+  else if(p === 'wide' && w >= 760) m = w >= 1280 ? 'xwide' : 'wide';
+  return { mode:m, w, h, orient: w > h ? 'land' : 'port', short: h < 600, pref:p };
+}
+function layoutSync(){
+  const L = layoutCompute(), root = document.documentElement, was = window.LAYOUT && window.LAYOUT.mode;
+  if(root.getAttribute('data-lay') !== L.mode) root.setAttribute('data-lay', L.mode);
+  root.setAttribute('data-orient', L.orient); root.toggleAttribute('data-short', L.short);
+  window.LAYOUT = L;
+  if(was && was !== L.mode){ try{ window.dispatchEvent(new CustomEvent('layoutchange', { detail:L })); }catch(e){} }
+}
+let _layoutRaf = 0;
+function layoutSoon(){ if(_layoutRaf) return; _layoutRaf = requestAnimationFrame(() => { _layoutRaf = 0; layoutSync(); }); }
+window.addEventListener('resize', layoutSoon); window.addEventListener('orientationchange', () => setTimeout(layoutSync, 120));
+try{ if(window.visualViewport) window.visualViewport.addEventListener('resize', layoutSoon); }catch(e){}
+function setLayoutPref(p){
+  try{ if(p === 'auto') localStorage.removeItem('cfp-layout'); else localStorage.setItem('cfp-layout', p); }catch(e){}
+  layoutSync(); renderLayoutControl();
+}
+function renderLayoutControl(){
+  const p = layoutPref();
+  ['auto','single','wide'].forEach(m => { const b = document.getElementById('layout_' + m); if(b) b.classList.toggle('active', m === p); });
+  const st = document.getElementById('layoutStatus'); if(!st) return;
+  const L = window.LAYOUT || layoutCompute();
+  st.textContent = p === 'auto' ? `Fits itself to this screen (${L.w} wide): ${L.mode === 'compact' ? 'one column' : L.mode === 'regular' ? 'one roomy column' : 'two columns, using the sides'}. It changes when you rotate.` : (p === 'single' ? 'Always one column on this device.' : 'Always uses the wide layout when the screen is big enough.');
+}
+layoutSync();
 // themeMode: 'auto' (default, also for older saved data) | 'light' | 'dark'.
 function systemPrefersDark(){
   try{ return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }catch(_){ return true; }
@@ -13083,7 +13165,7 @@ function renderReference(){
   });
   if(!syl.querySelector('.syllabus-domain')){ const e = document.createElement('div'); e.className = 'glossary-empty'; e.textContent = 'Nothing matches this filter right now — good sign.'; syl.appendChild(e); }
 
-  renderEveningModeControl(); renderThemeModeControl();
+  renderEveningModeControl(); renderThemeModeControl(); renderLayoutControl();
 }
 
 // ---------- Topic-level view of the 70 official subtopics ----------
@@ -27908,7 +27990,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.422';
+const BUILD_ID = '2026-10-22.423';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
