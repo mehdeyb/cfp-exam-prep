@@ -20238,22 +20238,60 @@ function mwYourPick(q){
   return best;
 }
 function mwPick(n, prefer){
+  // Chooses the misses most worth a walk-through: stuck beliefs, recurring confusion pairs, weak and heavily weighted areas, misses still failing,
+  // and ones that are overdue; skips ones just walked or cleared, and keeps the set varied by area, by confusion pair and by idea.
   const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
-  const now = Date.now(), done = DATA.mwDone || {};
+  const now = Date.now(), done = DATA.mwDone || {}, mixes = DATA.mixups || {}, DAY = 86400000;
   const acc = {}, wt = {};
-  DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; acc[d.key] = st.total ? st.correct / st.total : 0.5; wt[d.key] = d.weight || 10; });
-  const scored = (DATA.missed || []).map(id => byId[id]).filter(q => q && !isGenQ(q) && Array.isArray(q.choices) && q.choices.length === 4).map(q => {
-    const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; const stuck = Math.max(0, ...Object.values(picks).map(Number));
-    const d = done[q.id]; const recent = d && now - d.t < 3 * 86400000 ? 1 : 0;
-    return { q, s: stuck * 3 + (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5 - recent * 12 + (prefer && prefer.includes(q.id) ? 50 : 0) };
+  DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; acc[d.key] = st.total >= 4 ? st.correct / st.total : 0.5; wt[d.key] = d.weight || 10; });
+  const missed = DATA.missed || [], why = {};
+  const scored = missed.map((id, idx) => ({ id, idx })).map(o => ({ q: byId[o.id], idx: o.idx })).filter(o => o.q && !isGenQ(o.q) && Array.isArray(o.q.choices) && o.q.choices.length === 4).map(o => {
+    const q = o.q, picks = (DATA.wrongChoiceHistory || {})[q.id] || {};
+    const counts = Object.values(picks).map(Number), stuck = Math.max(0, ...counts), total = counts.reduce((a, b) => a + b, 0);
+    const sp = getSpacedStat(DATA.questionStats || {}, q.id);
+    let s = 0, tag = '';
+    s += stuck * 3; if(stuck >= 2) tag = 'same wrong pick ' + stuck + '×';
+    s += Math.min(total, 4) * 0.8;
+    const need = (1 - acc[q.domain]) * (wt[q.domain] || 10) / 5; s += need;
+    if(need >= 2.5 && !tag) tag = 'a weak, high-weight area';
+    // recurring confusion pair
+    let pair = null; const wrongIdx = Object.keys(picks).map(Number).filter(i => i !== q.correct).sort((a, b) => picks[b] - picks[a])[0];
+    if(wrongIdx !== undefined){ try{ pair = detectMixup(q, wrongIdx); }catch(e){} }
+    if(pair && mixes[pair.id] && mixes[pair.id].n >= 2){ s += 2 + Math.min(mixes[pair.id].n, 5); if(!tag) tag = pair.a + ' vs ' + pair.b + ' keeps catching you'; }
+    // memory: low box and overdue
+    if(sp.box <= 0) s += 1.5; if(sp.dueAt && sp.dueAt < now) s += 1.5;
+    // newer misses are fresher to fix
+    s += 2 * (o.idx / Math.max(1, missed.length - 1));
+    // earlier walk-through result
+    const d = done[q.id];
+    if(d){
+      const age = now - d.t;
+      if(age < DAY) s -= 14;
+      else if(d.ok === false){ s += 3; if(!tag) tag = 'still missed last time'; }
+      else if(d.ok === true && age < 14 * DAY) s -= 6;
+      else if(age < 3 * DAY) s -= 8;
+    }
+    if(prefer && prefer.includes(q.id)) s += 50;
+    return { q, s, pair };
   }).sort((a, b) => b.s - a.s);
-  const out = [], rest = scored.slice();
+  const out = [], rest = scored.slice(), usedPairs = new Set();
   while(out.length < n && rest.length){
-    const last = out.length ? out[out.length - 1].domain : null;
-    let i = rest.findIndex(x => x.q.domain !== last); if(i < 0) i = 0;
-    out.push(rest.splice(i, 1)[0].q);
+    const last = out.length ? out[out.length - 1].q.domain : null;
+    const base = out.map(x => mwWords(x.q.q + ' ' + x.q.choices[x.q.correct]));
+    let i = rest.findIndex(x => {
+      if(x.q.domain === last) return false;
+      if(x.pair && usedPairs.has(x.pair.id)) return false;
+      const w = mwWords(x.q.q + ' ' + x.q.choices[x.q.correct]);
+      return !out.some((o, k) => { let inter = 0; w.forEach(t => { if(base[k].has(t)) inter++; }); return inter / ((w.size + base[k].size - inter) || 1) > 0.45 || (() => { try{ return !factExempt(x.q) && questionsSameFact(o.q, x.q); }catch(e){ return false; } })(); });
+    });
+    if(i < 0) i = rest.findIndex(x => x.q.domain !== last);
+    if(i < 0) i = 0;
+    const pick = rest.splice(i, 1)[0]; out.push(pick); if(pick.pair) usedPairs.add(pick.pair.id);
   }
-  return out;
+  out.forEach(x => { const picks = (DATA.wrongChoiceHistory || {})[x.q.id] || {}; const st = Math.max(0, ...Object.values(picks).map(Number)); const dd = done[x.q.id];
+    why[x.q.id] = st >= 2 ? 'same wrong pick ' + st + '×' : (x.pair && mixes[x.pair.id] && mixes[x.pair.id].n >= 2 ? x.pair.a + ' vs ' + x.pair.b + ' keeps catching you' : (dd && dd.ok === false ? 'still missed last time' : ((1 - acc[x.q.domain]) * (wt[x.q.domain] || 10) / 5 >= 2.5 ? 'a weak, high-weight area' : ''))); });
+  mwPick.why = why;
+  return out.map(x => x.q);
 }
 function mwWords(t){ return new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 4)); }
 function mwSibling(q, used){
@@ -20281,7 +20319,7 @@ function mwOpen(n, prefer){
   const qs = mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
-  mw = { items: qs.map(q => ({ q, pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
+  mw = { items: qs.map(q => ({ q, why: (mwPick.why || {})[q.id] || '', pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
   if(host.parentElement !== document.body){ mw.home = host.parentElement; document.body.appendChild(host); }
   mw.opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   document.body.classList.add('mw-active');
@@ -20342,7 +20380,7 @@ function mwBreakdown(it){
 function mwHead(it, extra){
   const d = DOMAINS.find(x => x.key === it.q.domain) || {};
   const times = Math.max(0, ...Object.values((DATA.wrongChoiceHistory || {})[it.q.id] || {}).map(Number));
-  return `<div class="mw-kicker">Miss ${mw.i + 1} of ${mw.items.length} · ${escapeHtml(d.code || '')}${extra ? ' · ' + extra : (times >= 2 ? ' · same wrong pick ' + times + '×' : '')}</div>`;
+  return `<div class="mw-kicker">Miss ${mw.i + 1} of ${mw.items.length} · ${escapeHtml(d.code || '')}${extra ? ' · ' + extra : (it.why ? ' · ' + it.why : (times >= 2 ? ' · same wrong pick ' + times + '×' : ''))}</div>`;
 }
 function mwDots(){
   const el = document.getElementById('mwDots'); if(!el || !mw) return;
@@ -27084,7 +27122,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.385';
+const BUILD_ID = '2026-10-22.386';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
