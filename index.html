@@ -8612,9 +8612,10 @@ function studyPaceAdvice(){
     const ramp = examRampMinutes(days, avgMin);
     const minutes = Math.max(90, Math.min(360, Math.max(rounded, ramp)));
     const stretch = rounded > 360;
-    const status = !known ? 'new' : (avgMin >= minutes * 0.9 ? 'on' : 'behind');
+    const need = Math.max(90, Math.min(360, rounded));
+    const status = !known ? 'new' : (avgMin >= need * 0.9 ? 'on' : 'behind');
     const d = new Date(DATA.examDate + 'T00:00:00');
-    return { minutes, raw, avgMin, known, status, stretch, days, parts, ramp, rampLed: ramp > rounded, examLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+    return { minutes, need, raw, avgMin, known, status, stretch, days, parts, ramp, rampLed: ramp > rounded, examLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
   }catch(e){ return null; }
 }
 function paceAdviceText(a){
@@ -25215,7 +25216,7 @@ function buildTutorSystemPrompt(){
     const mem = tutorRecentTopics(14);
     if(mem.length) timeContext += ' Things they have brought to you in earlier conversations, oldest first: ' + mem.map(m => `"${m.q}" (${modeAgoText(m.t)})`).join('; ') + '. Use this for continuity, the way a tutor who remembers last week would: connect to an earlier topic when it genuinely helps, check whether it stuck, but never recite the list.';
   }catch(e){}
-  try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.minutes)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
+  try{ const pa = studyPaceAdvice(); if(pa) timeContext += ` The app estimates they need about ${paceHrs(pa.need)} of study a day to be ready by their exam date${pa.known ? ' (they have been averaging ' + paceHrs(pa.avgMin) + ')' : ''}${pa.stretch ? ', and full coverage would take more than that, so weak domains come first' : ''}. That comes from ${pa.parts.filter(p => p.min >= 1).map(p => p.label + ' (~' + paceHrs(p.min) + ')').join(', ')}, spread over ${pa.days} days with the last day for rest. When they ask how much to study, give this number and the reason, and offer to set today's plan to it; do not raise it unprompted.`; }catch(e){}
   try{ const x = lastSitting(); if(x) timeContext += ` Their last timed ${x.mode === 'mock' ? 'checkpoint' : 'full exam'} (${modeAgoText(new Date(x.date).getTime())}): ${sittingClockLine(x)}. Checkpoints run under exam conditions with no feedback until submitting, and the app shows the allowance per question (about 2 minutes) with the time they have banked against an even pace. Use this when they ask about pacing or time management; never push speed at the cost of accuracy.`; }catch(e){}
   try{
     // Today's plan, live, so the tutor never has to guess where the student is in it or contradict the Study tab.
@@ -26174,7 +26175,7 @@ const TUTOR_TOOLS = [
   {
     name: 'plan_my_study',
     description: "Build the student's plan for today: an ordered, time-boxed list of what to do, chosen from how many days they have left, what is due for review, what they keep missing and what they have already done today. Call this whenever they ask what to do, how to use their time, or what the best next move is. Pass 'minutes' if they tell you how long they have (60 to 360), or the suggested pace from the app if they ask you to set it; otherwise leave it out. Then walk them through it one step at a time in your own words, using each step's reason, and offer to start the first one. The same plan shows in the Study tab under Today's plan.",
-    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 60 to 360. Optional.' } } },
+    input_schema: { type: 'object', properties: { minutes: { type: 'number', description: 'How many minutes they have today, 30 to 360. Optional. Applies to today only.' } } },
   },
   {
     name: 'schedule_check_in',
@@ -26456,12 +26457,12 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'plan_my_study'){
       const m = Math.round(Number(toolInput && toolInput.minutes));
-      if(m >= 60 && m <= 360){ DATA.planMinutes = m; persist(); }
+      if(m >= 30 && m <= 360){ DATA.planToday = { day: localDayKey(), m }; try{ _planMemo = {}; }catch(e){} persist(); } // a time the student mentions is for today; the usual setting stays
       const plan = buildStudyPlan();
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
-      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes (plan uses about ${plan.used}).${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a 10 minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes${planTodayOverride() ? ' (set for today only)' : ''} (plan uses about ${plan.used}).${(() => { const pa = studyPaceAdvice(); return pa && pa.rampLed ? ' Days are deliberately lengthening toward a six-hour day with a break in the middle, to build stamina for the real exam.' : ''; })()}${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a ' + (plan.minutes >= 300 ? '15' : '10') + ' minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'queue_next_stop'){
@@ -27184,12 +27185,12 @@ const TN_RULES = [
   { kind: 'pace',
     make(){
       const a = studyPaceAdvice(); if(!a || !a.known || a.days > 35) return null;
-      const last3 = tnRecentDayMinutes(3); if(!last3.every(m => m < a.minutes * 0.7) || last3.every(m => m === 0)) return null; // three empty days is the gap note's job
+      const last3 = tnRecentDayMinutes(3); if(!last3.every(m => m < a.need * 0.7) || last3.every(m => m === 0)) return null; // three empty days is the gap note's job
       const avg = last3.reduce((x, y) => x + y, 0) / 3;
-      return { key: 'pace', cool: 5, text: `Under pace three days running: about ${paceHrs(Math.max(15, avg))} a day against the ${paceHrs(a.minutes)} that gets you ready by ${a.examLabel}.`,
+      return { key: 'pace', cool: 5, text: `Under pace three days running: about ${paceHrs(Math.max(15, avg))} a day against the ${paceHrs(a.need)} that gets you ready by ${a.examLabel}.`,
         act: { kind: 'ask', label: 'Build a catch-up plan', arg: `I have been under my study pace for three days. My exam is ${a.days} days away. Look at my plan and my weak areas, then give me a realistic catch-up plan that does not burn me out.` } };
     },
-    still(n){ const a = studyPaceAdvice(); return !!a && tnRecentDayMinutes(1)[0] < a.minutes; } },
+    still(n){ const a = studyPaceAdvice(); return !!a && tnRecentDayMinutes(1)[0] < a.need; } },
   { kind: 'fade',
     make(){
       const d = getDaysUntilExam(); if(d !== null && (d > 60 || d < 2)) return null;
@@ -27541,7 +27542,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.401';
+const BUILD_ID = '2026-10-22.402';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
