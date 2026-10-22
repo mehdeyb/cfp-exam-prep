@@ -1755,6 +1755,13 @@
   .podcast-speed-select{width:100%;margin-top:0;}
   .podcast-status{font-size:11.5px;color:var(--muted);margin-top:10px;min-height:16px;text-align:center;}
   .pod-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;}
+  /* A lesson that exists puts the screen first; the pickers sit below it and the duplicate Play button in the hero goes away. */
+  #lessonsCard{display:flex;flex-direction:column;} #lessonsCard > .card-head{order:-3;}
+  #lessonsCard.has-lesson #podcastHero{display:none;} #lessonsCard.has-lesson #podcastPlayer{order:-2;} #lessonsCard.has-lesson #podcastFocus{order:-1;}
+  #lessonsCard.has-lesson #podcastTypeSeg{margin-top:18px;flex-wrap:wrap;} #lessonsCard.has-lesson #podcastTypeSeg::before{content:'Another lesson';display:block;flex:0 0 100%;font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+  #lessonsCard .pstage{border-radius:20px;box-shadow:0 10px 30px -18px rgba(0,0,0,.35);} #lessonsCard .pst-body{min-height:230px;padding:6px 6px 0;} #lessonsCard .pst-title{font-size:26px;} 
+  html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard .pst-body{min-height:300px;} html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard .pst-title{font-size:30px;}
+  .pp-more .linklike.podcast-icon-btn-stop{background:none;border:0;padding:0;box-shadow:none;color:inherit;font:inherit;font-size:12.5px;min-height:36px;text-decoration:underline;text-underline-offset:3px;width:auto;height:auto;border-radius:0;display:inline;}
   .pod-hero{margin-top:10px;padding:16px;border-radius:18px;background:linear-gradient(160deg,var(--gold-soft),var(--surface2));border:1px solid var(--hair);}
   .pod-hero-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);}
   .pod-hero-title{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.25;margin:4px 0 4px;color:var(--paper);}
@@ -1769,7 +1776,7 @@
   .pp-cap small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
   .pp-prog{margin:0 0 12px;} .pp-prog input[type=range]{width:100%;accent-color:var(--gold);height:28px;margin:0;}
   .pp-time{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
-  .pp-more{display:flex;justify-content:center;gap:18px;margin-top:8px;} .pp-more .linklike{font-size:12.5px;min-height:36px;}
+  .pp-more{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 20px;margin-top:8px;} .pp-more .linklike{white-space:nowrap;} .pp-more .linklike{font-size:12.5px;min-height:36px;}
   .podcast-focus{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--hair);font-size:13px;line-height:1.5;}
   .podcast-focus b.pf-h{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);font-weight:500;margin-bottom:6px;}
   .podcast-focus .pf-row{display:flex;gap:8px;align-items:baseline;margin:3px 0;} .podcast-focus .pf-row i{flex:none;font-style:normal;color:var(--gold);}
@@ -3642,7 +3649,7 @@
       <p class="hint">Know what each variable means, not just the shape.</p>
       <div class="ref-scroll"><div id="formulasList"></div></div>
     </div>
-    <div class="card">
+    <div class="card" id="lessonsCard">
       <div class="card-head"><h2>Lessons</h2><div class="note">a tutor walks you through it, with slides</div></div>
       <div class="pod-hero" id="podcastHero">
         <div class="pod-hero-kicker" id="podHeroKicker"></div>
@@ -3692,7 +3699,6 @@
             <button class="podcast-icon-btn podcast-icon-btn-skip podcast-stop-btn" id="podcastStopBtn" onclick="stopPodcastPlayback()" title="Stop" aria-label="Stop" hidden><span></span></button>
           </div>
           <div class="podcast-player-secondary-row">
-            <button class="podcast-icon-btn podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Follow along</span></button>
             <select id="podcastSleepSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSleepChanged()" aria-label="Sleep timer">
               <option value="0" selected>Sleep</option>
               <option value="10">Sleep 10m</option>
@@ -3707,7 +3713,7 @@
             </select>
           </div>
           <div class="podcast-status" id="podcastStatus" aria-live="polite"></div>
-          <div class="pp-more"><button type="button" class="linklike" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Rewrite this lesson</button><button type="button" class="linklike" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all domains</button></div>
+          <div class="pp-more"><button class="linklike podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Read along</span></button><button type="button" class="linklike" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Rewrite</button><button type="button" class="linklike" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all</button></div>
         </div>
         <div class="podcast-generated-note" id="podcastGeneratedNote" style="display:none;" aria-live="polite"></div>
         <div class="podcast-refine" id="podcastRefine" style="display:none;"></div>
@@ -12099,7 +12105,7 @@ function refreshPodcastView(){
   const transcript = document.getElementById('podcastTranscript');
   const generatedNote = document.getElementById('podcastGeneratedNote');
   if(cached){
-    generateBtn.textContent = 'Rewrite this lesson'; generateBtn.style.display = '';
+    generateBtn.textContent = 'Rewrite'; generateBtn.style.display = '';
     player.style.display = 'block';
     transcriptWrap.style.display = podcastTranscriptOpen ? 'block' : 'none';
     transcript.className = 'podcast-transcript';
@@ -12122,7 +12128,7 @@ function refreshPodcastView(){
     generatedNote.style.display = 'none';
     try{ const sg = document.getElementById('podcastStage'); if(sg) sg.style.display = 'none'; }catch(e){}
   }
-  try{ const af = document.getElementById('podcastAfter'); if(af && !naturalSpeechState.active) af.style.display = 'none'; renderPodcastFocus(); renderPodcastRefine(); renderPodcastHero(); podcastUpdateProgress(0); const tt = document.getElementById('podcastTranscriptToggle'); if(tt){ tt.setAttribute('aria-expanded', podcastTranscriptOpen); tt.querySelector('span').textContent = podcastTranscriptOpen ? 'Hide transcript' : 'Follow along'; } const cp = document.getElementById('podcastCaption'); if(cp && !naturalSpeechState.active) cp.innerHTML = '<small>Ready</small>Tap play to start.'; }catch(e){}
+  try{ const af = document.getElementById('podcastAfter'); if(af && !naturalSpeechState.active) af.style.display = 'none'; renderPodcastFocus(); renderPodcastRefine(); renderPodcastHero(); podcastUpdateProgress(0); const tt = document.getElementById('podcastTranscriptToggle'); if(tt){ tt.setAttribute('aria-expanded', podcastTranscriptOpen); tt.querySelector('span').textContent = podcastTranscriptOpen ? 'Hide transcript' : 'Read along'; } const cp = document.getElementById('podcastCaption'); if(cp && !naturalSpeechState.active) cp.innerHTML = '<small>Ready</small>Tap play to start.'; }catch(e){}
   renderPodcastLibrary();
 }
 
@@ -12333,6 +12339,7 @@ function renderPodcastHero(busy){
   set('podHeroSub', sub);
   const b = document.getElementById('podcastHeroBtn'); if(!b) return;
   b.disabled = !!busy;
+  try{ const lc = document.getElementById('lessonsCard'); if(lc) lc.classList.toggle('has-lesson', !!(text && !podcastIsStale(key, type) && !busy)); }catch(e){}
   b.textContent = busy ? 'Writing…' : text ? (podcastIsStale(key, type) ? 'Write a fresh one' : (podcastSavedPos(key) ? '▶  Resume' : '▶  Play')) : 'Write this lesson';
   document.querySelectorAll('#podcastTypeSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === type));
   document.querySelectorAll('#podcastLenSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === len));
@@ -12539,13 +12546,13 @@ async function generatePodcastEpisode(forceNew, refine){
         if(sc){
           if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {}; if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {}; if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
           DATA.podcastEpisodes[cacheKey] = sc; DATA.podcastGeneratedAt[cacheKey] = Date.now() - 6 * 3600000; DATA.podcastPersonalized[cacheKey] = false;
-          persist(); podcastDomainChanged(); generateBtn.textContent = 'Rewrite this lesson';
+          persist(); podcastDomainChanged(); generateBtn.textContent = 'Rewrite';
           const st = document.getElementById('podcastStatus'); if(st) st.textContent = "Couldn't reach the AI, so this episode is read from your flashcards. Rewrite it later for a fresh one.";
           return;
         }
       }
     }catch(_){}
-    generateBtn.textContent = (DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]) ? 'Rewrite this lesson' : 'Generate this lesson'; try{ renderPodcastHero(); }catch(_){}
+    generateBtn.textContent = (DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]) ? 'Rewrite' : 'Generate this lesson'; try{ renderPodcastHero(); }catch(_){}
     transcript.className = 'podcast-transcript';
     transcript.innerHTML = '';
     const errSpan = document.createElement('span');
@@ -13260,7 +13267,7 @@ function podcastQueueStatusText(){
 
 function updatePodcastQueueUi(){
   const queueBtn = document.getElementById('podcastQueueBtn');
-  if(queueBtn) queueBtn.textContent = podcastQueueState.active ? 'Stop playing all domains' : 'Play all domains';
+  if(queueBtn) queueBtn.textContent = podcastQueueState.active ? 'Stop playing all' : 'Play all';
 }
 
 async function togglePodcastQueue(){
@@ -28723,7 +28730,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.434';
+const BUILD_ID = '2026-10-22.435';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
