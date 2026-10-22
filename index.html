@@ -9180,7 +9180,7 @@ function buildStudyPlanCore(minutes){
         why: gapT >= 4
           ? 'A mix on purpose: cards on ideas you missed, ones that are due, and new ones you have not met. Seeing an idea from a new angle helps it stick, and new cards keep the deck from going stale.'
           : 'A mix on purpose: cards that are due as they start to fade, and new ones you have not met. Pulling an answer from memory strengthens it more than rereading does.',
-        run: () => { const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
+        run: () => { fcStepRef('cards'); const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : `Adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
       why: (() => { const u = coverageUnderserved(2); return u.length ? `Weighted toward ${u.map(d => d.name).join(' and ')}, which have had the least attention lately for their share of the exam, so nothing on the blueprint goes cold.` : null; })() || (dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.'),
@@ -9365,12 +9365,17 @@ function buildStudyPlanCore(minutes){
     },
     cards2: () => {
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
-      const first = L.targets.newcards || 0;
+      const first = (L.targets.cards || 0) + (L.targets.newcards || 0); // the earlier card steps count first; only cards beyond them count here
       if(!L.targets.cards2 && unseen - first < 8) return null;
-      const n = planTarget('cards2', Math.min(Math.max(0, unseen - first), 15));
+      let n = planTarget('cards2', Math.min(Math.max(0, unseen - first), 15));
       if(!n) return null;
-      return { id:'cards2', title:`Learn ${n} more new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have: Math.max(0, Math.min(act.cards - first, n)), unit:'cards',
-        why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => { const remain = Math.max(4, n - Math.max(0, act.cards - first)); const b = fcBalanced(remain, { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
+      const haveRaw = Math.max(0, act.cards - first);
+      // Never promise more new cards than are left to show: the number shrinks to what is real, so the step can always be finished.
+      let availNew = 99; try{ const FL = fcBalListsCached({}); availNew = FL.weakNew.length + FL.newer.length; }catch(e){}
+      n = Math.min(n, Math.max(haveRaw, haveRaw + availNew));
+      if(n < 1) return null;
+      return { id:'cards2', title:`Learn ${n} more new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have: Math.min(haveRaw, n), unit:'cards',
+        why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => { fcStepRef('cards2'); const remain = Math.max(4, n - haveRaw); const b = fcBalanced(remain, { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     read: () => {
       if(!weakDom) return null;
@@ -9398,11 +9403,15 @@ function buildStudyPlanCore(minutes){
       { const c0 = mk.cards(); if(c0 && /new/i.test(c0.title)) return null; } // the flashcard step already brings in new cards
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
       if(!(unseen >= 8 && dueCards < 5 && !L.targets.newcards) && !L.targets.newcards) return null;
-      const n = planTarget('newcards', Math.min(unseen, 15));
+      let n = planTarget('newcards', Math.min(unseen, 15));
       if(!n) return null;
-      return { id:'newcards', title:`Learn ${n} new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have:act.cards, unit:'cards',
+      const base = L.targets.cards || 0, haveRaw = Math.max(0, act.cards - base);
+      let availNew = 99; try{ const FL = fcBalListsCached({}); availNew = FL.weakNew.length + FL.newer.length; }catch(e){}
+      n = Math.min(n, Math.max(haveRaw, haveRaw + availNew));
+      if(n < 1) return null;
+      return { id:'newcards', title:`Learn ${n} new flashcards`, minutes: Math.max(4, Math.ceil(n * 0.5)), need:n, have:Math.min(haveRaw, n), unit:'cards',
         why:'Meeting new cards in small batches, then letting them come back on a schedule, builds the facts the questions lean on.',
-        run: () => { const b = fcBalanced(Math.max(4, n - act.cards), { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
+        run: () => { fcStepRef('newcards'); const b = fcBalanced(Math.max(4, n - haveRaw), { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     pretest: () => {
       if(answered >= 20 || !weakDom) return null;
@@ -14341,7 +14350,7 @@ function startFlashcardSet(cards, kind){
   showTab('flashcards');
   const toggle = document.getElementById('fcFilterToggle'); if(toggle) toggle.checked = false;
   const sel = document.getElementById('fcDomainFilter'); if(sel) sel.value = '';
-  fcQueue = cards.slice(); fcCustomQueue = true; fcCustomKind = kind || null;
+  fcQueue = cards.slice(); fcCustomQueue = true; fcCustomKind = kind || null; if(kind !== 'plan') _fcStep = null;
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
   fcIndex = 0; renderFlashcard(); renderFlashcardStats();
   // A set started from today's plan runs on its own screen, with nothing else around it.
@@ -14780,12 +14789,19 @@ function fcApplyAdaptation(card){
 }
 
 // Today's plan for flashcards: distinct cards rated today against the step's target.
+// Which plan step the open card set belongs to, so the card header reads that step's own progress.
+let _fcStep = null;
+function fcStepRef(id){ _fcStep = id; }
 function fcPlanState(){
   try{
+    if(_fcStep && fcCustomQueue && fcCustomKind === 'plan'){
+      const plan = buildStudyPlan(), st = plan.steps.find(x => x.id === _fcStep);
+      if(st) return { have: st.have, need: st.need, done: !!st.done || st.have >= st.need, id: st.id };
+    }
     const n = planDayLog().targets.cards;
     if(!n) return null;
     const have = planTodayActivity().cards;
-    return { have, need: n, done: have >= n };
+    return { have, need: n, done: have >= n, id: 'cards' };
   }catch(e){ return null; }
 }
 function updateFcPlanLine(){
@@ -14801,7 +14817,7 @@ function updateFcPlanLine(){
     if(fr >= 0){ progress.classList.add('has-bar'); progress.style.setProperty('--p', (Math.round(fr * 1000) / 10) + '%'); } else progress.style.removeProperty('--p'); }
   if(!st){ progress.textContent = fcCustomQueue ? pos : pos + ' of ' + fcQueue.length; return; }
   if(st.done){
-    let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('cards'); }catch(e){}
+    let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id || 'cards'); }catch(e){}
     progress.innerHTML = escapeHtml(pos) + ` · plan done ✓` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
   } else progress.textContent = `${pos} · plan ${st.have} of ${st.need} cards`;
 }
@@ -27158,7 +27174,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.391';
+const BUILD_ID = '2026-10-22.392';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
