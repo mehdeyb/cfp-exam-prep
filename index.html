@@ -3012,7 +3012,8 @@
   .pst-c.right{border-color:var(--correct);background:var(--correct-tint);} .pst-c.right i{color:var(--correct);} .pst-c.pick{border-color:var(--incorrect);background:var(--incorrect-tint);} .pst-c.pick i{color:var(--incorrect);}
   .pst-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .pst-col{background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px;} .pst-col h4{margin:0 0 8px;font-size:15px;color:var(--paper);} .pst-col ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5;}
   .pst-slide .tutor-chart-row{max-width:100%;}
-  .pcal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-top:6px;} @media (max-width:560px){.pcal{grid-template-columns:1fr;}}
+  .pcal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-top:6px;} @media (max-width:560px){.pcal{grid-template-columns:1fr;gap:12px;} .pcal-pad{order:-1;} .pcal-steps li:not(.cur){display:none;} .pcal-steps li.cur{font-size:15.5px;}}
+  .pcal-dots{display:flex;gap:6px;justify-content:center;margin-top:10px;} .pcal-dots button{width:22px;height:6px;border-radius:3px;border:0;padding:0;background:rgba(127,127,127,.3);cursor:pointer;transition:background .25s,width .25s;} .pcal-dots button.on{background:var(--gold);width:34px;} .pcal-dots button.done{background:var(--gold);opacity:.5;}
   .pcal-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:pc;} .pcal-steps li{counter-increment:pc;padding:8px 10px 8px 34px;position:relative;border-radius:10px;font-size:14px;line-height:1.4;color:var(--text-dim,inherit);opacity:.55;border:1px solid transparent;} .pcal-steps li::before{content:counter(pc);position:absolute;left:10px;top:8px;font:600 11px 'IBM Plex Mono',monospace;color:var(--gold);} .pcal-steps li.cur{opacity:1;background:var(--surface2);border-color:var(--hair);} .pcal-steps li.done{opacity:.8;}
   .pcal-pad{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:10px;}
   .pk{position:relative;text-align:center;border-radius:7px;padding:13px 0 6px;background:rgba(127,127,127,.16);font:600 11.5px 'IBM Plex Mono',monospace;line-height:1;transition:background .2s,transform .2s;} .pk small{position:absolute;top:3px;left:0;right:0;font-size:8px;font-weight:500;color:var(--calc-orange);opacity:.9;} .pk.on{background:var(--gold);color:#1d1d1d;transform:scale(1.06);box-shadow:0 0 0 2px var(--gold);} .pk.on small{color:#1d1d1d;} .pk.or.on{background:var(--calc-orange);box-shadow:0 0 0 2px var(--calc-orange);} .pk i{position:absolute;top:-6px;right:-4px;min-width:15px;height:15px;border-radius:8px;background:#1d1d1d;color:#fff;font:700 9px/15px 'IBM Plex Sans',sans-serif;font-style:normal;}
@@ -12646,6 +12647,7 @@ function stageCalcTap(id){
   const taps = sl.taps[sl.ci || 0] || []; if(!taps.length) return;
   const want = taps[sl.ti || 0];
   if(id === want){
+    try{ navigator.vibrate && navigator.vibrate(8); }catch(e){}
     sl.ti = (sl.ti || 0) + 1;
     if(sl.ti >= taps.length){
       stageDraw(); const m = document.querySelectorAll('.pcal-msg'); m.forEach(x => x.textContent = '✓ Step done.');
@@ -12669,7 +12671,7 @@ function stageCalcHtml(sl){
     const cl = pr ? (taps[ti] === id ? ' next' : hits.length && hits.every(h => h <= ti) ? ' dn' : '') : (hits.length ? ' on' : '');
     return `<div class="pk${cl}${id === 'orange' ? ' or' : ''}" data-k="${id}" onclick="stageCalcTap('${id}')" role="button">${o ? `<small>${E(o)}</small>` : ''}${E(lab)}${!pr && hits.length ? `<i>${hits.join(',')}</i>` : ''}</div>`;
   }).join('')).join('');
-  return `<div class="pst-kicker">HP 10bII+ keys</div><div class="pst-title">${E(sl.title)}</div><div class="pcal"><ol class="pcal-steps">${li}</ol><div><div class="pcal-pad">${pad}</div><div class="pcal-msg" id="pcalMsg">${pr ? 'Tap the glowing key (' + Math.min(ti + 1, taps.length || 1) + ' of ' + (taps.length || 1) + ').' : 'Tap any key to try it.'}</div></div></div>`
+  return `<div class="pst-kicker">HP 10bII+ keys</div><div class="pst-title">${E(sl.title)}</div><div class="pcal"><ol class="pcal-steps">${li}</ol><div><div class="pcal-pad">${pad}</div><div class="pcal-dots">${sl.steps.map((_, i) => `<button type="button" aria-label="Step ${i + 1}" class="${i === ci ? 'on' : i < ci ? 'done' : ''}" onclick="stageCalcJump(${i})"></button>`).join('')}</div><div class="pcal-msg" id="pcalMsg">${pr ? 'Tap the glowing key (' + Math.min(ti + 1, taps.length || 1) + ' of ' + (taps.length || 1) + ').' : 'Tap any key to try it.'}</div></div></div>`
     + `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageCalcGo(-1)"${ci ? '' : ' disabled'}>Back</button><button type="button" class="btn" onclick="stageCalcGo(1)"${ci < sl.steps.length - 1 ? '' : ' disabled'}>Next step</button><button type="button" class="btn ghost" onclick="stageCalcPractice()">${pr ? 'Show the keys' : 'Practice the taps'}</button><span class="pst-dim" style="align-self:center;font-size:12.5px;">${ci + 1} of ${sl.steps.length}${taps.length ? '' : ' · no keys to light for this step'}</span></div>`;
 }
 function tvmShowKeysOnScreen(){
@@ -12962,7 +12964,18 @@ function stageTransportSync(){
   b.textContent = (naturalSpeechState.active && !naturalSpeechState.paused) ? 'Pause' : (naturalSpeechState.active ? 'Resume' : 'Play episode');
 }
 function stagePlayToggle(){ if(!stageState.deckKey) return; try{ togglePodcastPlayback(); }catch(e){} setTimeout(stageTransportSync, 150); }
-document.addEventListener('keydown', e => { if(e.key === 'Escape' && stageState.fullOpen) stageCloseFull(); });
+document.addEventListener('keydown', e => {
+  if(!stageState.fullOpen) return;
+  if(e.key === 'Escape'){ stageCloseFull(); return; }
+  if(/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '')) return;
+  const k = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if(!k) return;
+  const sl = stageState.cur; if(sl && sl.kind === 'calc') stageCalcGo(k); else stageStep(k);
+});
+(function(){ let x0 = null, y0 = 0;
+  document.addEventListener('touchstart', e => { const h = e.target.closest && e.target.closest('#scrBody'); x0 = h && e.touches.length === 1 ? e.touches[0].clientX : null; y0 = e.touches[0].clientY; }, { passive:true });
+  document.addEventListener('touchend', e => { if(x0 === null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if(Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return; const k = dx < 0 ? 1 : -1; const sl = stageState.cur; if(sl && sl.kind === 'calc') stageCalcGo(k); else stageStep(k); }, { passive:true });
+})();
 
 function highlightPodcastSentence(index){
   const transcript = document.getElementById('podcastTranscript');
@@ -28584,7 +28597,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.427';
+const BUILD_ID = '2026-10-22.428';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
