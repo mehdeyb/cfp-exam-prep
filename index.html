@@ -1915,6 +1915,24 @@
   body.focus-mode .tutor-guide .tg-next{display:none;}
   body.focus-mode.tvm-active #tvmHost{display:none !important;}
   body.focus-mode .tab-panel.active{padding-top:max(10px,env(safe-area-inset-top,0px));}
+  .ct-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--hair);}
+  .ct-row:first-child{border-top:0;}
+  .ct-l{flex:1;min-width:0;}
+  .ct-t{font-weight:600;font-size:14px;line-height:1.3;}
+  .ct-s{font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px;}
+  .ct-go,.ct-x{flex:none;min-height:40px;border-radius:11px;border:1px solid var(--hair);background:none;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0 14px;}
+  .ct-x{padding:0;width:40px;color:var(--muted);font-size:18px;}
+  .ct-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+  .ct-head span{font-size:12px;color:var(--muted);}
+  .ct-widget{margin-bottom:12px;}
+  .ct-steps{margin:0 0 10px;padding-left:22px;line-height:1.45;}
+  .ct-steps li{margin:0 0 10px;}
+  .ct-steps li.ct-did{opacity:.6;}
+  .ct-steps li div{font-size:13.5px;color:var(--muted);}
+  .ct-score{font-weight:700;margin:6px 0;}
+  .ct-lab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 0 6px;}
+  .ct-miss{font-size:13.5px;line-height:1.45;margin:6px 0;}
+  .dt-option.ct-ok{border-color:var(--green,#2f7d4f);}
   .focus-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--surface);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:tgIn .28s var(--ease);}
   .focus-bar .fb-l{flex:1;min-width:0;}
   .focus-bar .fb-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
@@ -3261,9 +3279,17 @@
       <div class="card-head"><h2>Decision tools</h2><div class="note">tap through, or see the whole map at once</div></div>
       <div class="tutor-chips" id="toolsTutorChips" style="margin:0 0 12px;">
         <button type="button" class="chip" onclick="askTutorAbout('I am not sure which decision tool fits my situation. Ask me a couple of quick questions and point me to the right one.')">Not sure which tool? Ask the tutor</button>
+        <button type="button" class="chip" onclick="askTutorAbout('Build me a new custom tool or study mode for whatever I most need to pass the exam. Say what it is for first.')">Build me a custom tool</button>
         <button type="button" class="chip" onclick="askTutorAbout('Walk me through a time value of money problem on my HP 10bII+, one step at a time, and check my setup as we go.')">Practice a TVM problem</button>
       </div>
       <p class="hint">Five trees give you a client scenario to walk: read the facts, choose the branch at each question, and get told right or wrong at every turn. Switch any tree to Explore to tap through without a scenario. The options matrix and plan tree are for exploring.</p>
+    </div>
+
+    <div class="card" id="customToolsCard" style="display:none;">
+      <div class="card-head"><h2>Built for you</h2><div class="note">tools your tutor designed for what you need</div></div>
+      <div id="ctRun"></div>
+      <div id="ctList"></div>
+      <div class="tutor-chips" style="margin:10px 0 0;"><button type="button" class="chip" onclick="askTutorAbout('Look at where I am struggling and build me a custom tool or study routine that will most improve my chances of passing. Say what it is for first.')">Ask the tutor to build me a tool</button></div>
     </div>
 
     <div class="card">
@@ -6193,6 +6219,7 @@ function defaultData(){
     tutorTopics: [],
     tutorNotes: [],
     tutorCreations: [],
+    customTools: [],
     announcedMilestones: []
   };
 }
@@ -6342,6 +6369,7 @@ function sanitizeLoadedData(d){
   d.sessions = d.sessions.filter(isObj);
   d.tutorNotes = (Array.isArray(d.tutorNotes) ? d.tutorNotes : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.text === 'string' && typeof x.t === 'number').slice(-40);
   d.tutorCreations = (Array.isArray(d.tutorCreations) ? d.tutorCreations : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.title === 'string' && typeof x.t === 'number' && typeof x.kind === 'string').slice(-40);
+  d.customTools = (Array.isArray(d.customTools) ? d.customTools : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.title === 'string' && typeof x.kind === 'string' && ['sorter','steps','tree','routine'].includes(x.kind)).slice(-12);
   d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
   Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && !rationaleAgreesWithKey(v)){ qHealKey(v); if(!rationaleAgreesWithKey(v)) delete d.readyNew[k]; } });
   d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q); }); // drops any saved item whose key contradicts its own explanation
@@ -7572,6 +7600,7 @@ function renderExamCountdownCard(){
 
 function renderAll(boot){
   try{ hydrateDynamicText(); }catch(e){}
+  try{ if(!_ctRun) ctRenderList(); }catch(e){}
   try{ conductorRefreshPill(); }catch(e){}
   const stats = computeStats();
   renderResumeSessionBanner();
@@ -8753,6 +8782,181 @@ async function tutorCreateMaterial(inp){
   wsChatRow(made);
   return `Created "${title}" (${WS_KINDS[kind]}) and showed it in the chat; it is saved in their workshop on the Study tab${made.cards ? ', with ' + made.cards.length + ' new flashcard(s) in their deck' : ''}${made.qn ? ', with ' + made.qn + ' new question(s) in their bank' : ''}${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Say in one sentence how to use it, and offer a quick check on it.`;
 }
+/* ---------- Tools the tutor builds for this student ----------
+   The tutor can design a small interactive tool when a plain answer would not stick: a sorter (put each item in the right
+   bucket), a step-through (an ordered procedure, revealed one step at a time), a decision tree of its own, or a routine (a
+   custom study mode that strings the app's own sessions together). Specs are plain data, checked here, and rendered by the
+   app's own code, so a tool can never run anything of its own. They live in DATA.customTools, so they follow backups and sync. */
+const CT_KINDS = { sorter:'Sorter', steps:'Step-through', tree:'Decision tree', routine:'Study routine' };
+const CT_ROUTINE_ACTIONS = { quiz:'Practice questions', flashcards:'Flashcards', formula:'Formula drill', calculator:'HP 10bII+ walkthrough', tool:'Decision tool' };
+let _ctRun = null;
+function ctList(){ if(!Array.isArray(DATA.customTools)) DATA.customTools = []; return DATA.customTools; }
+function ctStr(v, n){ return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n); }
+function ctValidate(kind, inp){
+  const S = (v, n) => ctStr(v, n);
+  if(kind === 'sorter'){
+    const buckets = (Array.isArray(inp.buckets) ? inp.buckets : []).map(b => S(b, 40)).filter(Boolean).slice(0, 4);
+    if(buckets.length < 2 || new Set(buckets.map(b => b.toLowerCase())).size < buckets.length) return 'Error: a sorter needs 2 to 4 distinct buckets.';
+    const items = (Array.isArray(inp.items) ? inp.items : []).map(i => ({ text:S(i && i.text, 160), bucket:Math.round(+(i && i.bucket)), why:S(i && i.why, 220) })).filter(i => i.text.length >= 3 && i.bucket >= 0 && i.bucket < buckets.length && i.why.length >= 8).slice(0, 16);
+    if(items.length < 4) return 'Error: a sorter needs at least 4 items, each with text, a bucket index and a "why" of at least 8 characters.';
+    if(buckets.some((b, bi) => !items.some(i => i.bucket === bi))) return 'Error: every bucket needs at least one item that belongs in it.';
+    return { buckets, items };
+  }
+  if(kind === 'steps'){
+    const steps = (Array.isArray(inp.steps) ? inp.steps : []).map(s => ({ title:S(s && s.title, 90), detail:S(s && s.detail, 260) })).filter(s => s.title.length >= 3).slice(0, 12);
+    if(steps.length < 3) return 'Error: a step-through needs at least 3 steps, each with a title.';
+    return { steps };
+  }
+  if(kind === 'tree'){
+    const nodes = {}, ids = [];
+    (Array.isArray(inp.nodes) ? inp.nodes : []).slice(0, 24).forEach(n => {
+      const id = S(n && n.id, 20).replace(/[^A-Za-z0-9_]/g, ''); if(!id || nodes[id]) return;
+      if(n.result || (!Array.isArray(n.options) && n.body)){ nodes[id] = { result:true, title:S(n.title || n.question, 100), body:S(n.body, 420) }; }
+      else { nodes[id] = { question:S(n.question, 200), options:(Array.isArray(n.options) ? n.options : []).slice(0, 5).map(o => ({ label:S(o && o.label, 100), next:S(o && o.next, 20).replace(/[^A-Za-z0-9_]/g, '') })) }; }
+      ids.push(id);
+    });
+    const start = S(inp.start, 20).replace(/[^A-Za-z0-9_]/g, '') || ids[0];
+    if(!nodes[start]) return 'Error: the tree needs a start node id that exists in nodes.';
+    for(const id of ids){
+      const n = nodes[id];
+      if(n.result){ if(n.title.length < 3 || n.body.length < 8) return 'Error: result node "' + id + '" needs a title and a body.'; }
+      else { if(n.question.length < 8 || n.options.length < 2) return 'Error: question node "' + id + '" needs a question and at least 2 options.'; if(n.options.some(o => !o.label || !nodes[o.next])) return 'Error: every option in "' + id + '" needs a label and a next that is a real node id.'; }
+    }
+    const reach = new Set(), q = [start]; while(q.length){ const x = q.pop(); if(reach.has(x)) continue; reach.add(x); if(!nodes[x].result) nodes[x].options.forEach(o => q.push(o.next)); }
+    if(![...reach].some(x => nodes[x].result)) return 'Error: no result node can be reached from the start.';
+    return { start, nodes };
+  }
+  if(kind === 'routine'){
+    const steps = [];
+    (Array.isArray(inp.routine) ? inp.routine : []).slice(0, 6).forEach(s => {
+      const action = CT_ROUTINE_ACTIONS[s && s.action] ? s.action : null; if(!action) return;
+      const r = { action, label:S(s.label, 80) || CT_ROUTINE_ACTIONS[action] };
+      if((action === 'quiz' || action === 'flashcards') && DOMAINS.some(d => d.key === s.domain)) r.domain = s.domain;
+      if(action === 'quiz' || action === 'flashcards') r.count = Math.max(5, Math.min(40, Math.round(+s.count) || 10));
+      if(action === 'flashcards' && ['gaps','learning','due','new'].includes(s.focus)) r.focus = s.focus;
+      if(action === 'formula' && typeof FD_NAMES !== 'undefined' && FD_NAMES.includes(s.formula)) r.formula = s.formula;
+      if(action === 'calculator') r.mode = s.mode === 'cashflow' ? 'cashflow' : 'tvm';
+      if(action === 'tool'){ if(!['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'].includes(s.tool)) return; r.tool = s.tool; }
+      steps.push(r);
+    });
+    if(steps.length < 2) return 'Error: a routine needs at least 2 valid steps (actions: ' + Object.keys(CT_ROUTINE_ACTIONS).join(', ') + ').';
+    return { routine:steps };
+  }
+  return 'Error: kind must be one of ' + Object.keys(CT_KINDS).join(', ') + '.';
+}
+function tutorBuildCustomTool(inp){
+  inp = inp || {};
+  const kind = inp.kind;
+  if(!CT_KINDS[kind]) return 'Error: kind must be one of ' + Object.keys(CT_KINDS).join(', ') + '.';
+  const title = ctStr(inp.title, 60); if(title.length < 3) return 'Error: give the tool a short title.';
+  const why = ctStr(inp.why, 200); if(why.length < 10) return 'Error: say in "why" what gap or confusion this tool is for.';
+  const spec = ctValidate(kind, inp); if(typeof spec === 'string') return spec;
+  const list = ctList();
+  const dup = list.find(x => x.title.toLowerCase() === title.toLowerCase());
+  const tool = Object.assign({ id: dup ? dup.id : 'ct' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: Date.now(), kind, title, why, uses: dup ? dup.uses : 0, best: dup ? dup.best : null }, spec);
+  if(dup) list.splice(list.indexOf(dup), 1, tool); else list.push(tool);
+  if(list.length > 12){ list.sort((a, b) => (b.uses || 0) - (a.uses || 0) || b.t - a.t); DATA.customTools = list.slice(0, 12); }
+  persist();
+  try{ ctRenderList(); }catch(e){}
+  ctOpen(tool.id);
+  return (dup ? 'Updated' : 'Built') + ' "' + title + '" (' + CT_KINDS[kind] + ') and opened it for the student. It is saved under Built for you on the Tools tab and travels with their backups. Tell them in one line what it is for and how to use it; check how they do with it later before building another.';
+}
+function ctOpenTool(inp){
+  inp = inp || {};
+  const list = ctList();
+  if(inp.action === 'list' || !inp.title && !inp.id) return list.length ? 'Tools built for them: ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + ')').join('; ') + '.' : 'No custom tools yet.';
+  const key = ctStr(inp.id || inp.title, 80).toLowerCase();
+  const t = list.find(x => x.id === inp.id) || list.find(x => x.title.toLowerCase() === key) || list.find(x => x.title.toLowerCase().includes(key));
+  if(!t) return 'Error: no custom tool matches "' + key + '". Use action list to see them.';
+  if(inp.action === 'delete'){ DATA.customTools = list.filter(x => x !== t); persist(); try{ ctRenderList(); }catch(e){} return 'Removed "' + t.title + '".'; }
+  ctOpen(t.id);
+  return 'Opened "' + t.title + '" for the student.';
+}
+function ctOpen(id){
+  const t = ctList().find(x => x.id === id); if(!t) return false;
+  showTab('tools');
+  _ctRun = { id, i:0, picks:[], wrong:[], queue:null, path:[], answers:[], done:false };
+  if(t.kind === 'sorter'){ _ctRun.queue = t.items.map((x, i) => i).sort(() => Math.random() - 0.5); _ctRun.ok = 0; _ctRun.total = 0; _ctRun.retry = []; }
+  if(t.kind === 'tree') _ctRun.path = [t.start];
+  ctRenderRun();
+  const card = document.getElementById('customToolsCard');
+  if(card){ try{ focusEnter({ tab:'tools', el:card, title:t.title }); }catch(e){} }
+  return true;
+}
+function ctClose(){ _ctRun = null; try{ focusActive() && focusExit({}); }catch(e){} ctRenderRun(); ctRenderList(); }
+function ctUsed(t, pct){ t.uses = (t.uses || 0) + 1; t.lastAt = Date.now(); if(pct != null) t.best = Math.max(t.best == null ? 0 : t.best, pct); persist(); }
+function ctRenderList(){
+  const host = document.getElementById('ctList'), card = document.getElementById('customToolsCard'); if(!host || !card) return;
+  const list = ctList();
+  card.style.display = (list.length || _ctRun) ? '' : 'none';
+  if(list.length && card.classList.contains('cc-card') && !card._ctOpened){ card._ctOpened = true; card.classList.add('cc-open'); }
+  host.innerHTML = list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''}</div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
+}
+function ctConfirmDelete(id){ const t = ctList().find(x => x.id === id); if(t && confirm('Remove "' + t.title + '"?')){ DATA.customTools = ctList().filter(x => x.id !== id); persist(); ctRenderList(); } }
+function ctRenderRun(){
+  const host = document.getElementById('ctRun'); if(!host) return;
+  const card = document.getElementById('customToolsCard'); if(card) card.style.display = '';
+  if(!_ctRun){ host.innerHTML = ''; return; }
+  const t = ctList().find(x => x.id === _ctRun.id); if(!t){ host.innerHTML = ''; return; }
+  const E = escapeHtml, r = _ctRun; let body = '';
+  const done = (extra) => `<div class="ct-done">${extra}<div class="dt-actions"><button type="button" onclick="ctOpen('${t.id}')">Run again</button><button type="button" onclick="ctClose()">Close</button></div></div>`;
+  if(t.kind === 'sorter'){
+    if(r.i >= r.queue.length){
+      if(!r.done){ r.done = true; ctUsed(t, r.total ? Math.round(r.ok / r.total * 100) : null); }
+      const miss = r.wrong.map(i => t.items[i]);
+      body = done(`<div class="ct-score">${r.ok} of ${r.total} right the first time</div>` + (miss.length ? '<div class="ct-lab">Worth another look</div>' + miss.map(m => `<div class="ct-miss"><b>${E(m.text)}</b> → ${E(t.buckets[m.bucket])}. ${E(m.why)}</div>`).join('') : '<div class="ct-miss">Clean run.</div>'));
+    } else {
+      const it = t.items[r.queue[r.i]], fb = r.fb;
+      body = `<div class="dtw-count">Item ${r.i + 1} of ${r.queue.length}</div><div class="dtw-facts"><div class="dtw-lab">Where does this go?</div>${E(it.text)}</div>`
+        + `<div class="dt-options">${t.buckets.map((b, bi) => `<button type="button" class="dt-option${fb && fb.bi === bi ? (fb.ok ? ' ct-ok' : ' dtw-bad') : ''}" ${fb ? 'disabled' : ''} onclick="ctSortPick(${bi})">${E(b)}</button>`).join('')}</div>`
+        + (fb ? `<div class="dtw-msg">${fb.ok ? 'Right. ' : 'Not quite: it goes with ' + E(t.buckets[it.bucket]) + '. '}${E(it.why)}</div><div class="dt-actions"><button type="button" onclick="ctSortNext()">Next</button></div>` : '');
+    }
+  } else if(t.kind === 'steps'){
+    const n = Math.min(r.i + 1, t.steps.length), fin = r.i >= t.steps.length;
+    body = `<ol class="ct-steps">${t.steps.slice(0, n).map((s, i) => `<li class="${i < r.i ? 'ct-did' : ''}"><b>${E(s.title)}</b>${s.detail ? '<div>' + E(s.detail) + '</div>' : ''}</li>`).join('')}</ol>`
+      + (fin ? done('<div class="ct-score">All ' + t.steps.length + ' steps</div>') : `<div class="dt-actions"><button type="button" onclick="ctStepNext()">${r.i + 1 >= t.steps.length ? 'Finish' : 'Got it, next step'}</button></div>`);
+  } else if(t.kind === 'tree'){
+    const node = t.nodes[r.path[r.path.length - 1]];
+    const crumb = r.answers.map(a => `<span class="dt-crumb-answer">${E(a.length > 40 ? a.slice(0, 40) + '…' : a)}</span>`).join(' → ');
+    if(node.result){ if(!r.done){ r.done = true; ctUsed(t, null); } }
+    body = `<div class="dt-breadcrumb">${crumb}</div>` + (node.result
+      ? `<div class="dt-step"><div class="dt-result"><div class="dt-result-title">${E(node.title)}</div><div class="dt-result-body">${E(node.body)}</div></div></div>`
+      : `<div class="dt-step"><div class="dt-question">${E(node.question)}</div><div class="dt-options">${node.options.map((o, i) => `<button type="button" class="dt-option" onclick="ctTreePick(${i})">${E(o.label)}</button>`).join('')}</div></div>`)
+      + `<div class="dt-actions"><button type="button" ${r.path.length <= 1 ? 'disabled' : ''} onclick="ctTreeBack()">← Back</button><button type="button" ${r.path.length <= 1 ? 'disabled' : ''} onclick="ctOpen('${t.id}')">Start over</button><button type="button" onclick="ctClose()">Close</button></div>`;
+  } else if(t.kind === 'routine'){
+    const dk = (DATA.customToolRoutine && DATA.customToolRoutine[t.id]) || {}, today = localDayKey(), doneSet = new Set(dk.day === today ? dk.done : []);
+    body = `<div class="ct-lab">Do these in order. Each opens the real session; come back here for the next.</div>` + t.routine.map((s, i) => {
+      const dm = s.domain ? (DOMAINS.find(d => d.key === s.domain) || {}).name : '';
+      return `<div class="ct-row"><div class="ct-l"><div class="ct-t">${doneSet.has(i) ? '✓ ' : (i + 1) + '. '}${E(s.label)}</div><div class="ct-s">${E(CT_ROUTINE_ACTIONS[s.action])}${dm ? ' · ' + E(dm) : ''}${s.count ? ' · ' + s.count : ''}</div></div><button type="button" class="ct-go" onclick="ctRoutineGo(${i})">${doneSet.has(i) ? 'Again' : 'Start'}</button></div>`;
+    }).join('') + `<div class="dt-actions"><button type="button" onclick="ctClose()">Close</button></div>`;
+  }
+  host.innerHTML = `<div class="dt-widget ct-widget"><div class="ct-head"><b>${E(t.title)}</b><span>${CT_KINDS[t.kind]} · ${E(t.why)}</span></div>${body}</div>`;
+}
+function ctSortPick(bi){ const r = _ctRun, t = ctList().find(x => x.id === r.id), qi = r.queue[r.i], it = t.items[qi]; if(r.fb) return; const ok = bi === it.bucket; r.fb = { bi, ok }; if(!r.retried || !r.retried.includes(qi)){ r.total++; if(ok) r.ok++; else r.wrong.push(qi); } ctRenderRun(); }
+function ctSortNext(){ const r = _ctRun; r.fb = null; r.i++; ctRenderRun(); }
+function ctStepNext(){ _ctRun.i++; if(_ctRun.i >= ctList().find(x => x.id === _ctRun.id).steps.length && !_ctRun.done){ _ctRun.done = true; ctUsed(ctList().find(x => x.id === _ctRun.id), null); } ctRenderRun(); }
+function ctTreePick(i){ const r = _ctRun, t = ctList().find(x => x.id === r.id), node = t.nodes[r.path[r.path.length - 1]], o = node.options[i]; if(!o) return; r.answers.push(o.label); r.path.push(o.next); ctRenderRun(); }
+function ctTreeBack(){ const r = _ctRun; if(r.path.length > 1){ r.path.pop(); r.answers.pop(); r.done = false; } ctRenderRun(); }
+async function ctRoutineGo(i){
+  const r = _ctRun; if(!r) return; const t = ctList().find(x => x.id === r.id), s = t.routine[i]; if(!s) return;
+  if(!DATA.customToolRoutine) DATA.customToolRoutine = {};
+  const today = localDayKey(), dk = DATA.customToolRoutine[t.id]; if(!dk || dk.day !== today) DATA.customToolRoutine[t.id] = { day: today, done: [] };
+  if(!DATA.customToolRoutine[t.id].done.includes(i)) DATA.customToolRoutine[t.id].done.push(i);
+  ctUsed(t, null);
+  try{ focusActive() && focusExit({ stay:true }); }catch(e){}
+  _ctRun = null;
+  let name, inp;
+  if(s.action === 'quiz'){ name = 'start_quiz_session'; inp = s.domain ? { mode:'drill', domain:s.domain, count:s.count } : { mode:'adaptive', count:s.count }; }
+  else if(s.action === 'flashcards'){ name = 'start_flashcards'; inp = { focus:s.focus || (s.domain ? 'domain' : 'due'), domain:s.domain, count:s.count }; }
+  else if(s.action === 'formula'){ name = 'open_formula_drill'; inp = s.formula ? { formula:s.formula } : {}; }
+  else if(s.action === 'calculator'){ name = 'open_tvm_calculator'; inp = { mode:s.mode }; }
+  else { name = 'open_decision_tool'; inp = { tool:s.tool }; }
+  try{ await executeTutorTool(name, inp); }catch(e){}
+}
+function ctTutorBlock(){
+  const list = ctList(); if(!list.length) return '';
+  return ' TOOLS YOU HAVE BUILT FOR THEM (open_custom_tool): ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', for: ' + x.why + '; used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + ')').join('; ') + '.';
+}
 function tutorShapePlan(inp){
   inp = inp || {};
   if(inp.clear){ DATA.planOverride = null; persist(); try{ renderTodayPlan(); }catch(e){} return "Cleared. Today's plan is back to automatic."; }
@@ -8790,7 +8994,7 @@ function tutorCoverageBlock(){
     const flags = tutorFlagsActive();
     let balText = '';
     try{ const u = coverageUnderserved(3), m = coverageModel(); if(u.length) balText = ` Balance against the exam blueprint over the last 14 days: least attention for their weight is ${u.map(d => d.name + ' (' + Math.round(m.dom[d.key].share * 100) + '% of study vs ' + Math.round(m.dom[d.key].target * 100) + '% of the exam)').join('; ')}; the app is already weighting practice toward them.`; const fr = figFreshness(); balText += ` Key figures (limits, thresholds): ${fr.due} of ${fr.total} are due for a refresh, ${fr.never} never drilled; offer start_plan_step with step_id "figures" when they ask about numbers.`; }catch(e){}
-    return ' WHAT THEY HAVE AND HAVE NOT BEEN SHOWN (live from the app): ' + rows.join('; ') + '.' +
+    return ctTutorBlock() + ' WHAT THEY HAVE AND HAVE NOT BEEN SHOWN (live from the app): ' + rows.join('; ') + '.' +
       (untouched.length ? ` Official topics with nothing shown yet (no question and no card seen): ${untouched.slice(0, 10).join('; ')}${untouched.length > 10 ? '; and ' + (untouched.length - 10) + ' more' : ''}.` : ' Every official topic has had at least a card or a question put in front of them.') +
       (strong.length ? ` Shown and going well: ${strong.slice(0, 4).join('; ')}.` : '') +
       (tk.length ? ` Explain-it-back so far: ${tk.length} ideas (${cnt('nailed')} nailed, ${cnt('partly')} partly, ${cnt('missed')} missed)${shaky.length ? '; shaky lately: ' + shaky.join(', ') : ''}.` : ' They have not tried Explain it back yet.') +
@@ -24387,7 +24591,7 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   timeContext += tutorCoverageBlock();
   try{ const dm = diagnosisModel(), top = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3).map(r => r.name + ' (' + r.state + (r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '%' : '') + ')'), st = staleSolidTopics(2).map(r => r.name + ' ' + r.days + 'd');
-    timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why. YOU MAY ALSO DESIGN MATERIAL: when a topic will not stick, a pair of ideas keeps getting mixed up, or a calculation needs a worked model, call create_study_material to make a cheat sheet, memory aid, worked example, side-by-side comparison, flashcards or a short practice set built for exactly their gap (it is saved in their workshop and the cards and questions join their spaced repetition). Make it only when it adds value beyond explaining in chat, keep it accurate and tied to an official topic, and offer to check them on it afterwards.`; }catch(err){}
+    timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why. YOU MAY ALSO DESIGN MATERIAL: when a topic will not stick, a pair of ideas keeps getting mixed up, or a calculation needs a worked model, call create_study_material to make a cheat sheet, memory aid, worked example, side-by-side comparison, flashcards or a short practice set built for exactly their gap (it is saved in their workshop and the cards and questions join their spaced repetition). Make it only when it adds value beyond explaining in chat, keep it accurate and tied to an official topic, and offer to check them on it afterwards. YOU MAY ALSO BUILD NEW TOOLS AND MODES: when none of the app's tools fits what this student needs to pass, call build_custom_tool: a sorter for look-alike classifications they keep mixing up, a step-through for a multi-step method or calculator keystrokes, a decision tree of your own for a judgment the built-in trees do not cover, or a routine that strings the app's sessions into a custom study mode for their situation (for example a short repair routine for their weakest domain). Check open_custom_tool list first so you never duplicate, state the gap in 'why', get every fact right for the exam, and say in one line what you built and how to use it. Build when it will change their result, not to look busy; when they ask for a tool or mode, build what they describe. Later, look at its usage and best score in your list, improve it by rebuilding with the same title, or delete it once it has done its job.`; }catch(err){}
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -24792,6 +24996,8 @@ function tutorActionText(name, input, result){
     if(name === 'show_visual') return 'Drew: ' + String(inp.title || 'a visual').slice(0, 50);
     if(name === 'diagnose_learner') return 'Checked where you stand' + (inp.topic ? ': ' + String(inp.topic).slice(0, 40) : '');
     if(name === 'run_diagnostic') return 'Started a diagnostic quiz';
+    if(name === 'build_custom_tool') return 'Built a tool for you: ' + String(inp.title || 'custom tool').slice(0, 50);
+    if(name === 'open_custom_tool') return inp.action === 'delete' ? 'Removed a tool I built' : 'Opened a tool built for you';
     if(name === 'create_study_material') return 'Made for you: ' + String(inp.title || 'study material').slice(0, 50);
     if(name === 'shape_today_plan') return inp.clear ? 'Reset today\'s plan to automatic' : 'Reshaped today\'s plan';
     if(name === 'flag_for_review') return 'Flagged for review: ' + String(inp.topic || '').slice(0, 50);
@@ -25277,6 +25483,26 @@ const TUTOR_TOOLS = [
     input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
   },
   {
+    name: 'build_custom_tool',
+    description: "Design and build a new interactive tool for this student, saved under 'Built for you' on the Tools tab, when you judge that one would raise their chance of passing and none of the app's existing tools or modes fits. You have free rein over what to make, but make it earn its place: name the specific gap, confusion or hard-to-remember rule it targets in 'why', and check what is already built (open_custom_tool action list) before making another. Kinds: sorter (items the student drops into 2 to 4 buckets with a one-line reason shown after each, for look-alike classifications such as ordinary income vs capital gain, deductible vs not, qualified vs nonqualified; 4 to 16 items, every bucket used), steps (an ordered procedure revealed one step at a time, for calculator keystrokes or a multi-step method), tree (your own decision tree: nodes with ids, question nodes with options pointing to other node ids, and result nodes with a title and body; keep it under about 15 nodes), routine (a custom study mode: 2 to 6 steps that each start one of the app's real sessions, such as a 10-question drill on one domain, then its flashcards, then a formula drill). Every fact you put in a tool must be accurate for the CFP exam; it is saved and reused. Building replaces any tool with the same title. Sorter items: {text, bucket: index into buckets, why}. Tree nodes: {id, question, options:[{label, next}]} or {id, result:true, title, body}. Routine steps: {action: quiz|flashcards|formula|calculator|tool, label, domain, count, focus, formula, mode, tool}.",
+    input_schema: { type: 'object', properties: {
+      kind: { type: 'string', enum: ['sorter','steps','tree','routine'] },
+      title: { type: 'string', description: 'Short name, under 60 characters.' },
+      why: { type: 'string', description: 'One line: the specific gap or confusion of this student that the tool targets.' },
+      buckets: { type: 'array', items: { type: 'string' }, description: 'Sorter: 2 to 4 bucket names.' },
+      items: { type: 'array', items: { type: 'object', properties: { text: { type: 'string' }, bucket: { type: 'integer' }, why: { type: 'string' } }, required: ['text','bucket','why'] } },
+      steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' } }, required: ['title'] }, description: 'Step-through: 3 to 12 steps.' },
+      start: { type: 'string', description: 'Tree: id of the first node.' },
+      nodes: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, question: { type: 'string' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, next: { type: 'string' } }, required: ['label','next'] } }, result: { type: 'boolean' }, title: { type: 'string' }, body: { type: 'string' } }, required: ['id'] } },
+      routine: { type: 'array', items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, label: { type: 'string' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, count: { type: 'integer' }, focus: { type: 'string', enum: ['gaps','learning','due','new'] }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string', enum: ['tvm','cashflow'] }, tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','optionsMatrix','qualifiedPlans'] } }, required: ['action'] } },
+    }, required: ['kind','title','why'] },
+  },
+  {
+    name: 'open_custom_tool',
+    description: "Open, list or remove a tool you built earlier with build_custom_tool. Use action list to see what exists (and how often it has been used and the best score) before building something new, open to put one in front of the student (match by title), delete to retire one that has done its job or was wrong.",
+    input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['open','list','delete'] }, title: { type: 'string' } } },
+  },
+  {
     name: 'create_study_material',
     description: "Design something for this student when it will help them learn or master a specific thing for the exam, and teaching in the chat alone would not stick. You have free rein over what to make, but make it earn its place: it must target a gap, a confusion you found, or a hard-to-remember topic. Kinds: cheat_sheet (a one-screen summary of a topic with the rules and numbers that matter), mnemonic (a memory aid with the pattern it encodes), worked_example (a full numbered walkthrough of one problem, with figures), comparison (two or three look-alike ideas side by side with the one thing that tells them apart), flashcards (2 to 8 cards, saved to their deck and scheduled by spaced repetition), practice_set (2 to 5 original multiple-choice questions you write, saved to their bank and started as a drill now). Put the sheet, mnemonic, example or comparison in 'content' as short lines; use '- ' for bullets and **bold** for key terms; under 1,800 characters. Name the official 'topic' (close to its official name) so it is filed and drillable. Use only rules and figures you are sure of; use the 2026 key numbers from this app, never guess a dollar limit. For questions: four distinct choices of similar length, one correct, four rationales that start 'Correct — ' for the key and 'Wrong — ' for the others, 'correct' is the 0 to 3 index. Make at most one or two per conversation unless they ask for more, and tell them what you made in one sentence.",
     input_schema: { type: 'object', properties: {
@@ -25569,6 +25795,8 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'run_diagnostic') return tutorRunDiagnostic(toolInput);
     if(toolName === 'shape_today_plan') return tutorShapePlan(toolInput);
     if(toolName === 'create_study_material') return await tutorCreateMaterial(toolInput);
+    if(toolName === 'build_custom_tool') return tutorBuildCustomTool(toolInput);
+    if(toolName === 'open_custom_tool') return ctOpenTool(toolInput);
     if(toolName === 'flag_for_review'){
       const f = tutorFlagAdd(toolInput && toolInput.topic, toolInput && toolInput.reason);
       if(!f) return 'Error: say which topic to flag.';
@@ -26124,6 +26352,7 @@ function focusExit(o){
   o = o || {};
   const f = _focus; if(!f) return;
   _focus = null; try{ dtwRun = null; }catch(e){}
+  try{ if(_ctRun){ _ctRun = null; ctRenderRun(); ctRenderList(); } }catch(e){}
   document.removeEventListener('keydown', focusKey, true);
   document.body.classList.remove('focus-mode');
   if(f.relock && document.body.classList.contains('tvm-active') && !bodyIsLocked()) lockBodyScroll();
@@ -26661,7 +26890,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.368';
+const BUILD_ID = '2026-10-22.370';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
