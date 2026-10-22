@@ -34,7 +34,8 @@
 <link rel="apple-touch-startup-image" media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait) and (prefers-color-scheme:light)" href="splash/light-s750x1334.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <script>
 /* Pick light/dark before first paint so the app never flashes the wrong theme. */
 (function(){try{
@@ -3843,6 +3844,7 @@ function backToPractice(){
 }
 function showTab(name, opts){
   opts = opts || {};
+  if(name !== 'study' && !_deferredP){ try{ runDeferredInit(); }catch(e){} }
   if(name !== 'flashcards' && document.body.classList.contains('flashcard-fullscreen')){ try{ exitFlashcardFullscreen(); }catch(e){} }
   const curEl = document.querySelector('.tab-panel.active');
   const curName = curEl ? curEl.id.replace(/^tab-/, '') : null;
@@ -6300,6 +6302,19 @@ function pruneRetiredQuestionIds(){
   }catch(e){}
 }
 
+var _deferredP = null;
+function runDeferredInit(){
+  if(_deferredP) return _deferredP;
+  _deferredP = (async () => {
+    try{ renderAllLate(); }catch(e){}
+    try{ initFlashcards(); }catch(e){}
+    try{ initToolsTab(); }catch(e){}
+    try{ renderExamDayCallout(); }catch(e){}
+    try{ updateTutorContextNote(); }catch(e){}
+    try{ await checkAIAvailability(); }catch(e){}
+  })();
+  return _deferredP;
+}
 async function loadData(){
   let loadFailed = false;
   let rawSaved = null;
@@ -6389,7 +6404,7 @@ async function loadData(){
   }
   applyTheme();
   pruneRetiredQuestionIds();
-  renderAll();
+  renderAll(true);
   try{
     const _ap = document.querySelector('.tab-panel.active'); if(_ap){ _ap.classList.add('tab-enter'); setTimeout(() => _ap.classList.remove('tab-enter'), 600); }
     const endBoot = () => { const h = document.documentElement; if(!h.classList.contains('booting')) return; h.classList.add('booted'); h.classList.remove('booting'); setTimeout(() => h.classList.remove('booted'), 700); };
@@ -6403,12 +6418,9 @@ async function loadData(){
     const go = () => { if(!window._refRenderedOnce){ try{ renderReference(); window._refRenderedOnce = true; }catch(e){} } };
     if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
   }, 1200);
-  initFlashcards();
-  initToolsTab();
-  renderExamDayCallout();
-  updateTutorContextNote();
-  await checkAIAvailability();
-  if(DATA.lastTab && DATA.lastTab !== 'study'){ showTab(DATA.lastTab); }
+  // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
+  if(DATA.lastTab && DATA.lastTab !== 'study'){ await runDeferredInit(); showTab(DATA.lastTab); }
+  else requestAnimationFrame(() => setTimeout(() => { if(window.requestIdleCallback) requestIdleCallback(() => { runDeferredInit(); }, { timeout: 1500 }); else runDeferredInit(); }, 0));
   if(loadFailed){
     persistFailureWarned = true;
     setStorageWarning(true);
@@ -6921,7 +6933,7 @@ function setStorageWarning(show){
   document.body.classList.toggle('has-storage-warning', show);
 }
 
-var _syncT = null;
+var _dataVer = 0, _syncT = null;
 // Every mode writes through persist(); this makes the surfaces that read the shared models (plan, readiness, next step, diagnosis) follow without each mode having to call them.
 function scheduleSurfaceSync(){
   clearTimeout(_syncT);
@@ -6933,6 +6945,7 @@ function scheduleSurfaceSync(){
   }catch(e){} }, 700);
 }
 async function persist(){
+  _dataVer++;
   try{ _expMemo = null; _dgMemo = null; scheduleSurfaceSync(); }catch(_){} // any change makes the shared models (exposure, diagnosis) stale, and visible surfaces catch up shortly
   // With sync on, stamp the data whenever it actually changed, so two devices can tell whose edit is newer.
   if(typeof SYNC !== 'undefined' && SYNC.on && !SYNC.applying && DATA){
@@ -7422,7 +7435,7 @@ function renderExamCountdownCard(){
   }
 }
 
-function renderAll(){
+function renderAll(boot){
   try{ hydrateDynamicText(); }catch(e){}
   try{ conductorRefreshPill(); }catch(e){}
   const stats = computeStats();
@@ -7445,15 +7458,20 @@ function renderAll(){
   renderExamCountdownCard();
   renderBlueprint();
   renderFocusCard();
-  renderReadinessExtras(stats);
+  if(!boot) renderReadinessExtras(stats);
   renderNextStepCard(stats);
   renderTodayPlan();
-  renderWeekRecap();
-  renderStudyPlan();
-  renderProgressChart();
-  renderBackupReminder();
-  renderDiagnosisCard();
-  refreshCoachIdleMessage();
+  if(boot) return;   // the rest sits below the fold; it is drawn right after the first paint (see runDeferredInit)
+  renderAllLate();
+}
+function renderAllLate(){
+  try{ renderReadinessExtras(computeStats()); }catch(e){}
+  try{ renderWeekRecap(); }catch(e){}
+  try{ renderStudyPlan(); }catch(e){}
+  try{ renderProgressChart(); }catch(e){}
+  try{ renderBackupReminder(); }catch(e){}
+  try{ renderDiagnosisCard(); }catch(e){}
+  try{ refreshCoachIdleMessage(); }catch(e){}
 }
 
 function renderBlueprint(){
@@ -8527,9 +8545,14 @@ function tutorCoverageBlock(){
   }catch(e){ return ''; }
 }
 var _podPlanBusy = false, _inPlanBuild = false;
+var _planMemo = {};
+// The plan is asked for many times in a row (header, next step, tutor, podcast); build it once per change.
 function buildStudyPlan(minutes){
+  const k = (minutes || 'd') + '|' + localDayKey();
+  const m = _planMemo[k];
+  if(m && m.ver === _dataVer && Date.now() - m.at < 3000) return m.v;
   const _wasBuilding = _inPlanBuild; _inPlanBuild = true;
-  try{ return buildStudyPlanCore(minutes); }finally{ _inPlanBuild = _wasBuilding; }
+  try{ const v = buildStudyPlanCore(minutes); _planMemo[k] = { v, ver: _dataVer, at: Date.now() }; const ks = Object.keys(_planMemo); if(ks.length > 6) delete _planMemo[ks[0]]; return v; }finally{ _inPlanBuild = _wasBuilding; }
 }
 // ---- Day focus ----
 // Each day leans toward one kind of work, chosen from what needs it most and never the same as yesterday unless nothing else
@@ -13523,7 +13546,12 @@ function fcInterleave(sorted){
   return out;
 }
 let fcCustomKind = null;
+var _gapMemo = null;
 function fcGapCards(){
+  if(_gapMemo && _gapMemo.ver === _dataVer && Date.now() - _gapMemo.at < 3000) return _gapMemo.v;
+  const v = fcGapCardsCore(); _gapMemo = { v, ver: _dataVer, at: Date.now() }; return v;
+}
+function fcGapCardsCore(){
   return allFlashcards().filter(c => {
     const sig = fcCardSignals(c);
     return sig.gap >= 0.4 && (sig.stat.seen === 0 || isDue(sig.stat)) && !(sig.stat.lastSeenAt && Date.now() - sig.stat.lastSeenAt < 6 * 3600000 && sig.stat.box >= 1); // a gap card you just got right waits its turn, so the set changes as you learn
@@ -25944,17 +25972,23 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.330';
+const BUILD_ID = '2026-10-21.331';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
   _updChecking = true;
   try{window._vpMark&&window._vpMark('upd-check')}catch(_){}
   try{
-    const r = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
-    const t = await r.text();
-    const m = t.match(/const BUILD_ID = '([^']+)'/);
-    if(m && m[1] !== BUILD_ID){
+    // A 60-byte file says which build is live, instead of downloading the whole 3 MB page on every open. It only counts when it is newer than this copy.
+    let live = null;
+    try{ const j = await fetch('build.json?v=' + Date.now(), {cache:'no-store'}); if(j.ok){ const o = await j.json(); if(o && typeof o.build === 'string') live = o.build; } }catch(_){}
+    if(live === null){
+      const r = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
+      const t = await r.text();
+      const m = t.match(/const BUILD_ID = '([^']+)'/);
+      if(m) live = m[1] !== BUILD_ID ? m[1] : null;
+    }
+    if(live && live > BUILD_ID){
       if(document.body.classList.contains('quiz-active')){ window._updPending = true; return; }
       // Never reload under the person's thumb: the new copy is already saved, so apply it when the app is put away.
       if(document.hidden){ location.reload(); return; }
@@ -25962,7 +25996,7 @@ async function checkForNewBuild(){
     }
   }catch(e){} finally{ _updChecking = false; }
 }
-window.addEventListener('load', () => setTimeout(checkForNewBuild, 1500));
+window.addEventListener('load', () => setTimeout(checkForNewBuild, 4000));
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForNewBuild(); });
 setInterval(() => { if(window._updPending && !document.body.classList.contains('quiz-active')){ window._updPending = false; checkForNewBuild(); } }, 5000);
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
