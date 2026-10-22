@@ -5863,7 +5863,7 @@ async function handleSaveGeminiKey(){
   const key = (input.value || '').trim();
   if(!key){ status.textContent = 'Paste a key first.'; status.classList.add('err'); return; }
   if(!/^[A-Za-z0-9_.\-]{30,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza" or "AQ."). Double-check and try again.'; status.classList.add('err'); return; }
-  status.textContent = 'Checking the key…'; status.classList.remove('err');
+  status.textContent = 'Checking the key…'; status.classList.remove('err'); try{ localStorage.removeItem('cfp-gemini-host'); }catch(e){} _geminiHostOrder = null;
   const prev = geminiKey; geminiKey = key;
   try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
   catch(e){
@@ -15873,7 +15873,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
     else body.contents.unshift({ role:'user', parts:[{ text: si }] });
   }
   let response;
-  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved, saved === 'studio' ? 'vertex' : 'studio'] : base }; }
+  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved] : base }; }
   const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
   let lastErr = null;
   for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
@@ -15901,6 +15901,10 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
     // A busy or rate-limited model: try the next model in the list before giving up, since each has its own capacity.
     if([429, 500, 503, 504].includes(response.status) && (tries || 0) < GEMINI_MODELS.length - 1){ return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length }); }
+    // A refusal that names the model or permission (not the key) can be specific to one model: try the next one before giving up.
+    if([400, 403, 404].includes(response.status) && !/api key|key not valid|has not been used|is disabled|SERVICE_DISABLED|invalid argument|thinking/i.test(detail) && /model|permission|not found|not supported|not available|access/i.test(detail) && (tries || 0) < GEMINI_MODELS.length - 1 && !(response.status === 404 && /use models\//i.test(detail))){
+      return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length });
+    }
     if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
     // A generic "invalid argument" usually means one optional field is not accepted by this model: drop them one at a time.
     if(response.status === 400 && /invalid argument/i.test(detail) && !/api key|not valid/i.test(detail)){
@@ -15990,7 +15994,7 @@ function aiReplyText(r){
   return '';
 }
 
-function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1); }
+function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; const dg = ((e && (e.provider === 'gemini' || e.geminiErr)) && _geminiDiag && _geminiDiag.length) ? ' (' + _geminiDiag.join(' | ').slice(0, 220) + ')' : ''; return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1) + dg; }
 function describeAiError(err){
   if(err && err.geminiErr && !err._describing){
     err._describing = true;
@@ -26654,7 +26658,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.362';
+const BUILD_ID = '2026-10-22.363';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
