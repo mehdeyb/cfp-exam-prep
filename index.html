@@ -171,6 +171,19 @@
   /* Reading polish: balanced headings, no one-word last lines, tabular figures where numbers line up. */
   h1,h2,h3,.q-text,.card-head h2{text-wrap:balance;}
   .q-text,.mw-q{white-space:pre-line;}
+  .pp{margin:0 0 10px;padding:0;}
+  .pp-segs{display:flex;gap:3px;height:6px;margin:0 0 5px;}
+  .pp-s{flex:1 1 0;min-width:2px;border-radius:3px;background:var(--hair-strong);position:relative;overflow:hidden;display:block;}
+  .pp-s.done{background:var(--gold);}
+  .pp-s.now{background:var(--hair-strong);box-shadow:0 0 0 1.5px var(--gold);}
+  .pp-s.now::after,.pp-s.part::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--f,0%);background:var(--gold);opacity:.85;}
+  .pp-s.part{background:var(--hair-strong);}
+  .pp-txt{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:11.5px;color:var(--muted);line-height:1.3;}
+  .pp-txt b{color:var(--paper);font-weight:600;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .pp-txt .pp-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;}
+  .pp-txt .pp-l{margin-left:auto;white-space:nowrap;}
+  .pp-mini{margin:4px 0 0;}.pp-mini .pp-segs{height:4px;margin-bottom:3px;}.pp-mini .pp-txt{font-size:10.5px;}.pp-mini .pp-t{display:none;}
+  body.flashcard-fullscreen .pp{margin:0 0 8px;padding-right:54px;}
   .q-text .q-stem{display:block;}
   .q-exh{display:block;margin:10px 0;border:1px solid var(--hair);border-radius:10px;overflow:hidden;font-size:.82em;}
   .q-exh-r{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;padding:7px 10px;border-top:1px solid var(--hair);}
@@ -3101,6 +3114,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
+        <div class="pp" data-pp="mw" style="display:none;"></div>
         <div class="mw-dots" id="mwDots" aria-hidden="true"></div>
         <div id="mwBody" aria-live="polite"></div>
       </div>
@@ -3126,6 +3140,7 @@
           <button class="btn" id="fdNextBtn" onclick="fdNext()" style="display:none;">Next problem</button>
         </div>
         <div class="fd-result" id="fdResult" role="status" aria-live="polite"></div>
+        <div class="pp" data-pp="fd" style="display:none;"></div>
         <div class="fd-status" id="fdStatus"></div>
       </div>
     </div>
@@ -3140,6 +3155,7 @@
         </div>
         <div class="tvm-modeseg"><div class="dt-seg" id="tvmModeSeg" role="group" aria-label="Calculator practice mode"><button type="button" data-mode="tvm" class="on" aria-pressed="true" onclick="tvmSetMode('tvm')">Time value</button><button type="button" data-mode="cf" aria-pressed="false" onclick="tvmSetMode('cf')">Cash flows</button></div></div>
         <details class="tvm-howto" id="tvmHowto"><summary onclick="this.parentNode.dataset.user=1">How this works</summary><p class="hint" id="tvmHowtoText" style="margin-top:8px;">Enter four of the five values (N, I/YR, PV, PMT, FV), each by typing the number and pressing its key. Then press the key you're solving for (marked "?"); there is no separate compute key. Money you pay out is negative and money you receive is positive.</p><button type="button" class="ck-link" onclick="openCalcKeys()">Your calculator keystrokes</button></details>
+        <div class="pp" data-pp="tvm" style="display:none;"></div>
         <div class="tvm-status" id="tvmStatus" role="status"></div>
         <div class="tvm-scenario" id="tvmScenario"></div>
         <div class="tvm-level-badge" id="tvmLevelBadge"></div>
@@ -3195,6 +3211,7 @@
             <span class="plan-chip" id="planChip" style="display:none;" role="status" aria-live="polite"></span>
             <div class="timer" id="quizTimer" style="display:none;">35:00</div>
           </div>
+          <div class="pp" data-pp="quiz" style="display:none;"></div>
           <div class="pace-strip" id="paceStrip" style="display:none;" role="status" aria-live="off"></div>
           <div class="tutor-brief" id="tutorBrief" style="display:none;" role="note"></div>
           <div class="q-card">
@@ -3575,6 +3592,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
           <button type="button" class="fc-undo" id="fcUndoBtn" onclick="undoFlashcardRating()" aria-label="Undo last rating">↶ Undo</button>
+          <div class="pp" data-pp="fc" style="display:none;"></div>
           <div class="fc-progress" id="fcProgress">Card 1 of 40</div>
           <div class="fc-plan-line" id="fcPlanLine" style="display:none;"></div>
           <div class="fc-card" id="fcCard" onclick="flipFlashcard()" tabindex="0" role="button">
@@ -8680,6 +8698,8 @@ function fmtRecord(q, ok){
   if(session && session.stmtDrill){ const L = planDayLog(); L.fmt = (L.fmt || 0) + 1; }
 }
 function fmtAcc(){ const f = fmtStats(); return f.n >= 5 ? f.ok / f.n : null; }
+// A session is tagged with its plan step when it starts; drills that mark themselves afterwards re-read it so the banner and the day strip name the right step.
+function retagSessionPlan(){ try{ session.planRef = undefined; initPlanRef(session); renderTutorBrief(); }catch(e){} }
 function startStatementDrill(n){
   n = Math.max(4, Math.min(12, n || 8));
   const pool = QUESTIONS.filter(q => q.ordered);
@@ -8691,8 +8711,50 @@ function startStatementDrill(n){
   sc.forEach(x => { if(picks.length < n && (per[x.q.domain] || 0) < Math.ceil(n / 3)){ picks.push(x.q); per[x.q.domain] = (per[x.q.domain] || 0) + 1; } });
   if(!picks.length) return false;
   beginSession(shuffle(picks), 'drill', null);
-  if(session) session.stmtDrill = true;
+  if(session){ session.stmtDrill = true; retagSessionPlan(); }
   return true;
+}
+// ---- The day's parts, on every screen ----
+// One slim strip, the same everywhere you work on a plan step: a segment for each part of today's plan (done, the one you are on, still to come),
+// which part you are on, and about how long is left. It reads from the same plan and guided session as everything else, so the numbers always match.
+function ppCur(kind){
+  try{
+    if(kind === 'quiz'){ const r = session && session.planRef; return r ? r.id : null; }
+    if(kind === 'fc') return (_fcStep && fcCustomQueue && fcCustomKind === 'plan') ? _fcStep : null;
+    if(kind === 'fd' || kind === 'tvm'){ const st = buildStudyPlan().steps.find(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && x.unit === 'problems' && (kind === 'fd' ? !/^Calculator practice/.test(x.title) : /^Calculator practice/.test(x.title))); return st ? st.id : null; }
+    if(kind === 'mw'){ return (typeof mw !== 'undefined' && mw) ? 'tutor' : null; }
+    if(kind === 'eb') return (typeof ebRun !== 'undefined' && ebRun && ebRun.stepId) ? ebRun.stepId : null;
+    if(kind === 'focus') return (typeof _focus !== 'undefined' && _focus && _focus.stepId) ? _focus.stepId : null;
+  }catch(e){}
+  return null;
+}
+function ppHtml(curId){
+  const plan = buildStudyPlan(), steps = plan.steps; if(!steps.length) return '';
+  const cs = (typeof conductorState === 'function') ? conductorState() : null;
+  let marks = null, n = 0, total = steps.length, doneN = steps.filter(x => x.done).length;
+  if(cs && cs.current){ try{ const pr = conductorProgress(cs); if(pr && pr.total){ marks = pr.marks; n = pr.n; total = pr.total; doneN = pr.done; } }catch(e){} }
+  const idx = steps.findIndex(x => x.id === curId);
+  let segs = '';
+  if(marks && marks.length){ segs = marks.map(m => `<i class="pp-s${m ? ' ' + m : ''}"></i>`).join(''); }
+  else segs = steps.map((x, i) => { const f = x.done ? 1 : (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0); const cls = x.done ? ' done' : (i === idx ? ' now' : (f > 0 ? ' part' : '')); return `<i class="pp-s${cls}" style="--f:${Math.round(f * 100)}%"></i>`; }).join('');
+  if(!marks) n = idx >= 0 ? idx + 1 : doneN;
+  const left = steps.reduce((a, x) => a + (x.done ? 0 : (x.minutes || 0) * (1 - (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0))), 0);
+  const leftTxt = left >= 5 ? (left >= 90 ? 'about ' + paceHrs(Math.round(left / 15) * 15) + ' left' : 'about ' + Math.round(left / 5) * 5 + ' min left') : 'nearly done';
+  const lab = idx >= 0 || marks ? `Part ${n} of ${total}` : `${doneN} of ${total} done`;
+  const cur = idx >= 0 ? steps[idx] : null;
+  return `<div class="pp-segs" aria-hidden="true">${segs}</div><div class="pp-txt"><b>${lab}</b>${cur ? `<span class="pp-t">${escapeHtml(String(cur.title).replace(/^(Drill|New ground|Keep fresh): /, '').slice(0, 40))}</span>` : ''}<span class="pp-l">${leftTxt}</span></div>`;
+}
+function ppRefresh(){
+  try{
+    document.querySelectorAll('.pp[data-pp]').forEach(el => {
+      const cur = ppCur(el.dataset.pp);
+      if(cur === null){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } return; }
+      const h = ppHtml(cur); if(!h){ el.style.display = 'none'; return; }
+      if(el._pp !== h){ el.innerHTML = h; el._pp = h; }
+      el.style.display = '';
+      el.setAttribute('role', 'status'); el.setAttribute('aria-label', (el.querySelector('.pp-txt') || {}).textContent || '');
+    });
+  }catch(e){}
 }
 function planLogAnswer(mode){
   try{
@@ -9801,7 +9863,8 @@ function conductorProgress(c, asId){
   }catch(e){ const t = Math.max(c.total || 0, c.log.length + (c.current ? 1 : 0)); return { total: t, done: c.log.length, n: c.log.length + 1, marks: [] }; }
 }
 // "Part 2 of 7 · " while a guided sitting is running, so every screen says where you are in today's plan and where you are inside the part.
-function cdPartTag(){ try{ const c = conductorState(); if(!c || !c.current) return ''; const pr = conductorProgress(c); return 'Part ' + pr.n + ' of ' + pr.total + ' · '; }catch(e){ return ''; } }
+function cdPartTag(){ try{ const c = conductorState(); if(!c || !c.current) return ''; try{ ppRefresh(); if([...document.querySelectorAll('.pp[data-pp]')].some(e => e.style.display !== 'none')) return ''; }catch(e){} // the day strip already says "Part n of N"
+ const pr = conductorProgress(c); return 'Part ' + pr.n + ' of ' + pr.total + ' · '; }catch(e){ return ''; } }
 function conductorTotal(c){ return conductorProgress(c).total; }
 function conductorPlanPreview(){
   const plan = buildStudyPlan();
@@ -10159,6 +10222,7 @@ function planAdvanceReveal(){
 }
 function ptToggleAll(){ window._ptAll = !window._ptAll; renderTodayPlan(); }
 function renderTodayPlan(){
+  try{ ppRefresh(); }catch(e){}
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   let plan;
@@ -10426,6 +10490,7 @@ function planRefForSession(sess){
   const byId = id => all.find(x => x.id === id);
   let st = null;
   if(sess.stmtDrill){ st = byId('stmts'); }
+  else if(sess.figDrill){ st = byId('figures'); }
   else if(sess.mode === 'adaptive'){ const l = ['adaptive','adaptive2','adaptive3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
   else if(sess.mode === 'review') st = byId('missed');
   else if(sess.mode === 'case'){ const l = ['case','case2','case3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
@@ -10449,6 +10514,7 @@ function initPlanRef(sess){
   }catch(e){ try{ sess.planRef = null; }catch(_){} }
 }
 function updatePlanChip(){
+  try{ ppRefresh(); }catch(e){}
   const el = document.getElementById('planChip');
   if(!el) return;
   const r = session && session.planRef;
@@ -11053,7 +11119,7 @@ function ebUpdateCues(){
 function ebEnsureDom(){
   let o = document.getElementById('ebOverlay'); if(o) return o;
   o = document.createElement('div'); o.id = 'ebOverlay'; o.className = 'eb-overlay'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true'); o.setAttribute('aria-labelledby','ebTitle');
-  o.innerHTML = '<div class="eb-sheet"><div class="eb-head"><div><div class="eb-kicker" id="ebKicker">Explain it back</div><h2 class="eb-title" id="ebTitle"></h2></div><button type="button" class="eb-x" aria-label="Close" onclick="ebClose()">✕</button></div><div id="ebBody"></div></div>';
+  o.innerHTML = '<div class="eb-sheet"><div class="eb-head"><div><div class="eb-kicker" id="ebKicker">Explain it back</div><h2 class="eb-title" id="ebTitle"></h2></div><button type="button" class="eb-x" aria-label="Close" onclick="ebClose()">✕</button></div><div class="pp" data-pp="eb" style="display:none;"></div><div id="ebBody"></div></div>';
   o.addEventListener('click', e => { if(e.target === o) ebClose(); });
   document.body.appendChild(o);
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && ebState) ebClose(); });
@@ -11086,6 +11152,7 @@ function ebStepper(n){
   return '<div class="eb-steps" aria-label="Step ' + n + ' of 3">' + ['Explain','Check','Rate'].map((t, i) => `<span class="${i + 1 === n ? 'on' : i + 1 < n ? 'past' : ''}"><i>${i + 1 < n ? '✓' : i + 1}</i>${t}</span>`).join('') + '</div>';
 }
 function ebRenderWrite(){
+  try{ ppRefresh(); }catch(e){}
   const st = ebState; if(!st) return;
   const n = st.points.length;
   const hasMic = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -15012,6 +15079,7 @@ function fcPlanState(){
   }catch(e){ return null; }
 }
 function updateFcPlanLine(){
+  try{ ppRefresh(); }catch(e){}
   // One integrated line: where you are in this run, and where that sits against today's plan.
   const progress = document.getElementById('fcProgress');
   const old = document.getElementById('fcPlanLine'); if(old) old.style.display = 'none';
@@ -15909,7 +15977,7 @@ function startFigureDrill(n){
   scored.forEach(x => { if(picks.length < n && (perDom[x.k.domain] || 0) < Math.ceil(n / 2)){ picks.push(x.k); perDom[x.k.domain] = (perDom[x.k.domain] || 0) + 1; } });
   if(!picks.length) return false;
   beginSession(picks.map(figBuildQuestion), 'drill', null);
-  if(session) session.figDrill = true;
+  if(session){ session.figDrill = true; retagSessionPlan(); }
   return true;
 }
 // ---- Coverage balance ----
@@ -19282,6 +19350,7 @@ function fdPosText(){
   return cdPartTag() + t;
 }
 function fdRenderStatus(){
+  try{ ppRefresh(); }catch(e){}
   const el = document.getElementById('fdStatus'); if(!el) return;
   const s = fdStats(fd.name);
   const acc = s.attempts ? Math.round(s.correct/s.attempts*100) + '% right over ' + s.attempts + (s.attempts===1?' try':' tries') : 'first time with this one';
@@ -19747,6 +19816,7 @@ function tvmCollapseHowto(){
 function tvmRenderStatus(){
   tvmRenderStatusCore();
   try{
+    try{ ppRefresh(); }catch(e){}
     const el = document.getElementById('tvmStatus'); if(!el) return;
     const cands = buildStudyPlan().steps.filter(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && /^Calculator practice/.test(x.title));
     const st = cands.find(x => x.kindKey === tvmKindFocus) || cands.find(x => !x.done) || cands[0];
@@ -20914,6 +20984,7 @@ function mwDots(){
   el.style.display = '';
 }
 function mwRender(){
+  try{ ppRefresh(); }catch(e){}
   if(!mw) return;
   const body = document.getElementById('mwBody'), title = document.getElementById('mwTitle'); if(!body) return;
   const it = mw.items[mw.i];
@@ -27095,7 +27166,7 @@ function focusEnter(o){
   const bar = document.createElement('div'); bar.className = 'focus-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Focus');
   const fromChat = _focus.origin === 'tutor';
   const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
-  bar.innerHTML = '<div class="fb-l"><div class="fb-k">' + (cdPartTag().replace(/ · $/, '') || 'Focus') + '</div><div class="fb-t"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
+  bar.innerHTML = '<div class="fb-l"><div class="fb-k">' + (cdPartTag().replace(/ · $/, '') || 'Focus') + '</div><div class="fb-t"></div><div class="pp pp-mini" data-pp="focus" style="display:none;"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
     (nx ? '<button type="button" class="fb-next"></button>' : '') +
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
@@ -27107,11 +27178,13 @@ function focusEnter(o){
   _focus.bar = bar; _focus.panel = panel;
   document.addEventListener('keydown', focusKey, true);
   _focus.entering = false;
+  try{ ppRefresh(); }catch(e){}
   try{ window.scrollTo(0, 0); }catch(e){}
   return true;
 }
 function fbNextStyle(nb, nx){ nb.setAttribute('aria-label', 'Next: ' + nx.label); nb.title = nx.label; nb.style.cssText = 'max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nb.textContent = 'Next: ' + nx.label.replace(/^(Drill|New ground|Keep fresh|Learn|Review|Refresh|Explain it back): /, '').slice(0, 28) + ' \u2192'; }
 function focusRefresh(){
+  try{ ppRefresh(); }catch(e){}
   const f = _focus; if(!f || !f.bar) return;
   let nx = null; try{ nx = tutorNextChoice(f.stepId); }catch(e){}
   let nb = f.bar.querySelector('.fb-next');
@@ -27665,7 +27738,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.412';
+const BUILD_ID = '2026-10-22.415';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
