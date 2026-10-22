@@ -2717,7 +2717,7 @@
   .syl-chip b{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--paper);margin-left:2px;}
   .syl-chip.on{border-color:var(--gold);color:var(--gold);}
   .syl-next{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--gold-tint);border:1px solid var(--gold);font-size:12px;color:var(--muted);line-height:1.4;}
-  .syl-next b{color:var(--paper);}
+  .syl-next b{color:var(--paper);} .syl-next .syl-less{margin-left:6px;} @media (max-width:430px){ .syl-next{flex-wrap:wrap;justify-content:flex-start;} .syl-next > span{flex:1 1 100%;} }
   .syl-next em{display:inline-block;font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);margin-left:4px;}
   details.syllabus-domain > summary.syllabus-head{cursor:pointer;list-style:none;gap:10px;min-height:44px;align-items:center;margin-bottom:0;}
   details.syllabus-domain > summary.syllabus-head::-webkit-details-marker{display:none;}
@@ -12778,6 +12778,12 @@ function stageCheckPick(k){
   sl.pick = k; stageRecordAnswer(q, k); try{ navigator.vibrate && navigator.vibrate(k === q.correct ? 8 : [8, 40, 8]); }catch(e){}
   stageDraw(true);
 }
+// One tap from anywhere: a short two-host lesson, with slides, on a topic. The same path the tutor uses.
+async function lessonOnTopic(name, why){
+  if(!aiFeaturesAvailable){ try{ openSettingsToApiKey(); }catch(e){} return; }
+  const t = String(name || '').trim(); if(!t) return;
+  const r = await executeTutorTool('create_lesson', { title: t, request: 'Teach the CFP exam topic "' + t + '" the way a tutor at a whiteboard would: what it is in plain words, one worked example with numbers where it applies, the trap the exam sets, and how to spot it in a question.' + (why ? ' Context for this student: ' + String(why).slice(0, 160) + '.' : ''), length: 'short', hosts: 'two' });
+}
 function stageHasLesson(){ return !!(naturalSpeechState.active || (stageState.deckKey && DATA.podcastEpisodes && DATA.podcastEpisodes[stageState.deckKey])); }
 function stageResume(){
   const sl = stageState.cur; if(sl) sl.passed = true;
@@ -13976,9 +13982,10 @@ function renderReference(){
   sum.innerHTML = `<div class="syl-bar-row"><span><b>${nChecked}</b> of ${nTotal} reviewed${nSolid ? ` · <b>${nSolid}</b> solid in practice` : ''}</span><span class="syl-bar"><i style="width:${Math.round(nChecked / nTotal * 100)}%"></i></span></div>` +
     (pace ? `<div class="syl-pace">${pace}</div>` : '') +
     `<div class="syl-chips">${chip('all', 'All', null)}${chip('shaky', 'Shaky', nShaky)}${chip('unseen', 'Not seen', nUnseen)}${chip('todo', 'Not reviewed', nUnchecked)}</div>` +
-    (sugg ? `<div class="syl-next"><span>Next up: <b>${sugg.name}</b> <em>${sugg.why}</em></span><button type="button" class="syl-drill" aria-label="Drill ${sugg.name.replace(/"/g,'&quot;')}">Drill</button></div>` : '');
+    (sugg ? `<div class="syl-next"><span>Next up: <b>${sugg.name}</b> <em>${sugg.why}</em></span><button type="button" class="syl-drill" aria-label="Drill ${sugg.name.replace(/"/g,'&quot;')}">Drill</button>${aiFeaturesAvailable ? `<button type="button" class="syl-drill syl-less" aria-label="Lesson on ${sugg.name.replace(/"/g,'&quot;')}">Lesson</button>` : ''}</div>` : '');
   sum.querySelectorAll('.syl-chip').forEach(c => c.onclick = () => { window._sylFilter = c.dataset.f; renderReference(); });
-  const sd = sum.querySelector('.syl-next .syl-drill'); if(sd && sugg) sd.onclick = () => startSubtopicDrill(sugg.key, sugg.idx);
+  const sd = sum.querySelector('.syl-next .syl-drill:not(.syl-less)'); if(sd && sugg) sd.onclick = () => startSubtopicDrill(sugg.key, sugg.idx);
+  const sl2 = sum.querySelector('.syl-next .syl-less'); if(sl2 && sugg) sl2.onclick = () => lessonOnTopic(sugg.name, sugg.why);
   syl.appendChild(sum);
   weakOrder.forEach((key,rank)=>{
     const d = DOMAINS.find(x=>x.key===key);
@@ -28996,7 +29003,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.451';
+const BUILD_ID = '2026-10-22.452';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
