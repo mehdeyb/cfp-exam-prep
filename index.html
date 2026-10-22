@@ -7250,6 +7250,9 @@ function computeStats(){
   const triedShare = poolTotal ? triedTotal/poolTotal : 0;
   const margin = triedTotal ? Math.min(30, Math.round(100 * 1.64 * Math.sqrt(expectedAcc*(1-expectedAcc)/triedTotal) * (1 + (1-triedShare)))) : null;
   const readiness = Math.round(weighted * calibrationFactor);
+  // The headline accuracy estimate and the readiness score are two views of one number: readiness is how far above guessing the estimate sits.
+  // Tie them together after the overconfidence adjustment, so the ring and the line under it can never disagree.
+  expectedAcc = READINESS_FLOOR + (1 - READINESS_FLOOR) * (weighted * calibrationFactor) / 100;
   const calibration = {
     factor: calibrationFactor,
     penalty: weighted - weighted * calibrationFactor, // points lost to overconfidence
@@ -8004,6 +8007,7 @@ function renderReadinessExtras(stats){
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
       estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '');
+      estEl.title = `Readiness counts only what you know beyond guessing, which scores 25% on four-choice questions: ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
       estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions.`;
       estEl.style.display = 'block';
     } else { estEl.style.display = 'none'; }
@@ -26234,7 +26238,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.337';
+const BUILD_ID = '2026-10-21.338';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
