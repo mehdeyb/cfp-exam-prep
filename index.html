@@ -8531,7 +8531,7 @@ function computeNextStep(stats){
    The tutor reads and runs the same plan.
 =========================================================== */
 // With the exam days away, short days no longer make sense: the plan is built for a real study block.
-const PLAN_MINUTE_CHOICES = [120, 150, 180, 210, 240];
+const PLAN_MINUTE_CHOICES = [120, 180, 240, 300, 360];
 function planMinuteLabel(m){ return paceHrs(m); }
 function planTodayOverride(){ const o = DATA && DATA.planToday; return (o && o.day === localDayKey() && o.m >= 30 && o.m <= 360) ? Math.round(o.m) : 0; }
 function planMinutesChosen(){ const t = planTodayOverride(); if(t) return t; const m = DATA && DATA.planMinutes; return (m >= 60 && m <= 360) ? Math.round(m) : 0; }
@@ -8564,6 +8564,16 @@ function paceHrs(m){
 // How long a day it takes to be ready on exam day, worked out from what is actually left: the questions and cards
 // not yet met, the weak domains, what was missed, and a few timed checks, spread over the days that remain.
 // It is an estimate, shown as one number you can accept or ignore.
+function examRampMinutes(days, avgMin){
+  if(days === null || days < 2) return 0;
+  if(days <= 3) return 0; // taper days are handled by the plan itself
+  if(days <= 5) return 360;
+  const start = Math.max(120, Math.min(240, Math.round((avgMin || 150) / 15) * 15));
+  const span = Math.max(1, 14 - 5);
+  const f = Math.max(0, Math.min(1, (14 - days) / span));
+  if(days > 14) return 0;
+  return Math.min(360, Math.round((start + (360 - start) * f) / 15) * 15);
+}
 function studyPaceAdvice(){
   try{
     const days = getDaysUntilExam(); if(days === null || days < 2) return null;
@@ -8597,17 +8607,21 @@ function studyPaceAdvice(){
     const effDays = days >= 3 ? days - 2 : 1; // the last day is rest and the day before it is light
     const raw = total / effDays;
     const rounded = Math.round(raw / 15) * 15;
-    const minutes = Math.max(90, Math.min(300, rounded));
-    const stretch = rounded > 300;
+    // Exam-day conditioning: the real exam is about six hours with a break in the middle, so days lengthen toward that
+    // (full six-hour days around five and four days out), then taper. Stamina is trained by doing the thing at length.
+    const ramp = examRampMinutes(days, avgMin);
+    const minutes = Math.max(90, Math.min(360, Math.max(rounded, ramp)));
+    const stretch = rounded > 360;
     const status = !known ? 'new' : (avgMin >= minutes * 0.9 ? 'on' : 'behind');
     const d = new Date(DATA.examDate + 'T00:00:00');
-    return { minutes, raw, avgMin, known, status, stretch, days, parts, examLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+    return { minutes, raw, avgMin, known, status, stretch, days, parts, ramp, rampLed: ramp > rounded, examLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
   }catch(e){ return null; }
 }
 function paceAdviceText(a){
   if(!a) return '';
   const rec = paceHrs(a.minutes), avg = a.known ? paceHrs(a.avgMin) : '';
   if(a.stretch) return (a.raw > 420 ? 'Not everything can be covered in the time left. ' : `Covering everything would take about ${paceHrs(a.raw)} a day. `) + `Planned at ${rec}, with your weakest domains first.`;
+  if(a.rampLed && a.minutes >= 180) return `The real exam runs about six hours with a break in the middle, so your days are lengthening toward that: ${rec} today, with full six-hour days about five and four days out, then a taper. Practicing at exam length is what builds the stamina.`;
   if(a.status === 'on') return `On pace. About ${rec} a day gets you ready by ${a.examLabel}; you are averaging ${avg}.`;
   if(a.status === 'behind') return `To be ready by ${a.examLabel}, aim for about ${rec} a day. You are averaging ${avg}.`;
   return `To be ready by ${a.examLabel}, aim for about ${rec} a day.`;
@@ -9401,6 +9415,12 @@ function buildStudyPlanCore(minutes){
       return { id:'weak3', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     // Long days (3.5 to 4 hours) get a third and fourth block of the same kind of work, never just longer versions of the same thing.
+    adaptive3: () => { if(answered === 0) return null;
+      return { id:'adaptive3', title:`Third adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
+        why:'A six-hour day ends with a late mixed round on purpose. The real exam asks for your best thinking in its last hour, and practicing that while tired is the training.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - 2 * ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
+    weak5: () => { const t = wkAt(4); if(!t) return null;
+      return { id:'weak5', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fifth on your list of weak topics (${accTxt(t)}). A six-hour day has room for it.`,
+        run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     weak4: () => { const t = wkAt(3); if(!t) return null;
       return { id:'weak4', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Fourth on your list of weak topics (${accTxt(t)}). A long day has room to give it a proper turn.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
@@ -9550,7 +9570,7 @@ function buildStudyPlanCore(minutes){
   }
   // A long day: once the first pass is placed and time is left, add more of what helps most, still within the budget.
   if(minutes >= 200 && !['taper','rest','exam','after'].includes(phase.key)){
-    ['read','weak4','cards2','calc2','case2'].forEach(k => {
+    ['read','weak4','cards2','calc2','case2'].concat(minutes >= 300 ? ['adaptive3','weak5'] : []).forEach(k => {
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
       if(!worked && used + st.minutes > minutes) return;
@@ -9560,7 +9580,7 @@ function buildStudyPlanCore(minutes){
   // From 3.5 hours, one real break near the middle. Spaced rounds after a rest beat one unbroken push.
   let breakAfter = null;
   if(minutes >= 200 && steps.length >= 5 && used >= 150){
-    let cum = 0; const half = Math.min(105, used / 2);
+    let cum = 0; const half = minutes >= 300 ? used / 2 : Math.min(105, used / 2);
     for(let i = 0; i < steps.length - 1; i++){ cum += steps[i].minutes; if(cum >= half){ breakAfter = steps[i].id; break; } }
   }
   // One activity can only count toward one step. Flashcards seen today, formula problems and the like are shared out in plan order,
@@ -10067,7 +10087,7 @@ function renderTodayPlan(){
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
-    </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, 10 min</b> Stand up, water, no screen. The second half sticks better after it.</div>` : ''); });
+    </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   const rows = stepRows.join('');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
@@ -10078,7 +10098,7 @@ function renderTodayPlan(){
     ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${(runwayTxt || lateNote) ? `<p class="pt-sub">${escapeHtml((runwayTxt || '') + lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
-    ${(() => { const o = planTodayOverride(); const opts = [45, 60, 90, 300].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Just today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
+    ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Just today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
     ${paceLine}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows || '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
@@ -27471,7 +27491,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.399';
+const BUILD_ID = '2026-10-22.400';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
