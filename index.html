@@ -18850,11 +18850,12 @@ function fdChooseName(){
   for(let i = 0; i < weights.length; i++){ r -= weights[i]; if(r <= 0) return FD_NAMES[i]; }
   return FD_NAMES[0];
 }
-function fdUnitLabel(u){ return u === '$' ? '$' : u === '%' ? '%' : u === 'years' ? 'years' : ''; }
+function fdUnitLabel(u){ return u === '$' ? '$' : u === '%' ? '%' : u === 'years' ? 'years' : u === 'months' ? 'months' : ''; }
 function fdFormat(prob, v){
   if(prob.unit === '$') return v >= 1000 ? fdMoney(v) : '$' + fdNum(v,2);
   if(prob.unit === '%') return fdNum(v,2) + '%';
   if(prob.unit === 'years') return fdNum(v, Number.isInteger(v) ? 0 : 1) + ' years';
+  if(prob.unit === 'months') return fdNum(v, Number.isInteger(v) ? 0 : 1) + ' months';
   return fdNum(v,2);
 }
 function openFormulaDrill(name){
@@ -18909,7 +18910,7 @@ function fdNext(){
   inp.value = ''; inp.disabled = false;
   inp.setAttribute('aria-label', 'Your answer' + (fd.prob.unit ? ' in ' + (fd.prob.unit === '$' ? 'dollars' : fd.prob.unit) : ''));
   document.getElementById('fdUnitPre').textContent = fd.prob.unit === '$' ? '$' : '';
-  document.getElementById('fdUnitPost').textContent = (fd.prob.unit === '%' || fd.prob.unit === 'years') ? fd.prob.unit : '';
+  document.getElementById('fdUnitPost').textContent = (fd.prob.unit === '%' || fd.prob.unit === 'years' || fd.prob.unit === 'months') ? fd.prob.unit : '';
   const res = document.getElementById('fdResult'); res.style.display = 'none'; res.innerHTML = ''; res.className = 'fd-result';
   document.getElementById('fdCheck').style.display = '';
   document.getElementById('fdNextBtn').style.display = 'none';
@@ -27374,7 +27375,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.394';
+const BUILD_ID = '2026-10-22.395';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
