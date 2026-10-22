@@ -15847,12 +15847,19 @@ function toGeminiContents(messages){
 // The likely host for the key is tried first; if Google answers that it is not valid there, the other host is tried once and remembered.
 let _geminiHostOrder = null, _geminiDiag = [];
 function geminiUrl(host, model){ return host === 'vertex' ? 'https://aiplatform.googleapis.com/v1/publishers/google/models/' + model + ':generateContent' : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'; }
-async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries }){
+let geminiSysFolded = false;
+async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg }){
+  deg = deg || 0;
   if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
   body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
   if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
-  if(!geminiThinkingRejected) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  if(!geminiThinkingRejected && deg < 1) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  if(geminiSysFolded || deg >= 2){ // some models reject a separate system instruction: put it at the front of the first message instead
+    const si = body.systemInstruction.parts[0].text; delete body.systemInstruction;
+    if(body.contents.length && body.contents[0].role === 'user' && body.contents[0].parts && body.contents[0].parts[0] && typeof body.contents[0].parts[0].text === 'string') body.contents[0].parts[0].text = si + '\n\n' + body.contents[0].parts[0].text;
+    else body.contents.unshift({ role:'user', parts:[{ text: si }] });
+  }
   let response;
   if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = /^AQ\./.test(geminiKey) ? ['vertex', 'studio'] : ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved, saved === 'studio' ? 'vertex' : 'studio'] : base }; }
   const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
@@ -15871,7 +15878,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
       throw e;
     }finally{ clearTimeout(timeoutId); }
     if(response.ok){ _geminiDiag = []; try{ localStorage.setItem('cfp-gemini-host', _geminiHostOrder.hosts[0]); }catch(e){} break; }
-    let det = ''; try{ det = ((await response.clone().json()).error || {}).message || ''; }catch(e){}
+    let det = ''; try{ const ej = (await response.clone().json()).error || {}; det = ej.message || ''; const fv = ((ej.details || []).map(d => (d.fieldViolations || [])[0]).filter(Boolean)[0]) || null; if(fv) det += ' [' + (fv.field || '') + ' ' + (fv.description || '') + ']'; }catch(e){}
     if(hi === 0) _geminiDiag = [];
     _geminiDiag.push((_geminiHostOrder.hosts[0] === 'vertex' ? 'Vertex' : 'AI Studio') + ' answered ' + response.status + (det ? ': ' + det.slice(0, 150) : ''));
     if(last || ![400, 401, 403, 404].includes(response.status)) break;
@@ -15883,6 +15890,11 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
     // A busy or rate-limited model: try the next model in the list before giving up, since each has its own capacity.
     if([429, 500, 503, 504].includes(response.status) && (tries || 0) < GEMINI_MODELS.length - 1){ return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length }); }
     if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
+    // A generic "invalid argument" usually means one optional field is not accepted by this model: drop them one at a time.
+    if(response.status === 400 && /invalid argument/i.test(detail) && !/api key|not valid/i.test(detail)){
+      if(deg < 2) return geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg: deg + 1 });
+      if((tries || 0) < GEMINI_MODELS.length - 1) return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length });
+    }
     if(response.status === 404 || (response.status === 400 && /model/i.test(detail))){
       const sug = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1]; // Google names the current model when one is retired
       if(sug && !GEMINI_MODELS.includes(sug)) GEMINI_MODELS.splice(Math.min(geminiModelIdx + 1, GEMINI_MODELS.length), 0, sug);
@@ -15895,6 +15907,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   if(!cand || !cand.content){ const e = new Error('AI response contained no usable text' + (data && data.promptFeedback && data.promptFeedback.blockReason ? ' (blocked: ' + data.promptFeedback.blockReason + ')' : '') + '.'); e.code = 'EMPTY'; e.provider = 'gemini'; throw e; }
   try{ const u = data.usageMetadata; if(u){ if(!DATA.aiTokenUsage) DATA.aiTokenUsage = { totalInput: 0, totalOutput: 0, requestCount: 0, since: Date.now() }; DATA.aiTokenUsage.geminiInput = (DATA.aiTokenUsage.geminiInput || 0) + (u.promptTokenCount || 0); DATA.aiTokenUsage.geminiOutput = (DATA.aiTokenUsage.geminiOutput || 0) + (u.candidatesTokenCount || 0); DATA.aiTokenUsage.geminiRequests = (DATA.aiTokenUsage.geminiRequests || 0) + 1; persist(); } }catch(e){}
   _aiLastProvider = 'gemini';
+  if(deg >= 1) geminiThinkingRejected = true; if(deg >= 2) geminiSysFolded = true;
   const parts = cand.content.parts || [];
   if(tools){
     const blocks = [];
@@ -26620,7 +26633,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.357';
+const BUILD_ID = '2026-10-22.358';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
