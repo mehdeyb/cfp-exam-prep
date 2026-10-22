@@ -2716,7 +2716,7 @@
   @media not ((orientation:landscape) and (max-height:520px) and (min-width:520px)){
     body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:max(96px, calc(86px + env(safe-area-inset-bottom,0px)));}
     body.flashcard-fullscreen .fc-fullscreen-inner{align-self:stretch;display:flex;flex-direction:column;padding-top:0;}
-    body.flashcard-fullscreen .fc-card{flex:1 1 0;min-height:240px;padding:36px 26px;}
+    body.flashcard-fullscreen .fc-card{flex:1 0 auto;min-height:240px;padding:36px 26px;}
     body.flashcard-fullscreen .fc-card .fc-front{font-size:clamp(26px,4.2vh,34px);}
     body.flashcard-fullscreen .fc-card .fc-front.fc-front-def{font-size:clamp(18px,2.7vh,22px);}
     body.flashcard-fullscreen .fc-card .fc-back{font-size:clamp(16px,2.2vh,19px);line-height:1.6;}
@@ -15935,7 +15935,7 @@ async function anthropicMessagesRequestOnce(args){
   }catch(err){
     if(geminiKey && err && err.code !== 'NO_API_KEY' && (err.status !== 400 || /credit|balance|billing|quota|overload/i.test(err.message || ''))){
       if(err.status !== 401 && err.status !== 403) _claudeDownUntil = Date.now() + (err.status === 400 ? 15 : 4) * 60000; // a rejected key will not heal on its own; an outage might
-      try{ return await geminiRequestOnce(args); }catch(gerr){ throw err; }
+      try{ return await geminiRequestOnce(args); }catch(gerr){ try{ err.geminiErr = gerr; }catch(e){} throw err; }
     }
     throw err;
   }
@@ -15980,6 +15980,13 @@ function aiReplyText(r){
 
 function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1); }
 function describeAiError(err){
+  if(err && err.geminiErr && !err._describing){
+    err._describing = true;
+    try{
+      const credit = /credit balance|billing|purchase credits/i.test(err.message || '');
+      return (credit ? 'Claude is out of credit' : 'Claude is not responding') + ', and Gemini could not answer either: ' + describeAiError(err.geminiErr).replace(/^\w/, c => c.toLowerCase());
+    }finally{ err._describing = false; }
+  }
   const status = err && err.status;
   if(err && err.provider === 'gemini'){
     if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
@@ -26635,7 +26642,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.359';
+const BUILD_ID = '2026-10-22.360';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
