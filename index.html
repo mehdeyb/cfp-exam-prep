@@ -15984,7 +15984,7 @@ function describeAiError(err){
     err._describing = true;
     try{
       const credit = /credit balance|billing|purchase credits/i.test(err.message || '');
-      return (credit ? 'Claude is out of credit' : 'Claude is not responding') + ', and Gemini could not answer either: ' + describeAiError(err.geminiErr).replace(/^\w/, c => c.toLowerCase());
+      return (credit ? 'Claude is out of credit' : 'Claude is not responding') + ', and Gemini could not answer either: ' + describeAiError(err.geminiErr).replace(/^(?!Google|Gemini)\w/, c => c.toLowerCase());
     }finally{ err._describing = false; }
   }
   const status = err && err.status;
