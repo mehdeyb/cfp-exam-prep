@@ -3695,6 +3695,14 @@
         </div>
 
         <div class="settings-section">
+          <h3>App version</h3>
+          <p class="hint" style="margin-top:0;" id="appVersionLine"></p>
+          <div class="api-key-row"><button class="btn" id="appUpdateBtn" onclick="settingsCheckUpdate(false)">Check for update</button></div>
+          <div class="tutor-status" id="appUpdateStatus" role="status"></div>
+          <p class="hint" style="margin-top:8px;"><button class="linklike" onclick="settingsCheckUpdate(true)" style="text-decoration:underline;">Still on an old version? Reset the app's saved files</button> Your progress and settings are not touched.</p>
+        </div>
+
+        <div class="settings-section">
           <h3>AI connection</h3>
           <div class="api-key-box" id="apiKeyBox" style="display:none;">
             <p class="hint" style="margin-top:0;">The tutor, AI-written practice and podcasts need your own API key (console.anthropic.com). It stays encrypted in this browser and goes only to Anthropic. Everything else works without it.</p>
@@ -26642,8 +26650,35 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.360';
+const BUILD_ID = '2026-10-22.361';
 let _updChecking = false;
+// Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
+// A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
+async function applyNewBuild(force){
+  const r = await fetch(location.pathname + '?v=' + Date.now(), { cache:'no-store' });
+  if(!r.ok) throw new Error('fetch');
+  const t = await r.clone().text(); const m = t.match(/const BUILD_ID = '([^']+)'/);
+  if(!m) throw new Error('noid');
+  if(!force && !(m[1] > BUILD_ID)) return m[1];
+  if('caches' in window){
+    try{ const keys = await caches.keys(); for(const k of keys){ if(k !== 'blueprint-shell-v2') await caches.delete(k); } const c = await caches.open('blueprint-shell-v2'); await c.put('./index.html', r.clone()); await c.put('./', r.clone()); }catch(e){}
+  }
+  if(force && navigator.serviceWorker){ try{ const regs = await navigator.serviceWorker.getRegistrations(); for(const g of regs) await g.unregister(); if('caches' in window){ const keys = await caches.keys(); for(const k of keys) await caches.delete(k); } }catch(e){} }
+  location.reload();
+  return m[1];
+}
+async function settingsCheckUpdate(force){
+  const st = document.getElementById('appUpdateStatus'), say = t => { if(st) st.textContent = t; };
+  if(!navigator.onLine){ say('You are offline. Try again when you have a connection.'); return; }
+  say(force ? 'Resetting the saved files…' : 'Checking…');
+  try{
+    let live = null; try{ const j = await fetch('build.json?v=' + Date.now(), { cache:'no-store' }); if(j.ok){ const o = await j.json(); live = o && o.build; } }catch(e){}
+    if(!force && live && !(live > BUILD_ID)){ const v = await applyNewBuild(false); if(!(v > BUILD_ID)){ say('You are on the newest version (' + BUILD_ID + ').'); return; } }
+    say('Updating to the newest version…');
+    await applyNewBuild(!!force);
+  }catch(e){ say('Could not reach the update. Check the connection and try again.'); }
+}
+try{ document.addEventListener('DOMContentLoaded', () => { const l = document.getElementById('appVersionLine'); if(l) l.textContent = 'This copy is build ' + BUILD_ID + '.'; }); }catch(e){}
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
   _updChecking = true;
@@ -26661,8 +26696,10 @@ async function checkForNewBuild(){
     if(live && live > BUILD_ID){
       if(document.body.classList.contains('quiz-active')){ window._updPending = true; return; }
       // Never reload under the person's thumb: the new copy is already saved, so apply it when the app is put away.
-      if(document.hidden){ location.reload(); return; }
-      if(!window._updOnHide){ window._updOnHide = true; document.addEventListener('visibilitychange', () => { if(document.hidden && !document.body.classList.contains('quiz-active')) location.reload(); }); }
+      const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      // Just opened and nothing under way: update right now so the new version is what you see, not the next time.
+      if(document.hidden || (performance.now() < 60000 && !typing && !document.body.classList.contains('flashcard-fullscreen') && !document.body.classList.contains('settings-active'))){ try{ await applyNewBuild(false); }catch(e){ if(document.hidden) location.reload(); } return; }
+      if(!window._updOnHide){ window._updOnHide = true; document.addEventListener('visibilitychange', () => { if(document.hidden && !document.body.classList.contains('quiz-active')) applyNewBuild(false).catch(() => location.reload()); }); }
     }
   }catch(e){} finally{ _updChecking = false; }
 }
