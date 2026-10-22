@@ -2735,6 +2735,13 @@
     body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px));}
     body.flashcard-fullscreen .fc-fullscreen-inner{align-self:stretch;display:flex;flex-direction:column;padding-top:0;}
     body.flashcard-fullscreen .fc-card{flex:1 0 auto;min-height:240px;padding:36px 26px;}
+  @media (min-width:700px) and (min-height:700px){
+    /* When both the look-alike and the deciding-difference boxes show, set them side by side so the card stays short. */
+    body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:14px;align-items:start;justify-content:stretch;}
+    body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > *{grid-column:1 / -1;}
+    body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcContrast{grid-column:1;}
+    body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell{grid-column:2;}
+  }
     body.flashcard-fullscreen .fc-card .fc-front{font-size:clamp(26px,4.2vh,34px);}
     body.flashcard-fullscreen .fc-card .fc-front.fc-front-def{font-size:clamp(18px,2.7vh,22px);}
     body.flashcard-fullscreen .fc-card .fc-back{font-size:clamp(16px,2.2vh,19px);line-height:1.6;}
@@ -26986,7 +26993,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.380';
+const BUILD_ID = '2026-10-22.381';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
