@@ -19186,7 +19186,7 @@ function tvmRenderStatus(){
     if(!st) return;
     const nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id);
     el.insertAdjacentHTML('beforeend', st.done
-      ? `<span class="tvm-chip">Today's plan: calculator practice done ✓</span>${nx ? `<button type="button" class="fc-plan-next" onclick="closeTvmThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}`
+      ? `<span class="tvm-chip">${escapeHtml(cdPartTag())}Today's plan: calculator practice done ✓</span>${nx ? `<button type="button" class="fc-plan-next" onclick="closeTvmThen('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : ''}${(!nx && conductorState()) ? `<button type="button" class="fc-plan-next" onclick="closeTvmTool();setTimeout(conductorOpenMenu,60)">Next part →</button>` : ''}`
       : `<span class="tvm-chip">${escapeHtml(cdPartTag())}Today's plan: ${st.have || 0} of ${st.need} solved · ${escapeHtml((CALC_KINDS[st.kindKey] || {}).label || 'calculator')}</span>`);
   }catch(e){}
 }
@@ -26986,7 +26986,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.379';
+const BUILD_ID = '2026-10-22.380';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
