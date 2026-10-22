@@ -2807,6 +2807,17 @@
   .mw-tip > b,.mw-note > b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
   .mw-note > b{color:var(--teal);}
   .mw-note.loading{color:var(--muted);}
+  .mw-break{margin:12px 0 0;display:grid;gap:10px;}
+  .mw-sec{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--paper);}
+  .mw-sec > b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;font-weight:600;}
+  .mw-sec p{margin:0 0 6px;} .mw-sec p:last-child{margin-bottom:0;}
+  .mw-sec ol{margin:0;padding-left:20px;display:grid;gap:4px;}
+  .mw-dom{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .mw-more{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:0 14px;font-size:14px;line-height:1.55;color:var(--paper);}
+  .mw-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--muted);font-size:13.5px;}
+  .mw-more p{margin:0 0 10px;} .mw-more p span{color:var(--muted);font-size:13px;}
+  .mw-note p{margin:0 0 6px;} .mw-note p:last-child{margin-bottom:0;}
+  .mw-sub{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:1px;}
   .mw-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
   .mw-verdict{font-weight:600;font-size:16px;margin:2px 0 10px;color:var(--paper);}
   .mw-verdict.ok{color:var(--correct);} .mw-verdict.no{color:var(--incorrect);}
@@ -20208,11 +20219,16 @@ function startFullExam(){
 // question on the same idea. What you say about each miss shapes the wrap-up, and finishing it completes the plan step.
 let mw = null;
 const MW_REASONS = [
-  { k:'read',  label:'I misread it',            tip:'Reading slips fix fast: circle qualifiers such as NOT, EXCEPT and LEAST, then read all four choices before you lock one in.' },
-  { k:'know',  label:"I didn't know it",         tip:'Then the work is the idea itself: say the rule in one sentence out loud, then try the similar question.' },
-  { k:'mix',   label:'Two ideas looked alike',   tip:'Mix-ups are fixed by contrast: name the one fact that separates the two ideas, and the choice that looks right stops looking right.' },
-  { k:'calc',  label:'A calculation slip',       tip:'Write what is given and what is asked, redo it one step at a time, and check that the size of the answer makes sense.' },
-  { k:'guess', label:'I guessed',                tip:'A miss on a guess says the topic is not secure yet. A flashcard on it will help more than rereading the explanation.' }
+  { k:'read',  label:'I misread it',            tip:'Reading slips fix fast: circle qualifiers such as NOT, EXCEPT and LEAST, then read all four choices before you lock one in.',
+    steps:['Reread the last line of the question and say what it is asking for.','Circle every qualifier (NOT, EXCEPT, LEAST, BEST, FIRST) before looking at the choices.','Read all four choices, then cross out any that fail the qualifier.'] },
+  { k:'know',  label:"I didn't know it",         tip:'Then the work is the idea itself: say the rule in one sentence out loud, then try the similar question.',
+    steps:['Say the rule in one plain sentence, as if teaching it to a client.','Add the one condition that makes it apply (who, when, how much).','Test it on the similar question below, and make a card if it still feels shaky.'] },
+  { k:'mix',   label:'Two ideas looked alike',   tip:'Mix-ups are fixed by contrast: name the one fact that separates the two ideas, and the choice that looks right stops looking right.',
+    steps:['Name both ideas that looked alike.','Find the single fact that separates them (who it applies to, when, or what it covers).','Before you pick, ask which one the facts in the question actually point to.'] },
+  { k:'calc',  label:'A calculation slip',       tip:'Write what is given and what is asked, redo it one step at a time, and check that the size of the answer makes sense.',
+    steps:['Write what is given and what is asked before touching the calculator.','Choose the formula first, then enter numbers one step at a time.','Sanity check the size and sign of the answer against the choices.'] },
+  { k:'guess', label:'I guessed',                tip:'A miss on a guess says the topic is not secure yet. A flashcard on it will help more than rereading the explanation.',
+    steps:['Before answering, rate yourself: sure, leaning, or guessing.','When guessing, eliminate the two weakest choices first.','Put any topic you guessed on onto a card, because it is not locked in.'] }
 ];
 function mwLetter(i){ return 'ABCD'.charAt(i) || '?'; }
 function mwClean(t){ return String(t || '').replace(/^\s*(Wrong|Correct|Incorrect)\s*[—–-]\s*/i, '').trim(); }
@@ -20290,6 +20306,39 @@ function mwClose(){
   if(was){ try{ renderAll(); }catch(e){} try{ planAdvanceReveal(); }catch(e){} }
   if(was && opener && document.contains(opener) && typeof opener.focus === 'function'){ try{ opener.focus({ preventScroll:true }); }catch(e){} }
 }
+function mwFirstSentence(t){ t = mwClean(t); const m = t.match(/^(.+?[.!?])(\s|$)/); const r = (m ? m[1] : t).trim(); return r.charAt(0).toUpperCase() + r.slice(1); }
+function mwBreakdown(it){
+  // Always-available breakdown of the miss: what it tested, how it went wrong, why the other choices fail, and a method for next time.
+  const q = it.q, d = DOMAINS.find(x => x.key === q.domain) || {};
+  const hist = (DATA.wrongChoiceHistory || {})[q.id] || {};
+  const misses = Object.values(hist).reduce((a, b) => a + Number(b || 0), 0);
+  const sameN = it.pick >= 0 ? Number(hist[it.pick] || 0) : 0;
+  const seen = ((DATA.questionStats || {})[q.id] || {}).seen || 0;
+  const r = MW_REASONS.find(x => x.k === it.reason), rat = q.rationale || [];
+  const sec = (h, body) => `<div class="mw-sec"><b>${h}</b>${body}</div>`;
+  let out = '';
+  const tested = mwFirstSentence(rat[q.correct]);
+  if(tested && d.name) out += sec('What this was testing', `<p>${escapeHtml(d.name)}: ${it.pick >= 0 ? 'telling the right answer apart from one that sounds close.' : 'knowing the rule well enough to defend it.'} The key fact: <b>${escapeHtml(String(q.choices[q.correct]).replace(/\s+/g, ' ').slice(0, 110))}${String(q.choices[q.correct]).length > 110 ? '…' : ''}</b></p>`);
+  const how = [];
+  if(it.pick >= 0){
+    how.push(`You chose <b>${mwLetter(it.pick)}</b>. ${/\bIS\b|\btrue\b/i.test(rat[it.pick] || '') ? 'It is a real fact, but it does not fit what was asked.' : 'It sounds close, but the facts given point to the other answer.'}`);
+    if(r) how.push(`You said: ${escapeHtml(r.label.toLowerCase())}.`);
+    let pr = null; try{ pr = detectMixup(q, it.pick); }catch(e){}
+    if(pr) how.push(`This is a <b>${escapeHtml(pr.a)}</b> vs <b>${escapeHtml(pr.b)}</b> mix-up. ${escapeHtml(pr.a)}: ${escapeHtml(pr.da)} ${escapeHtml(pr.b)}: ${escapeHtml(pr.db)}`);
+    const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|PRIMARY)\b/);
+    if(m) how.push(`The question turns on the word <b>${escapeHtml(m[1])}</b>. A choice can be true and still be the wrong answer to it.`);
+    if(sameN >= 2) how.push(`Same wrong pick ${sameN} times: that is a belief, not a slip. The fix is to replace the belief, not to be more careful.`);
+    else if(misses >= 2) how.push(`You have missed this ${misses} times${seen ? ' in ' + seen + ' tries' : ''}, with more than one wrong choice. The idea itself is not settled yet.`);
+  } else if(it.nowRight){
+    how.push('You picked the right answer this time, so the idea is closer than the earlier miss suggested. Now say why, so it holds up when the wording changes.');
+  }
+  if(q.calcSteps && q.calcSteps.length) how.push('Calculator path: ' + q.calcSteps.map(x => escapeHtml(x)).join(' '));
+  if(how.length) out += sec(it.pick >= 0 ? 'How it went wrong' : 'Why it holds', how.map(x => `<p>${x}</p>`).join(''));
+  const others = q.choices.map((c, k) => ({ c, k })).filter(o => o.k !== q.correct && o.k !== it.pick);
+  if(others.length) out += `<details class="mw-more"><summary>Why the other ${others.length === 1 ? 'choice is' : others.length + ' choices are'} out</summary>${others.map(o => `<p><b>${mwLetter(o.k)}</b> ${escapeHtml(o.c)}<br><span>${escapeHtml(mwClean(rat[o.k]))}</span></p>`).join('')}</details>`;
+  if(r && r.steps) out += sec('Next time, do this', `<ol>${r.steps.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`);
+  return out;
+}
 function mwHead(it, extra){
   const d = DOMAINS.find(x => x.key === it.q.domain) || {};
   const times = Math.max(0, ...Object.values((DATA.wrongChoiceHistory || {})[it.q.id] || {}).map(Number));
@@ -20336,8 +20385,8 @@ function mwRender(){
     if(it.reason === 'read'){ const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|PRIMARY)\b/); if(m) tip = `<b>${escapeHtml(r.label)}</b>The word that decided it: ${escapeHtml(m[1])}. ${escapeHtml(r.tip)}`; }
     const canNote = aiFeaturesAvailable && !q.calcSteps && !q.calcType && it.pick >= 0;
     body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
-      + (tip ? `<div class="mw-tip">${tip}</div>` : '')
-      + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Thinking about why that one is tempting…</div>` : '')
+      + `<div class="mw-break">${mwBreakdown(it)}</div>`
+      + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Writing a closer look at why that one is tempting…</div>` : '')
       + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button></div>`;
     if(canNote) mwFetchNote(it);
     return;
@@ -20370,17 +20419,21 @@ function mwReason(k){
 }
 async function mwFetchNote(it){
   const q = it.q, key = q.id + ':' + it.pick + ':' + (it.reason || '');
-  const show = txt => { if(!mw || mw.items[mw.i] !== it || it.stage !== 'fix') return; const el = document.getElementById('mwNote'); if(!el) return;
-    if(!txt){ el.remove(); return; } el.className = 'mw-note'; el.innerHTML = '<b>From your tutor</b>' + escapeHtml(txt); };
+  const LAB = [['TRAP','Why it is tempting'],['RULE','The rule that decides it'],['TELL','How to spot it next time'],['HOOK','Memory hook']];
+  const render = txt => {
+    const got = []; LAB.forEach(([k, h]) => { const m = txt.match(new RegExp('(?:^|\\n)[\\s*#-]*' + k + '\\**\\s*[:\\u2013-]\\s*\\**\\s*([^\\n]+)', 'i')); if(m && m[1].trim().length > 8) got.push([h, m[1].trim().replace(/\*+/g, '')]); });
+    return got.length >= 2 ? got.map(([h, t]) => `<p><b class="mw-sub">${h}</b>${escapeHtml(t)}</p>`).join('') : '';
+  };
+  const show = html => { if(!mw || mw.items[mw.i] !== it || it.stage !== 'fix') return; const el = document.getElementById('mwNote'); if(!el) return;
+    if(!html){ el.remove(); return; } el.className = 'mw-note'; el.innerHTML = '<b>From your tutor</b>' + html; };
   if(mw.notes[key]){ show(mw.notes[key]); return; }
   const r = MW_REASONS.find(x => x.k === it.reason);
-  const prompt = `A CFP exam student missed this practice question. Write a short coaching note, at most 60 words, in plain language, no lists or headings.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
-    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r && r.k === 'guess' ? ' They were guessing; do not comment on guessing.' : r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nSay why ${mwLetter(it.pick)} is tempting, then the one fact or rule that separates it from ${mwLetter(q.correct)}, then a short memory hook. Do not repeat the question or the choices word for word.`;
+  const prompt = `A CFP exam student missed this practice question. Coach them in four labeled lines, plain language, at most 30 words per line, no other text.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
+    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r && r.k === 'guess' ? ' They were guessing; do not comment on guessing.' : r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nWrite exactly these lines:\nTRAP: why ${mwLetter(it.pick)} is tempting, naming the exact thought that leads there.\nRULE: the one rule or fact that separates ${mwLetter(it.pick)} from ${mwLetter(q.correct)}.\nTELL: the clue in a question like this that points to ${mwLetter(q.correct)}.\nHOOK: a short memory hook.\nDo not repeat the question or the choices word for word.`;
   try{
-    const txt = trimToSentence(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 260 }));
-    const ok = txt && txt.length > 40 && /[.!?][\"'\u201d\u2019)\]]*$/.test(txt);
-    if(ok){ mw && (mw.notes[key] = txt); }
-    show(ok ? txt : '');
+    const html = render(String(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 420 }) || ''));
+    if(html && mw) mw.notes[key] = html;
+    show(html);
   }catch(e){ show(''); }
 }
 function mwAskTutor(){
@@ -20469,6 +20522,7 @@ function mwWrapHtml(){
     + `<div class="mw-sum"><div><b>${done.length}</b><span>reviewed</span></div><div><b>${fixed.length}${tried.length ? '/' + tried.length : ''}</b><span>follow-ups right</span></div><div><b>${left}</b><span>still on your list</span></div></div>`
     + `<ul class="mw-list">${done.map(x => `<li><i class="${x.ok === false ? 'no' : ''}">${x.ok === false ? '·' : '✓'}</i><span>${escapeHtml(String(x.q.q).replace(/\s+/g, ' ').slice(0, 90))}${String(x.q.q).length > 90 ? '…' : ''}</span></li>`).join('')}</ul>`
     + pattern + mix
+    + (done.some(x => x.reason === 'guess') ? `<div class="mw-tip"><b>Guesses</b>${done.filter(x => x.reason === 'guess').length} of these were guesses. Those topics are not locked in yet, so the cards below are the fastest fix.</div>` : '')
     + `<div class="mw-actions">${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('tutor'); }catch(e){} return nx ? `<button type="button" class="btn" onclick="mwClose();setTimeout(()=>planGoNext('${nx.id}'),60)">Next: ${escapeHtml(String(nx.title).slice(0, 44))} →</button>` : ''; })()}`
     + `${cards.length ? `<button type="button" class="btn ghost" onclick="mwCards()">Cards for these ideas (${cards.length})</button>` : ''}`
     + `${left > 0 && done.length >= mw.items.length ? `<button type="button" class="btn ghost" onclick="mwMore()">${Math.min(5, left)} more misses</button>` : ''}`
@@ -27030,7 +27084,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.384';
+const BUILD_ID = '2026-10-22.385';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
