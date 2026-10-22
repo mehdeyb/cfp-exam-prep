@@ -1246,7 +1246,7 @@
   .session-insight{font-size:12px;line-height:1.5;color:var(--paper);margin:10px 0;padding:10px 14px;border-radius:8px;background:var(--teal-tint);border:1px solid var(--teal);}
   .simplify-row{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
   .simplify-row .btn.ghost{font-size:12px;padding:9px 16px;min-height:44px;}
-  .take-row .btn.suggest{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .take-row{font-size:12.5px;color:var(--muted);line-height:1.45;margin:10px 0 2px;}
   .take-row .take-note{flex:1 0 100%;font-size:12px;color:var(--muted);line-height:1.4;}
   .calc-steps-row{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
   .calc-steps-row .btn.ghost{font-size:12px;padding:9px 16px;min-height:44px;}
@@ -3115,10 +3115,7 @@
                 <button class="btn" id="qChatSend" onclick="sendQuestionChat()">Send</button>
               </div>
             </div>
-            <div class="simplify-row take-row" id="takeRow" style="display:none;">
-              <button class="btn ghost" id="takeEasierBtn" onclick="questionTake('easier')">An easier take</button>
-              <button class="btn ghost" id="takeHarderBtn" onclick="questionTake('harder')">A harder take</button>
-            </div>
+            <div class="take-row" id="takeRow" style="display:none;" role="status" aria-live="polite"></div>
             <div class="flag-row" id="flagRow" style="display:none;">
               <button class="flag-btn" id="flagBtn" onclick="toggleFlag()">
                 <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18M4 4h13l-2.5 4L17 12H4"/></svg>
@@ -8418,7 +8415,7 @@ function diagnosisModelCore(){
     const acc = t.st.acc === null ? 0 : t.st.acc;
     let need = t.state === 'new' ? 1 : t.state === 'thin' ? 0.7 : t.state === 'shaky' ? 0.5 + (0.8 - Math.min(0.8, acc)) : ((days !== null && days >= 10) ? Math.min(0.4, days / 60) : 0);
     if(t.state !== 'solid' || need > 0) need += Math.min(0.3, missedN * 0.05 + repeat * 0.1);
-    pool.forEach(q => { if(!byQ[q.id] || byQ[q.id].need < need) byQ[q.id] = { need, key: t.key, name: t.name }; });
+    pool.forEach(q => { if(!byQ[q.id] || byQ[q.id].need < need) byQ[q.id] = { need, key: t.key, name: t.name, state: t.state, acc: t.st.acc, attempts: t.st.attempts }; });
     return Object.assign({}, t, { missedN, repeat, days, need, score: t.w * need });
   });
   const ty = { 'plain recall questions': [0, 0], 'scenario questions': [0, 0], 'calculation questions': [0, 0] };
@@ -21110,24 +21107,54 @@ async function prefetchNewForMiss(q, pickedIdx){
 // the app falls back to the closest question in the bank that sits one step easier or harder. The suggested direction follows the
 // answer just given and how the last twenty have gone; the other direction stays one tap away.
 let _takeBusy = false;
-function takeSuggest(q, isCorrect){
+// After an answer, the session adapts by itself: a miss on a question above plain recall is followed by an easier take on the same idea,
+// and a correct answer on a topic that is already solid is followed by a harder one. Nothing to tap; a short note says what is coming.
+// Guard rails: never in timed or exam-style sessions, never on a take of a take beyond one step back up, never two in a row, and no more than
+// about a quarter of a session, so practice stays on the plan.
+function takeAutoDir(q, isCorrect){
   const cur = questionDifficulty(q);
+  if(q.takeDir){
+    if(q.takeDir === 'easier' && isCorrect) return 'harder';   // rebuilt the idea; step back up to the real level
+    return null;                                                // a take of a take stops here; the tutor or a flashcard is the next support
+  }
+  if(!isCorrect) return cur > 1 ? 'easier' : null;
+  if(cur >= 3) return null;
   const log = DATA.recentAccuracyLog || [];
   const acc = log.length >= 5 ? log.filter(e => e.correct).length / log.length : null;
-  if(!isCorrect) return cur > 1 ? 'easier' : null;
-  if(cur >= 3 && acc !== null && acc < 0.5) return null;
-  return 'harder';
+  let info = null; try{ info = diagnosisModel().byQ[q.id]; }catch(e){}
+  const solid = info && info.state === 'solid' && info.acc !== null && info.acc >= 0.75;
+  return (solid && (acc === null || acc >= 0.6)) ? 'harder' : null;
 }
 function renderTakeRow(q, isCorrect){
-  const row = document.getElementById('takeRow'); if(!row) return;
-  if(!isStudyMode() || isGenQ(q) || !session || session.mode === 'case'){ row.style.display = 'none'; return; }
-  const sug = takeSuggest(q, isCorrect);
-  const e = document.getElementById('takeEasierBtn'), h = document.getElementById('takeHarderBtn');
-  [e, h].forEach(b => { if(b){ b.disabled = false; b.classList.remove('suggest'); b.classList.add('ghost'); } });
-  e.textContent = 'An easier take'; h.textContent = 'A harder take';
-  const sb = sug === 'easier' ? e : sug === 'harder' ? h : null; if(sb){ sb.classList.add('suggest'); sb.classList.remove('ghost'); }
-  const old = row.querySelector('.take-note'); if(old) old.remove();
-  row.style.display = '';
+  const row = document.getElementById('takeRow'); if(row){ row.style.display = 'none'; row.textContent = ''; }
+  try{ autoTake(q, isCorrect); }catch(e){}
+}
+async function autoTake(q, isCorrect){
+  if(!isStudyMode() || isGenQ(q) || !session || session.mode === 'case' || session.diagnostic || q._autoTake) return;
+  q._autoTake = true;
+  const dir = takeAutoDir(q, isCorrect); if(!dir) return;
+  session.autoTakes = session.autoTakes || 0;
+  if(session.autoTakes >= Math.max(2, Math.floor(session.queue.length * 0.25))) return;
+  const nx = session.queue[session.index + 1]; if(nx && nx.takeDir) return;
+  if(session.lastAutoIndex === session.index - 1 && !q.takeDir) return;
+  const cur = questionDifficulty(q), target = dir === 'easier' ? Math.max(1, cur - 1) : Math.min(3, cur + 1);
+  let made = null, how = '';
+  try{ made = takeFromBank(q, dir); if(made){ made.difficulty = made.difficulty || target; made.takeDir = dir; how = 'from the bank'; } }catch(e){}
+  if(!made && aiFeaturesAvailable && !genBackoffActive() && !_takeBusy){
+    _takeBusy = true;
+    try{
+      const r = await genVariant(q, { orig: q.id, why: dir === 'easier' ? 'the student missed this and needs a gentler version of the same idea' : 'the student has this topic down and is ready for a tougher version', wrongText: '' }, { dir, target });
+      if(r && r.variant){ made = buildVariantQuestion(q, r.variant); made.difficulty = target; made.takeDir = dir; how = 'written for you'; }
+    }catch(e){}
+    _takeBusy = false;
+    if(!session || session.queue[session.index] !== q) return; // they moved on; do not insert behind them
+  }
+  if(!made) return;
+  session.queue.splice(session.index + 1, 0, made);
+  session.autoTakes++; session.lastAutoIndex = session.index;
+  try{ saveInProgressSession(); }catch(e){}
+  const row = document.getElementById('takeRow');
+  if(row){ row.textContent = dir === 'easier' ? 'Next: a gentler take on the same idea, to rebuild it.' : 'Next: a tougher take on the same idea, since this one is solid.'; row.style.display = ''; }
 }
 function takeFromBank(q, dir){
   const cur = questionDifficulty(q);
@@ -21144,32 +21171,6 @@ function takeFromBank(q, dir){
     if(sc > bs){ bs = sc; best = c; }
   });
   return best ? shuffleQuestionChoices(Object.assign({}, best)) : null;
-}
-async function questionTake(dir){
-  if(_takeBusy || !session) return;
-  const q = session.queue[session.index]; if(!q) return;
-  const row = document.getElementById('takeRow'), btn = document.getElementById(dir === 'easier' ? 'takeEasierBtn' : 'takeHarderBtn'), other = document.getElementById(dir === 'easier' ? 'takeHarderBtn' : 'takeEasierBtn');
-  const note = txt => { if(!row) return; let n = row.querySelector('.take-note'); if(!n){ n = document.createElement('div'); n.className = 'take-note'; n.setAttribute('role', 'status'); row.appendChild(n); } n.textContent = txt; };
-  const cur = questionDifficulty(q);
-  const target = dir === 'easier' ? Math.max(1, cur - 1) : Math.min(3, cur + 1);
-  if(dir === 'easier' && cur <= 1 && q.takeDir !== 'harder' && !q.isVariant && !aiFeaturesAvailable){ note('This is already a plain recall question. The flashcard below is the simpler version of the same idea.'); return; }
-  _takeBusy = true; const label = btn.textContent; btn.disabled = true; other.disabled = true; btn.textContent = 'Writing…';
-  let made = null, how = '';
-  try{
-    if(aiFeaturesAvailable && !genBackoffActive() && !isGenQ(q)){
-      const r = await genVariant(q, { orig: q.id, why: dir === 'easier' ? 'the student asked for an easier take on this idea' : 'the student asked for a harder take on this idea', wrongText: '' }, { dir, target });
-      if(r && r.variant){ made = buildVariantQuestion(q, r.variant); made.difficulty = target; made.takeDir = dir; how = 'written for you'; }
-    }
-  }catch(e){}
-  if(!session || session.queue[session.index] !== q){ _takeBusy = false; return; }
-  if(!made){ try{ made = takeFromBank(q, dir); if(made) how = 'from the question bank'; }catch(e){} }
-  _takeBusy = false;
-  btn.textContent = label; btn.disabled = false; other.disabled = false;
-  if(!made){ note(dir === 'easier' ? 'Nothing simpler on this idea yet. The flashcard below covers the basics.' : 'Nothing tougher on this idea yet.'); return; }
-  session.queue.splice(session.index + 1, 0, made);
-  try{ saveInProgressSession(); }catch(e){}
-  btn.disabled = true; btn.textContent = dir === 'easier' ? 'Easier take added' : 'Harder take added';
-  note(`${dir === 'easier' ? 'An easier' : 'A harder'} take on this idea is next (${how}). Tap Next.`);
 }
 async function genVariant(q, wantNew, take){
   const domainMeta = DOMAINS.find(d=>d.key===q.domain);
@@ -25943,7 +25944,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.329';
+const BUILD_ID = '2026-10-21.330';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
