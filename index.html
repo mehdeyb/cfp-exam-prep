@@ -8872,19 +8872,19 @@ function ctOpenTool(inp){
   ctOpen(t.id);
   return 'Opened "' + t.title + '" for the student.';
 }
-function ctOpen(id){
+function ctOpen(id, o){
   const t = ctList().find(x => x.id === id); if(!t) return false;
   showTab('tools');
-  _ctRun = { id, i:0, picks:[], wrong:[], queue:null, path:[], answers:[], done:false };
+  _ctRun = { id, stepId:(o && o.stepId) || null, i:0, picks:[], wrong:[], queue:null, path:[], answers:[], done:false };
   if(t.kind === 'sorter'){ _ctRun.queue = t.items.map((x, i) => i).sort(() => Math.random() - 0.5); _ctRun.ok = 0; _ctRun.total = 0; _ctRun.retry = []; }
   if(t.kind === 'tree') _ctRun.path = [t.start];
   ctRenderRun();
   const card = document.getElementById('customToolsCard');
-  if(card){ try{ focusEnter({ tab:'tools', el:card, title:t.title }); }catch(e){} }
+  if(card){ try{ focusEnter({ tab:'tools', el:card, title:t.title, stepId:(o && o.stepId) || null }); }catch(e){} }
   return true;
 }
 function ctClose(){ _ctRun = null; try{ focusActive() && focusExit({}); }catch(e){} ctRenderRun(); ctRenderList(); }
-function ctUsed(t, pct){ t.uses = (t.uses || 0) + 1; t.lastAt = Date.now(); if(pct != null) t.best = Math.max(t.best == null ? 0 : t.best, pct); persist(); }
+function ctUsed(t, pct){ t.uses = (t.uses || 0) + 1; t.lastAt = Date.now(); if(pct != null) t.best = Math.max(t.best == null ? 0 : t.best, pct); persist(); try{ if(planDayLog().targets.myToolId === t.id) planMarkManualDone('mytool'); }catch(e){} }
 function ctRenderList(){
   const host = document.getElementById('ctList'), card = document.getElementById('customToolsCard'); if(!host || !card) return;
   const list = ctList();
@@ -9203,6 +9203,24 @@ function buildStudyPlanCore(minutes){
         why:`${whyIntro} Working through the choices yourself teaches which one fits.`,
         manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
     },
+    mytool: () => {
+      // A tool the tutor built for this student: the one never tried first, then the one that has waited longest or scored worst.
+      let ct = []; try{ ct = ctList(); }catch(e){}
+      if(!ct.length) return null;
+      const pin = planDayLog().targets.myToolId;
+      let t = pin && ct.find(x => x.id === pin);
+      if(!t){
+        const rank = x => (x.uses ? 1e13 + (x.lastAt || 0) + (x.best != null && x.best < 80 ? -5e12 : 0) : -x.t);
+        t = ct.slice().sort((a, b) => rank(a) - rank(b))[0];
+        if(!t) return null;
+        t = ct.find(x => x.id === planTarget('myToolId', t.id)) || t;
+      }
+      const fresh = !t.uses;
+      return { id:'mytool', title:`Your tool: ${t.title}`, minutes: t.kind === 'routine' ? 12 : 6,
+        why: (fresh ? 'Your tutor built this for you and you have not tried it yet. ' : 'Your tutor built this for you. ') + t.why + (t.best != null && t.kind === 'sorter' ? ' Best so far: ' + t.best + '%.' : ''),
+        how: t.kind === 'sorter' ? ['Tap the bucket each item belongs in, before you read anything else.', 'Read the reason shown after each one.', 'The ones you miss are listed again at the end.'] : t.kind === 'steps' ? ['Read the step and say it back without looking.', 'Tap to reveal the next step.', 'Finish all of them to complete this part.'] : t.kind === 'tree' ? ['Pick the answer at each fork before you read where it leads.', 'Read the result and the reason it fits.'] : ['Start each part in order; each opens the real session.', 'Come back to this card for the next one.'],
+        manual:true, run: () => { ctOpen(t.id, { stepId:'mytool' }); } };
+    },
     listen: () => {
       if(answered < 20 || !weakDom) return null;
       let b = null; try{ b = podcastBriefing(); }catch(e){}
@@ -9350,9 +9368,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','calc','figures','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','calc','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','refresh','gap','tool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','mytool','calc','figures','case','teach','listen'],
+    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','tool','mytool','calc','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','refresh','gap','tool','mytool','tutor','adaptive','calc','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards']
   }[phase.key];
@@ -9479,6 +9497,7 @@ const CONDUCTOR_CUES = {
   calc: 'Do the key presses by hand. The habit matters more than the answer.',
   teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.',
   figures: 'Say the number before you look at the choices. If it is a range, say both ends.',
+  mytool: 'Do it without looking anything up first. If you miss one, the reason shown is the thing to remember.',
   tool: 'Pick the answer at each fork yourself before you read why. The reasoning is what transfers to the exam.',
   listen: 'Listen without a screen if you can, and pause to say the key idea back before the episode does.'
 };
@@ -26890,7 +26909,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.370';
+const BUILD_ID = '2026-10-22.371';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
