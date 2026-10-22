@@ -3003,6 +3003,8 @@
   .pst-c.right{border-color:var(--correct);background:var(--correct-tint);} .pst-c.right i{color:var(--correct);} .pst-c.pick{border-color:var(--incorrect);background:var(--incorrect-tint);} .pst-c.pick i{color:var(--incorrect);}
   .pst-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .pst-col{background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px;} .pst-col h4{margin:0 0 8px;font-size:15px;color:var(--paper);} .pst-col ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5;}
   .pst-slide .tutor-chart-row{max-width:100%;}
+  .pst-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .pst-recap{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14.5px;line-height:1.4;} .pst-recap i{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gold);margin-right:8px;}
   #screenHost{display:none;}
   body.screen-active #screenHost{display:flex;position:fixed;inset:0;z-index:210;background-color:var(--ink);background-image:radial-gradient(ellipse 800px 500px at 10% -10%, var(--bg-glow-1), transparent 60%),radial-gradient(ellipse 800px 500px at 100% 0%, var(--bg-glow-2), transparent 60%);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));animation:quizIn .32s var(--ease);}
   .scr-inner{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;min-height:min(100%,640px);}
@@ -3756,6 +3758,7 @@
             <button class="btn ghost" id="fcMnemonicBtn" onclick="event.stopPropagation(); requestFlashcardMnemonic();">Give me a memory trick for this</button>
             <button class="btn ghost" id="fcExplainBtn" onclick="event.stopPropagation(); requestFlashcardExplain();">Explain it with an example</button>
             <button class="btn ghost" id="fcTutorBtn" onclick="event.stopPropagation(); askTutorAboutCard();">Talk it through with the tutor</button>
+            <button class="btn ghost" onclick="event.stopPropagation(); cardShowScreen();">Show on screen</button>
           </div>
           <div class="fc-mnemonic-box" id="fcMnemonicBox" style="display:none;"></div>
         </div>
@@ -12335,6 +12338,7 @@ async function generatePodcastEpisode(forceNew, refine){
     deep:     { words: 1050, concepts: '5-6', maxTokens: 1500 },
   }[episodeLength] || { words: 600, concepts: '3-4', maxTokens: 900 };
   const cacheKey = podcastCacheKey();
+  window._podEpQids = [];
   stopPodcastPlayback();
 
   if(!forceNew && DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]){
@@ -12413,7 +12417,7 @@ async function generatePodcastEpisode(forceNew, refine){
     if(domainMissed.length > 0){
       wasPersonalized = true;
       const missedCap = episodeLength === 'short' ? 2 : episodeLength === 'deep' ? 6 : 4;
-      const missedForEpisode = domainMissed.slice(0, missedCap);
+      const missedForEpisode = domainMissed.slice(0, missedCap); window._podEpQids = missedForEpisode.map(q => q.id);
       const missedSummary = missedForEpisode.map(q => {
         const correctRationale = q.rationale && q.rationale[q.correct] ? q.rationale[q.correct] : '';
         return `- Question: "${q.q}" -- Correct reasoning: ${correctRationale}`;
@@ -12435,6 +12439,7 @@ async function generatePodcastEpisode(forceNew, refine){
   generateBtn.disabled = true;
   generateBtn.textContent = 'Writing…';
   try{
+    prompt += '\n\nA screen beside the audio shows each key term, formula, figure and missed question as it comes up, so say the full name of each one the first time you use it and state exact figures plainly.';
     if(refine) prompt += '\n\nRevision brief from the student: ' + refine;
     const requestArgs = { messages: [{role:'user', content: prompt}], maxTokens: lengthConfig.maxTokens };
     if(systemPrompt) requestArgs.system = systemPrompt;
@@ -12450,7 +12455,7 @@ async function generatePodcastEpisode(forceNew, refine){
     DATA.podcastGeneratedAt[cacheKey] = Date.now();
     if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
     DATA.podcastPersonalized[cacheKey] = wasPersonalized;
-    try{ DATA.podcastMeta[cacheKey] = { focus: podcastFocusNow || [domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey(), sig: podcastPlanSig(), dn: ((DATA.domainStats || {})[domainKey] || {}).total || 0 }; }catch(e){}
+    try{ DATA.podcastMeta[cacheKey] = { qids: (window._podEpQids || []).slice(0, 8), focus: podcastFocusNow || [domainMeta.name], at: Date.now(), n: computeStats().totalAnswered, day: localDayKey(), sig: podcastPlanSig(), dn: ((DATA.domainStats || {})[domainKey] || {}).total || 0 }; }catch(e){}
     persist();
     if(!stillOnSameSelection()) return;
     podcastDomainChanged();
@@ -12529,6 +12534,19 @@ function podcastAutoSlides(text, key, domainKey, label){
     const nums = t.match(numRe);
     if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; }
   });
+  // Questions this episode was built from always get their slide, at the sentence that talks about them most.
+  const want = ((DATA.podcastMeta || {})[key] || {}).qids || [];
+  want.forEach(id => {
+    if(seenQ.has(id)) return; const m = missed.find(x => x.q.id === id); if(!m) return;
+    let bi = -1, bn = 1; chunks.forEach((t, i) => { if(i === 0 || out.some(o => o.at === i)) return; const cw = mwWords(t); let n = 0; cw.forEach(w => { if(m.w.has(w)) n++; }); if(n > bn){ bn = n; bi = i; } });
+    if(bi > 0){ seenQ.add(id); out.push({ at:bi, kind:'question', src:'auto', qid:id }); }
+  });
+  out.sort((a, b) => a.at - b.at);
+  // At the end: what was covered, with the next move.
+  if(chunks.length > 6){
+    const cov = out.filter(o => o.kind === 'term' || o.kind === 'formula' || o.kind === 'question');
+    if(cov.length) out.push({ at: chunks.length - 1, kind:'recap', src:'auto', items: cov.slice(0, 8).map(o => ({ k:o.kind, t:o.term || o.title || ((allQuestions().find(q => q.id === o.qid) || {}).q || 'A missed question') })), qids: out.filter(o => o.kind === 'question').map(o => o.qid) });
+  }
   _stageAutoCache[ck] = out;
   return out;
 }
@@ -12546,7 +12564,11 @@ function stageQuestionHtml(q){
   const rows = q.choices.map((c, k) => { const right = k === q.correct, mine = k === pick;
     return `<li class="pst-c${right ? ' right' : ''}${mine ? ' pick' : ''}"><b>${L[k]}</b><span>${mine ? '<i>You chose</i> ' : ''}${right ? '<i>Correct</i> ' : ''}${stageEsc(c)}</span></li>`; }).join('');
   const why = mwFirstSentence((q.rationale || [])[q.correct] || '');
-  return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}`;
+  return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button></div>`;
+}
+function stageWalkMiss(ids){
+  try{ if(naturalSpeechState.active && !naturalSpeechState.paused){ pauseSpeechSequence(); setPodcastPlayButtonState('Resume'); } }catch(e){}
+  stageCloseFull(); setTimeout(() => { try{ mwOpen(5, String(ids).split(',')); }catch(e){} }, 120);
 }
 function stageSlideNode(sl){
   const d = document.createElement('div'); d.className = 'pst-slide pst-' + sl.kind;
@@ -12555,6 +12577,9 @@ function stageSlideNode(sl){
     const q = allQuestions().find(x => x.id === sl.qid);
     if(!q) return null;
     d.innerHTML = stageQuestionHtml(q);
+  } else if(sl.kind === 'recap'){
+    const li = (sl.items || []).map(x => `<li><i>${x.k === 'term' ? 'Term' : x.k === 'formula' ? 'Formula' : 'Missed'}</i>${E(stageClip(x.t, 80))}</li>`).join('');
+    d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
     d.innerHTML = `<div class="pst-kicker">Now playing</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
   } else if(sl.kind === 'term'){
@@ -12711,6 +12736,14 @@ function stageSlideFromTool(a){
 }
 function stageInlineVisible(){
   try{ const w = document.getElementById('podcastStage'); if(!w || w.style.display === 'none' || !w.offsetParent) return false; const r = w.getBoundingClientRect(); return r.bottom > 80 && r.top < innerHeight - 80; }catch(e){ return false; }
+}
+function tutorScreenText(){
+  const sl = stageState.cur; if(!sl || !stageState.deckKey) return '';
+  const playing = naturalSpeechState.active;
+  if(!playing && !stageState.fullOpen) return '';
+  const what = sl.kind === 'question' ? 'a question they missed: "' + stageClip(((allQuestions().find(q => q.id === sl.qid) || {}).q || ''), 140) + '"' : sl.kind === 'term' ? 'the term ' + sl.term : sl.kind === 'formula' ? 'the formula ' + sl.title : stageClip(sl.title || sl.big || sl.text || sl.kind, 80);
+  const line = playing ? stageClip(((naturalSpeechState.chunks[naturalSpeechState.index] || {}).text || ''), 160) : '';
+  return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are listening to "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a podcast episode', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen, so use it to show what you are explaining instead of describing it. Treat questions as likely about what is playing or showing.`;
 }
 function tutorShowOnScreen(a){
   const r = stageSlideFromTool(a); if(r.error) return 'Error: ' + r.error;
@@ -21610,7 +21643,7 @@ function mwRender(){
     body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${qTextHtml(q.q)}</div><ul class="mw-choices">${choices}</ul>`
       + `<div class="mw-break">${mwBreakdown(it)}${mwWhy(it.pick >= 0 ? 'Seeing the right answer beside the tempting one, with the fact that separates them, targets the exact confusion. Reading the right answer alone leaves the old belief in place.' : 'Saying why the answer holds, not just that it does, is what lets you get it right when the wording changes.')}</div>`
       + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Writing a closer look at why that one is tempting…</div>` : '')
-      + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button></div>`;
+      + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button><button type="button" class="btn ghost" onclick="mwShowScreen()">Show on screen</button></div>`;
     if(canNote) mwFetchNote(it);
     return;
   }
@@ -21670,6 +21703,15 @@ async function mwFetchNote(it){
     if(html && mw) mw.notes[key] = html;
     show(html);
   }catch(e){ show(''); }
+}
+function mwShowScreen(){
+  if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
+  stageShow({ kind:'question', qid:it.q.id, src:'auto' }, 'walk'); stageOpenFull();
+}
+function cardShowScreen(){
+  const c = fcQueue[fcIndex]; if(!c) return;
+  const f = (typeof FORMULAS !== 'undefined' ? FORMULAS : []).find(x => x.name && c.term && x.name.toLowerCase() === c.term.toLowerCase());
+  stageShow(f ? { kind:'formula', title:f.name, formula:f.formula, text:f.note || '', src:'auto' } : { kind:'term', term:c.term, def:c.def, src:'auto' }, 'card'); stageOpenFull();
 }
 function mwAskTutor(){
   if(!mw) return; const it = mw.items[mw.i]; if(!it) return; const q = it.q, r = MW_REASONS.find(x => x.k === it.reason);
@@ -26170,6 +26212,7 @@ Guidelines:
 - When you pose a multiple-choice practice question in chat, put each option on its own line as \"A) ...\", \"B) ...\", \"C) ...\", \"D) ...\" with nothing else on those lines, and do not reveal or hint at the answer in the same message. The app turns the options into tappable buttons, and their tap arrives as the student's reply (for example \"B) ...\"). Then say whether they are right and explain why each wrong option fails in short sentences (\"Choice A fails because...\"), never as new lettered lines. Ask one question at a time.\n- Each of the five decision trees (trust, entity, ira, roth, socialSecurity) has client scenarios to walk with right and wrong feedback at every question. When the student wants to practice or be tested on one of them, call open_decision_tool with practice true instead of writing the scenario out yourself.\n- You can leave the student a short note for their next visit with schedule_check_in. The app cannot send phone notifications, so the note appears at the top of the Study tab when they next open the app. Use it sparingly and only when it adds real value: they ask you to follow up later, or you just worked a concept that is still shaky and a re-test in 1 to 3 days would help, or you agreed to check on something time-sensitive. Make the note one or two specific sentences in your voice, never generic encouragement, and at most one per conversation unless they ask. Tell them in a line that you set it.\n- If asked for financial, legal, or tax advice about the student's own real situation (not exam prep), briefly note you're a study tutor, not a licensed advisor, and that real decisions need a professional — then still help with the underlying exam concept if there is one.
 ${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice(0, 4); return f.length ? '\nThe Study tab shows the student this ranked diagnosis, so refer to it rather than contradicting it: ' + f.map((x, i) => (i + 1) + '. ' + x.title + (x.line ? ' (' + x.line + ')' : '')).join(' ') + '\n' : ''; }catch(e){ return ''; } })()}
 ${tutorFiguresText()}
+${(() => { try{ return tutorScreenText(); }catch(e){ return ''; } })()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -28357,7 +28400,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.425';
+const BUILD_ID = '2026-10-22.426';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
