@@ -1860,6 +1860,23 @@
   .tutor-visual{margin:2px 0;padding:12px 12px 10px;max-width:min(100%,380px);background:var(--surface2);border:1px solid var(--hair);border-radius:14px;}
   .tutor-visual figcaption{font-size:13px;font-weight:600;color:var(--paper);margin-bottom:8px;line-height:1.3;}
   .tutor-visual svg{display:block;max-width:100%;height:auto;}
+
+  #workshopCard{margin-top:14px;}
+  .ws-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .ws-head h3{margin:0;font-size:15px;}
+  .ws-sub{font-size:11.5px;color:var(--muted);}
+  .ws-item{border:1px solid var(--hair);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--card, transparent);}
+  .ws-item summary{cursor:pointer;font-size:13.5px;line-height:1.4;}
+  .ws-kind{display:inline-block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-right:6px;}
+  .ws-tag{font-size:11px;color:var(--muted);margin-left:4px;}
+  .ws-body{font-size:13.5px;line-height:1.55;margin-top:8px;}
+  .ws-body p{margin:6px 0;}
+  .ws-h{margin:10px 0 2px;font-size:13px;color:var(--teal);}
+  .ws-list{margin:6px 0;padding-left:18px;}
+  .ws-list li{margin:3px 0;}
+  .ws-actions{display:flex;gap:8px;margin-top:8px;}
+  .ws-btn{padding:6px 12px;font-size:12px;}
+  .ws-chat .ws-item{margin-top:0;}
   .tv-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted);margin-top:6px;}
   .tv-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
   .tv-legend-col{flex-direction:column;margin:0;gap:5px;}
@@ -2860,6 +2877,7 @@
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
     
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
+    <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
 
     <div class="card" id="blueprintCard">
       <div class="card-head">
@@ -6080,6 +6098,7 @@ function defaultData(){
     recentAdaptiveIds: [],
     tutorTopics: [],
     tutorNotes: [],
+    tutorCreations: [],
     announcedMilestones: []
   };
 }
@@ -6228,6 +6247,7 @@ function sanitizeLoadedData(d){
   });
   d.sessions = d.sessions.filter(isObj);
   d.tutorNotes = (Array.isArray(d.tutorNotes) ? d.tutorNotes : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.text === 'string' && typeof x.t === 'number').slice(-40);
+  d.tutorCreations = (Array.isArray(d.tutorCreations) ? d.tutorCreations : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.title === 'string' && typeof x.t === 'number' && typeof x.kind === 'string').slice(-40);
   d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
   Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && !rationaleAgreesWithKey(v)){ qHealKey(v); if(!rationaleAgreesWithKey(v)) delete d.readyNew[k]; } });
   d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q); }); // drops any saved item whose key contradicts its own explanation
@@ -8535,6 +8555,107 @@ function tutorRunDiagnostic(inp){
   try{ session.diagnostic = true; }catch(err){}
   return `Started a ${Math.min(cnt, queue.length)}-question diagnostic across ${topics.length} topic(s): ${topics.map(t => t.name).join('; ')}. When they finish, call diagnose_learner again to read what it showed, then shape_today_plan.`;
 }
+// ---- Tutor's workshop: things the tutor designs for the student (sheets, mnemonics, worked examples, cards, question sets) ----
+const WS_KINDS = { cheat_sheet: 'Cheat sheet', mnemonic: 'Memory aid', worked_example: 'Worked example', comparison: 'Side-by-side', flashcards: 'Flashcards', practice_set: 'Practice set' };
+function wsList(){ if(!Array.isArray(DATA.tutorCreations)) DATA.tutorCreations = []; return DATA.tutorCreations; }
+function wsFormat(text){
+  const E = escapeHtml; const out = []; let list = false;
+  String(text || '').split(/\n+/).forEach(raw => {
+    const line = raw.trim(); if(!line) return;
+    const li = /^[-•*]\s+(.*)$/.exec(line) || /^\d+[.)]\s+(.*)$/.exec(line);
+    const fm = s => E(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    if(li){ if(!list){ out.push('<ul class="ws-list">'); list = true; } out.push('<li>' + fm(li[1]) + '</li>'); }
+    else { if(list){ out.push('</ul>'); list = false; } out.push((/^#+\s/.test(line) ? '<h4 class="ws-h">' + fm(line.replace(/^#+\s*/, '')) + '</h4>' : '<p>' + fm(line) + '</p>')); }
+  });
+  if(list) out.push('</ul>');
+  return out.join('');
+}
+function wsCardHtml(c, open){
+  const E = escapeHtml, tp = c.topicKey ? ' <span class="ws-tag">' + E(c.topicName || '') + '</span>' : '';
+  let body = c.text ? '<div class="ws-body">' + wsFormat(c.text) + '</div>' : '';
+  if(c.cards && c.cards.length) body += '<div class="ws-body"><p>' + c.cards.length + ' card' + (c.cards.length === 1 ? '' : 's') + ' added to your deck: ' + c.cards.map(x => '<b>' + E(x) + '</b>').join(', ') + '.</p></div>';
+  if(c.qn) body += '<div class="ws-body"><p>' + c.qn + ' question' + (c.qn === 1 ? '' : 's') + ' added to your bank.</p></div>';
+  const drill = c.topicKey ? '<button type="button" class="btn ghost ws-btn" onclick="wsDrill(\'' + E(c.id) + '\')">Drill this topic</button>' : '';
+  return '<details class="ws-item"' + (open ? ' open' : '') + '><summary><span class="ws-kind">' + E(WS_KINDS[c.kind] || 'Material') + '</span> <b>' + E(c.title) + '</b>' + tp + '</summary>' + body + '<div class="ws-actions">' + drill + '<button type="button" class="btn ghost ws-btn" onclick="wsRemove(\'' + E(c.id) + '\')">Remove</button></div></details>';
+}
+function wsDrill(id){ const c = wsList().find(x => x.id === id); if(!c || !c.topicKey) return; try{ showTab('study'); startSubtopicDrill(c.topicKey, c.topicIdx); }catch(e){} }
+function wsRemove(id){ DATA.tutorCreations = wsList().filter(x => x.id !== id); persist(); renderWorkshop(); }
+function renderWorkshop(){
+  const el = document.getElementById('workshopCard'); if(!el) return;
+  const L = wsList().filter(c => c.text || c.kind === 'flashcards' || c.kind === 'practice_set').slice().sort((a, b) => b.t - a.t);
+  if(!L.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = '<div class="ws-head"><h3>Your tutor\'s workshop</h3><span class="ws-sub">' + L.length + ' made for you</span></div>' + L.slice(0, 8).map(c => wsCardHtml(c, false)).join('') + (L.length > 8 ? '<div class="ws-sub" style="margin-top:6px;">Showing the 8 newest.</div>' : '');
+}
+function wsChatRow(c){
+  const thread = document.getElementById('tutorThread'); if(!thread) return;
+  const row = document.createElement('div'); row.className = 'tutor-msg tutor-msg-bot tutor-visual-row';
+  const box = document.createElement('div'); box.className = 'tutor-visual ws-chat'; box.innerHTML = wsCardHtml(c, true) + '<div class="tv-note">Saved to your workshop on the Study tab.</div>';
+  row.appendChild(box); thread.appendChild(row); thread.scrollTop = thread.scrollHeight;
+}
+async function tutorCreateMaterial(inp){
+  inp = inp || {};
+  const kind = WS_KINDS[inp.kind] ? inp.kind : null;
+  if(!kind) return 'Error: kind must be one of ' + Object.keys(WS_KINDS).join(', ') + '.';
+  const title = String(inp.title || '').replace(/\s+/g, ' ').trim().slice(0, 70);
+  if(title.length < 3) return 'Error: give it a short title.';
+  const m = inp.topic ? tutorFlagMatch(inp.topic) : null;
+  let domain = m ? m.key : (DOMAINS.some(d => d.key === inp.domain) ? inp.domain : null);
+  if(!domain && (kind === 'flashcards' || kind === 'practice_set')) return 'Error: name the official topic (or domain) so the items land in the right place.';
+  const made = { id: 'ws' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: Date.now(), kind, title, domain: domain || null };
+  if(m){ made.topicKey = m.key; made.topicIdx = m.idx; made.topicName = m.name; }
+  const notes = [];
+  if(kind === 'flashcards' || kind === 'practice_set' || Array.isArray(inp.cards) && inp.cards.length){
+    const have = allFlashcards();
+    const cards = (Array.isArray(inp.cards) ? inp.cards : []).slice(0, 8).map((c, i) => ({ term: String(c && c.term || '').trim().slice(0, 80), def: String(c && c.def || '').trim().slice(0, 260) })).filter(c => c.term.length >= 2 && c.def.length >= 10 && !have.some(h => normalizeForDedup(h.term) === normalizeForDedup(c.term)));
+    if(domain && cards.length){
+      if(!Array.isArray(DATA.generatedFlashcards)) DATA.generatedFlashcards = [];
+      cards.forEach((c, i) => DATA.generatedFlashcards.push({ id: 'tfc-' + Date.now().toString(36) + i, domain, term: c.term, def: c.def, generated: true, tutorMade: true }));
+      const mine = DATA.generatedFlashcards.filter(x => x.tutorMade);
+      if(mine.length > 60){ const drop = new Set(mine.slice(0, mine.length - 60).map(x => x.id)); DATA.generatedFlashcards = DATA.generatedFlashcards.filter(x => !drop.has(x.id)); }
+      made.cards = cards.map(c => c.term);
+    } else if(kind === 'flashcards') return 'Not created: no usable cards (each needs a term and a definition of at least 10 characters, and not a duplicate of an existing card).';
+  }
+  let qs = [];
+  if(kind === 'practice_set' || Array.isArray(inp.questions) && inp.questions.length){
+    const bank = allQuestions();
+    (Array.isArray(inp.questions) ? inp.questions : []).slice(0, 5).forEach((q, i) => {
+      try{
+        if(!q || !Array.isArray(q.choices) || q.choices.length !== 4 || !Array.isArray(q.rationale) || q.rationale.length !== 4) return;
+        const ch = q.choices.map(x => String(x).trim()), rt = q.rationale.map(x => String(x).trim()), ci = Math.round(+q.correct);
+        const stem = String(q.q || '').trim();
+        if(!(ci >= 0 && ci <= 3) || stem.length < 25 || ch.some(x => x.length < 2) || new Set(ch.map(x => x.toLowerCase())).size < 4) return;
+        if(!rt.every((x, k) => x.startsWith(k === ci ? 'Correct' : 'Wrong'))) return;
+        const item = { id: 'tq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4) + i, domain: domain || 'general', q: stem, choices: ch, correct: ci, rationale: rt, generated: true, tutorMade: true, ideaNote: title };
+        if(q.scenario) item.scenario = String(q.scenario).slice(0, 700);
+        if(!passesDistractorQualityCheck(item, true)) { notes.push('one question was dropped because its correct answer was much longer than the others'); return; }
+        if(bank.some(b => factSimilarity(b, item) >= 0.8)) return;
+        qs.push(item);
+      }catch(e){}
+    });
+    if(qs.length){
+      if(!Array.isArray(DATA.generatedBank)) DATA.generatedBank = [];
+      DATA.generatedBank = DATA.generatedBank.concat(qs);
+      const mine = DATA.generatedBank.filter(x => x.tutorMade);
+      if(mine.length > 80){ const drop = new Set(mine.slice(0, mine.length - 80).map(x => x.id)); DATA.generatedBank = DATA.generatedBank.filter(x => !drop.has(x.id)); }
+      made.qn = qs.length;
+    } else if(kind === 'practice_set') return 'Not created: none of the questions passed the checks (need four distinct choices, four rationales starting "Correct" for the key and "Wrong" for the rest, and no length giveaway). Fix and retry.';
+  }
+  const text = String(inp.content || '').trim().slice(0, 1800);
+  if(!text && !made.cards && !made.qn) return 'Error: include content (the sheet, memory aid, example or side-by-side itself).';
+  if(text) made.text = text;
+  wsList().push(made);
+  if(DATA.tutorCreations.length > 40) DATA.tutorCreations = DATA.tutorCreations.slice(-40);
+  persist();
+  try{ renderWorkshop(); }catch(e){}
+  if(kind === 'practice_set' && qs.length){
+    wsChatRow(made);
+    try{ showTab('study'); beginSession(qs.map(q => shuffleQuestionChoices(q)), 'drill', null); }catch(e){}
+    return `Saved and started a ${qs.length}-question practice set "${title}"${notes.length ? ' (' + notes.join('; ') + ')' : ''}. The questions are also in their bank now. After they finish, diagnose_learner to see what held.`;
+  }
+  wsChatRow(made);
+  return `Created "${title}" (${WS_KINDS[kind]}) and showed it in the chat; it is saved in their workshop on the Study tab${made.cards ? ', with ' + made.cards.length + ' new flashcard(s) in their deck' : ''}${made.qn ? ', with ' + made.qn + ' new question(s) in their bank' : ''}${notes.length ? ' (' + notes.join('; ') + ')' : ''}. Say in one sentence how to use it, and offer a quick check on it.`;
+}
 function tutorShapePlan(inp){
   inp = inp || {};
   if(inp.clear){ DATA.planOverride = null; persist(); try{ renderTodayPlan(); }catch(e){} return "Cleared. Today's plan is back to automatic."; }
@@ -9559,6 +9680,7 @@ function refreshCoachSurfaces(){
   const stats = computeStats();
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
   try{ renderStudyTechniques(); }catch(e){}
+  try{ renderWorkshop(); }catch(e){}
   renderReadinessExtras(stats);
   try{ tnTick(); tnRenderCard(); }catch(e){}
   renderNextStepCard(stats);
@@ -23836,7 +23958,7 @@ function buildTutorSystemPrompt(){
   }catch(e){}
   timeContext += tutorCoverageBlock();
   try{ const dm = diagnosisModel(), top = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3).map(r => r.name + ' (' + r.state + (r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '%' : '') + ')'), st = staleSolidTopics(2).map(r => r.name + ' ' + r.days + 'd');
-    timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why.`; }catch(err){}
+    timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why. YOU MAY ALSO DESIGN MATERIAL: when a topic will not stick, a pair of ideas keeps getting mixed up, or a calculation needs a worked model, call create_study_material to make a cheat sheet, memory aid, worked example, side-by-side comparison, flashcards or a short practice set built for exactly their gap (it is saved in their workshop and the cards and questions join their spaced repetition). Make it only when it adds value beyond explaining in chat, keep it accurate and tied to an official topic, and offer to check them on it afterwards.`; }catch(err){}
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -24241,6 +24363,7 @@ function tutorActionText(name, input, result){
     if(name === 'show_visual') return 'Drew: ' + String(inp.title || 'a visual').slice(0, 50);
     if(name === 'diagnose_learner') return 'Checked where you stand' + (inp.topic ? ': ' + String(inp.topic).slice(0, 40) : '');
     if(name === 'run_diagnostic') return 'Started a diagnostic quiz';
+    if(name === 'create_study_material') return 'Made for you: ' + String(inp.title || 'study material').slice(0, 50);
     if(name === 'shape_today_plan') return inp.clear ? 'Reset today\'s plan to automatic' : 'Reshaped today\'s plan';
     if(name === 'flag_for_review') return 'Flagged for review: ' + String(inp.topic || '').slice(0, 50);
     if(name === 'plan_my_study') return 'Updated today\'s plan' + (Math.round(Number(inp.minutes)) >= 60 ? ' for about ' + (Math.round(Number(inp.minutes)) / 60).toFixed(1).replace(/\.0$/, '') + ' hours' : '');
@@ -24725,6 +24848,19 @@ const TUTOR_TOOLS = [
     input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
   },
   {
+    name: 'create_study_material',
+    description: "Design something for this student when it will help them learn or master a specific thing for the exam, and teaching in the chat alone would not stick. You have free rein over what to make, but make it earn its place: it must target a gap, a confusion you found, or a hard-to-remember topic. Kinds: cheat_sheet (a one-screen summary of a topic with the rules and numbers that matter), mnemonic (a memory aid with the pattern it encodes), worked_example (a full numbered walkthrough of one problem, with figures), comparison (two or three look-alike ideas side by side with the one thing that tells them apart), flashcards (2 to 8 cards, saved to their deck and scheduled by spaced repetition), practice_set (2 to 5 original multiple-choice questions you write, saved to their bank and started as a drill now). Put the sheet, mnemonic, example or comparison in 'content' as short lines; use '- ' for bullets and **bold** for key terms; under 1,800 characters. Name the official 'topic' (close to its official name) so it is filed and drillable. Use only rules and figures you are sure of; use the 2026 key numbers from this app, never guess a dollar limit. For questions: four distinct choices of similar length, one correct, four rationales that start 'Correct — ' for the key and 'Wrong — ' for the others, 'correct' is the 0 to 3 index. Make at most one or two per conversation unless they ask for more, and tell them what you made in one sentence.",
+    input_schema: { type: 'object', properties: {
+      kind: { type: 'string', enum: ['cheat_sheet','mnemonic','worked_example','comparison','flashcards','practice_set'] },
+      title: { type: 'string', description: 'Short title, under 70 characters.' },
+      topic: { type: 'string', description: 'Official topic it belongs to, a few words.' },
+      domain: { type: 'string', enum: DOMAINS.map(d => d.key), description: 'Only if no topic matches.' },
+      content: { type: 'string', description: 'The material itself for every kind except flashcards and practice_set (where it is an optional note).' },
+      cards: { type: 'array', items: { type: 'object', properties: { term: { type: 'string' }, def: { type: 'string', description: 'Under 30 words.' } }, required: ['term','def'] } },
+      questions: { type: 'array', items: { type: 'object', properties: { q: { type: 'string' }, scenario: { type: 'string' }, choices: { type: 'array', items: { type: 'string' } }, correct: { type: 'number' }, rationale: { type: 'array', items: { type: 'string' } } }, required: ['q','choices','correct','rationale'] } },
+    }, required: ['kind','title'] },
+  },
+  {
     name: 'flag_for_review',
     description: "Mark one specific topic for review when you have seen the student struggle with it in this conversation (they got it wrong, mixed it up, or could not explain it). It moves that topic to the front of today's drill in the plan until they have drilled it. Use it sparingly, at most two per conversation, and only for a concrete topic, never for a vague area. Tell them you did it in one short sentence.",
     input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'The topic in a few words, close to the official topic name, for example "Required minimum distributions".' }, reason: { type: 'string', description: 'What went wrong, under 100 characters, for example "mixed up RMD ages".' } }, required: ['topic'] },
@@ -25003,6 +25139,7 @@ async function executeTutorTool(toolName, toolInput){
     if(toolName === 'diagnose_learner') return learnerDiagnosis(toolInput && toolInput.topic);
     if(toolName === 'run_diagnostic') return tutorRunDiagnostic(toolInput);
     if(toolName === 'shape_today_plan') return tutorShapePlan(toolInput);
+    if(toolName === 'create_study_material') return await tutorCreateMaterial(toolInput);
     if(toolName === 'flag_for_review'){
       const f = tutorFlagAdd(toolInput && toolInput.topic, toolInput && toolInput.reason);
       if(!f) return 'Error: say which topic to flag.';
@@ -26069,7 +26206,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.333';
+const BUILD_ID = '2026-10-21.334';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
