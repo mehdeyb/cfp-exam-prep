@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Blueprint — CFP® Practice Exam Studio</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com https://aiplatform.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0F1A2C">
 <meta name="color-scheme" content="dark light">
@@ -5840,8 +5840,8 @@ async function handleSaveGeminiKey(){
   if(!/^[A-Za-z0-9_.\-]{30,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza" or "AQ."). Double-check and try again.'; status.classList.add('err'); return; }
   status.textContent = 'Checking the key…'; status.classList.remove('err');
   const prev = geminiKey; geminiKey = key;
-  try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); }
-  catch(e){ geminiKey = prev; status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
+  try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
+  catch(e){ geminiKey = prev; status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e); status.classList.add('err'); return; }
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
@@ -15785,22 +15785,37 @@ function toGeminiContents(messages){
   if(!out.length || out[0].role !== 'user') out.unshift({ role: 'user', parts: [{ text: 'Hello' }] });
   return out;
 }
-async function geminiRequestOnce({ system, messages, maxTokens, tools, grown }){
+// Google issues two kinds of key: AI Studio keys ("AIza…", generativelanguage.googleapis.com) and Vertex AI express keys ("AQ.…", aiplatform.googleapis.com).
+// The likely host for the key is tried first; if Google answers that it is not valid there, the other host is tried once and remembered.
+let _geminiHostOrder = null;
+function geminiUrl(host, model){ return host === 'vertex' ? 'https://aiplatform.googleapis.com/v1/publishers/google/models/' + model + ':generateContent' : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'; }
+async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs }){
   if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
   body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
   if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
   if(!geminiThinkingRejected) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20)));
   let response;
-  try{
-    response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ':generateContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
-  }catch(err){
-    const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
-    e.provider = 'gemini'; throw e;
-  }finally{ clearTimeout(timeoutId); }
+  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey) _geminiHostOrder = { key: geminiKey, hosts: /^AQ\./.test(geminiKey) ? ['vertex', 'studio'] : ['studio', 'vertex'] };
+  const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
+  let lastErr = null;
+  for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
+    const last = hi === _geminiHostOrder.hosts.length - 1;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), last ? total : Math.round(total * 0.4));
+    try{
+      response = await fetch(geminiUrl(_geminiHostOrder.hosts[0], GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)]), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
+    }catch(err){
+      const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
+      e.provider = 'gemini'; lastErr = e;
+      if(!last){ _geminiHostOrder.hosts.reverse(); continue; } // this host did not answer: try the other one
+      throw e;
+    }finally{ clearTimeout(timeoutId); }
+    if(response.ok || last || ![400, 401, 403, 404].includes(response.status)) break;
+    let det = ''; try{ det = ((await response.clone().json()).error || {}).message || ''; }catch(e){}
+    if(response.status === 404 || /api key|not valid|unauthenticated|permission|credential|expired/i.test(det)) _geminiHostOrder.hosts.reverse(); else break; // wrong host for this key: try the other one
+  }
   if(!response.ok){
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
     if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
@@ -15889,6 +15904,9 @@ function describeAiError(err){
     if(status === 401 || status === 403) return 'the Gemini key was rejected — check it in Settings.';
     if(status === 429) return 'Gemini is rate-limiting this key — wait a bit and try again.';
     if(status && status >= 500) return "a temporary issue on Google's end — try again in a moment.";
+    const gd = ((err && err.message) || '').replace(/^AI request failed \(\d+\):?\s*/, '').slice(0, 160);
+    if(gd && !err.code) return gd;
+    if(err.code === 'NETWORK') return 'could not reach Google. Check the connection (or a blocker) and try again.';
   }
   if(err && err.code === 'NO_API_KEY') return 'no AI key is connected. Add one in Settings to turn on the tutor and generated questions.';
   if(err && err.code === 'TIMEOUT') return "the request took too long and timed out, likely a network hiccup — try again.";
@@ -26445,7 +26463,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.343';
+const BUILD_ID = '2026-10-21.345';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
