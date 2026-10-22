@@ -18610,7 +18610,7 @@ function fdNext(){
   fdRenderSupport();
   const f = FORMULAS.find(x => x.name === fd.name);
   const dm = f && DOMAINS.find(d => d.key === f.domain);
-  document.getElementById('fdTag').textContent = fd.name + (dm ? ' · ' + dm.name : '');
+  document.getElementById('fdTag').textContent = fdPosText() + ' · ' + fd.name + (dm ? ' · ' + dm.name : '');
   document.getElementById('fdScenario').textContent = fd.prob.scenario;
   const inp = document.getElementById('fdInput');
   inp.value = ''; inp.disabled = false;
@@ -18703,6 +18703,15 @@ function fdCoachLine(ok, s){
     return `${fd.tally.n} problems this sitting, ${rate}% right, with no formula giving you a clear problem.`;
   }
   return '';
+}
+function fdPosText(){
+  // "Problem 2 of 3" while today's plan has formula problems open, otherwise a plain count for this sitting.
+  let t = 'Problem ' + ((fd.tally && fd.tally.n || 0) + 1);
+  try{
+    const st = buildStudyPlan().steps.find(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && x.unit === 'problems');
+    if(st && !st.done) t = 'Problem ' + Math.min(st.need, (st.have || 0) + 1) + ' of ' + st.need;
+  }catch(e){}
+  return cdPartTag() + t;
 }
 function fdRenderStatus(){
   const el = document.getElementById('fdStatus'); if(!el) return;
@@ -26976,7 +26985,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.376';
+const BUILD_ID = '2026-10-22.377';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
