@@ -8007,8 +8007,7 @@ function renderReadinessExtras(stats){
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
       estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '');
-      estEl.title = `Readiness counts only what you know beyond guessing, which scores 25% on four-choice questions: ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
-      estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions.`;
+      estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions. Readiness counts only what you know beyond guessing (25% on four-choice questions), so ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
       estEl.style.display = 'block';
     } else { estEl.style.display = 'none'; }
   }
@@ -8066,7 +8065,7 @@ function renderReadinessExtras(stats){
   if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
     const lo = Math.max(0, stats.expectedAccuracy - stats.accuracyMargin), hi = Math.min(100, stats.expectedAccuracy + stats.accuracyMargin);
     const ex = stats.exam ? ` Your last ${stats.exam.sittings} timed sitting${stats.exam.sittings===1?'':'s'} (${Math.round(stats.exam.accuracy*100)}% right) pull the estimate toward them.` : '';
-    estimateBlock = `<div class="rb-est"><b>Estimated accuracy on exam-style questions</b><span>About ${stats.expectedAccuracy}%, likely between ${lo}% and ${hi}%, from ${stats.triedTotal} question${stats.triedTotal===1?'':'s'} tried. The range narrows as you try more of the bank.${ex}</span></div>`;
+    estimateBlock = `<div class="rb-est"><b>Estimated accuracy on exam-style questions</b><span>About ${stats.expectedAccuracy}%, likely between ${lo}% and ${hi}%, from ${stats.triedTotal} question${stats.triedTotal===1?'':'s'} tried. The range narrows as you try more of the bank.${ex} The readiness score above counts only what you know beyond guessing, which earns 25% on four-choice questions, so ${stats.expectedAccuracy}% accuracy shows as ${stats.readiness} of 100.</span></div>`;
   }
   panel.innerHTML = `
     <div class="rb-head">
@@ -26238,7 +26237,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.338';
+const BUILD_ID = '2026-10-21.339';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
