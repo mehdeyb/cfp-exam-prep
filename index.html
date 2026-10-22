@@ -9778,8 +9778,9 @@ function buildStudyPlanCore(minutes){
       if(answered < 20 || !weakDom) return null;
       let b = null; try{ b = podcastBriefing(); }catch(e){}
       const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.kind === 'topic' ? f.label : f.label).join(' and ') : weakDom.name;
-      return { id:'listen', title:`Lesson: your tutor's briefing`, minutes:10,
-        why:`A spoken lesson with slides, written for you today: ${top}. Low effort, and it revisits your weak spots away from the questions.`,
+      let rs = false; try{ const pm0 = planMinutes(), pk = 'personalized-' + (pm0 >= 210 ? 'deep' : pm0 <= 100 ? 'short' : 'standard'); rs = podcastSavedPos(pk) > 1 && !!(DATA.podcastEpisodes || {})[pk]; }catch(e){}
+      return { id:'listen', title: rs ? `Lesson: pick up your tutor's briefing` : `Lesson: your tutor's briefing`, minutes:10,
+        why: rs ? `You stopped partway through today's lesson on ${top}. It resumes where you left off, with its slides.` : `A spoken lesson with slides, written for you today: ${top}. Low effort, and it revisits your weak spots away from the questions.`,
         manual:true, run: () => podcastOpenTutorPick() };
     },
     case: () => {
@@ -12796,7 +12797,7 @@ function stageSlideNode(sl){
     d.innerHTML = stageCalcHtml(sl) + `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('calc')">Try one on the calculator</button></div>`;
   } else if(sl.kind === 'recap'){
     const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
-    d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
+    d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){} return nx ? `<button type="button" class="btn ghost" onclick="stageCloseFull();planGoNext('${nx.id}')">Next: ${stageEsc(stageClip(nx.title, 34))} →</button>` : ''; })()}${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
     d.innerHTML = `<div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
   } else if(sl.kind === 'term'){
@@ -28741,7 +28742,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.437';
+const BUILD_ID = '2026-10-22.438';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
