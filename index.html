@@ -5841,7 +5841,10 @@ async function handleSaveGeminiKey(){
   status.textContent = 'Checking the key…'; status.classList.remove('err');
   const prev = geminiKey; geminiKey = key;
   try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
-  catch(e){ geminiKey = prev; status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e) + (_geminiDiag.length ? ' (' + _geminiDiag.join(' | ') + ')' : ''); status.classList.add('err'); return; }
+  catch(e){
+    // Google answered but every model was busy: the key itself got through, so keep it.
+    if(e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500)){ await saveGeminiKeyToStorage(key); input.value = ''; status.textContent = 'Saved. Google\'s models are busy right now, so the first answer may take a moment; the app retries on its own.'; status.classList.remove('err'); await checkAIAvailability(); return; }
+    geminiKey = prev; status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e) + (_geminiDiag.length ? ' (' + _geminiDiag.join(' | ') + ')' : ''); status.classList.add('err'); return; }
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
@@ -15745,7 +15748,7 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
 
 // ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
 const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
-const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 let geminiKey = null, geminiModelIdx = 0, geminiThinkingRejected = false, _claudeDownUntil = 0, _aiLastProvider = null;
 async function loadGeminiKey(){
   try{ const v = await storageGet(GEMINI_KEY_STORAGE); if(!v || !v.length) return null; return v.startsWith('v1:') ? await openSecret(v) : v; }catch(e){ return null; }
@@ -15789,7 +15792,7 @@ function toGeminiContents(messages){
 // The likely host for the key is tried first; if Google answers that it is not valid there, the other host is tried once and remembered.
 let _geminiHostOrder = null, _geminiDiag = [];
 function geminiUrl(host, model){ return host === 'vertex' ? 'https://aiplatform.googleapis.com/v1/publishers/google/models/' + model + ':generateContent' : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'; }
-async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs }){
+async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries }){
   if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
   body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
@@ -15804,7 +15807,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), last ? total : Math.round(total * 0.4));
     try{
-      response = await fetch(geminiUrl(_geminiHostOrder.hosts[0], GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)]), {
+      response = await fetch(geminiUrl(_geminiHostOrder.hosts[0], GEMINI_MODELS[Math.min(modelIdx != null ? modelIdx : geminiModelIdx, GEMINI_MODELS.length - 1)]), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
     }catch(err){
       const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
@@ -15822,6 +15825,8 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   }
   if(!response.ok){
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
+    // A busy or rate-limited model: try the next model in the list before giving up, since each has its own capacity.
+    if([429, 500, 503, 504].includes(response.status) && (tries || 0) < GEMINI_MODELS.length - 1){ return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length }); }
     if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
     if(response.status === 404 || (response.status === 400 && /model/i.test(detail))){
       const sug = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1]; // Google names the current model when one is retired
@@ -26471,7 +26476,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.347';
+const BUILD_ID = '2026-10-21.348';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
