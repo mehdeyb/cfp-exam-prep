@@ -1588,6 +1588,14 @@
   .pt-step.done .pt-title{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px;}
   .pt-why{font-size:12px;color:var(--muted);line-height:1.5;margin-top:3px;}
   .pt-time{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);margin-top:3px;}
+  .da-result{margin:12px 0;display:flex;flex-direction:column;gap:8px;}
+  .da-wrap{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--hair);margin-bottom:6px;}
+  .da-sum{font-size:12.5px;color:var(--muted);line-height:1.4;}
+  .da-h{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;}
+  .da-row{display:flex;align-items:center;gap:12px;justify-content:space-between;}
+  .da-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .da-txt b{font-size:14px;font-weight:600;line-height:1.35;}
+  .da-txt span{font-size:12.5px;color:var(--muted);line-height:1.4;}
   .pt-go{flex:none;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 16px;min-height:44px;border-radius:22px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;transition:transform var(--t-fast) var(--ease),background var(--t-fast) var(--ease),color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);}
   .pt-go:hover{background:var(--gold);color:var(--ink);transform:translateY(-1px);box-shadow:var(--shadow-gold);}
   .pt-go:active{transform:translateY(0) scale(.97);}
@@ -6916,7 +6924,19 @@ function setStorageWarning(show){
   document.body.classList.toggle('has-storage-warning', show);
 }
 
+var _syncT = null;
+// Every mode writes through persist(); this makes the surfaces that read the shared models (plan, readiness, next step, diagnosis) follow without each mode having to call them.
+function scheduleSurfaceSync(){
+  clearTimeout(_syncT);
+  _syncT = setTimeout(() => { try{
+    if(typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
+    if(typeof lastCoachRefreshAt !== 'undefined' && Date.now() - lastCoachRefreshAt < 1500) return;
+    const qv = document.getElementById('quizView'); if(qv && qv.offsetParent !== null) return; // never redraw under an active question
+    refreshCoachSurfaces();
+  }catch(e){} }, 700);
+}
 async function persist(){
+  try{ _expMemo = null; _dgMemo = null; scheduleSurfaceSync(); }catch(_){} // any change makes the shared models (exposure, diagnosis) stale, and visible surfaces catch up shortly
   // With sync on, stamp the data whenever it actually changed, so two devices can tell whose edit is newer.
   if(typeof SYNC !== 'undefined' && SYNC.on && !SYNC.applying && DATA){
     const probe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
@@ -8381,8 +8401,14 @@ function staleSolidTopics(n, minDays){
   exposureModel().topics.forEach(t => { if(t.state !== 'solid') return; const at = topicLastSeenAt(t.dom, t.idx); if(!at) return; const d = (Date.now() - at) / ONE_DAY_MS; if(d >= md) out.push(Object.assign({}, t, { days: Math.round(d) })); });
   return out.sort((a, b) => (b.days * b.w) - (a.days * a.w)).slice(0, n || 5);
 }
+var _dgMemo = null;
 function diagnosisModel(){
-  const e = exposureModel(), missed = new Set(DATA.missed || []), wch = DATA.wrongChoiceHistory || {};
+  const e0 = exposureModel();
+  if(_dgMemo && _dgMemo.sig === e0.sig && Date.now() - _dgMemo.at < 30000 && _dgMemo.mc === (DATA.missed || []).length) return _dgMemo.v;
+  const v = diagnosisModelCore(); _dgMemo = { sig: e0.sig, at: Date.now(), mc: (DATA.missed || []).length, v }; return v;
+}
+function diagnosisModelCore(){
+  const e = exposureModel(), byQ = {}, missed = new Set(DATA.missed || []), wch = DATA.wrongChoiceHistory || {};
   const rows = e.topics.map(t => {
     let pool = []; try{ pool = subtopicPool(t.dom, t.idx); }catch(err){}
     const ids = new Set(pool.map(q => q.id));
@@ -8392,11 +8418,17 @@ function diagnosisModel(){
     const acc = t.st.acc === null ? 0 : t.st.acc;
     let need = t.state === 'new' ? 1 : t.state === 'thin' ? 0.7 : t.state === 'shaky' ? 0.5 + (0.8 - Math.min(0.8, acc)) : ((days !== null && days >= 10) ? Math.min(0.4, days / 60) : 0);
     if(t.state !== 'solid' || need > 0) need += Math.min(0.3, missedN * 0.05 + repeat * 0.1);
+    pool.forEach(q => { if(!byQ[q.id] || byQ[q.id].need < need) byQ[q.id] = { need, key: t.key, name: t.name }; });
     return Object.assign({}, t, { missedN, repeat, days, need, score: t.w * need });
   });
   const ty = { 'plain recall questions': [0, 0], 'scenario questions': [0, 0], 'calculation questions': [0, 0] };
   allQuestions().forEach(q => { const st = getSpacedStat(DATA.questionStats, q.id); if(!st.seen) return; const k = (q.calcSteps || isGenQ(q)) ? 'calculation questions' : q.scenario ? 'scenario questions' : 'plain recall questions'; ty[k][0] += Math.min(st.correct, st.seen); ty[k][1] += st.seen; });
-  return { e, rows, ty };
+  return { e, rows, ty, byQ };
+}
+// How much the evidence says this question's topic needs attention (1 = ordinary). Feeds the adaptive picker so practice follows the diagnosis.
+function topicNeedFactor(q){
+  try{ const dm = diagnosisModel(), r = dm.byQ[q.id]; if(!r) return 1; let f = 1 + 0.6 * Math.min(1, r.need);
+    const ov = planOverrideToday(); if(ov && ov.pins.some(x => x.key + '-' + x.idx === r.key)) f *= 1.4; return f; }catch(e){ return 1; }
 }
 function learnerDiagnosis(topicQuery){
   const dm = diagnosisModel(), e = dm.e, domName = k => (DOMAINS.find(d => d.key === k) || {}).name || k;
@@ -9444,6 +9476,23 @@ function renderModeMeta(){
   }catch(e){ /* a status line is never worth breaking the screen */ }
 }
 
+
+function diagActionsHtml(){
+  let dm; try{ dm = diagnosisModel(); }catch(e){ return ''; }
+  const e = dm.e;
+  if(computeStats().totalAnswered < 10) return '';
+  const domName = k => (DOMAINS.find(d => d.key === k) || {}).name || k;
+  const gaps = dm.rows.filter(r => r.state !== 'solid' && r.size >= 3).sort((a, b) => b.score - a.score).slice(0, 3);
+  const unk = dm.rows.filter(r => (r.state === 'new' || r.state === 'thin') && r.size >= 3);
+  const stale = staleSolidTopics(2);
+  const row = (r, why, btn) => `<div class="da-row"><div class="da-txt"><b>${escapeHtml(r.name)}</b><span>${escapeHtml(domName(r.dom))} · ${why}</span></div>${btn}</div>`;
+  const stTxt = r => r.st.acc !== null ? `${Math.round(r.st.acc * 100)}% over ${r.st.attempts}` : 'not yet tried';
+  const go = (r, t) => `<button type="button" class="pt-go" onclick="showTab('study');startSubtopicDrill('${r.dom}',${r.idx})">${t}</button>`;
+  return `<div class="da-wrap"><div class="da-sum">${e.total - e.nNew} of ${e.total} official topics seen · ${e.nSolid} solid · ${e.nShaky} shaky · ${e.nThin + e.nNew} barely tried or unseen</div>` +
+    (gaps.length ? '<div class="da-h">Fix first</div>' + gaps.map(r => row(r, stTxt(r) + (r.missedN ? ', ' + r.missedN + ' still missed' : '') + (r.repeat ? ', same wrong answer twice' : ''), go(r, 'Drill'))).join('') : '') +
+    (stale.length ? '<div class="da-h">Fading, keep fresh</div>' + stale.map(r => row(r, `last practiced ${r.days} days ago`, go(r, 'Check'))).join('') : '') +
+    (unk.length >= 3 ? `<div class="da-h">Not yet measured</div><div class="da-row"><div class="da-txt"><b>${unk.length} topics with little or no evidence</b><span>A short mixed quiz finds out where you really stand on the heaviest ones.</span></div><button type="button" class="pt-go" onclick="tutorRunDiagnostic({count:10})">Probe</button></div>` : '') + `</div>`;
+}
 function refreshCoachSurfaces(){
   if(typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
   lastCoachRefreshAt = Date.now();
@@ -9456,6 +9505,7 @@ function refreshCoachSurfaces(){
   try{ tnTick(); tnRenderCard(); }catch(e){}
   renderNextStepCard(stats);
   renderTodayPlan();
+  try{ const db = document.getElementById('diagnosisBody'); if(db && db.style.display !== 'none') renderDiagnosisCard(); }catch(e){}
   renderModeMeta();
   renderWeekRecap();
 }
@@ -10828,6 +10878,7 @@ function podcastBriefing(){
       if(!lead) lead = w.key;
     });
   }catch(e){}
+  try{ staleSolidTopics(2).forEach(r => lines.push(`Fading strength to keep fresh with a quick recap: "${r.name}" (last practiced ${r.days} days ago).`)); }catch(e){}
   try{
     const qs = allQuestions(); const byDom = {};
     (DATA.missed || []).slice(-12).forEach(id => { const q = qs.find(x => x.id === id); if(q) (byDom[q.domain] = byDom[q.domain] || []).push(q); });
@@ -15000,7 +15051,7 @@ function questionPriority(q){
   const missedBoost = DATA.missed.includes(q.id) ? 1.6 : 1;
   const stageF = stageDifficultyFactor(q);
   const mixFactor = stageF !== null ? stageF : estimateDifficultyWeights()[questionDifficulty(q)] * domainNewnessFactor(q) * foundationDifficultyFactor(q);
-  return Math.max(0.05, domainWeightFactor*3 * weaknessFactor * dueFactor * missedBoost * mixFactor * coverageFactor(q));
+  return Math.max(0.05, domainWeightFactor*3 * weaknessFactor * dueFactor * missedBoost * mixFactor * coverageFactor(q) * topicNeedFactor(q));
 }
 
 function weightedDrawWithoutReplacement(sourcePool, count){
@@ -22243,6 +22294,23 @@ function finishSession(){
   const host = document.getElementById('quizFullscreenHost');
   if(host){ try{ host.scrollTo({top:0,left:0,behavior:'instant'}); }catch(e){ host.scrollTop = 0; } }
 
+  try{
+    const old = document.getElementById('diagResult'); if(old) old.remove();
+    if(session.diagnostic){
+      const dm = diagnosisModel(), by = {};
+      (session.answerLog || []).forEach(a => { const q = session.queue[a.index]; const r = q && dm.byQ[q.id]; if(!r) return; const o = by[r.key] = by[r.key] || { name: r.name, c: 0, n: 0, key: r.key }; o.n++; if(a.correct) o.c++; });
+      const list = Object.values(by).sort((a, b) => (a.c / a.n) - (b.c / b.n));
+      if(list.length){
+        const div = document.createElement('div'); div.id = 'diagResult'; div.className = 'da-result';
+        const weak = list.filter(x => x.c / x.n < 0.5);
+        div.innerHTML = '<div class="da-h">What the diagnostic showed</div>' + list.map(x => { const [dk, di] = x.key.split('-'); return `<div class="da-row"><div class="da-txt"><b>${escapeHtml(x.name)}</b><span>${x.c} of ${x.n} right · ${x.c / x.n >= 0.5 ? 'holding so far' : 'needs work'}</span></div>${x.c / x.n < 0.5 ? `<button type="button" class="pt-go" onclick="showTab('study');startSubtopicDrill('${dk}',${di})">Repair</button>` : ''}</div>`; }).join('') + `<p class="pt-sub">${weak.length ? weak.length + ' topic(s) were missed and now lead your plan.' : 'Nothing alarming. These topics now count as measured.'}</p>`;
+        const anchor = document.getElementById('planResultLine'); if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(div, anchor);
+        if(weak.length){ const o = planOverrideToday() || { day: localDayKey(), at: Date.now(), focus: null, reason: '', pins: [], refresh: [] };
+          weak.slice(0, 3).forEach(x => { const [dk, di] = x.key.split('-'); if(!o.pins.some(p => p.key === dk && p.idx === +di)) o.pins.push({ key: dk, idx: +di, name: x.name }); });
+          o.pins = o.pins.slice(0, 3); o.reason = o.reason || 'Your diagnostic missed these, so they come first today.'; DATA.planOverride = o; persist(); }
+      }
+    }
+  }catch(e){}
   const ansN = (session.answerLog || []).length;
   const early = ansN > 0 && ansN < session.queue.length && !(session.timedOut && examLike());
   const denomN = early ? ansN : session.queue.length;
@@ -23235,6 +23303,7 @@ function renderDiagnosisCard(){
   }
 
   bodyEl.innerHTML = `
+    ${diagActionsHtml()}
     ${diagnosisFindingsHtml(findings)}
     <div class="diag-hours-row"><span>Study hours logged</span><b>${totalHours.toFixed(1)} hrs</b></div>
     <div class="diag-hours-bar"><div class="diag-hours-fill" style="width:${hoursPct}%"></div></div>
@@ -25874,7 +25943,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.328';
+const BUILD_ID = '2026-10-21.329';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
