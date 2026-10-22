@@ -8699,6 +8699,12 @@ function tutorCoverageBlock(){
       (tk.length ? ` Explain-it-back so far: ${tk.length} ideas (${cnt('nailed')} nailed, ${cnt('partly')} partly, ${cnt('missed')} missed)${shaky.length ? '; shaky lately: ' + shaky.join(', ') : ''}.` : ' They have not tried Explain it back yet.') +
       balText +
       (() => { try{ const e = exposureModel(); return ` Topic exposure for passing: ${e.total - e.nNew} of ${e.total} topics seen (${e.seenPct}% of exam weight), ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried. Steer toward ${e.nNew ? 'unseen' : 'barely-tried and shaky'} topics, heaviest weight first.`; }catch(err){ return ''; } })() +
+      (() => { try{
+        const bits = [], ts = DATA.treeStats || {};
+        RESULT_TOOL_MATCH.filter(m => TREE_SCENARIOS[m.key]).forEach(m => { const qs2 = treeQuestions(m.key); const last = Math.max(0, ...qs2.map(q => (ts[q.id] || {}).last || 0)); const d = treeDrillStats(m.key); bits.push(m.name + ': ' + (last ? Math.round((Date.now() - last) / 86400000) + ' days ago, ' + d.solved + ' of ' + d.total + ' solved' : 'never used')); });
+        const ws = wsList().slice(-4).map(c => c.title); const pl = buildStudyPlan(); const tool = pl.steps.find(x => x.id === 'tool');
+        return ' Their decision tools (practice them with start_plan_step "tool" or point_to): ' + bits.join('; ') + '.' + (tool ? ' Today\'s plan already has a tool step: ' + tool.title + '.' : '') + (ws.length ? ' Already made for them in the workshop (do not remake): ' + ws.join('; ') + '.' : '');
+      }catch(e){ return ''; } })() +
       (flags.length ? ` Topics you flagged for review that they have not drilled yet: ${flags.map(f => f.name + (f.reason ? ' (' + f.reason + ')' : '')).join('; ')}.` : '') +
       ' Use this for any "what have I not covered" or "what should I review" question: say plainly when something has not been shown yet instead of assuming they have seen it, bring in unshown topics (cards first) before re-drilling ones they already own, and when you see them struggle with a specific topic in conversation, call flag_for_review so it leads tomorrow\'s plan.';
   }catch(e){ return ''; }
@@ -8847,23 +8853,39 @@ function buildStudyPlanCore(minutes){
       // The decision tree that matches the ideas you keep missing.
       const counts = {};
       (DATA.missed || []).forEach(id => { const q = allQuestions().find(x => x.id === id); if(!q) return; const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' '); RESULT_TOOL_MATCH.forEach(t => { if(t.re.test(hay)) counts[t.key] = (counts[t.key] || 0) + 1; }); });
-      const top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= 2).sort((a, b) => counts[b.key] - counts[a.key])[0];
+      let top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= 2).sort((a, b) => counts[b.key] - counts[a.key])[0], src = top ? 'missed' : null, srcTopic = '';
       const pinned = planDayLog().targets.toolKey;
+      // No repeated misses yet: a tool still earns a place when a topic it teaches is new, thin or shaky, or when one has gone a week unpracticed.
+      if(!top && !pinned && answered >= 10){
+        try{
+          const E = exposureModel();
+          const hit = E.topics.filter(x => x.state !== 'solid').sort((p, q) => (q.w || 0) - (p.w || 0)).map(x => ({ x, t: RESULT_TOOL_MATCH.find(m => m.re.test(x.name)) })).find(y => y.t);
+          if(hit){ top = hit.t; src = 'topic'; srcTopic = hit.x.name; }
+        }catch(e){}
+        if(!top && answered >= 30){
+          const lastOf = k => Math.max(0, ...treeQuestions(k).map(q => ((DATA.treeStats || {})[q.id] || {}).last || 0));
+          const stale = RESULT_TOOL_MATCH.filter(m => TREE_SCENARIOS[m.key] && Date.now() - lastOf(m.key) > 6 * ONE_DAY_MS).sort((p, q) => lastOf(p.key) - lastOf(q.key))[0];
+          if(stale){ top = stale; src = 'upkeep'; }
+        }
+      }
       const key = pinned || (top ? planTarget('toolKey', top.key) : null); // pinned for the day once chosen; no pin while nothing qualifies
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
+      if(!src) src = (counts[t.key] || 0) >= 2 ? 'missed' : (planDayLog().targets.toolSrc || 'upkeep');
+      if(planDayLog().targets.toolSrc !== src){ planDayLog().targets.toolSrc = src; }
+      const whyIntro = src === 'missed' ? `You have missed ${counts[t.key] || 'several'} questions that this tool sorts out.` : src === 'topic' ? `${srcTopic ? srcTopic + ' is not solid for you yet, and' : 'A topic you are still building is not solid yet, and'} this tool is how the exam tests it.` : `You have not used this tool in a week, and the exam keeps asking which choice fits.`;
       if(TREE_SCENARIOS[t.key]){
         // Client scenarios, a handful chosen for you (weakest and newest first), counted so the step completes by itself.
         const avail = dtwList(t.key).length;
         const goal = Math.max(1, Math.min(3, planTarget('toolGoal', Math.min(3, avail)), avail));
         const have = Math.min(goal, ((planDayLog().trees) || []).filter(k => k === t.key).length);
         return { id:'tool', title:`Decision tool: ${t.name}`, minutes: Math.max(4, goal * 3),
-          why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. ${goal} client scenarios, picked from your weakest first, teach which choice fits.`,
+          why:`${whyIntro} ${goal} client scenarios, picked from your weakest first, teach which choice fits.`,
           need:goal, have, unit:'scenarios',
           run: () => openTreeRun(t.key, { goal: goal - have > 0 ? goal - have : goal, stepId:'tool', title:'Decision tool: ' + t.name }) };
       }
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
-        why:`You have missed ${counts[t.key] || 'several'} questions that this tool sorts out. Working through the choices yourself teaches which one fits.`,
+        why:`${whyIntro} Working through the choices yourself teaches which one fits.`,
         manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
     },
     listen: () => {
@@ -8875,8 +8897,8 @@ function buildStudyPlanCore(minutes){
         manual:true, run: () => podcastOpenTutorPick() };
     },
     case: () => {
-      if(answered < 80) return null;
-      { const lv = DOMAINS.map(d => ((DATA.domainStats[d.key] || {}).total || 0) ? domainStageOf(d.key) : 1); if(lv.reduce((a, b) => a + b, 0) / lv.length < 2) return null; } // cases pay off once the basics are in place
+      if(answered < 60) return null;
+      if(answered < 150){ const lv = DOMAINS.map(d => ((DATA.domainStats[d.key] || {}).total || 0) ? domainStageOf(d.key) : 1); if(lv.reduce((a, b) => a + b, 0) / lv.length < 1.5) return null; } // cases pay off once the basics are in place; after 150 answers they are simply the exam's format
       const cs = DATA.caseStats || {};
       const last = Math.max(0, ...Object.values(cs).map(c => c.lastAt || 0));
       if((Date.now() - last) < 7 * 86400000 && !act.modes.includes('case') && !L.targets.caseId) return null;
@@ -8952,10 +8974,16 @@ function buildStudyPlanCore(minutes){
         why:'More new cards fit in a long day. Small batches with a break between them stick better than one big pile.', run: () => { const remain = Math.max(4, n - Math.max(0, act.cards - first)); const b = fcBalanced(remain, { only:'new' }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     read: () => {
-      if(!weakDom || answered >= 150) return null;
-      return { id:'read', title:`Read the topic notes: ${weakDom.name}`, minutes:25,
-        why:`${weakDom.name} carries the most weight you have not yet earned. Read each topic's "what to know" note, check off the ones you could now explain, and let the questions test the rest.`,
-        manual:true, run: () => { showTab('reference'); const e = document.getElementById('syllabusList'); if(e) focusEnter({ tab:'reference', el:e, title:'Topic notes: ' + weakDom.name, stepId:'read' }); } };
+      if(!weakDom) return null;
+      let rd = weakDom;
+      if(answered >= 150){
+        let best = null;
+        try{ const cnt2 = {}; exposureModel().topics.forEach(x => { if(x.state === 'new') cnt2[x.dom] = (cnt2[x.dom] || 0) + 1; }); const k = Object.keys(cnt2).sort((a, b) => cnt2[b] - cnt2[a])[0]; if(k && cnt2[k] >= 3) best = DOMAINS.find(d => d.key === k); }catch(e){}
+        if(!best) return null; rd = best;
+      }
+      return { id:'read', title:`Read the topic notes: ${rd.name}`, minutes:25,
+        why: answered >= 150 ? `${rd.name} still has topics you have not met at all. Reading each topic's "what to know" note first gives the questions something to land on.` : `${rd.name} carries the most weight you have not yet earned. Read each topic's "what to know" note, check off the ones you could now explain, and let the questions test the rest.`,
+        manual:true, run: () => { showTab('reference'); const e = document.getElementById('syllabusList'); if(e) focusEnter({ tab:'reference', el:e, title:'Topic notes: ' + rd.name, stepId:'read' }); } };
     },
     case2: () => {
       if(answered < 80) return null;
@@ -26206,7 +26234,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.336';
+const BUILD_ID = '2026-10-21.337';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
