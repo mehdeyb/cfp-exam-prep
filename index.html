@@ -8424,7 +8424,7 @@ function computeNextStep(stats){
         const partial = (first.have || 0) > 0 && first.need > 0;
         const started = partial || plan.steps.some(x => x.done); // anything finished or begun today makes it a continuation
         const total = Math.min(plan.minutes, open.reduce((a, x) => a + x.minutes, 0));
-        step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}`, title: open.length === 1 ? first.title : "Today's session",
+        step = { kicker:`Today's session · ${open.length} part${open.length === 1 ? '' : 's'}${started ? ' left' : ''}`, title: open.length === 1 ? first.title : "Today's session",
           why: open.length === 1 ? first.why : `${started ? 'Next' : 'First'}: ${first.title}. Then ${open.length - 1} more part${open.length === 2 ? '' : 's'}; the order adjusts as you go.`,
           cta: started ? "Continue today's session" : "Start today's session", meta:`about ${total} min${started ? ' left' : ''}`, run: (open.length === 1 && typeof first.run === 'function') ? first.run : () => conductorStart(),
           bigger: step.title };
@@ -26985,7 +26985,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.377';
+const BUILD_ID = '2026-10-22.378';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
