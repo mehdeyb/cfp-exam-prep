@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Blueprint — CFP® Practice Exam Studio</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0F1A2C">
 <meta name="color-scheme" content="dark light">
@@ -3695,6 +3695,19 @@
             <button class="linklike" onclick="testAiConnection()">Test</button>
             <button class="linklike" onclick="handleClearApiKey()">Disconnect</button>
           </div>
+          <div class="api-key-box" id="geminiBox" style="margin-top:12px;">
+            <p class="hint" style="margin-top:0;"><b>Backup: Google Gemini.</b> Optional. If Claude is down, overloaded or out of credit, Gemini answers instead, so the tutor and generated practice keep working. It also works on its own with no Claude key. Get a free key at aistudio.google.com. It stays encrypted in this browser and goes only to Google.</p>
+            <div class="api-key-row">
+              <input type="password" id="geminiKeyInput" class="tutor-input" aria-label="Gemini API key" placeholder="AIza..." onkeydown="if(event.key==='Enter') handleSaveGeminiKey();">
+              <button class="btn" onclick="handleSaveGeminiKey()">Connect</button>
+            </div>
+            <div class="tutor-status" id="geminiKeyStatus" role="alert"></div>
+          </div>
+          <div class="api-key-connected" id="geminiConnected" style="display:none;margin-top:12px;">
+            <span id="geminiHealthText">✓ Gemini connected as your backup AI.</span>
+            <button class="linklike" onclick="testGeminiConnection()">Test</button>
+            <button class="linklike" onclick="handleClearGeminiKey()">Disconnect</button>
+          </div>
         </div>
 
         <div class="settings-section">
@@ -5703,7 +5716,7 @@ async function unlockWithPassphrase(blob, pass){
   return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv: _unb64(iv)}, await _passKey(pass, _unb64(salt)), _unb64(ct)));
 }
 // Anything that looks like a key is masked before it can reach a log or a message.
-function redactSecrets(t){ return String(t == null ? '' : t).replace(/sk-ant-[A-Za-z0-9_\-]{6,}/g, 'sk-ant-…'); }
+function redactSecrets(t){ return String(t == null ? '' : t).replace(/sk-ant-[A-Za-z0-9_\-]{6,}/g, 'sk-ant-…').replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza…'); }
 async function loadApiKey(){
   try{
     const v = await storageGet(API_KEY_STORAGE);
@@ -5732,17 +5745,22 @@ async function checkAIAvailability(){
     aiFeaturesAvailable = true;
   } else {
     userApiKey = await loadApiKey();
+    geminiKey = await loadGeminiKey();
     if(userApiKey){
       aiMode = 'direct';
+      aiFeaturesAvailable = true;
+    } else if(geminiKey){
+      aiMode = 'gemini';
       aiFeaturesAvailable = true;
     } else {
       aiMode = 'none';
       aiFeaturesAvailable = false;
     }
   }
+  if(hasArtifactStorage()){ try{ geminiKey = await loadGeminiKey(); }catch(e){} }
   renderApiKeyUI();
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
-  if(aiMode === 'direct') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
+  if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
 }
 
 function renderApiKeyUI(){
@@ -5762,13 +5780,14 @@ function renderApiKeyUI(){
 
   if(apiKeyBox) apiKeyBox.style.display = (aiMode === 'none') ? 'block' : 'none';
   if(apiKeyConnected) apiKeyConnected.style.display = (aiMode === 'direct') ? 'flex' : 'none';
+  try{ const gb = document.getElementById('geminiBox'), gc = document.getElementById('geminiConnected'); if(gb) gb.style.display = geminiKey ? 'none' : 'block'; if(gc) gc.style.display = geminiKey ? 'flex' : 'none'; }catch(e){}
   const tutorApiKeyHint = document.getElementById('tutorApiKeyHint');
   if(tutorApiKeyHint) tutorApiKeyHint.style.display = (aiMode === 'none') ? 'flex' : 'none';
 
   if(aiMode === 'artifact'){
     if(genStatus){ genStatus.textContent = 'Auto-expands your weakest areas roughly every 10 answers.'; }
-  } else if(aiMode === 'direct'){
-    if(genStatus){ genStatus.textContent = 'Auto-expands your weakest areas roughly every 10 answers (using your connected API key).'; }
+  } else if(aiMode === 'direct' || aiMode === 'gemini'){
+    if(genStatus){ genStatus.textContent = 'Auto-expands your weakest areas roughly every 10 answers (using your connected API key' + (aiMode === 'gemini' ? ', Gemini' : geminiKey ? ', with Gemini as backup' : '') + ').'; }
   } else {
     if(genStatus){ genStatus.textContent = 'Connect an API key in Settings to turn on AI-generated questions.'; }
   }
@@ -5783,10 +5802,10 @@ async function testAiConnection(){
   if(el) el.textContent = 'Testing the connection…';
   const t0 = Date.now();
   try{
-    const r = await anthropicMessagesRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 });
+    const r = aiMode === 'gemini' ? await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }) : await anthropicCoreOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 });
     const txt = aiReplyText(r) || (typeof r === 'string' ? r : '');
     if(!/\S/.test(String(txt))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' });
-    const model = aiMode === 'direct' ? DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)] : ARTIFACT_MODEL;
+    const model = aiMode === 'gemini' ? GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] : aiMode === 'direct' ? DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)] : ARTIFACT_MODEL;
     aiHealth = { ok:true, msg:'✓ Working · ' + model + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's' };
   }catch(e){
     aiHealth = { ok:false, msg:'⚠ Not working: ' + describeAiError(e) };
@@ -5812,6 +5831,32 @@ async function handleSaveApiKey(){
   await checkAIAvailability();
 }
 
+async function handleSaveGeminiKey(){
+  const input = document.getElementById('geminiKeyInput'), status = document.getElementById('geminiKeyStatus');
+  const key = (input.value || '').trim();
+  if(!key){ status.textContent = 'Paste a key first.'; status.classList.add('err'); return; }
+  if(!/^AIza[0-9A-Za-z_\-]{20,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza"). Double-check and try again.'; status.classList.add('err'); return; }
+  status.textContent = 'Checking the key…'; status.classList.remove('err');
+  const prev = geminiKey; geminiKey = key;
+  try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); }
+  catch(e){ geminiKey = prev; status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
+  await saveGeminiKeyToStorage(key);
+  input.value = ''; status.textContent = ''; status.classList.remove('err');
+  await checkAIAvailability();
+  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Gemini connected.'; }catch(e){}
+}
+async function handleClearGeminiKey(){
+  if(!confirm('Disconnect Gemini? Your Claude key, if any, keeps working.')) return;
+  try{ await storageSet(GEMINI_KEY_STORAGE, ''); }catch(e){}
+  geminiKey = null; _claudeDownUntil = 0;
+  await checkAIAvailability();
+}
+async function testGeminiConnection(){
+  const el = document.getElementById('geminiHealthText'); if(!geminiKey) return;
+  if(el) el.textContent = 'Testing Gemini…'; const t0 = Date.now();
+  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Gemini working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; }
+  catch(e){ if(el) el.textContent = '⚠ Gemini not working: ' + describeAiError(e); }
+}
 async function handleClearApiKey(){
   if(!confirm('Disconnect your API key? AI features will pause until you reconnect one.')) return;
   await clearApiKeyFromStorage();
@@ -15580,7 +15625,7 @@ function strongestDomains(count){
   return rows.slice(0,count).map(d=>d.key);
 }
 
-async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools, grown}){
+async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
   if(aiMode === 'none'){
     const err = new Error('No API key connected.');
     err.code = 'NO_API_KEY';
@@ -15642,13 +15687,13 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools,
     try{ const errJson = await response.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
     if(aiMode === 'direct' && response.status === 400 && /thinking/i.test(detail) && !directThinkingRejected){
       directThinkingRejected = true;
-      return anthropicMessagesRequestOnce({system, messages, maxTokens, tools});
+      return anthropicCoreOnce({system, messages, maxTokens, tools});
     }
     // An unknown or retired model ID shows up as a 404 (or a 400 that names the model).
     // Try the next ID instead of failing every AI feature in the app.
     if(aiMode === 'direct' && (response.status === 404 || (response.status === 400 && /model/i.test(detail))) && directModelIdx < DIRECT_MODELS.length - 1){
       directModelIdx++;
-      return anthropicMessagesRequestOnce({system, messages, maxTokens, tools});
+      return anthropicCoreOnce({system, messages, maxTokens, tools});
     }
     const err = new Error('AI request failed ('+response.status+')'+(detail?': '+detail:''));
     err.status = response.status;
@@ -15672,7 +15717,7 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools,
   }
   // A reply that stopped because it ran out of room would end mid-thought on screen: ask again with more room, once.
   if(!tools && !grown && data && data.stop_reason === 'max_tokens' && (maxTokens || 1000) < 4000){
-    try{ return await anthropicMessagesRequestOnce({system, messages, maxTokens: Math.min(4000, Math.round((maxTokens || 1000) * 2.5)), tools, grown:true}); }catch(e){ /* fall through to the shorter reply */ }
+    try{ return await anthropicCoreOnce({system, messages, maxTokens: Math.min(4000, Math.round((maxTokens || 1000) * 2.5)), tools, grown:true}); }catch(e){ /* fall through to the shorter reply */ }
   }
   if(tools) return data.content || [];
   const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text);
@@ -15687,13 +15732,114 @@ async function anthropicMessagesRequestOnce({system, messages, maxTokens, tools,
     // completion rather than a transient one it would have recovered from.
     // If the budget ran out before any text (hidden thinking), retry once with more room.
     if(data && data.stop_reason === 'max_tokens' && (maxTokens || 1000) < 4000){
-      return anthropicMessagesRequestOnce({system, messages, maxTokens: Math.min(4000, (maxTokens || 1000) * 4), tools});
+      return anthropicCoreOnce({system, messages, maxTokens: Math.min(4000, (maxTokens || 1000) * 4), tools});
     }
     const emptyErr = new Error('AI response contained no usable text' + (data && data.stop_reason ? ' (' + data.stop_reason + ')' : '') + '.');
     emptyErr.code = 'EMPTY';
     throw emptyErr;
   }
   return reply;
+}
+
+// ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
+const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+let geminiKey = null, geminiModelIdx = 0, geminiThinkingRejected = false, _claudeDownUntil = 0, _aiLastProvider = null;
+async function loadGeminiKey(){
+  try{ const v = await storageGet(GEMINI_KEY_STORAGE); if(!v || !v.length) return null; return v.startsWith('v1:') ? await openSecret(v) : v; }catch(e){ return null; }
+}
+async function saveGeminiKeyToStorage(key){
+  try{ let val = key; try{ val = await sealSecret(key); }catch(e){ val = key; } await storageSet(GEMINI_KEY_STORAGE, val); return true; }catch(e){ return false; }
+}
+function geminiSchema(s){
+  if(!s || typeof s !== 'object') return undefined;
+  const out = {};
+  if(typeof s.type === 'string') out.type = s.type;
+  if(s.description) out.description = String(s.description).slice(0, 600);
+  if(Array.isArray(s.enum) && s.enum.length) out.enum = s.enum.map(String);
+  if(s.properties && typeof s.properties === 'object'){ out.properties = {}; Object.keys(s.properties).forEach(k => { const c = geminiSchema(s.properties[k]); if(c) out.properties[k] = c; }); if(!Object.keys(out.properties).length) delete out.properties; }
+  if(s.items) out.items = geminiSchema(s.items) || { type: 'string' };
+  if(out.type === 'array' && !out.items) out.items = { type: 'string' };
+  if(Array.isArray(s.required) && out.properties){ const r = s.required.filter(k => out.properties[k]); if(r.length) out.required = r; }
+  if(out.type === 'object' && !out.properties) return { type: 'object', properties: { note: { type: 'string', description: 'Optional.' } } };
+  return out;
+}
+function toGeminiContents(messages){
+  const nameById = {}, out = [];
+  (messages || []).forEach(m => {
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    const blocks = typeof m.content === 'string' ? [{ type: 'text', text: m.content }] : (Array.isArray(m.content) ? m.content : []);
+    const parts = [];
+    blocks.forEach(b => {
+      if(!b) return;
+      if(b.type === 'text'){ if(b.text) parts.push({ text: String(b.text) }); }
+      else if(b.type === 'tool_use'){ nameById[b.id] = b.name; parts.push({ functionCall: { name: b.name, args: b.input || {} } }); }
+      else if(b.type === 'tool_result'){ parts.push({ functionResponse: { name: nameById[b.tool_use_id] || 'tool', response: { result: typeof b.content === 'string' ? b.content : JSON.stringify(b.content) } } }); }
+    });
+    if(!parts.length) return;
+    const last = out[out.length - 1];
+    if(last && last.role === role) last.parts.push(...parts); else out.push({ role, parts });
+  });
+  if(!out.length || out[0].role !== 'user') out.unshift({ role: 'user', parts: [{ text: 'Hello' }] });
+  return out;
+}
+async function geminiRequestOnce({ system, messages, maxTokens, tools, grown }){
+  if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
+  const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
+  body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
+  if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
+  if(!geminiThinkingRejected) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20)));
+  let response;
+  try{
+    response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ':generateContent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
+  }catch(err){
+    const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
+    e.provider = 'gemini'; throw e;
+  }finally{ clearTimeout(timeoutId); }
+  if(!response.ok){
+    let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
+    if(response.status === 400 && /thinking/i.test(detail) && !geminiThinkingRejected){ geminiThinkingRejected = true; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
+    if((response.status === 404 || (response.status === 400 && /model/i.test(detail))) && geminiModelIdx < GEMINI_MODELS.length - 1){ geminiModelIdx++; return geminiRequestOnce({ system, messages, maxTokens, tools }); }
+    const err = new Error('AI request failed (' + response.status + ')' + (detail ? ': ' + detail : '')); err.status = response.status; err.provider = 'gemini'; throw err;
+  }
+  let data; try{ data = await response.json(); }catch(e){ const be = new Error('The AI sent back a reply this app could not read'); be.code = 'BAD_REPLY'; be.provider = 'gemini'; throw be; }
+  const cand = data && data.candidates && data.candidates[0];
+  if(!cand || !cand.content){ const e = new Error('AI response contained no usable text' + (data && data.promptFeedback && data.promptFeedback.blockReason ? ' (blocked: ' + data.promptFeedback.blockReason + ')' : '') + '.'); e.code = 'EMPTY'; e.provider = 'gemini'; throw e; }
+  try{ const u = data.usageMetadata; if(u){ if(!DATA.aiTokenUsage) DATA.aiTokenUsage = { totalInput: 0, totalOutput: 0, requestCount: 0, since: Date.now() }; DATA.aiTokenUsage.geminiInput = (DATA.aiTokenUsage.geminiInput || 0) + (u.promptTokenCount || 0); DATA.aiTokenUsage.geminiOutput = (DATA.aiTokenUsage.geminiOutput || 0) + (u.candidatesTokenCount || 0); DATA.aiTokenUsage.geminiRequests = (DATA.aiTokenUsage.geminiRequests || 0) + 1; persist(); } }catch(e){}
+  _aiLastProvider = 'gemini';
+  const parts = cand.content.parts || [];
+  if(tools){
+    const blocks = [];
+    parts.forEach(p => { if(p.text) blocks.push({ type: 'text', text: p.text }); else if(p.functionCall) blocks.push({ type: 'tool_use', id: 'gem' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: p.functionCall.name, input: p.functionCall.args || {} }); });
+    return blocks;
+  }
+  const reply = parts.map(p => p.text || '').join('');
+  if(!reply.trim()){
+    if(cand.finishReason === 'MAX_TOKENS' && !grown && (maxTokens || 1000) < 4000) return geminiRequestOnce({ system, messages, maxTokens: Math.min(4000, (maxTokens || 1000) * 3), tools, grown: true });
+    const e = new Error('AI response contained no usable text' + (cand.finishReason ? ' (' + cand.finishReason + ')' : '') + '.'); e.code = 'EMPTY'; e.provider = 'gemini'; throw e;
+  }
+  if(cand.finishReason === 'MAX_TOKENS' && !grown && (maxTokens || 1000) < 4000){ try{ return await geminiRequestOnce({ system, messages, maxTokens: Math.min(4000, Math.round((maxTokens || 1000) * 2.5)), tools, grown: true }); }catch(e){} }
+  return reply;
+}
+// Claude first; if it cannot be reached (down, overloaded, rate-limited, offline) and a Gemini key is connected, Gemini answers instead.
+// After a Claude failure Gemini keeps answering for a few minutes so each request does not wait on a service that is down.
+async function anthropicMessagesRequestOnce(args){
+  if(aiMode === 'gemini') return geminiRequestOnce(args);
+  if(geminiKey && Date.now() < _claudeDownUntil) return geminiRequestOnce(args);
+  try{
+    const out = await anthropicCoreOnce(args);
+    _aiLastProvider = 'claude';
+    return out;
+  }catch(err){
+    if(geminiKey && err && err.code !== 'NO_API_KEY' && err.status !== 400){
+      if(err.status !== 401 && err.status !== 403) _claudeDownUntil = Date.now() + 4 * 60000; // a rejected key will not heal on its own; an outage might
+      try{ return await geminiRequestOnce(args); }catch(gerr){ throw err; }
+    }
+    throw err;
+  }
 }
 
 // Transient failures (network blips, rate limits, momentary server errors)
@@ -15735,6 +15881,13 @@ function aiReplyText(r){
 
 function describeAiError(err){
   const status = err && err.status;
+  if(err && err.provider === 'gemini'){
+    if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
+    if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
+    if(status === 401 || status === 403) return 'the Gemini key was rejected — check it in Settings.';
+    if(status === 429) return 'Gemini is rate-limiting this key — wait a bit and try again.';
+    if(status && status >= 500) return "a temporary issue on Google's end — try again in a moment.";
+  }
   if(err && err.code === 'NO_API_KEY') return 'no AI key is connected. Add one in Settings to turn on the tutor and generated questions.';
   if(err && err.code === 'TIMEOUT') return "the request took too long and timed out, likely a network hiccup — try again.";
   if(err && err.code === 'NETWORK') return "check your internet connection and try again.";
@@ -23242,15 +23395,21 @@ function backupSummary(data, withKey){
 async function buildBackupText(){
   const cb = document.getElementById('backupIncludeKey'), pw = document.getElementById('backupPass');
   const pass = pw ? pw.value : '';
-  let enc = null, note = '';
+  let enc = null, encG = null, note = '';
   if(cb && cb.checked){
     if(pass.length < 6) note = 'Type a passphrase of at least 6 characters to include your AI key.';
-    else { let key = null; try{ key = await loadApiKey(); }catch(e){} if(key){ try{ enc = await lockWithPassphrase(key, pass); }catch(e){} } else note = 'No AI key is saved on this device.'; }
+    else {
+      let key = null, gk = null; try{ key = await loadApiKey(); }catch(e){} try{ gk = await loadGeminiKey(); }catch(e){}
+      if(key){ try{ enc = await lockWithPassphrase(key, pass); }catch(e){} }
+      if(gk){ try{ encG = await lockWithPassphrase(gk, pass); }catch(e){} }
+      if(!key && !gk) note = 'No AI key is saved on this device.';
+    }
   }
   const copy = JSON.parse(JSON.stringify(DATA));
   copy._backupMeta = { app: 'cfp-blueprint', build: (typeof BUILD_ID !== 'undefined' ? BUILD_ID : ''), savedAt: new Date().toISOString() };
   if(enc) copy._apiKeyEnc = enc;
-  window._lastBackupSummary = backupSummary(DATA, false) + (enc ? ', AI key included (locked with your passphrase)' : '') + (note ? '. ' + note : '');
+  if(encG) copy._geminiKeyEnc = encG;
+  window._lastBackupSummary = backupSummary(DATA, false) + ((enc || encG) ? ', AI key included (locked with your passphrase)' : '') + (note ? '. ' + note : '');
   return encodeBackup(copy);
 }
 function encodeBackup(data){
@@ -23761,11 +23920,17 @@ async function restoreFromBackup(){
   if(!confirm('Restore this backup? It will replace whatever progress currently exists in this session.')) return;
 
   let restoredKey = (typeof parsed._apiKey === 'string' && parsed._apiKey.startsWith('sk-ant-')) ? parsed._apiKey : null;
+  let restoredGemini = null;
+  if(typeof parsed._geminiKeyEnc === 'string' && typeof parsed._apiKeyEnc !== 'string'){
+    const passG = prompt('This backup includes your Gemini key, locked with a passphrase. Enter the passphrase to restore it (leave blank to skip the key).');
+    if(passG){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, passG); if(/^AIza/.test(k)) restoredGemini = k; else alert('That passphrase did not unlock the key. Your progress will still be restored.'); }catch(e){ alert('That passphrase did not unlock the key. Your progress will still be restored.'); } }
+  }
   if(typeof parsed._apiKeyEnc === 'string'){
     const pass = prompt('This backup includes your AI key, locked with a passphrase. Enter the passphrase to restore it (leave blank to skip the key).');
+    if(pass && typeof parsed._geminiKeyEnc === 'string'){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, pass); if(/^AIza/.test(k)) restoredGemini = k; }catch(e){} }
     if(pass){ try{ const k = await unlockWithPassphrase(parsed._apiKeyEnc, pass); if(/^sk-ant-/.test(k)) restoredKey = k; else alert('That passphrase did not unlock the key. Your progress will still be restored.'); }catch(e){ alert('That passphrase did not unlock the key. Your progress will still be restored.'); } }
   }
-  delete parsed._apiKey; delete parsed._apiKeyEnc; delete parsed._backupMeta;
+  delete parsed._apiKey; delete parsed._apiKeyEnc; delete parsed._geminiKeyEnc; delete parsed._backupMeta;
   try{ DATA = sanitizeLoadedData(parsed); }catch(e){ DATA = parsed; }
   // Backfill any fields a backup from an older version might be missing,
   // the same way loadData() does for a normal load.
@@ -23830,7 +23995,8 @@ async function restoreFromBackup(){
   renderReference();
   rebuildFlashcardQueue();
   renderExamDayCallout();
-  if(restoredKey){ try{ await saveApiKeyToStorage(restoredKey); await checkAIAvailability(); }catch(e){} }
+  if(restoredGemini){ try{ await saveGeminiKeyToStorage(restoredGemini); }catch(e){} }
+  if(restoredKey || restoredGemini){ try{ if(restoredKey) await saveApiKeyToStorage(restoredKey); await checkAIAvailability(); }catch(e){} }
   statusEl.textContent = 'Restored — welcome back. ' + backupSummary(DATA, !!restoredKey) + '.';
   statusEl.className = 'backup-status ok';
 }
@@ -26177,7 +26343,7 @@ function updateTutorContextNote(){
   const el = document.getElementById('tutorContextNote');
   if(!el) return;
   if(aiMode === 'none'){ el.textContent = 'connect a key in Settings to activate'; return; }
-  const suffix = aiMode === 'direct' ? ' · using your API key' : '';
+  const suffix = aiMode === 'direct' ? ' · using your API key' + (geminiKey ? ', Gemini as backup' : '') : aiMode === 'gemini' ? ' · using Gemini' : '';
   el.textContent = stats.totalAnswered
     ? `sees: ${stats.readiness}/100 readiness · weakest: ${stats.weakestMeta.name}${suffix}`
     : `knows your current progress${suffix}`;
@@ -26275,7 +26441,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.340';
+const BUILD_ID = '2026-10-21.341';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -26477,7 +26643,15 @@ async function syncBuildPayload(){
       enc = SYNC.keyEnc;
     }
   }catch(e){}
-  return { data: d, keyEnc: enc };
+  let encG = null;
+  try{
+    const gk = await loadGeminiKey();
+    if(gk){
+      if(SYNC.gEncFor !== gk){ SYNC.gEnc = await lockWithPassphrase(gk, SYNC.token); SYNC.gEncFor = gk; }
+      encG = SYNC.gEnc;
+    }
+  }catch(e){}
+  return { data: d, keyEnc: enc, keyEncG: encG };
 }
 async function syncApply(m){
   SYNC.applying = true;
@@ -26516,6 +26690,9 @@ async function syncNow(reason){
     if(remote){
       remoteData = remote.data;
       merged = syncMergeData(local.data, JSON.parse(JSON.stringify(remote.data)));
+      if(remote.keyEncG && !local.keyEncG){
+        try{ const k = await unlockWithPassphrase(remote.keyEncG, SYNC.token); if(/^AIza/.test(k)){ await saveGeminiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
+      }
       if(remote.keyEnc && !local.keyEnc){
         try{ const k = await unlockWithPassphrase(remote.keyEnc, SYNC.token); if(/^sk-ant-/.test(k)){ await saveApiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
       }
@@ -26524,10 +26701,10 @@ async function syncNow(reason){
     if(remote && mergedCanon !== syncCanon(local.data)){
       if(syncCanApply()) await syncApply(merged); else SYNC.pendingApply = true;
     }
-    const pushKey = !!local.keyEnc && (SYNC.keyPushedFor !== SYNC.keyEncFor || (!!remote && !remote.keyEnc));
+    const pushKey = (!!local.keyEnc && (SYNC.keyPushedFor !== SYNC.keyEncFor || (!!remote && !remote.keyEnc))) || (!!local.keyEncG && !!remote && !remote.keyEncG);
     const needPush = !remote ? (r.status === 200 || mergedCanon !== SYNC.lastPushedCanon) : (mergedCanon !== syncCanon(remoteData) || pushKey);
     if(needPush){
-      const body = { app: 'cfp-blueprint', v: 1, build: (typeof BUILD_ID !== 'undefined' ? BUILD_ID : ''), device: syncDeviceLabel(), savedAt: Date.now(), data: merged, keyEnc: pushKey ? local.keyEnc : (remote && remote.keyEnc) || local.keyEnc || null };
+      const body = { app: 'cfp-blueprint', v: 1, build: (typeof BUILD_ID !== 'undefined' ? BUILD_ID : ''), device: syncDeviceLabel(), savedAt: Date.now(), data: merged, keyEnc: pushKey ? (local.keyEnc || (remote && remote.keyEnc) || null) : (remote && remote.keyEnc) || local.keyEnc || null, keyEncG: local.keyEncG || (remote && remote.keyEncG) || null };
       const pr = await syncGh('/gists/' + SYNC.gistId, { method: 'PATCH', body: { files: { [SYNC_FILE]: { content: JSON.stringify(body) } } } });
       httpStatus = pr.status;
       if(!pr.ok){ const er = new Error('http ' + pr.status); try{ er.ghMsg = (await pr.json()).message; }catch(_){} throw er; }
