@@ -20718,6 +20718,25 @@ function unseenSiblingFor(q, takenIds, members){
   return null;
 }
 
+/* No unseen question is left on this idea: take the sibling that has waited longest (or been shown least) instead of the
+   very same question, so the idea comes back from a different angle even when every question has been seen once. */
+function staleSiblingFor(q, takenIds, members){
+  const key = conceptKeyOf(q);
+  if(!key) return null;
+  const now = Date.now(), qs = getSpacedStat(DATA.questionStats, q.id);
+  const pool = allQuestions().filter(c => c.id !== q.id && c.domain === q.domain && !takenIds.has(c.id) && !factExempt(c) && !isGenQ(c) && !(DATA.missed || []).includes(c.id) && conceptKeyOf(c) === key && !questionsSameFact(q, c) && !(c.variantOf && (c.variantOf === q.id || c.variantOf === q.variantOf)));
+  const ranked = pool.map(c => { const st = getSpacedStat(DATA.questionStats, c.id); return { c, st, s: (st.seen || 0) * 3 + (now - (st.lastSeenAt || 0) > 3 * ONE_DAY_MS ? 0 : 4) + factSimilarity(q, c) * -1 + Math.random() * 0.3 }; })
+    .filter(r => (r.st.seen || 0) <= Math.max(1, (qs.seen || 1)) && now - (r.st.lastSeenAt || 0) > 36 * 3600000)
+    .sort((a, b) => a.s - b.s);
+  for(let i = 0; i < ranked.length; i++){
+    const c = ranked[i].c;
+    if(members.some(m => m && m.id !== q.id && !factExempt(m) && questionsSameFact(m, c))) continue;
+    const fit = factSimilarity(q, c); if(fit < NEW_QUESTION_FIT_FLOOR) continue; // a sibling must really be on the same idea
+    return { c, fit, stale: true };
+  }
+  return null;
+}
+
 /* Another bank question, or a new one written for this student? Bank questions are checked and cover the
    exam's range; a written one can aim at exactly what this student keeps getting wrong. So a new one is
    chosen when there is a specific reason: the same idea missed more than once, a confident wrong answer,
@@ -20748,7 +20767,7 @@ function retestMoveFor(q, fit){
    simulation would make it less like the real thing. */
 function freshenQueue(queue, mode){
   const out = { queue, siblingOf: {}, gated: [], wantNew: {} };
-  if(!['adaptive', 'drill', 'review'].includes(mode)) return out;
+  if(!['adaptive', 'drill', 'review', 'weakspot'].includes(mode)) return out;
   let aiOk = false; try{ aiOk = !!aiFeaturesAvailable && !genBackoffActive(); }catch(e){}
   const taken = new Set(queue.map(q => q.id));
   const members = queue.slice();
@@ -20756,7 +20775,7 @@ function freshenQueue(queue, mode){
     if(!q || factExempt(q) || isGenQ(q) || questionIsNew(q)) return;
     // A new question written after an earlier miss is already waiting: use it rather than look for another stand-in.
     if(aiOk && DATA.readyNew && DATA.readyNew[String(q.variantOf || q.id)]){ out.wantNew[q.id] = { orig: q.id, why: 'a new question on this idea is already written', wrongText: '' }; return; }
-    const sib = unseenSiblingFor(q, taken, members);
+    const sib = unseenSiblingFor(q, taken, members) || staleSiblingFor(q, taken, members);
     const call = aiOk ? retestMoveFor(q, sib ? sib.fit : null) : null;
     if(sib){
       taken.add(sib.c.id); members[i] = sib.c; out.siblingOf[sib.c.id] = q.id;
@@ -22097,7 +22116,7 @@ C. ${q.choices[2]}
 D. ${q.choices[3]}
 Correct: ${letters[q.correct]}
 
-Write a genuinely different version of this question, in the ${domainMeta.name} domain, that tests the exact same underlying concept and skill — different specific numbers, names, or scenario framing, so it doesn't look or read like the same question, but still requires the same understanding to answer correctly. ${scenarioInstruction} ${skillContext}${calcStepsInstruction}
+Write a genuinely different version of this question, in the ${domainMeta.name} domain, from a different angle: change the client, the facts and the figures, AND change what is being asked or how the rule is reached (for example ask for the exception instead of the rule, ask what the client should do instead of what the law says, or work from the result back to the rule), so the student cannot answer from the old wording or by recognising the old correct choice. Do not reuse any distinctive phrase from the question above, that tests the exact same underlying concept and skill — different specific numbers, names, or scenario framing, so it doesn't look or read like the same question, but still requires the same understanding to answer correctly. ${scenarioInstruction} ${skillContext}${calcStepsInstruction}
 
 ${ONE_ASK_RULE}
 
@@ -26910,7 +26929,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.372';
+const BUILD_ID = '2026-10-22.373';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
