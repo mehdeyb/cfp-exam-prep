@@ -3018,6 +3018,7 @@
   .pcal-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:pc;} .pcal-steps li{counter-increment:pc;padding:8px 10px 8px 34px;position:relative;border-radius:10px;font-size:14px;line-height:1.4;color:var(--text-dim,inherit);opacity:.55;border:1px solid transparent;} .pcal-steps li::before{content:counter(pc);position:absolute;left:10px;top:8px;font:600 11px 'IBM Plex Mono',monospace;color:var(--gold);} .pcal-steps li.cur{opacity:1;background:var(--surface2);border-color:var(--hair);} .pcal-steps li.done{opacity:.8;}
   .pcal-pad{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:10px;}
   .pk{position:relative;text-align:center;border-radius:7px;padding:13px 0 6px;background:rgba(127,127,127,.16);font:600 11.5px 'IBM Plex Mono',monospace;line-height:1;transition:background .2s,transform .2s;} .pk small{position:absolute;top:3px;left:0;right:0;font-size:8px;font-weight:500;color:var(--calc-orange);opacity:.9;} .pk.on{background:var(--gold);color:#1d1d1d;transform:scale(1.06);box-shadow:0 0 0 2px var(--gold);} .pk.on small{color:#1d1d1d;} .pk.or.on{background:var(--calc-orange);box-shadow:0 0 0 2px var(--calc-orange);} .pk i{position:absolute;top:-6px;right:-4px;min-width:15px;height:15px;border-radius:8px;background:#1d1d1d;color:#fff;font:700 9px/15px 'IBM Plex Sans',sans-serif;font-style:normal;}
+  .pst-now{min-height:0;margin-top:10px;padding:10px 12px;border-left:3px solid var(--gold);border-radius:0 10px 10px 0;background:var(--surface2);font-size:14.5px;line-height:1.5;} .pst-now:empty{display:none;} .pst-now b{display:block;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;} .pst-now mark{background:rgba(190,150,40,.28);color:inherit;border-radius:4px;padding:0 3px;font-weight:600;} .pst-now.pst-tick{animation:pstUp .3s ease;} .scr-now{font-size:17px;}
   .scr-dots{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;} .scr-dots:empty{display:none;} .scr-dots button{flex:none;border:1px solid var(--hair);background:var(--surface2);color:inherit;border-radius:999px;padding:6px 12px;font:500 12px 'IBM Plex Sans',sans-serif;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;} .scr-dots button.cur{background:var(--gold);color:#1d1d1d;border-color:var(--gold);}
   .scr-ask{margin-top:6px;border-top:1px solid var(--hair);padding-top:12px;} .scr-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;} .scr-chips button{border:1px solid var(--hair);background:transparent;color:inherit;border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;}
   .scr-form{display:flex;gap:8px;} .scr-form input{flex:1;min-width:0;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--hair);background:var(--surface2);color:inherit;}
@@ -3255,6 +3256,7 @@
         </div>
         <div class="scr-dots" id="scrDots"></div>
         <div class="pst-body scr-body" id="scrBody" aria-live="polite"></div>
+        <div class="pst-now scr-now" id="scrNow" aria-hidden="true"></div>
         <div class="scr-ask" id="scrAsk">
           <div class="scr-chips" id="scrChips"></div>
           <form class="scr-form" onsubmit="event.preventDefault();stageAsk()"><input id="scrQ" type="text" placeholder="Ask about this…" autocomplete="off" enterkeyhint="send"><button type="submit" class="btn" id="scrGo">Ask</button></form>
@@ -3677,6 +3679,7 @@
       <div class="podcast-player" id="podcastPlayer" style="display:none;">
         <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
           <div class="pst-body" id="pstBody"></div>
+          <div class="pst-now" id="pstNow" aria-hidden="true"></div>
           <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
         </div>
         <div class="podcast-player-panel">
@@ -7199,42 +7202,74 @@ function jumpToSpeechChunk(index){
   playNextSpeechChunk();
 }
 
-const PRONUNCIATION_DICTIONARY = {
-  'IRA': 'I R A', 'RMD': 'R M D', 'AMT': 'A M T', 'HSA': 'H S A', 'ESA': 'E S A',
-  'NUA': 'N U A', 'ADR': 'A D R', 'CPI': 'C P I', 'AGI': 'A G I', 'QBI': 'Q B I',
-  'QCD': 'Q C D', 'LTC': 'L T C', 'GST': 'G S T', 'NOL': 'N O L', 'AOTC': 'A O T C',
-  'RSU': 'R S U', 'NIIT': 'N I I T', 'YTM': 'Y T M', 'DTI': 'D T I', 'TOD': 'T O D',
-  'FDIC': 'F D I C', 'HDHP': 'H D H P', 'BOE': 'B O E', 'FLP': 'F L P', 'FCRA': 'F C R A',
-  'CFPB': 'C F P B', 'CFP': 'C F P', 'SEC': 'S E C', 'ADV': 'A D V',
-  'QDRO': 'kwadro', 'CAPM': 'cap-M', 'QLAC': 'kew-lack', 'UGMA': 'ugma', 'GRAT': 'grat',
-  'UTMA': 'utma', 'FICA': 'fyekuh', 'ILIT': 'eye-lit', 'QTIP': 'Q-tip', 'ERISA': 'eh-rissuh',
-  'FICO': 'fyekoh', 'ESOP': 'ee-sop', 'IRMAA': 'earmuh', 'FINRA': 'finruh', 'REIT': 'reet',
-  'FAFSA': 'fafsuh',
-  'JTWROS': 'joint tenants with right of survivorship',
-};
+// How finance words are said aloud. Acronyms that people spell out are spelled letter by letter; the ones everyone says as a word get a
+// phonetic respelling. Matching is case-sensitive (acronyms are written in capitals), so ordinary words like "sec" or "arm" are never touched.
+const PRON_SPELLED = ('IRA RMD AMT HSA ESA NUA ADR CPI AGI QBI QCD LTC GST NOL AOTC RSU NIIT YTM YTC DTI TOD FDIC HDHP BOE FLP FCRA CFPB CFP SEC ADV ' +
+  'AUM ETF ETN ROI ROE ROA ROIC NPV IRR APR APY EAR CAGR SIPC CPA CLU CRPC RIA IAR TSP PMI LTV CD MLP LLC POA IRS SSA PIA FRA WEP GPO FSA HRA ' +
+  'QPRT CRT FMV MAGI NII PPO HMO ACA DOL PBGC ISO NSO ESPP NQDC IFRS EPS DCF NAV CMO MBS IPO SPAC IDGT SEP SIMPLE401 PV FV CFj ' +
+  'CPT DOB POD TOD GRIT QPR QDOT FIFO LIFO HIFO ESBT QSST CCC DRIP SMA UIT REMIC CDO ARM FHA VA FSO SRO NASAA MSRB IARD CRD ' +
+  'RRSP ERP DOL OASDI SSDI SSI PIA AIME COLA2 WEP GPO NRA FRA DRC UGPO MFJ MFS HOH QSS SE SECA FUTA SUTA W2 ' +
+  'LP GP LLP CCR HOA PITI DSCR NOI GRM CAP').split(/\s+/).filter(k => /^[A-Za-z]{2,6}$/.test(k) && k !== 'SIMPLE401' && k !== 'COLA2' && k !== 'W2' && k !== 'ARM' && k !== 'CAP' && k !== 'SEP' && k !== 'CD');
+const PRONUNCIATION_DICTIONARY = {};
+PRON_SPELLED.concat(['CD', 'ChFC']).forEach(k => { PRONUNCIATION_DICTIONARY[k] = k.split('').join(' '); });
+Object.assign(PRONUNCIATION_DICTIONARY, {
+  'SEP': 'sep', 'CAPM': 'cap M', 'WACC': 'wack', 'QDRO': 'quad-row', 'QLAC': 'kew-lack', 'UGMA': 'you-gma', 'UTMA': 'you-tma', 'GRAT': 'grat', 'CRUT': 'crut', 'CRAT': 'crat',
+  'SLAT': 'slat', 'FICA': 'fy-kuh', 'ILIT': 'eye-lit', 'QTIP': 'Q-tip', 'ERISA': 'eh-rissuh', 'FICO': 'fy-koh', 'ESOP': 'ee-sop', 'IRMAA': 'ir-mah', 'FINRA': 'fin-ruh',
+  'REIT': 'reet', 'FAFSA': 'faff-suh', 'HELOC': 'hee-lock', 'COLA': 'coh-luh', 'HIPAA': 'hip-uh', 'GAAP': 'gap', 'FASB': 'faz-bee', 'EBITDA': 'ee-bit-dah',
+  'GNMA': 'ginnie may', 'FNMA': 'fannie may', 'FHLMC': 'freddie mac', 'VIX': 'vicks', 'SARSEP': 'sar-sep', 'TIPS': 'tips', 'STRIPS': 'strips', 'PMT': 'payment',
+  'JTWROS': 'joint tenants with right of survivorship', 'TBE': 'tenants by the entirety', 'TIC': 'tenants in common', 'LIBOR': 'lye-bor', 'SOFR': 'so-fer',
+  'ADRs': 'A D Rs', 'BEG/END': 'begin end', 'I/YR': 'I Y R', 'P/YR': 'P Y R', 'xP/YR': 'times P Y R', 'P/E': 'P E', 'N/A': 'not applicable', 'S&P': 'S and P', 'M&A': 'M and A', 'R&D': 'R and D',
+});
 const PRONUNCIATION_PATTERN = new RegExp(
-  '\\b(' + Object.keys(PRONUNCIATION_DICTIONARY).join('|') + ')\\b',
-  'gi'
+  '(?<![\\w/&])(' + Object.keys(PRONUNCIATION_DICTIONARY).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')).join('|') + ")(['’]?s)?(?![\\w/&])",
+  'g'
 );
 // Entries ending in a closing paren (e.g. "401(K)") can't satisfy a trailing
 // \b the way word-ending entries can -- \b needs a word/non-word transition,
 // and there isn't one between ")" and a following space or period. A
 // lookahead for "not a word character, or end of string" does the same job
 // a trailing \b would for these specifically.
-const PARENTHETICAL_DICTIONARY = { '401(K)': 'four oh one K', '403(B)': 'four oh three B' };
+const PARENTHETICAL_DICTIONARY = { '401(K)': 'four oh one K', '403(B)': 'four oh three B', '457(B)': 'four fifty-seven B', '529': 'five twenty-nine' };
 const PARENTHETICAL_PATTERN = new RegExp(
-  '\\b(' + Object.keys(PARENTHETICAL_DICTIONARY).map(k => k.replace(/[()]/g, '\\$&')).join('|') + ')(?=\\W|$)',
+  '\\b(' + ['401(K)', '403(B)', '457(B)'].map(k => k.replace(/[()]/g, '\\$&')).join('|') + ')(?=\\W|$)',
   'gi'
 );
+const PRON_ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const PRON_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+function pronPair(two){ // "05" -> "oh five", "00" -> "hundred", "40" -> "forty"
+  const n = parseInt(two, 10); if(two === '00') return 'hundred'; if(two[0] === '0') return 'oh ' + PRON_ONES[n];
+  return n < 20 ? PRON_ONES[n] : PRON_TENS[Math.floor(n / 10)] + (n % 10 ? '-' + PRON_ONES[n % 10] : '');
+}
+// Form and Code section numbers are said in pairs ("ten forty", "five twenty-nine", "seventy-five twenty"), never as one big number.
+function pronCode(num){
+  if(num.length === 2) return pronPair(num);
+  if(num.length === 3) return PRON_ONES[+num[0]] + ' ' + pronPair(num.slice(1));
+  if(num.length === 4) return pronPair(num.slice(0, 2)) + ' ' + pronPair(num.slice(2));
+  return num;
+}
+const PRON_FORMS = '1040|1041|1065|1098|1099|1120|5498|5500|8606|8889|8949|4797|5329|8582|6251|2848|8824|4972|8615|8839|1116|3520';
+const PRON_CUE = '(?:Forms?|Sections?|Sec\\.|IRC|Code|Rules?|Schedules?|Publications?|Pub\\.?|Notices?|Reg\\.|Regulations?|Rev\\. Rul\\.|Revenue Ruling|Code Section)';
+const PRON_FORM_RE = new RegExp('(?<![\\w$.,])(?:(' + PRON_FORMS + ')(?![\\d,.]\\d)|(?<=' + PRON_CUE + '\\s)(\\d{2,4})(?![\\d,.]\\d)(?=\\s*(?:\\(|\\b)))', 'g');
+const PRON_PLAN_RE = /(?<![\w$.,])(?:529|457|1035|1031|7520|7702|2503|2036|2035|2042|1244|1202|1014|1015|121|72|83)(?:\(([a-z])\)|(?=\s*(?:plans?\b|exchanges?\b|rates?\b|elections?\b|loans?\b|accounts?\b)))/gi;
 function applyPronunciationDictionary(text){
   text = String(text)
     .replace(/[*_#`]+/g, '')                       // stray markdown is never said aloud
-    .replace(/\s*(?:--|\u2014|\u2013)\s*/g, ', ')         // dashes become a natural breath
+    .replace(/\s*(?:--|—|–)\s*/g, ', ')         // dashes become a natural breath
     .replace(/\be\.g\.,?/gi, 'for example,').replace(/\bi\.e\.,?/gi, 'that is,')
-    .replace(/\bvs\.?(?=\s)/gi, 'versus').replace(/\betc\./gi, 'and so on')
+    .replace(/\bvs\.?(?=\s)/gi, 'versus').replace(/\betc\./gi, 'and so on').replace(/\bapprox\./gi, 'approximately')
+    .replace(/\bw\/o\b/gi, 'without').replace(/\bw\/(?=\s)/gi, 'with').replace(/(?<![\w/])yrs?\b\.?/g, m => /s/.test(m) ? 'years' : 'year')
+    .replace(/§§?\s*/g, 'section ')
+    .replace(/(\d)\s?(?:bps|bp)\b/gi, (m, d) => d + ' basis points')
+    .replace(/(\d(?:\.\d+)?)x\b/g, '$1 times')
+    .replace(/\$\s?(\d[\d,]*(?:\.\d+)?)\s?(K|MM|M|B|bn)\b/g, (m, n, u) => '$' + n + ' ' + ({ K:'thousand', M:'million', MM:'million', B:'billion', bn:'billion' }[u]))
+    .replace(/\bW-?(2|4|9)\b/g, (m, d) => 'W ' + PRON_ONES[+d]).replace(/\bK-1\b/g, 'K one').replace(/\bSS-4\b/g, 'S S four')
+    .replace(/\b(1099)-(DIV|INT|NEC|SA|B|R|G|K)\b/g, (m, n, l) => n + ' ' + l.split('').join(' '))
     .replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ');
+  text = text.replace(PRON_PLAN_RE, (m, l) => pronCode(m.replace(/\(.*$/, '')) + (l ? ' ' + l.toUpperCase() : ''));
+  text = text.replace(/\b409A\b/g, 'four oh nine A');
+  text = text.replace(PRON_FORM_RE, (m, a, b) => pronCode(a || b));
   return text
-    .replace(PRONUNCIATION_PATTERN, match => PRONUNCIATION_DICTIONARY[match.toUpperCase()] || match)
+    .replace(PRONUNCIATION_PATTERN, (m, k, suf) => (PRONUNCIATION_DICTIONARY[k] || k) + (suf ? (/^[A-Z](?: [A-Z])+$/.test(PRONUNCIATION_DICTIONARY[k] || '') ? "'s" : 's') : ''))
     .replace(PARENTHETICAL_PATTERN, match => PARENTHETICAL_DICTIONARY[match.toUpperCase()] || match)
     .replace(/(?<![\w])\(([^)]{1,40})\)/g, ', $1,')   // a short aside reads as a lilt
     .replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/,\s*([.!?])/g, '$1').replace(/\s{2,}/g, ' ');
@@ -12470,7 +12505,7 @@ async function generatePodcastEpisode(forceNew, refine){
   generateBtn.disabled = true;
   generateBtn.textContent = 'Writing…';
   try{
-    prompt += '\n\nA screen beside the audio shows each key term, formula, figure and missed question as it comes up, so say the full name of each one the first time you use it and state exact figures plainly.';
+    prompt += '\n\nA screen beside the audio shows each key term, formula, figure and missed question as it comes up, so say the full name of each one the first time you use it and state exact figures plainly. Write for the ear: the first time you use an acronym, say what it stands for and then the letters, in capitals (for example, Required Minimum Distribution, R M D); write IRS forms and code sections as Form 1040 or Section 529 (never as a long number), use no symbols, tables or parentheses, and keep every dollar limit, rate and date to figures you are certain of for the current tax year, saying so plainly when something changes each year instead of guessing.';
     if(refine) prompt += '\n\nRevision brief from the student: ' + refine;
     const requestArgs = { messages: [{role:'user', content: prompt}], maxTokens: lengthConfig.maxTokens };
     if(systemPrompt) requestArgs.system = systemPrompt;
@@ -12543,12 +12578,15 @@ function podcastAutoSlides(text, key, domainKey, label){
     if(ac) terms.push({ c, v: ac, exact: true });
   });
   terms.sort((a, b) => b.v.length - a.v.length);
+  // When a stretch of talk has no match in this domain, fall back to any card in the app so the screen never goes stale on a different topic.
+  const termsAll = []; allFlashcards().forEach(c => { if(!c.term || !c.def || (domainKey && c.domain === domainKey)) return; const base = c.term.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); if(base.length >= 8) termsAll.push({ c, v: base }); });
+  termsAll.sort((a, b) => b.v.length - a.v.length);
   const forms = FORMULAS.filter(f => (!domainKey || f.domain === domainKey || f.domain === 'general') && f.name.length >= 5).map(f => ({ f, v: f.name.toLowerCase() })).sort((a, b) => b.v.length - a.v.length);
   const missed = (DATA.missed || []).map(id => allQuestions().find(q => q.id === id)).filter(q => q && Array.isArray(q.choices) && q.choices.length === 4 && (!domainKey || q.domain === domainKey)).slice(0, 40).map(q => ({ q, w: mwWords(q.q + ' ' + q.choices[q.correct]) }));
   const seenTerm = new Map(), seenQ = new Set(); let last = -9, lastQ = -9;
   const numRe = /\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand|k))?|\b\d+(?:\.\d+)?\s?(?:%|percent|years?|months?|days?|times)\b/gi;
   chunks.forEach((t, i) => {
-    if(i === 0 || out.length >= 18) return;
+    if(i === 0 || out.length >= 26) return;
     const low = t.toLowerCase();
     // 1. a question you missed that this sentence is about
     if(missed.length && i - lastQ >= 3){
@@ -12556,11 +12594,12 @@ function podcastAutoSlides(text, key, domainKey, label){
       if(cw.size >= 5) missed.forEach(m => { if(seenQ.has(m.q.id)) return; let n = 0; cw.forEach(w => { if(m.w.has(w)) n++; }); if(n > bn){ bn = n; best = m; } });
       if(best && bn >= 4 && bn / cw.size >= 0.3){ seenQ.add(best.q.id); out.push({ at:i, kind:'question', src:'auto', qid:best.q.id }); last = lastQ = i; return; }
     }
-    if(i - last < 3) return;
+    if(i - last < 2) return;
     // 2. a formula
     for(const x of forms){ if(stageFind(low, x.v) >= 0 && (seenTerm.get(x.v) || -99) < i - 15){ seenTerm.set(x.v, i); out.push({ at:i, kind:'formula', src:'auto', title:x.f.name, formula:x.f.formula, text:x.f.note || '' }); last = i; return; } }
     // 3. a term from your flashcards
-    for(const x of terms){ const hit = x.exact ? t.search(new RegExp('\\b' + x.v + '\\b')) : stageFind(low, x.v); if(hit >= 0 && (seenTerm.get(x.v) || -99) < i - 25){ seenTerm.set(x.v, i); out.push({ at:i, kind:'term', src:'auto', term:x.c.term, def:x.c.def }); last = i; return; } }
+    for(const x of terms){ const hit = x.exact ? t.search(new RegExp('\\b' + x.v + '\\b')) : stageFind(low, x.v); if(hit >= 0 && (seenTerm.get(x.v) || -99) < i - 18){ seenTerm.set(x.v, i); out.push({ at:i, kind:'term', src:'auto', term:x.c.term, def:x.c.def }); last = i; return; } }
+    { for(const x of termsAll){ if(stageFind(low, x.v) >= 0 && (seenTerm.get(x.v) || -99) < i - 18){ seenTerm.set(x.v, i); out.push({ at:i, kind:'term', src:'auto', term:x.c.term, def:x.c.def }); last = i; return; } } }
     // 4. the numbers
     const nums = t.match(numRe);
     if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; }
@@ -12848,7 +12887,17 @@ function stageStep(dir){
 }
 function stageLive(){ stageState.hi = stageState.hist.length - 1; stageState.cur = stageState.hist[stageState.hi]; stageDraw(); }
 // Called as each sentence starts: the slide changes only when the talk moves on to something new.
+function stageNow(idx){
+  try{
+    const ch = naturalSpeechState.chunks && naturalSpeechState.chunks[idx]; if(!ch) return;
+    let t = String(ch.text || '').replace(/^\s*HOST\s*[12]\s*:\s*/i, ''); if(!t) return;
+    const who = /HOST2/i.test(String(ch.speaker || '')) ? 'Host 2' : /HOST1/i.test(String(ch.speaker || '')) ? 'Host 1' : 'Now saying';
+    const html = stageEsc(stageClip(t, 260)).replace(/(\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand))?|\b\d+(?:\.\d+)?\s?(?:%|percent|years?|months?|times)\b|\b[A-Z]{2,6}(?:s)?\b(?![a-z]))/g, '<mark>$1</mark>');
+    ['pstNow', 'scrNow'].forEach(id => { const el = document.getElementById(id); if(!el) return; el.innerHTML = '<b>' + who + '</b>' + html; el.classList.remove('pst-tick'); void el.offsetWidth; el.classList.add('pst-tick'); });
+  }catch(e){}
+}
 function podcastStageSync(idx){
+  stageNow(idx);
   try{
     const deck = stageState.deck; if(!deck.length) return;
     const sl = podcastSlideAtIndex(deck, idx); if(!sl) return;
@@ -12888,14 +12937,14 @@ async function podcastStageAi(key, text, domainKey, label){
     const chunks = splitIntoSpeechChunks(text).map(c => String(c.text || ''));
     const numbered = chunks.map((t, i) => i + ': ' + t.slice(0, 170)).join('\n');
     const missed = (DATA.missed || []).map(id => allQuestions().find(q => q.id === id)).filter(q => q && (!domainKey || q.domain === domainKey)).slice(0, 8);
-    const prompt = `Below is a CFP exam podcast script, one numbered sentence per line. Plan up to 9 slides to show on a screen beside the audio, each appearing when the talk reaches that sentence number (field "at", increasing, the first not before 2). Pick the visual that teaches best:\n- {"kind":"term","at":N,"term":"...","def":"one plain sentence"}\n- {"kind":"formula","at":N,"title":"...","formula":"plain text formula","text":"when to use it","vars":[{"sym":"r","meaning":"rate per period"}]}\n- {"kind":"number","at":N,"title":"short label","big":"$16,100","text":"what it means"}\n- {"kind":"compare","at":N,"title":"A vs B","left":{"head":"A","points":["..."]},"right":{"head":"B","points":["..."]}}\n- {"kind":"steps","at":N,"title":"...","steps":[{"title":"...","detail":"..."}]}\n- {"kind":"bar","at":N,"title":"...","labels":["a","b"],"series":[{"name":"x","values":[1,2]}],"unit":"%"}\n- {"kind":"table","at":N,"title":"...","columns":["..",".."],"rows":[["..",".."]]}\n${missed.length ? '- {"kind":"question","at":N,"qid":"<id>"} when the script discusses one of these questions the student missed: ' + missed.map(q => q.id + ' (' + q.q.replace(/\s+/g, ' ').slice(0, 70) + ')').join('; ') + '\n' : ''}Use only facts that appear in the script or are standard CFP exam facts you are sure of. Keep text short. Return ONLY a JSON array.\n\nEpisode: ${label}\n\n${numbered}`;
+    const prompt = `Below is a CFP exam podcast script, one numbered sentence per line. Plan up to 10 slides to show on a screen beside the audio, each appearing when the talk reaches that sentence number (field "at", increasing, the first not before 2). Each slide must show exactly what the speakers are saying at that sentence: put it at the sentence that FIRST introduces the idea, never earlier, and never show something they do not talk about. Whenever the script works through numbers, prefer a chart, calculator walk-through, table or comparison over a term card; use a term card only for a term the speakers actually define. Pick the visual that teaches best:\n- {"kind":"calc","at":N,"title":"...","steps":[{"title":"Type 360, press [N]"}]} when the speakers work a time-value, cash-flow or other HP 10bII+ problem: every key in [square brackets], start with Orange Shift then [C ALL], and use only numbers from the script\n- {"kind":"chart","at":N,"chart":{"kind":"growth","title":"...","principal":10000,"rates":[4,7],"years":20}} (or kind amortization with loan, rate, years; or bond_price) when the speakers describe growth, a loan or a bond with real numbers\n\n- {"kind":"term","at":N,"term":"...","def":"one plain sentence"}\n- {"kind":"formula","at":N,"title":"...","formula":"plain text formula","text":"when to use it","vars":[{"sym":"r","meaning":"rate per period"}]}\n- {"kind":"number","at":N,"title":"short label","big":"$16,100","text":"what it means"}\n- {"kind":"compare","at":N,"title":"A vs B","left":{"head":"A","points":["..."]},"right":{"head":"B","points":["..."]}}\n- {"kind":"steps","at":N,"title":"...","steps":[{"title":"...","detail":"..."}]}\n- {"kind":"bar","at":N,"title":"...","labels":["a","b"],"series":[{"name":"x","values":[1,2]}],"unit":"%"}\n- {"kind":"table","at":N,"title":"...","columns":["..",".."],"rows":[["..",".."]]}\n${missed.length ? '- {"kind":"question","at":N,"qid":"<id>"} when the script discusses one of these questions the student missed: ' + missed.map(q => q.id + ' (' + q.q.replace(/\s+/g, ' ').slice(0, 70) + ')').join('; ') + '\n' : ''}Use only facts that appear in the script or are standard CFP exam facts you are sure of. Keep text short. Return ONLY a JSON array.\n\nEpisode: ${label}\n\n${numbered}`;
     let arr = [];
     try{
       const raw = String(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 1600 }) || '');
       const m = raw.match(/\[[\s\S]*\]/); arr = m ? JSON.parse(m[0]) : [];
     }catch(e){ _stageAiBusy[key] = false; return; }
     const ok = [], qset = new Set((allQuestions() || []).map(q => q.id));
-    (Array.isArray(arr) ? arr : []).slice(0, 12).forEach(x => {
+    (Array.isArray(arr) ? arr : []).slice(0, 14).forEach(x => {
       if(!x || typeof x !== 'object') return;
       const at = Math.max(1, Math.min(chunks.length - 1, parseInt(x.at, 10) || 0)); if(!at) return;
       const k = String(x.kind || ''); const sl = { at, kind:k, src:'ai' };
@@ -12904,6 +12953,8 @@ async function podcastStageAi(key, text, domainKey, label){
       else if(k === 'number' && x.big){ sl.title = stageClip(x.title, 40); sl.big = stageClip(x.big, 24); sl.text = stageClip(x.text, 150); }
       else if(k === 'compare' && x.left && x.right){ sl.title = stageClip(x.title, 50); sl.left = { head:stageClip(x.left.head, 40), points:(x.left.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; sl.right = { head:stageClip(x.right.head, 40), points:(x.right.points || []).slice(0, 5).map(p => stageClip(p, 80)) }; }
       else if(['steps','bar','table','line','pie'].includes(k)){ Object.assign(sl, { title:stageClip(x.title, 60), labels:x.labels, series:x.series, unit:x.unit, columns:x.columns, rows:x.rows, steps:x.steps }); if(!tutorVisualHtml(sl)) return; }
+      else if(k === 'calc'){ const c = stageCalcSlide(x.title, x.steps, { src:'ai', at }); if(!c) return; Object.assign(sl, c); }
+      else if(k === 'chart' && x.chart){ let r = null; try{ r = tcBuild(x.chart); }catch(e){} if(!r || r.error) return; sl.chart = x.chart; }
       else if(k === 'question' && qset.has(x.qid)){ sl.qid = x.qid; }
       else return;
       ok.push(sl);
@@ -28624,7 +28675,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.431';
+const BUILD_ID = '2026-10-22.432';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
