@@ -8666,8 +8666,31 @@ function planDayLog(){
   if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvmKinds:{}, tvm:0, formula:0 };
   return DATA.dayLog;
 }
+// Statement-style questions (a stem, numbered statements, and choices like "I and III only") are a format on their own, so they get their own record.
+function fmtStats(){ const f = (DATA.fmtStats = DATA.fmtStats || {}); return f.stmt = f.stmt || { n:0, ok:0, last:0 }; }
+function fmtRecord(q, ok){
+  if(!q || !q.ordered) return;
+  const f = fmtStats(); f.n++; if(ok) f.ok++; f.last = Date.now();
+  if(session && session.stmtDrill){ const L = planDayLog(); L.fmt = (L.fmt || 0) + 1; }
+}
+function fmtAcc(){ const f = fmtStats(); return f.n >= 5 ? f.ok / f.n : null; }
+function startStatementDrill(n){
+  n = Math.max(4, Math.min(12, n || 8));
+  const pool = QUESTIONS.filter(q => q.ordered);
+  if(!pool.length) return false;
+  const dAcc = {}; DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; dAcc[d.key] = st.total >= 4 ? st.correct / st.total : 0.5; });
+  const sc = pool.map(q => { const st = getSpacedStat(DATA.questionStats, q.id); const wrong = (DATA.missed || []).includes(q.id);
+    return { q, s: (st.seen === 0 ? 3 : 0) + (wrong ? 3 : 0) + (st.dueAt && st.dueAt < Date.now() && st.seen ? 1.5 : 0) + (1 - dAcc[q.domain]) * 2 + Math.random() }; }).sort((a, b) => b.s - a.s);
+  const picks = [], per = {};
+  sc.forEach(x => { if(picks.length < n && (per[x.q.domain] || 0) < Math.ceil(n / 3)){ picks.push(x.q); per[x.q.domain] = (per[x.q.domain] || 0) + 1; } });
+  if(!picks.length) return false;
+  beginSession(shuffle(picks), 'drill', null);
+  if(session) session.stmtDrill = true;
+  return true;
+}
 function planLogAnswer(mode){
   try{
+    if(session && session.stmtDrill) mode = 'stmts';
     const L = planDayLog();
     L.modes[mode] = (L.modes[mode] || 0) + 1;
     if(mode === 'drill' && session && session.drillTopic) L.drill[session.drillTopic] = (L.drill[session.drillTopic] || 0) + 1;
@@ -9257,6 +9280,18 @@ function buildStudyPlanCore(minutes){
           : 'A mix on purpose: cards that are due as they start to fade, and new ones you have not met. Pulling an answer from memory strengthens it more than rereading does.',
         run: () => { fcStepRef('cards'); const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
+    stmts: () => {
+      if(answered < 15 || !QUESTIONS.some(q => q.ordered)) return null;
+      const f = fmtStats(), acc = fmtAcc();
+      const need0 = f.n < 24 || (acc !== null && acc < 0.7);
+      if(!need0 && !L.targets.stmtGoal) return null;
+      const goal = planTarget('stmtGoal', (acc !== null && acc < 0.6) ? 10 : 8);
+      const have = Math.min(goal, L.fmt || 0);
+      return { id:'stmts', title:`Statement-style questions (${goal})`, minutes: Math.max(8, Math.round(goal * 1.6)), need:goal, have, unit:'questions',
+        why: acc !== null && acc < 0.7 ? `You have got ${Math.round(acc * 100)}% of the "which statements are correct" questions right. The exam uses this format a lot, and the fix is judging each statement on its own before looking at the choices.` : f.n < 24 ? `The exam asks many "which of these statements are correct" questions (I, II, III, IV, then choices like "I and III only"). You have seen ${f.n} so far, and this format rewards practice: judge each statement true or false on its own first, then find the choice that matches.` : 'A short round keeps this format sharp.',
+        how:['Read the stem, then mark each statement true or false before you look at the choices.','Find the choice that matches your marks exactly.','After each one, read why every statement is true or false.'],
+        run: () => { showTab('study'); if(!startStatementDrill(goal - have > 0 ? goal - have : goal)) showTab('study'); } };
+    },
     adaptive: () => ({ id:'adaptive', title: answered === 0 ? 'Take your first adaptive session' : `Adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
       why: (() => { const u = coverageUnderserved(2); return u.length ? `Weighted toward ${u.map(d => d.name).join(' and ')}, which have had the least attention lately for their share of the exam, so nothing on the blueprint goes cold.` : null; })() || (dueQs >= 8 ? `${dueQs} questions you have seen are due to come back. Mixing topics makes you pick the right idea each time, which is what the exam asks of you.` : 'Mixing topics makes you pick the right idea each time, which is what the exam asks of you.'),
       need: ADAPTIVE_LENGTH, have: Math.min(cnt.adaptive || 0, ADAPTIVE_LENGTH), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }),
@@ -9561,9 +9596,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach','listen'],
-    build:      ['cards','adaptive','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','refresh','gap','calc','tool','mytool','tutor','adaptive','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach','listen'],
+    build:      ['cards','adaptive','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach','listen'],
+    sharpen:    ['cards','missed','weak','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
@@ -9709,7 +9744,7 @@ const CONDUCTOR_CUES = {
 ['weak2','weak3','weak4','weak5','weak6'].forEach(k => { CONDUCTOR_CUES[k] = CONDUCTOR_CUES.weak; });
 ['case2','case3'].forEach(k => { CONDUCTOR_CUES[k] = CONDUCTOR_CUES.case; });
 CONDUCTOR_CUES.checkpoint2 = 'Same pace and rules as the first one. Notice where your focus slips when you are tired, and slow down on the qualifiers.';
-CONDUCTOR_CUES.figures2 = CONDUCTOR_CUES.figures; CONDUCTOR_CUES.tutor2 = 'Name the slip out loud each time. Habits show up as the same reason twice.';
+CONDUCTOR_CUES.stmts = 'Mark each statement true or false on its own before you look at the choices, then match your marks to the choice.'; CONDUCTOR_CUES.figures2 = CONDUCTOR_CUES.figures; CONDUCTOR_CUES.tutor2 = 'Name the slip out loud each time. Habits show up as the same reason twice.';
 function conductorState(){
   const c = (typeof DATA !== 'undefined' && DATA) ? DATA.conductor : null;
   if(!c) return null;
@@ -10384,7 +10419,8 @@ function planRefForSession(sess){
   const all = plan.steps.concat(plan.blocks || []).filter(x => x && !x.manual && x.need > 0);
   const byId = id => all.find(x => x.id === id);
   let st = null;
-  if(sess.mode === 'adaptive'){ const l = ['adaptive','adaptive2','adaptive3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
+  if(sess.stmtDrill){ st = byId('stmts'); }
+  else if(sess.mode === 'adaptive'){ const l = ['adaptive','adaptive2','adaptive3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
   else if(sess.mode === 'review') st = byId('missed');
   else if(sess.mode === 'case'){ const l = ['case','case2','case3'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
   else if(sess.mode === 'mock'){ const l = ['checkpoint','checkpoint2'].map(byId).filter(Boolean); st = l.find(x => !x.done) || l[0] || null; }
@@ -10436,7 +10472,7 @@ function planNextHtml(nxt){
 function planGoNext(id){
   try{
     const inQuiz = document.body.classList.contains('quiz-active');
-    const sessionIds = ['adaptive','adaptive2','adaptive3','weak','refresh','gap','gap2','weak2','weak3','weak4','weak5','weak6','missed','case','case2','case3','checkpoint','checkpoint2'];
+    const sessionIds = ['stmts','adaptive','adaptive2','adaptive3','weak','refresh','gap','gap2','weak2','weak3','weak4','weak5','weak6','missed','case','case2','case3','checkpoint','checkpoint2'];
     if(inQuiz && !sessionIds.includes(id)) exitToMenu();
     runPlanStep(id);
   }catch(e){}
@@ -10736,6 +10772,13 @@ const MISS_TYPES = {
   gap:    { label:'Knowledge gap', tip:'' }
 };
 const TRAP_RE = /\b(EXCEPT|NOT|LEAST)\b|\b(except|least likely|least)\b|\b(is|are|was|do|does|did|would|will|can|should|may)\s+not\b/;
+// Question text as HTML. Statement-style questions (stem, then "I. ... IV. ...") put each statement on its own hanging line.
+function qTextHtml(text, hl){
+  hl = hl || highlightQualifiers; text = String(text || '');
+  if(!/\nI\. /.test(text)) return hl(text);
+  const parts = text.split('\n'), stem = parts.shift();
+  return `<span class="q-stem">${hl(stem)}</span><span class="q-stmts">${parts.map(p => { const m = p.match(/^(I{1,3}|IV)\.\s+(.*)$/); return m ? `<span class="q-st"><b>${m[1]}.</b><span>${hl(m[2])}</span></span>` : `<span class="q-st"><span>${hl(p)}</span></span>`; }).join('')}</span>`;
+}
 function highlightQualifiers(text){
   return escapeHtml(text).replace(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|LAST|PRIMARY)\b|\b(except|least likely|most likely)\b/g, m => '<span class="q-flag">'+m+'</span>');
 }
@@ -20625,6 +20668,19 @@ function examBlockQueue(domainCounts, nCase, nScen, sections, preferExamLevel){
     });
     cand.slice(0, need).forEach(x => single.push(x.q));
   });
+  // The real exam leans on "which statements are correct" items, so a timed set carries a fair share of them (about one in eight).
+  try{
+    const stm = pool.filter(q => q.ordered && !inAnyGroup.has(q.id) && !single.includes(q) && !inBlock.has(q.id));
+    const have = single.filter(q => q.ordered).length, want = Math.round(DOMAINS.reduce((a, d) => a + (domainCounts[d.key] || 0), 0) / 8);
+    if(have < want && stm.length){
+      const fresh0 = shuffle(stm.slice()).sort((a, b) => seenOf(a) - seenOf(b));
+      for(const q of fresh0){
+        if(single.filter(x => x.ordered).length >= want) break;
+        const i = single.findIndex(x => x.domain === q.domain && !x.ordered);
+        if(i >= 0) single[i] = q;
+      }
+    }
+  }catch(e){}
   const total = DOMAINS.reduce((a, d) => a + (domainCounts[d.key] || 0), 0);
   let singles = shuffle(single);
   const blockQs = blocks.reduce((a, g) => a + g.length, 0);
@@ -20858,7 +20914,7 @@ function mwRender(){
       : `<li><button type="button" class="mw-c" onclick="mwChoose(${k})"><b>${mwLetter(k)}</b><span>${escapeHtml(c)}</span></button></li>`).join('');
     let reasons = MW_REASONS.filter(r => r.k !== 'calc' || q.calcSteps || q.calcType || stemLooksComputational(q));
     if(!TRAP_RE.test(q.q || '')) reasons = reasons.filter(r => r.k !== 'read').concat(reasons.filter(r => r.k === 'read'));
-    body.innerHTML = mwHead(it) + scn + `<div class="mw-q">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
+    body.innerHTML = mwHead(it) + scn + `<div class="mw-q">${qTextHtml(q.q)}</div><ul class="mw-choices">${choices}</ul>`
       + (hasPick ? `<div class="mw-ask"><b>What made ${mwLetter(it.pick)} look right?</b><div class="mw-chips">${reasons.map(r => `<button type="button" class="mw-chip" onclick="mwReason('${r.k}')">${escapeHtml(r.label)}</button>`).join('')}</div><button type="button" class="mw-skip" onclick="mwReason('')">Skip, just show me</button>${mwWhy('Putting into words why a wrong answer looked right (self-explanation) corrects the belief behind it better than just reading the answer. Your reason also tells the app which kind of fix you need.')}</div>`
         : `<p class="hint" style="margin:0;">You missed this one before. Tap the answer you would choose now.</p>`);
     return;
@@ -20877,7 +20933,7 @@ function mwRender(){
     if(!tip && r) tip = `<b>${escapeHtml(r.label)}</b>${escapeHtml(r.tip)}`;
     if(it.reason === 'read'){ const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|PRIMARY)\b/); if(m) tip = `<b>${escapeHtml(r.label)}</b>The word that decided it: ${escapeHtml(m[1])}. ${escapeHtml(r.tip)}`; }
     const canNote = aiFeaturesAvailable && !q.calcSteps && !q.calcType && it.pick >= 0;
-    body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
+    body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${qTextHtml(q.q)}</div><ul class="mw-choices">${choices}</ul>`
       + `<div class="mw-break">${mwBreakdown(it)}${mwWhy(it.pick >= 0 ? 'Seeing the right answer beside the tempting one, with the fact that separates them, targets the exact confusion. Reading the right answer alone leaves the old belief in place.' : 'Saying why the answer holds, not just that it does, is what lets you get it right when the wording changes.')}</div>`
       + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Writing a closer look at why that one is tempting…</div>` : '')
       + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button></div>`;
@@ -20894,7 +20950,7 @@ function mwRender(){
       return `<li class="mw-c${cls}"><b>${mwLetter(k)}</b><span>${k === it.sibPick && k !== s.correct ? '<span class="mw-tagline">You chose</span><br>' : ''}${escapeHtml(c)}${note}</span></li>`;
     }).join('');
     const last = mw.i >= mw.items.length - 1;
-    body.innerHTML = mwHead(it, 'similar idea') + (s.scenario ? `<div class="mw-scn">${escapeHtml(s.scenario)}</div>` : '') + `<div class="mw-q">${highlightQualifiers(s.q)}</div><ul class="mw-choices">${choices}</ul>`
+    body.innerHTML = mwHead(it, 'similar idea') + (s.scenario ? `<div class="mw-scn">${escapeHtml(s.scenario)}</div>` : '') + `<div class="mw-q">${qTextHtml(s.q)}</div><ul class="mw-choices">${choices}</ul>`
       + (answered ? '' : mwWhy('A different question on the same idea is real recall. Re-reading the same one only tests whether you recognise it, and this shows if you learned the idea or just the wording.'))
       + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div>${mwWhy(it.ok ? 'Getting it right after a miss, on different wording, is what builds durable memory. The original comes back later, since spaced repeats beat cramming.' : 'A miss here is useful: it shows the idea is not secure. The original is now due again sooner, so you meet it again before it fades.')}<div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
     return;
@@ -22495,10 +22551,8 @@ function renderQuestion(){
   paintScenario(q, false);
   const qTextDisplay = document.getElementById('qText');
   qTextDisplay.classList.remove('variant-loading');
-  if(/\nI\. /.test(q.q)){ // Roman-numeral statement questions: the stem, then each statement on its own hanging line, as on the exam
-    const parts = q.q.split('\n'), stem = parts.shift(), hl = isStudyMode() ? highlightQualifiers : escapeHtml;
-    qTextDisplay.innerHTML = `<span class="q-stem">${hl(stem)}</span><span class="q-stmts">${parts.map(p => { const m = p.match(/^(I{1,3}|IV)\.\s+(.*)$/); return m ? `<span class="q-st"><b>${m[1]}.</b><span>${hl(m[2])}</span></span>` : `<span class="q-st"><span>${hl(p)}</span></span>`; }).join('')}</span>`;
-  } else if(isStudyMode()) qTextDisplay.innerHTML = highlightQualifiers(q.q); else qTextDisplay.textContent = q.q;
+  if(/\nI\. /.test(q.q)) qTextDisplay.innerHTML = qTextHtml(q.q, isStudyMode() ? highlightQualifiers : escapeHtml);
+  else if(isStudyMode()) qTextDisplay.innerHTML = highlightQualifiers(q.q); else qTextDisplay.textContent = q.q;
   renderAskChips(q);
 
   const choicesBox = document.getElementById('qChoices');
@@ -23159,6 +23213,7 @@ function scoreExamAnswers(fromIndex, toIndex, answeredOnly){
     DATA.questionStats[q.id] = advanceSpacedStat(prevStat, isCorrect);
     DATA.answerCounter++;
     planLogAnswer(session.mode);
+    try{ fmtRecord(q, isCorrect); }catch(e){}
     try{ updatePlanChip(); }catch(e){}
 
     try{ recordDomainAnswer(q.domain, isCorrect, q); }catch(e){}
@@ -23316,6 +23371,7 @@ function selectAnswerCore(i){
 
   DATA.answerCounter++;
   planLogAnswer(session.mode);
+  try{ fmtRecord(q, isCorrect); }catch(e){}
   try{ updatePlanChip(); }catch(e){}
   DATA.recentAccuracyLog.push({correct: isCorrect, difficulty: questionDifficulty(q)});
   if(DATA.recentAccuracyLog.length > 20) DATA.recentAccuracyLog.shift();
@@ -26513,7 +26569,7 @@ async function executeTutorTool(toolName, toolInput){
       renderTodayPlan();
       const lines = plan.steps.map((st, i) => `${i + 1}. [${st.id}] ${st.title}, about ${st.minutes} min${st.done ? ' (already done today)' : (st.need > 0 && (st.have || 0) > 0 ? ` (${st.have} of ${st.need} ${st.unit || 'questions'} done so far)` : '')}. Why: ${st.why}`);
       const blk = plan.blocks.map(b => `Bigger block this week: [${b.id}] ${b.title}, about 6 hours. Why: ${b.why}`);
-      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} Time budget: ${plan.minutes} minutes${planTodayOverride() ? ' (set for today only)' : ''} (plan uses about ${plan.used}).${(() => { const pa = studyPaceAdvice(); return pa && pa.rampLed ? ' Days are deliberately lengthening toward a six-hour day with a break in the middle, to build stamina for the real exam.' : ''; })()}${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a ' + (plan.minutes >= 300 ? '15' : '10') + ' minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
+      return `Phase: ${plan.phase.label}. ${(() => { const pa = studyPaceAdvice(); return pa ? 'Pace guidance: ' + paceAdviceText(pa) + ' ' : ''; })()}${plan.days === null ? 'No exam date set.' : plan.days + ' day(s) to the exam.'} ${(() => { const f = fmtStats(); return f.n ? 'Statement-style questions (I, II, III, IV with choices like "I and III only"): ' + f.n + ' answered, ' + Math.round(100 * f.ok / f.n) + '% correct. ' : ''; })()}Time budget: ${plan.minutes} minutes${planTodayOverride() ? ' (set for today only)' : ''} (plan uses about ${plan.used}).${(() => { const pa = studyPaceAdvice(); return pa && pa.rampLed ? ' Days are deliberately lengthening toward a six-hour day with a break in the middle, to build stamina for the real exam.' : ''; })()}${plan.minutes >= 200 ? ' This is a long day: suggest alternating topics and a ' + (plan.minutes >= 300 ? '15' : '10') + ' minute break around the middle' + (plan.breakAfter ? ' (after step ' + plan.breakAfter + ')' : '') + '.' : ''} ${plan.answered} questions answered so far; ${plan.dueCards} flashcards and ${plan.dueQs} questions due; ${plan.missedN} missed.\n` + (lines.join('\n') || 'No steps queued: suggest an adaptive session.') + (blk.length ? '\n' + blk.join('\n') : '') + `\nThe same plan is on the Study tab under Today's plan.`;
     }
     if(toolName === 'schedule_check_in') return tnScheduleCheckIn(toolInput);
     if(toolName === 'queue_next_stop'){
@@ -27594,7 +27650,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.410';
+const BUILD_ID = '2026-10-22.411';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
