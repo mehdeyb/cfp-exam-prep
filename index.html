@@ -26084,7 +26084,8 @@ function focusEnter(o){
   if(!(o.els && o.els.length) && el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
   if(el === panel) el = null;
   const els = (o.els && o.els.length) ? o.els.filter(Boolean) : (el ? [el] : []);
-  els.forEach(t => { t.classList.add('focus-target'); let a = t.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } });
+  els.forEach(t => { try{ const cc = t.classList.contains('cc-card') ? t : (t.closest && t.closest('.cc-card')); if(cc){ cc.classList.add('cc-open'); const ch = cc.querySelector(':scope > .card-head'); if(ch) ch.setAttribute('aria-expanded', 'true'); } }catch(e){}
+    t.classList.add('focus-target'); let a = t.parentElement; while(a){ a.classList.add('focus-path'); if(a === panel) break; a = a.parentElement; } });
   if(el) _focus.el = el;
   _focus.relock = bodyIsLocked() && document.body.classList.contains('tvm-active');
   if(_focus.relock) unlockBodyScroll();
@@ -26660,7 +26661,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.367';
+const BUILD_ID = '2026-10-22.368';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
