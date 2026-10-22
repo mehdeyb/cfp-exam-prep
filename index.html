@@ -1762,6 +1762,16 @@
   #lessonsCard .pstage{border-radius:20px;box-shadow:0 10px 30px -18px rgba(0,0,0,.35);} #lessonsCard .pst-body{min-height:230px;padding:6px 6px 0;} #lessonsCard .pst-title{font-size:26px;} 
   html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard .pst-body{min-height:300px;} html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard .pst-title{font-size:30px;}
   .pp-more .linklike.podcast-icon-btn-stop{background:none;border:0;padding:0;box-shadow:none;color:inherit;font:inherit;font-size:12.5px;min-height:36px;text-decoration:underline;text-underline-offset:3px;width:auto;height:auto;border-radius:0;display:inline;}
+  /* The player: one tight bar, transport on the left and the scrubber beside it, options on a single line below. The sentence being said already shows under the screen. */
+  #lessonsCard .podcast-player-panel{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;padding:10px 14px;}
+  #lessonsCard .pp-cap{display:none;}
+  #lessonsCard .podcast-player-controls{grid-column:1;grid-row:1;gap:6px;} #lessonsCard .pp-prog{grid-column:2;grid-row:1;margin:0;min-width:0;}
+  #lessonsCard .podcast-icon-btn-play{width:48px;height:48px;} #lessonsCard .podcast-icon-btn-play svg{width:20px;height:20px;} #lessonsCard .podcast-icon-btn-skip{width:36px;height:36px;} #lessonsCard .podcast-icon-btn-skip svg{width:16px;height:16px;}
+  #lessonsCard .pp-prog input[type=range]{height:22px;} #lessonsCard .pp-time{font-size:10.5px;margin-top:-2px;}
+  #lessonsCard .podcast-player-secondary-row{grid-column:1 / -1;grid-row:2;display:flex;gap:8px;align-items:center;margin:2px 0 0;flex-wrap:wrap;} #lessonsCard .podcast-player-secondary-row > *{width:auto;}
+  #lessonsCard .podcast-speed-select{padding:6px 26px 6px 10px;font-size:12.5px;min-height:34px;}
+  #lessonsCard .pp-more{grid-column:1 / -1;grid-row:3;justify-content:space-between;margin:0;gap:2px 14px;} @media (min-width:520px){ #lessonsCard .podcast-player-secondary-row{grid-column:1;} #lessonsCard .pp-more{grid-column:2;grid-row:2;justify-content:flex-end;} } #lessonsCard .pp-more .linklike{min-height:34px;}
+  #lessonsCard .podcast-status{grid-column:1 / -1;margin:0;min-height:0;}
   .pod-hero{margin-top:10px;padding:16px;border-radius:18px;background:linear-gradient(160deg,var(--gold-soft),var(--surface2));border:1px solid var(--hair);}
   .pod-hero-kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);}
   .pod-hero-title{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.25;margin:4px 0 4px;color:var(--paper);}
@@ -28731,7 +28741,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.436';
+const BUILD_ID = '2026-10-22.437';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
