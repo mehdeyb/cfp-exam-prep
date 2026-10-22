@@ -8723,11 +8723,21 @@ function planDayLog(){
 // Statement-style questions (a stem, numbered statements, and choices like "I and III only") are a format on their own, so they get their own record.
 function fmtStats(){ const f = (DATA.fmtStats = DATA.fmtStats || {}); return f.stmt = f.stmt || { n:0, ok:0, last:0 }; }
 function fmtRecord(q, ok){
-  if(!q || !(q.ordered || q.neg)) return;
-  const f = fmtStats(); f.n++; if(ok) f.ok++; f.last = Date.now();
+  if(!q || !(q.ordered || q.neg || /^fmt-exh/.test(q.id))) return;
+  const f = fmtBucket(q.ordered ? 'stmt' : (q.neg ? 'neg' : 'exh')); f.n++; if(ok) f.ok++; f.last = Date.now();
   if(session && session.stmtDrill){ const L = planDayLog(); L.fmt = (L.fmt || 0) + 1; }
 }
-function fmtAcc(){ const f = fmtStats(); return f.n >= 5 ? f.ok / f.n : null; }
+function fmtBucket(k){ const f = (DATA.fmtStats = DATA.fmtStats || {}); return f[k] = f[k] || { n:0, ok:0, last:0 }; }
+function fmtAll(){ const a = fmtBucket('stmt'), b = fmtBucket('neg'); return { n:a.n + b.n, ok:a.ok + b.ok, last:Math.max(a.last, b.last) }; }
+function fmtAcc(){ const f = fmtAll(); return f.n >= 5 ? f.ok / f.n : null; }
+// The format you do worst on, if it trails your overall accuracy by a clear margin.
+function fmtWeakest(){
+  const t = [['stmt','"which statements are correct"'],['neg','EXCEPT / NOT / LEAST'],['exh','exhibit and table']];
+  let tot = 0, ok = 0; Object.keys(DATA.domainStats || {}).forEach(k => { tot += DATA.domainStats[k].total || 0; ok += DATA.domainStats[k].correct || 0; });
+  if(tot < 40) return null; const all = ok / tot;
+  const w = t.map(([k, label]) => { const b = fmtBucket(k); return { label, n:b.n, acc:b.n ? b.ok / b.n : null }; }).filter(x => x.n >= 8 && x.acc < all - 0.08).sort((a, b) => a.acc - b.acc)[0];
+  return w ? { label:w.label, acc:w.acc, all } : null;
+}
 // A session is tagged with its plan step when it starts; drills that mark themselves afterwards re-read it so the banner and the day strip name the right step.
 function retagSessionPlan(){ try{ session.planRef = undefined; initPlanRef(session); renderTutorBrief(); }catch(e){} }
 function startStatementDrill(n){
@@ -9413,7 +9423,7 @@ function buildStudyPlanCore(minutes){
     },
     stmts: () => {
       if(answered < 15 || !QUESTIONS.some(q => q.ordered)) return null;
-      const f = fmtStats(), acc = fmtAcc();
+      const f = fmtAll(), acc = fmtAcc();
       const need0 = f.n < 24 || (acc !== null && acc < 0.7);
       if(!need0 && !L.targets.stmtGoal) return null;
       const goal = planTarget('stmtGoal', (acc !== null && acc < 0.6) ? 10 : 8);
@@ -11012,6 +11022,8 @@ function renderPatternCallout(){
       return;
     }
   }
+  const fw = fmtWeakest();
+  if(fw){ el.innerHTML = `<b>Format check:</b> you get ${Math.round(fw.acc * 100)}% of ${fw.label} questions right, against ${Math.round(fw.all * 100)}% overall. The exam uses this wording, so it is worth drilling.`; el.style.display = 'block'; return; }
   const tvmCats = DATA.tvmMistakeCategories || {};
   const tvmTopCat = Object.keys(TVM_MISTAKE_LABELS).sort((a,b) => (tvmCats[b]||0) - (tvmCats[a]||0))[0];
   if(tvmTopCat && (tvmCats[tvmTopCat]||0) >= 3){
@@ -27851,7 +27863,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.419';
+const BUILD_ID = '2026-10-22.420';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
