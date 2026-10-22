@@ -1983,6 +1983,14 @@
   .api-key-connected > span{flex:1 1 100%;line-height:1.45;}
   .api-key-connected .linklike{color:var(--correct);text-decoration:underline;padding:6px 4px;min-height:36px;margin-right:16px;}
   .api-key-connected .linklike:hover{color:var(--paper);}
+  .api-key-connected > span{display:block;}
+  .api-key-connected .akc-name{margin-right:4px;}
+  .api-key-connected .akc-actions{display:flex;gap:8px;flex:1 1 100%;}
+  .api-key-connected .akc-actions .linklike{margin-right:12px;}
+  .api-key-connected.warn{background:rgba(214,158,46,0.12);border-color:#D69E2E;color:#E6B655;}
+  .api-key-connected.warn .linklike{color:#E6B655;}
+  body.light-mode .api-key-connected.warn{background:#FFF6DF;color:#8A5A00;border-color:#C98A00;}
+  body.light-mode .api-key-connected.warn .linklike{color:#8A5A00;}
 
   #appHeader{margin-bottom:28px;}
   #diagnosisToggle{cursor:pointer;}
@@ -3693,9 +3701,9 @@
             <div class="tutor-status" id="apiKeyStatus" role="alert"></div>
           </div>
           <div class="api-key-connected" id="apiKeyConnected" style="display:none;">
-            <span id="aiHealthText">✓ API key connected — AI features are active on this device.</span>
-            <button class="linklike" onclick="testAiConnection()">Test</button>
-            <button class="linklike" onclick="handleClearApiKey()">Disconnect</button>
+            <span><b class="akc-name">Claude</b> <span id="aiHealthText">✓ Connected — AI features are active on this device.</span></span>
+            <div class="akc-actions"><button class="linklike" onclick="testAiConnection()">Test</button>
+            <button class="linklike" onclick="handleClearApiKey()">Disconnect</button></div>
           </div>
           <div class="api-key-box" id="geminiBox" style="margin-top:12px;">
             <p class="hint" style="margin-top:0;"><b>Backup: Google Gemini.</b> Optional. If Claude is down, overloaded or out of credit, Gemini answers instead, so the tutor and generated practice keep working. It also works on its own with no Claude key. Get a free key at aistudio.google.com. It stays encrypted in this browser and goes only to Google.</p>
@@ -3705,17 +3713,17 @@
             </div>
             <div class="tutor-status" id="geminiKeyStatus" role="alert"></div>
           </div>
-          <div class="hint" id="aiBuildLine" style="margin-top:10px;font-size:11.5px;"></div>
           <div class="api-key-connected" id="geminiConnected" style="display:none;margin-top:12px;">
-            <span id="geminiHealthText">✓ Gemini connected as your backup AI.</span>
-            <button class="linklike" onclick="testGeminiConnection()">Test</button>
-            <button class="linklike" onclick="handleClearGeminiKey()">Disconnect</button>
+            <span><b class="akc-name">Gemini</b> <span id="geminiHealthText">✓ Connected as your backup AI.</span></span>
+            <div class="akc-actions"><button class="linklike" onclick="testGeminiConnection()">Test</button>
+            <button class="linklike" onclick="handleClearGeminiKey()">Disconnect</button></div>
           </div>
+          <div class="hint" id="aiBuildLine" style="margin-top:2px;font-size:11.5px;"></div>
         </div>
 
         <div class="settings-section">
           <h3>AI token usage</h3>
-          <p class="hint" style="margin-top:0;">Counts the tokens used by this app's own AI requests. It is not your account balance, which no app can read; check billing at console.anthropic.com.</p>
+          <p class="hint" style="margin-top:0;">Counts the tokens used by this app's own AI requests. It is not your account balance, which no app can read; check billing at console.anthropic.com (Claude) or aistudio.google.com (Gemini).</p>
           <div id="aiTokenUsageDisplay"></div>
         </div>
 
@@ -5812,9 +5820,10 @@ async function testAiConnection(){
     const model = aiMode === 'gemini' ? GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] : aiMode === 'direct' ? DIRECT_MODELS[Math.min(directModelIdx, DIRECT_MODELS.length - 1)] : ARTIFACT_MODEL;
     aiHealth = { ok:true, msg:'✓ Working · ' + model + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's' };
   }catch(e){
-    aiHealth = { ok:false, msg:(geminiKey ? '⚠ Claude is not working, so Gemini is answering: ' : '⚠ Not working: ') + describeAiError(e) };
+    aiHealth = { ok:false, msg:(geminiKey ? '⚠ Not working, so Gemini is answering: ' : '⚠ Not working: ') + describeAiError(e) };
   }
   const el2 = document.getElementById('aiHealthText'); if(el2) el2.textContent = aiHealth.msg;
+  try{ const bx = document.getElementById('apiKeyConnected'); if(bx) bx.classList.toggle('warn', !aiHealth.ok); }catch(e){}
   return aiHealth;
 }
 
@@ -5850,7 +5859,7 @@ async function handleSaveGeminiKey(){
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
-  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Gemini connected.'; }catch(e){}
+  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; }catch(e){}
 }
 async function handleClearGeminiKey(){
   if(!confirm('Disconnect Gemini? Your Claude key, if any, keeps working.')) return;
@@ -5861,7 +5870,7 @@ async function handleClearGeminiKey(){
 async function testGeminiConnection(){
   const el = document.getElementById('geminiHealthText'); if(!geminiKey) return;
   if(el) el.textContent = 'Testing Gemini…'; const t0 = Date.now();
-  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Gemini working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; }
+  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; }
   catch(e){ if(el) el.textContent = '⚠ Gemini not working: ' + describeAiError(e); }
 }
 async function handleClearApiKey(){
@@ -16947,15 +16956,15 @@ function renderAiTokenUsage(){
   const el = document.getElementById('aiTokenUsageDisplay');
   if(!el) return;
   const usage = DATA.aiTokenUsage;
-  if(!usage || usage.requestCount === 0){
+  if(!usage || ((usage.requestCount || 0) === 0 && !usage.geminiRequests)){
     el.innerHTML = `<p class="sg-empty">No AI requests tracked yet on this device.</p>`;
     return;
   }
-  const total = usage.totalInput + usage.totalOutput;
+  const total = (usage.totalInput || 0) + (usage.totalOutput || 0);
   const sinceDate = new Date(usage.since).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
   el.innerHTML = `
-    <div class="sg-item"><b>Total tokens used:</b> ${total.toLocaleString()} (${usage.totalInput.toLocaleString()} in, ${usage.totalOutput.toLocaleString()} out)</div>
-    <div class="sg-item"><b>Requests made:</b> ${usage.requestCount.toLocaleString()}</div>
+    ${(usage.requestCount || !usage.geminiRequests) ? `<div class="sg-item"><b>Claude tokens:</b> ${total.toLocaleString()} (${(usage.totalInput||0).toLocaleString()} in, ${(usage.totalOutput||0).toLocaleString()} out) · ${(usage.requestCount||0).toLocaleString()} request${usage.requestCount === 1 ? '' : 's'}</div>` : ''}
+    ${usage.geminiRequests ? `<div class="sg-item"><b>Gemini tokens:</b> ${((usage.geminiInput||0)+(usage.geminiOutput||0)).toLocaleString()} (${(usage.geminiInput||0).toLocaleString()} in, ${(usage.geminiOutput||0).toLocaleString()} out) · ${usage.geminiRequests.toLocaleString()} request${usage.geminiRequests === 1 ? '' : 's'}</div>` : ''}
     <div class="sg-item"><b>Tracked since:</b> ${sinceDate}</div>`;
 }
 
@@ -26490,7 +26499,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.350';
+const BUILD_ID = '2026-10-21.351';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
