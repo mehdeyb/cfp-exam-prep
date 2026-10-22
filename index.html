@@ -8855,7 +8855,7 @@ function tutorBuildCustomTool(inp){
   const dup = list.find(x => x.title.toLowerCase() === title.toLowerCase());
   const tool = Object.assign({ id: dup ? dup.id : 'ct' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: Date.now(), kind, title, why, uses: dup ? dup.uses : 0, best: dup ? dup.best : null }, spec);
   if(dup) list.splice(list.indexOf(dup), 1, tool); else list.push(tool);
-  if(list.length > 12){ list.sort((a, b) => (b.uses || 0) - (a.uses || 0) || b.t - a.t); DATA.customTools = list.slice(0, 12); }
+  if(list.length > 12){ list.sort((a, b) => (b.uses || 0) - (a.uses || 0) || b.t - a.t); const keep = list.slice(0, 12); list.filter(x => !keep.includes(x)).forEach(x => { if(!Array.isArray(DATA.customToolsGone)) DATA.customToolsGone = []; DATA.customToolsGone.push(x.id); }); DATA.customTools = keep; }
   persist();
   try{ ctRenderList(); }catch(e){}
   ctOpen(tool.id);
@@ -8868,7 +8868,7 @@ function ctOpenTool(inp){
   const key = ctStr(inp.id || inp.title, 80).toLowerCase();
   const t = list.find(x => x.id === inp.id) || list.find(x => x.title.toLowerCase() === key) || list.find(x => x.title.toLowerCase().includes(key));
   if(!t) return 'Error: no custom tool matches "' + key + '". Use action list to see them.';
-  if(inp.action === 'delete'){ DATA.customTools = list.filter(x => x !== t); persist(); try{ ctRenderList(); }catch(e){} return 'Removed "' + t.title + '".'; }
+  if(inp.action === 'delete'){ ctForget(t.id); return 'Removed "' + t.title + '".'; }
   ctOpen(t.id);
   return 'Opened "' + t.title + '" for the student.';
 }
@@ -8892,7 +8892,8 @@ function ctRenderList(){
   if(list.length && card.classList.contains('cc-card') && !card._ctOpened){ card._ctOpened = true; card.classList.add('cc-open'); }
   host.innerHTML = list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''}</div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
 }
-function ctConfirmDelete(id){ const t = ctList().find(x => x.id === id); if(t && confirm('Remove "' + t.title + '"?')){ DATA.customTools = ctList().filter(x => x.id !== id); persist(); ctRenderList(); } }
+function ctForget(id){ DATA.customTools = ctList().filter(x => x.id !== id); if(!Array.isArray(DATA.customToolsGone)) DATA.customToolsGone = []; if(!DATA.customToolsGone.includes(id)) DATA.customToolsGone.push(id); DATA.customToolsGone = DATA.customToolsGone.slice(-60); persist(); ctRenderList(); }
+function ctConfirmDelete(id){ const t = ctList().find(x => x.id === id); if(t && confirm('Remove "' + t.title + '"?')) ctForget(id); }
 function ctRenderRun(){
   const host = document.getElementById('ctRun'); if(!host) return;
   const card = document.getElementById('customToolsCard'); if(card) card.style.display = '';
@@ -26909,7 +26910,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.371';
+const BUILD_ID = '2026-10-22.372';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -26999,7 +27000,7 @@ const SYNC_FILE = 'cfp-blueprint-sync.json';
 const SYNC_DESC = 'CFP Blueprint sync (private)';
 // Per-device settings that should not follow you from phone to iPad.
 const SYNC_LOCAL_ONLY = ['tutorNotes','tutorNotesOff','speechOptimizedText','lastTab','theme','themeMode','eveningModeSetting','preferredVoiceName','preferredHost1VoiceName','preferredHost2VoiceName','conductor','fcShown','lastBackupAtAnswerCount','genRetryAt','genFailStreak','variantFailedAt'];
-const SYNC_UNION_ARRAYS = ['studyDates','checkedSubtopics','announcedMilestones','missed','hypercorrectionQueue'];
+const SYNC_UNION_ARRAYS = ['customToolsGone','studyDates','checkedSubtopics','announcedMilestones','missed','hypercorrectionQueue'];
 const SYNC_ARRAY_CAP = { sessions: 300, errorLog: 500, tutorTopics: 300 };
 const SYNC_WHOLE = ['tvmProgress', 'cfProgress'];
 const SYNC = { on:false, token:null, gistId:null, etag:null, lastOkAt:0, status:'off', err:'', busy:false, again:false, timer:null, poll:null, pendingApply:false, applying:false, lastProbe:null, keyEncFor:null, keyEnc:null, keyPushedFor:null, lastPullTry:0 };
@@ -27059,6 +27060,7 @@ function syncMergeData(local, remote){
   const an = lm >= rm, out = {};
   Object.keys(local).forEach(k => { out[k] = syncMergeVal(local[k], remote[k], an, k); });
   Object.keys(remote).forEach(k => { if(!(k in out)) out[k] = remote[k]; });
+  if(Array.isArray(out.customTools) && Array.isArray(out.customToolsGone) && out.customToolsGone.length){ const gone = new Set(out.customToolsGone); out.customTools = out.customTools.filter(x => !gone.has(x.id)); }
   out._modAt = Math.max(lm, rm);
   return JSON.parse(JSON.stringify(out));
 }
