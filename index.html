@@ -1094,6 +1094,12 @@
   .bp-fold .card-head{margin-bottom:6px;min-height:44px;}
   .bp-fold .card-head h2{font-size:15px;}
   .bp-guide-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);}
+  #bpPlan,#focusPills,#difficultyIndicator{display:none !important;}
+  .bp-top{margin:2px 0 14px;padding-bottom:14px;border-bottom:1px solid var(--hair);}
+  .bp-top .rb-panel{margin:0 0 12px;box-shadow:none;background:var(--surface-2,rgba(128,128,128,.06));}
+  .bp-top .coach-line{margin:0;}
+  .bp-top .score-row{margin-bottom:12px;}
+  .guide-card{padding-top:14px;padding-bottom:14px;} .guide-card .bp-guide-row{margin:0;padding:0;border:0;}
   .bp-guide-row b{display:block;font-size:14px;}
   .bp-guide-row .note{display:block;font-size:11.5px;color:var(--muted);}
   .trend-toggle{display:inline-flex;border:1px solid var(--hair);border-radius:16px;overflow:hidden;}
@@ -2977,10 +2983,8 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #todayPlanCard{column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard,html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #modePanel{column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard{order:1;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:36px;align-items:start;grid-auto-flow:row dense;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > *{grid-column:1;min-width:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .card-head,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-focus,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-fold,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .bp-guide-row,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .source-note,html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > .pattern-callout{grid-column:1 / -1;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard > #progressCard{grid-column:2;grid-row:2 / span 4;margin-top:0;border-top:0;padding-top:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard .bp-cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:36px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard .bp-colR #progressCard{margin-top:0;border-top:0;padding-top:0;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard .progress-plot{height:150px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #modePanel{order:2;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #todayPlanCard .pt-rows{column-count:2;column-gap:36px;}
@@ -3122,6 +3126,26 @@
   <!-- ================= STUDY TAB ================= -->
   <div class="tab-panel active" id="tab-study">
 
+
+
+
+
+
+
+    <div class="tn-card" id="tutorNoteCard" role="region" aria-label="Note from your tutor" style="display:none;"></div>
+
+    <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
+    
+    <div id="studyCols">
+    <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
+    <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
+
+    <div class="card" id="blueprintCard">
+      <div class="card-head">
+        <h2>The Blueprint Bar</h2>
+        <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
+      </div>
+      <div class="bp-top">
     <div class="score-row" id="scoreRow">
       <div class="score-ring-block">
         <div class="score-ring-wrap">
@@ -3154,30 +3178,20 @@
         <div class="stat"><div class="num" id="statStreak">0</div><div class="lbl">Day streak</div></div>
       </div>
     </div>
-
     <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
-
     <div class="coach-line empty" id="coachLine" role="status">
       <span class="coach-dot" id="coachDot"></span>
       <span id="coachText"></span>
     </div>
-
-    <div class="tn-card" id="tutorNoteCard" role="region" aria-label="Note from your tutor" style="display:none;"></div>
-
-    <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
-    
-    <div id="studyCols">
-    <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
-    <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
-
-    <div class="card" id="blueprintCard">
-      <div class="card-head">
-        <h2>The Blueprint Bar</h2>
-        <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
       </div>
+      <div class="bp-cols">
+      <div class="bp-colL">
       <div class="bp-bar" id="bpBar"></div>
       <div class="bp-code-row" id="bpCodeRow"></div>
-      <div class="bp-plan" id="bpPlan" style="display:none;"></div>
+      <div class="bp-plan" id="bpPlan" style="display:none !important;" hidden></div>
+      <div class="bp-legend" id="bpLegend"></div>
+      </div>
+      <div class="bp-colR">
       <div class="bp-trend" id="progressCard">
         <div class="bp-trend-head"><span class="bp-trend-title">Your trend</span><span class="trend-toggle" id="trendToggle" role="group" aria-label="What the line shows" style="display:none;"><button type="button" data-view="score" class="on" aria-pressed="true" onclick="setTrendView('score')">Score</button><button type="button" data-view="ready" aria-pressed="false" onclick="setTrendView('ready')">Readiness</button></span></div>
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
@@ -3203,12 +3217,14 @@
         </div>
       </div>
       <div class="bp-focus">
-        <div class="bp-trend-head"><span class="bp-trend-title">Focus next</span><span class="note">your coach learns from every answer</span></div>
-        <div class="focus-pills" id="focusPills"><span class="focus-empty">Answer a few questions in each domain to reveal a focus area.</span></div>
-        <div class="difficulty-indicator" id="difficultyIndicator" style="display:none;"></div>
+        <div class="focus-pills" id="focusPills" hidden></div>
+        <div class="difficulty-indicator" id="difficultyIndicator" style="display:none !important;" hidden></div>
         <div class="week-recap" id="weekRecap" style="display:none;"></div>
       </div>
-      <div class="bp-legend" id="bpLegend"></div>
+      </div>
+      </div>
+
+
       <div class="pattern-callout" id="patternCallout" style="display:none;"></div>
       <div class="pattern-callout" id="mixupCallout" style="display:none;"></div>
       <div class="bp-fold" id="diagnosisCard">
@@ -3220,8 +3236,6 @@
       <div id="diagnosisBody" style="display:none;"></div>
     </div>
 
-      <div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div>
-      <div class="source-note">Weights and the <span data-dyn="subtopicN">70</span> subtopics are from CFP Board's <a href="https://www.cfp.net/certification-process/exam-requirement/about-the-cfp-exam/what-youll-be-tested-on" target="_blank" rel="noopener">Principal Knowledge Topics</a>. Tap a domain to drill it.</div>
     </div>
     </div>
 
@@ -3720,6 +3734,7 @@
       </div>
       </div>
     </div>
+    <div class="card guide-card" id="studyGuideCard"><div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div></div>
     <div class="card" id="techCard">
       <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
       <div id="techPick"></div>
@@ -8060,7 +8075,7 @@ function renderBlueprint(){
   let E = null; try{ E = exposureModel(); }catch(e){}
   let overall = null; try{ const cs = computeStats(); overall = cs.totalAnswered ? cs.readiness : null; }catch(e){}
   const bn = document.getElementById('bpNote');
-  if(bn) bn.textContent = E ? `${overall === null ? 'Not started' : overall + '/100 ready'} · ${E.seenPct}% of exam topics seen · ${E.nSolid} of ${E.total} solid` : 'width = exam weight · fill = readiness';
+  if(bn) bn.textContent = E ? `${E.seenPct}% of exam topics seen · ${E.nSolid} of ${E.total} solid` : 'width = exam weight · fill = readiness';
   DOMAINS.forEach(d=>{
     const s = DATA.domainStats[d.key];
     const dx = E ? E.topics.filter(t => t.dom === d.key) : [];
@@ -10640,7 +10655,7 @@ function renderTodayPlan(){
       + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
   } else rows = stepRows.join('') + (stepRows.length > 11 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ${(() => { try{ const cs = computeStats(); return cs.totalAnswered ? cs.readiness + '/100 ready · ' : ''; }catch(e){ return ''; } })()}` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
@@ -27261,7 +27276,7 @@ const TUTOR_POINT_TARGETS = {
   flashcard_stats:{ tab:'flashcards', sel:'#fcStatsCard',     label:'Cards due and still learning' },
   flashcard_deck: { tab:'flashcards', sel:'#fcCard',          label:'Start here' },
   study_stats:    { tab:'study',      sel:'.stat-strip',      label:'Due, answered, accuracy and streak' },
-  study_guide:    { tab:'study',      sel:'.bp-guide-row',    label:'Your one-page study guide' },
+  study_guide:    { tab:'reference',  sel:'#studyGuideCard',    label:'Your one-page study guide' },
   podcast:        { tab:'reference',  sel:'.card:has(#podcastDomainSelect)', label:'Lessons' },
   ref_toolkit:    { tab:'reference',  sel:'#techCard',        label:'Study toolkit: what works' },
   ref_glossary:   { tab:'reference',  sel:'.card:has(#glossarySearch)', label:'Glossary search' },
@@ -29010,7 +29025,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.454';
+const BUILD_ID = '2026-10-22.455';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
