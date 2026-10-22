@@ -3875,7 +3875,7 @@
   <!-- ================= TUTOR TAB ================= -->
   <div class="tab-panel" id="tab-tutor">
     <div class="card" id="tutorCard">
-      <div class="card-head"><h2>Ask your tutor</h2><div class="note" id="tutorContextNote">knows your current progress</div></div>
+      <div class="card-head"><h2>Ask your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
       <p class="hint">This is the same AI that writes your practice questions, now available for direct, specific questions — a concept you got wrong, a formula you want explained differently, anything CFP-related. It can see your progress in this app (readiness, weak areas, the mistakes you tend to make), but not your name or anything outside it.</p>
 
       <div class="tutor-snapshot" id="tutorSnapshot">
@@ -7737,6 +7737,7 @@ function renderReadinessGauge(stats){
 }
 
 function refreshHeaderStats(){
+  try{ stageEntrySync(); }catch(e){}
   // Lightweight refresh run after every single answer/rating: due count,
   // streak, and now the readiness gauge itself (ring, band label, trend,
   // and the breakdown if it is open) so everything on the dashboard moves
@@ -12651,8 +12652,9 @@ function stageCalcTap(id){
     sl.ti = (sl.ti || 0) + 1;
     if(sl.ti >= taps.length){
       stageDraw(); const m = document.querySelectorAll('.pcal-msg'); m.forEach(x => x.textContent = '✓ Step done.');
+      if(sl.ci >= sl.steps.length - 1){ try{ DATA.keyPractice = { done:((DATA.keyPractice || {}).done || 0) + 1, at:Date.now() }; persist(); }catch(e){} }
       if(sl.ci < sl.steps.length - 1) setTimeout(() => { if(stageState.cur === sl && sl.practice) stageCalcGo(1); }, 650);
-      else setTimeout(() => document.querySelectorAll('.pcal-msg').forEach(x => x.textContent = '✓ That is the whole sequence.'), 50);
+      else setTimeout(() => document.querySelectorAll('.pcal-msg').forEach(x => x.textContent = '✓ Whole sequence done. That is ' + ((DATA.keyPractice || {}).done || 1) + ' practiced so far.'), 50);
       return;
     }
     stageDraw();
@@ -12808,8 +12810,21 @@ function stageDots(){
   const curAt = stageState.cur && stageState.cur.src !== 'tutor' ? stageId(stageState.cur) : stageState.podId;
   el.innerHTML = deck.map((s, i) => `<button type="button" class="pst-dot${stageId(s) === curAt ? ' cur' : ''}${s.src === 'tutor' ? ' tutor' : ''}" aria-label="Show slide ${i + 1}" onclick="stageGoDeck(${i})"></button>`).join('');
 }
+function stageRemember(sl){
+  try{
+    if(!sl || !(sl.src === 'tutor' || sl.kind === 'calc')) return;
+    const keep = JSON.parse(JSON.stringify(sl)); delete keep.ti; delete keep.practice;
+    const id = stageId(sl); const arr = (DATA.screenRecent || []).filter(x => stageId(x) !== id); arr.push(keep);
+    DATA.screenRecent = arr.slice(-12); persist(); stageEntrySync();
+  }catch(e){}
+}
+function stageEntrySync(){
+  const b = document.getElementById('screenEntryBtn'); if(!b) return;
+  const n = (DATA.screenRecent || []).length; b.style.display = (n || stageState.cur) ? '' : 'none';
+}
 function stageShow(sl, src){
   if(!sl) return;
+  stageRemember(sl);
   stageState.cur = sl;
   const last = stageState.hist[stageState.hist.length - 1];
   if(!last || stageId(last) !== stageId(sl)){ stageState.hist.push(sl); if(stageState.hist.length > 40) stageState.hist.shift(); }
@@ -12948,6 +12963,7 @@ function stageOpenFull(){
   const host = document.getElementById('screenHost'); if(!host) return;
   if(host.parentElement !== document.body) document.body.appendChild(host);
   stageState.fullOpen = true; document.body.classList.add('screen-active'); try{ lockBodyScroll(); }catch(e){}
+  if(!stageState.hist.length && (DATA.screenRecent || []).length){ stageState.hist = DATA.screenRecent.map(x => Object.assign({}, x, { ci:0, ti:0 })); stageState.hi = stageState.hist.length - 1; stageState.cur = stageState.hist[stageState.hi]; }
   stageState.drawn = null; stageChips();
   if(!stageState.cur && stageState.deck[0]) stageShow(stageState.deck[0], 'podcast'); else stageDraw();
   stageTransportSync();
@@ -26265,6 +26281,7 @@ function buildTutorSystemPrompt(){
   timeContext += tutorCoverageBlock();
   try{ const dm = diagnosisModel(), top = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3).map(r => r.name + ' (' + r.state + (r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '%' : '') + ')'), st = staleSolidTopics(2).map(r => r.name + ' ' + r.days + 'd');
     timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why. YOU MAY ALSO DESIGN MATERIAL: when a topic will not stick, a pair of ideas keeps getting mixed up, or a calculation needs a worked model, call create_study_material to make a cheat sheet, memory aid, worked example, side-by-side comparison, flashcards or a short practice set built for exactly their gap (it is saved in their workshop and the cards and questions join their spaced repetition). Make it only when it adds value beyond explaining in chat, keep it accurate and tied to an official topic, and offer to check them on it afterwards. YOU MAY ALSO BUILD NEW TOOLS AND MODES: when none of the app's tools fits what this student needs to pass, call build_custom_tool: a sorter for look-alike classifications they keep mixing up, a step-through for a multi-step method or calculator keystrokes, a decision tree of your own for a judgment the built-in trees do not cover, or a routine that strings the app's sessions into a custom study mode for their situation (for example a short repair routine for their weakest domain). Check open_custom_tool list first so you never duplicate, state the gap in 'why', get every fact right for the exam, and say in one line what you built and how to use it. Build when it will change their result, not to look busy; when they ask for a tool or mode, build what they describe. Later, look at its usage and best score in your list, improve it by rebuilding with the same title, or delete it once it has done its job.`; }catch(err){}
+  timeContext += ' SCREEN: you have a full-screen board (show_on_screen). When you walk through any calculation, use kind calc so the student sees the HP keypad with each tap lit and can practice it; use kind question to put a missed question in front of them, and term, formula, number or compare when showing beats saying. Say one line about what to look at. Do not repeat what the screen already shows.';
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -28597,7 +28614,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.428';
+const BUILD_ID = '2026-10-22.429';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
