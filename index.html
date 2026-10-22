@@ -7108,7 +7108,7 @@ function mergeSpeechChunks(chunks){
   const out = [];
   chunks.forEach(c => {
     const last = out[out.length - 1];
-    if(last && last.speaker === c.speaker && last.pauseAfterMs < 300 && (last.text.length + c.text.length) <= 200 && !/[?]$/.test(last.text)){
+    if(last && last.speaker === c.speaker && last.pauseAfterMs < 300 && (last.text.length + c.text.length) <= 260 && !/[?]$/.test(last.text)){
       last.text += ' ' + c.text; last.pauseAfterMs = c.pauseAfterMs;
     } else out.push({ text:c.text, speaker:c.speaker, pauseAfterMs:c.pauseAfterMs });
   });
@@ -7340,8 +7340,8 @@ function playNextSpeechChunk(){
   if(trimmedText.endsWith('?')) pitchBias += 0.05; // questions naturally lift in pitch
   else if(trimmedText.endsWith('!')) { pitchBias += 0.04; rateBias += 0.02; } // a touch more energy
   else if(/(\.\.\.|--)$/.test(trimmedText)) rateBias -= 0.04; // trailing off, not rushing to the next thought
-  utter.rate = (0.96 + rateBias + (Math.random() * 0.03 - 0.015)) * state.speed;
-  utter.pitch = 1 + pitchBias + (Math.random() * 0.04 - 0.02);
+  utter.rate = (0.96 + rateBias + (Math.random() * 0.016 - 0.008)) * state.speed;
+  utter.pitch = 1 + pitchBias + (Math.random() * 0.02 - 0.01);
   let voice = null;
   if(state.voicePair && chunk.speaker === 'HOST1') voice = state.voicePair.host1;
   else if(state.voicePair && chunk.speaker === 'HOST2') voice = state.voicePair.host2;
@@ -7357,7 +7357,7 @@ function playNextSpeechChunk(){
     // Scale the pause too, not just the spoken rate -- otherwise the gaps
     // between sentences would stay the same fixed length even as the words
     // themselves sped up, which would feel disjointed rather than genuinely faster.
-    const nat = (chunk.pauseAfterMs || 110) * (0.85 + Math.random() * 0.4) + (/[?:]$/.test(trimmedText) ? 120 : 0) + (words > 24 ? 60 : 0) + (state.chunks[state.index] && state.chunks[state.index].speaker && state.chunks[state.index - 1] && state.chunks[state.index - 1].speaker !== state.chunks[state.index].speaker ? 140 : 0);
+    const nat = (chunk.pauseAfterMs || 110) * (0.9 + Math.random() * 0.25) + (/[?:]$/.test(trimmedText) ? 120 : 0) + (words > 24 ? 60 : 0) + (state.chunks[state.index] && state.chunks[state.index].speaker && state.chunks[state.index - 1] && state.chunks[state.index - 1].speaker !== state.chunks[state.index].speaker ? 140 : 0);
     setTimeout(() => { if(myGeneration === state.generation && state.active && !state.paused) playNextSpeechChunk(); }, nat / state.speed);
   };
   utter.onerror = () => {
@@ -28995,7 +28995,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.449';
+const BUILD_ID = '2026-10-22.450';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
