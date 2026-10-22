@@ -10554,6 +10554,7 @@ const MISS_TYPES = {
   over:   { label:'Overconfident', tip:'You marked this confident and missed it. Slow down on questions that feel easy.' },
   rushed: { label:'Answered too fast', tip:'Answered in a few seconds. Read the stem and every choice before locking in.' },
   repeat: { label:'Recurring gap', tip:'You have missed this one before, so it is worth a flashcard or a closer read of the explanation.' },
+  mix:    { label:'Mixed up two ideas', tip:'Two ideas looked alike. Name the one fact that separates them before you choose.' },
   gap:    { label:'Knowledge gap', tip:'' }
 };
 const TRAP_RE = /\b(EXCEPT|NOT|LEAST)\b|\b(except|least likely|least)\b|\b(is|are|was|do|does|did|would|will|can|should|may)\s+not\b/;
@@ -20450,9 +20451,20 @@ function mwChoose(k){
   else { it.pick = k; }
   mwRender();
 }
+const MW_TO_MISS = { read:'trap', know:'gap', mix:'mix', calc:'calc', guess:'gap' };
 function mwReason(k){
   if(!mw) return; const it = mw.items[mw.i]; if(!it) return;
-  it.reason = k || ''; it.stage = 'fix'; mwRender();
+  it.reason = k || '';
+  // What you say went wrong is the best label there is: it replaces the app's guess in your miss pattern, so the dashboard, tutor and plan agree with you.
+  try{
+    if(k && MW_TO_MISS[k]){
+      if(!Array.isArray(DATA.errorLog)) DATA.errorLog = [];
+      DATA.errorLog = DATA.errorLog.filter(e => !(e.q === it.q.id && e.src === 'walk'));
+      DATA.errorLog.push({ t: Date.now(), d: it.q.domain, k: MW_TO_MISS[k], q: it.q.id, src: 'walk' });
+      if(DATA.errorLog.length > 300) DATA.errorLog.splice(0, DATA.errorLog.length - 300);
+      persist();
+    }
+  }catch(e){} it.stage = 'fix'; mwRender();
   const host = document.getElementById('mwHost'); if(host) host.scrollTop = 0;
 }
 async function mwFetchNote(it){
@@ -20508,6 +20520,7 @@ function mwAnswer(k){
   const q = it.sib, right = k === q.correct;
   it.sibPick = k; it.ok = right;
   if(q.isVariant){
+    try{ if(!right){ const st0 = DATA.questionStats[it.q.id]; if(st0){ st0.dueAt = Date.now(); } } }catch(e){}
     try{ creditConceptRetest(q.id, right); const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; } DATA.answerCounter = (DATA.answerCounter || 0) + 1; try{ recordDomainAnswer(q.domain, right, q); }catch(e){} recordStudyDay(); persist(); refreshHeaderStats(); }catch(e){}
     mwRender();
     const v0 = document.querySelector('#mwBody .mw-verdict'); if(v0) v0.scrollIntoView({ block:'nearest', behavior:'smooth' });
@@ -20526,6 +20539,7 @@ function mwAnswer(k){
     try{ recordDomainAnswer(q.domain, right, q); }catch(e){}
     recordStudyDay(); persist(); refreshHeaderStats();
   }catch(e){}
+  if(!right){ try{ const st0 = DATA.questionStats[it.q.id]; if(st0){ st0.dueAt = Date.now(); persist(); } }catch(e){} } // a failed follow-up makes the original due again right away
   if(right){ try{ creditConceptRetest(it.q.id, true); persist(); }catch(e){} } // answering a different question on the idea clears the missed one
   mwRender();
   const v = document.querySelector('#mwBody .mw-verdict'); if(v) v.scrollIntoView({ block:'nearest', behavior:'smooth' });
@@ -27122,7 +27136,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.386';
+const BUILD_ID = '2026-10-22.387';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
