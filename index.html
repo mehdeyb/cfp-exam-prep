@@ -184,6 +184,36 @@
   .pp-txt .pp-l{margin-left:auto;white-space:nowrap;}
   .pp-mini{margin:4px 0 0;}.pp-mini .pp-segs{height:4px;margin-bottom:3px;}.pp-mini .pp-txt{font-size:10.5px;}.pp-mini .pp-t{display:none;}
   body.flashcard-fullscreen .pp{margin:0 0 8px;padding-right:54px;}
+  .pp{cursor:pointer;border-radius:10px;-webkit-tap-highlight-color:transparent;}
+  .pp:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+  .pp-s.brk{margin-right:5px;}
+  .pp-s::after{transition:width .5s var(--ease-out,ease);}
+  .pp-s{transition:background-color .3s ease,box-shadow .3s ease;}
+  .pp-txt::after{content:"\203A";color:var(--muted);opacity:.6;margin-left:-2px;}
+  .pp-mini .pp-txt::after{display:none;}
+  .pp-sheet{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-end;justify-content:center;background:rgba(8,14,24,.55);backdrop-filter:blur(3px);padding:0;}
+  .pp-sheet.on{display:flex;}
+  .pps-panel{width:100%;max-width:560px;max-height:min(82vh,calc(var(--vh-real,100vh) - 40px));display:flex;flex-direction:column;background:var(--surface);color:var(--paper);border:1px solid var(--hair-strong,var(--hair));border-radius:22px 22px 0 0;padding:18px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -14px 44px rgba(0,0,0,.3);animation:ppUp .28s var(--ease-out,ease);}
+  @media (min-width:700px){.pp-sheet{align-items:center}.pps-panel{border-radius:22px;padding-bottom:18px}}
+  @keyframes ppUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  .pps-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 12px;}
+  .pps-k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .pps-h{font-size:16px;font-weight:600;margin-top:2px;}
+  .pps-x{min-width:44px;min-height:44px;margin:-8px -8px 0 0;border:none;background:none;color:var(--muted);font-size:16px;cursor:pointer;}
+  .pps-list{overflow-y:auto;overscroll-behavior:contain;margin:0 -6px;padding:0 6px;}
+  .pps-row{display:flex;gap:12px;align-items:center;width:100%;min-height:52px;padding:8px 10px;margin:0 0 4px;border:1px solid transparent;border-radius:14px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}
+  .pps-row:hover{background:var(--surface2);}
+  .pps-row.now{border-color:var(--gold);background:var(--surface2);}
+  .pps-n{flex:0 0 26px;height:26px;border-radius:50%;border:1px solid var(--hair-strong,var(--hair));display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pps-row.done .pps-n{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .pps-row.now .pps-n{border-color:var(--gold);color:var(--gold);font-weight:600;}
+  .pps-b{display:flex;flex-direction:column;min-width:0;gap:1px;}
+  .pps-t{font-size:14px;line-height:1.3;}
+  .pps-row.done .pps-t{color:var(--muted);}
+  .pps-m{font-size:11.5px;color:var(--muted);}
+  .pps-brk{margin:6px 0 10px;padding:7px 12px;border:1px dashed var(--hair-strong,var(--hair));border-radius:12px;font-size:12px;color:var(--muted);text-align:center;}
+  .pps-note{font-size:11.5px;color:var(--muted);margin:10px 2px 0;line-height:1.4;}
+  @media (prefers-reduced-motion:reduce){.pps-panel{animation:none}.pp-s::after,.pp-s{transition:none}}
   .q-text .q-stem{display:block;}
   .q-exh{display:block;margin:10px 0;border:1px solid var(--hair);border-radius:10px;overflow:hidden;font-size:.82em;}
   .q-exh-r{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;padding:7px 10px;border-top:1px solid var(--hair);}
@@ -8735,8 +8765,10 @@ function ppHtml(curId){
   if(cs && cs.current){ try{ const pr = conductorProgress(cs); if(pr && pr.total){ marks = pr.marks; n = pr.n; total = pr.total; doneN = pr.done; } }catch(e){} }
   const idx = steps.findIndex(x => x.id === curId);
   let segs = '';
-  if(marks && marks.length){ segs = marks.map(m => `<i class="pp-s${m ? ' ' + m : ''}"></i>`).join(''); }
-  else segs = steps.map((x, i) => { const f = x.done ? 1 : (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0); const cls = x.done ? ' done' : (i === idx ? ' now' : (f > 0 ? ' part' : '')); return `<i class="pp-s${cls}" style="--f:${Math.round(f * 100)}%"></i>`; }).join('');
+  // Each segment is as wide as its part is long, so the strip reads as the shape of the day, with the break where it falls.
+  const mins = id => { const x = steps.find(y => y.id === id); return Math.max(4, (x && x.minutes) || 10); };
+  if(marks && marks.length){ const ids = (cs && Array.isArray(cs.parts)) ? cs.parts : []; segs = marks.map((m, i) => `<i class="pp-s${m ? ' ' + m : ''}${ids[i] && ids[i] === plan.breakAfter ? ' brk' : ''}" style="flex-grow:${ids[i] ? mins(ids[i]) : 10}"></i>`).join(''); }
+  else segs = steps.map((x, i) => { const f = x.done ? 1 : (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0); const cls = x.done ? ' done' : (i === idx ? ' now' : (f > 0 ? ' part' : '')); return `<i class="pp-s${cls}${x.id === plan.breakAfter ? ' brk' : ''}" style="--f:${Math.round(f * 100)}%;flex-grow:${mins(x.id)}"></i>`; }).join('');
   if(!marks) n = idx >= 0 ? idx + 1 : doneN;
   const left = steps.reduce((a, x) => a + (x.done ? 0 : (x.minutes || 0) * (1 - (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0))), 0);
   const leftTxt = left >= 5 ? (left >= 90 ? 'about ' + paceHrs(Math.round(left / 15) * 15) + ' left' : 'about ' + Math.round(left / 5) * 5 + ' min left') : 'nearly done';
@@ -8744,6 +8776,36 @@ function ppHtml(curId){
   const cur = idx >= 0 ? steps[idx] : null;
   return `<div class="pp-segs" aria-hidden="true">${segs}</div><div class="pp-txt"><b>${lab}</b>${cur ? `<span class="pp-t">${escapeHtml(String(cur.title).replace(/^(Drill|New ground|Keep fresh): /, '').slice(0, 40))}</span>` : ''}<span class="pp-l">${leftTxt}</span></div>`;
 }
+// Tap the strip to see every part of today, where you are, and jump to any of them.
+function ppOpenSheet(curId){
+  try{
+    const plan = buildStudyPlan(), steps = plan.steps; if(!steps.length) return;
+    let o = document.getElementById('ppSheet');
+    if(!o){ o = document.createElement('div'); o.id = 'ppSheet'; o.className = 'pp-sheet'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', "Today's parts"); document.body.appendChild(o);
+      o.addEventListener('click', e => { if(e.target === o) ppCloseSheet(); }); }
+    const doneN = steps.filter(x => x.done).length;
+    const left = steps.reduce((a, x) => a + (x.done ? 0 : (x.minutes || 0) * (1 - (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0))), 0);
+    const inRun = !!(session || document.body.classList.contains('flashcard-fullscreen') || document.body.classList.contains('focus-mode'));
+    const rows = steps.map((x, i) => {
+      const pr = x.manual ? '' : (x.need > 0 ? `${Math.min(x.have || 0, x.need)} of ${x.need} ${x.unit || ''}` : '');
+      const state = x.done ? 'done' : (x.id === curId ? 'now' : ((x.have || 0) > 0 ? 'part' : ''));
+      const here = x.id === curId;
+      return `<button type="button" class="pps-row ${state}" ${here ? 'aria-current="step"' : ''} onclick="ppGo('${x.id}')"><span class="pps-n">${x.done ? '\u2713' : i + 1}</span><span class="pps-b"><span class="pps-t">${escapeHtml(x.title)}</span><span class="pps-m">${here ? 'You are here \u00b7 ' : ''}${escapeHtml(pr ? pr + ' \u00b7 ' : '')}about ${x.minutes} min</span></span></button>` + (plan.breakAfter === x.id ? `<div class="pps-brk">${plan.minutes >= 300 ? 15 : 10} minute break</div>` : '');
+    }).join('');
+    o.innerHTML = `<div class="pps-panel"><div class="pps-head"><div><div class="pps-k">Today\u2019s parts</div><div class="pps-h">${doneN} of ${steps.length} done \u00b7 ${left >= 5 ? 'about ' + (left >= 90 ? paceHrs(Math.round(left / 15) * 15) : Math.round(left / 5) * 5 + ' min') + ' left' : 'nearly done'}</div></div><button type="button" class="pps-x" aria-label="Close" onclick="ppCloseSheet()">\u2715</button></div><div class="pps-list">${rows}</div>${inRun ? '<p class="pps-note">Picking another part ends this run. Your answers so far are saved.</p>' : ''}</div>`;
+    o.classList.add('on'); document.body.classList.add('pps-open');
+    const cur = o.querySelector('.pps-row.now'); if(cur) setTimeout(() => { try{ cur.scrollIntoView({ block:'center' }); }catch(e){} }, 30);
+    window._ppKey = e => { if(e.key === 'Escape') ppCloseSheet(); }; document.addEventListener('keydown', window._ppKey);
+  }catch(e){}
+}
+function ppCloseSheet(){ const o = document.getElementById('ppSheet'); if(o) o.classList.remove('on'); document.body.classList.remove('pps-open'); if(window._ppKey){ document.removeEventListener('keydown', window._ppKey); window._ppKey = null; } }
+function ppLeaveSurface(){
+  try{ if(session) exitToMenu(); }catch(e){}
+  try{ if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen(); }catch(e){}
+  try{ closeFormulaDrill(); }catch(e){} try{ closeTvmTool(); }catch(e){} try{ mwClose(); }catch(e){} try{ ebClose(); }catch(e){}
+  try{ if(typeof _focus !== 'undefined' && _focus) focusExit({ stay:true }); }catch(e){}
+}
+function ppGo(id){ ppCloseSheet(); try{ const cs = conductorState(); if(cs && cs.current && cs.current.id === id) return; }catch(e){} setTimeout(() => { ppLeaveSurface(); setTimeout(() => { try{ runPlanStep(id); }catch(e){} }, 80); }, 40); }
 function ppRefresh(){
   try{
     document.querySelectorAll('.pp[data-pp]').forEach(el => {
@@ -8751,8 +8813,9 @@ function ppRefresh(){
       if(cur === null){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } return; }
       const h = ppHtml(cur); if(!h){ el.style.display = 'none'; return; }
       if(el._pp !== h){ el.innerHTML = h; el._pp = h; }
-      el.style.display = '';
-      el.setAttribute('role', 'status'); el.setAttribute('aria-label', (el.querySelector('.pp-txt') || {}).textContent || '');
+      el.style.display = ''; el.dataset.cur = cur;
+      if(!el._ppBound){ el._ppBound = true; el.tabIndex = 0; el.onclick = () => ppOpenSheet(el.dataset.cur); el.onkeydown = ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); ppOpenSheet(el.dataset.cur); } }; }
+      el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Today\'s parts. ' + ((el.querySelector('.pp-txt') || {}).textContent || '') + ' Tap to see all parts.');
     });
   }catch(e){}
 }
@@ -9285,7 +9348,7 @@ function buildStudyPlanCore(minutes){
   let tutorFlagged = []; try{ tutorFlagged = tutorFlagsActive().filter(f => f.key).map(f => { let st = null; try{ st = subtopicStats(f.key, f.idx); }catch(e){} return { key:f.key, idx:f.idx, name:f.name, flag:f, st: st || { acc:null, attempts:0 } }; }); }catch(e){}
   const ov = planOverrideToday();
   const ovPins = ov ? ov.pins.map(x => { let st = null; try{ st = subtopicStats(x.key, x.idx); }catch(e){} return { key:x.key, idx:x.idx, name:x.name, flag:{ reason: ov.reason }, st: st || { acc:null, attempts:0 } }; }) : [];
-  const workedKeys = Object.keys(L.drill).filter(k => L.drill[k] > 0 && L.meta[k]);
+  const workedKeys = Object.keys(L.meta || {}).filter(k => L.meta[k] && ((L.drill[k] || 0) > 0 || L.started)); // a topic you opened today keeps its place even before the first answer
   const wkList0 = workedKeys.map(k => { const m = L.meta[k]; let st = null; try{ st = subtopicStats(m.key, m.idx); }catch(e){} return { key:m.key, idx:m.idx, name:m.name, st: st || { acc:null, attempts:0 } }; })
     .concat(ovPins.filter(w => !workedKeys.includes(w.key + '-' + w.idx)))
     .concat(tutorFlagged.filter(w => !workedKeys.includes(w.key + '-' + w.idx) && !ovPins.some(t => t.key === w.key && t.idx === w.idx)))
@@ -9295,7 +9358,7 @@ function buildStudyPlanCore(minutes){
   // targets are re-derived whenever the inputs that matter change (exam phase, time budget, misses, due cards, answer count, weakest topic).
   // The moment any work starts they freeze, so counts and part totals never move under you.
   try{
-    const untouched = !Object.keys(L.modes).some(m => L.modes[m] > 0) && !act.cards && !act.tvm && !act.formula && !Object.keys(L.manual || {}).length && !(L.trees || []).length && !(L.explains || []).length && !(L.figs || []).length && !DATA.conductor;
+    const untouched = !Object.keys(L.modes).some(m => L.modes[m] > 0) && !act.cards && !act.tvm && !act.formula && !Object.keys(L.manual || {}).length && !(L.trees || []).length && !(L.explains || []).length && !(L.figs || []).length && !DATA.conductor && !L.started && !session;
     const sig = [phase.key, minutes, Math.min(missedN, 15), dueCards >= 5 ? 1 : 0, dueQs >= 8 ? 1 : 0, [0,10,20,30,60,80,100,150].filter(t => answered >= t).length, freshWeak[0] ? freshWeak[0].key + '-' + freshWeak[0].idx : '', ov ? 'ov' : '', tutorFlagged.length].join('|');
     if(L.sig !== sig){
       if(untouched && L.sig !== undefined){ L.targets = {}; L.snap = {}; L.drill = {}; L.meta = {}; }
@@ -10174,6 +10237,7 @@ function conductorMaybeStartFromTutor(){
 
 let _planLaunchId = null, _planLaunchTimer = null;
 function runPlanStep(id){
+  try{ const L0 = planDayLog(); if(!L0.started){ L0.started = true; persist(); } }catch(e){} // opening any part ends the pre-start re-planning for the day
   const plan = buildStudyPlan();
   const st = plan.steps.concat(plan.blocks).find(x => x.id === id);
   // A session started from a plan step is sized to what is left of that step, so a half-done step is finished, not restarted.
@@ -13538,7 +13602,7 @@ function dtwFinish(inst){
     try{ renderTodayPlan(); refreshCoachSurfaces(); conductorRefreshPill(); }catch(e){}
   }catch(e){}
 }
-function dtwNext(inst){ const w = dtwState[inst]; const av = w && w.id; delete dtwState[inst]; if(dtwAiOn()){ dtwBegin(inst, av); return; } dtwStart(inst, av); dtwRender(inst); }
+function dtwNext(inst){ const w = dtwState[inst]; const av = w && w.id; delete dtwState[inst]; try{ if(DATA.dtwProgress) delete DATA.dtwProgress[inst]; }catch(e){} if(dtwAiOn()){ dtwBegin(inst, av); return; } dtwStart(inst, av); dtwRender(inst); }
 function dtwReplay(inst){ const w = dtwState[inst]; if(!w) return; const s = w.s, route = w.route; dtwState[inst] = Object.assign({}, w, { step: 0, wrong: 0, wrongHere: [], log: [], done: false }); dtwRender(inst); }
 function dtwAskTutor(inst){
   const w = dtwState[inst]; if(!w) return;
@@ -13549,13 +13613,33 @@ function dtwAskTutor(inst){
 function dtModeSwitch(inst, mode){
   return `<div class="dt-seg" role="tablist" aria-label="How to use this tool"><button type="button" role="tab" aria-selected="${mode === 'walk'}" class="${mode === 'walk' ? 'on' : ''}" onclick="dtSetMode('${inst}','walk')">Practice</button><button type="button" role="tab" aria-selected="${mode === 'explore'}" class="${mode === 'explore' ? 'on' : ''}" onclick="dtSetMode('${inst}','explore')">Explore</button></div>`;
 }
+// A client scenario you left partway is kept (and syncs with your data), so coming back lands on the same question with your wrong turns intact.
+function dtwSave(inst){
+  try{
+    const w = dtwState[inst]; DATA.dtwProgress = DATA.dtwProgress || {};
+    if(!w || w.done){ if(DATA.dtwProgress[inst]){ delete DATA.dtwProgress[inst]; persist(); } return; }
+    if(w.step === 0 && !w.wrong && !w.log.length) return;
+    DATA.dtwProgress[inst] = { at: Date.now(), w: { id:w.id, s:w.s, route:w.route, step:w.step, wrong:w.wrong, wrongHere:w.wrongHere, log:w.log, total:w.total, n:w.n, level:w.level, gen:!!w.gen } };
+    persist();
+  }catch(e){}
+}
+function dtwResume(inst){
+  try{
+    const p = (DATA.dtwProgress || {})[inst]; if(!p || !p.w) return false;
+    if(Date.now() - (p.at || 0) > 3 * 86400000 || !Array.isArray(p.w.route) || !p.w.route[p.w.step]){ delete DATA.dtwProgress[inst]; return false; }
+    dtwState[inst] = Object.assign({ done:false, shown:false }, p.w, { done:false, resumed:true });
+    return true;
+  }catch(e){ return false; }
+}
 function dtwRender(inst){
   const host = document.getElementById('dt-' + inst); if(!host) return;
+  if(!dtwState[inst]) dtwResume(inst);
   if(!dtwState[inst]){
     if(dtwLoading[inst]) return;
     if(dtwAiOn() && host.offsetParent !== null && dtwResultIds(dtKeyOf(inst)).length){ dtwBegin(inst); return; } // hidden cards start with the saved bank, so opening the tab never spends a request per tool
     if(!dtwStart(inst)){ dtModeMap[inst] = 'explore'; dtInit(inst); return; }
   }
+  dtwSave(inst);
   const w = dtwState[inst], key = dtKeyOf(inst), tree = DECISION_TREES[key];
   const logHtml = w.log.map(l => `<div class="dtw-log"><div class="dtw-lq">${escapeHtml(l.q)}</div><div class="dtw-la"><span class="dtw-ok">✓</span> <b>${escapeHtml(l.a)}</b></div><div class="dtw-why">${escapeHtml(l.why)}</div></div>`).join('');
   let body;
@@ -13581,7 +13665,7 @@ function dtwRender(inst){
   host.innerHTML = `<div class="dt-widget dtw">
     <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span></div>
     ${w.gen ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
-    ${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
+    ${w.resumed && !w.done ? `<div class="dtw-plan">Picking up where you left off: question ${w.step + 1} of ${w.route.length}.</div>` : ''}${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
     <div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
     ${logHtml}${body}</div>`;
   if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } }
@@ -13592,7 +13676,7 @@ function openTreeRun(key, o){
   o = o || {};
   const avail = dtwList(key).length; if(!avail) return false;
   dtwRun = { key, goal: Math.max(1, Math.min(o.goal || 3, 6)), n: 0, seen: [], stepId: o.stepId || null };
-  showTab('tools'); dtModeMap[key] = 'walk'; delete dtwState[key];
+  showTab('tools'); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
   if(!card) return false;
@@ -13603,7 +13687,7 @@ function openTreeRun(key, o){
 function dtwRunDone(){ const r = dtwRun; dtwRun = null; focusExit({ done:true }); return r; }
 function openTreeWalk(key){
   dtwRun = null;
-  showTab('tools'); dtModeMap[key] = 'walk'; delete dtwState[key];
+  showTab('tools'); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
   if(card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -20826,6 +20910,31 @@ const MW_REASONS = [
     steps:['Before answering, rate yourself: sure, leaning, or guessing.','When guessing, eliminate the two weakest choices first.','Put any topic you guessed on onto a card, because it is not locked in.'] }
 ];
 function mwLetter(i){ return 'ABCD'.charAt(i) || '?'; }
+// Progress is kept (and syncs with the rest of your data) so leaving partway and coming back picks up on the same miss, in the same step.
+function mwClear(){ if(DATA.mwProgress){ DATA.mwProgress = null; try{ persist(); }catch(e){} } }
+function mwSave(){
+  try{
+    if(!mw || mw.stage === 'wrap'){ return; }
+    DATA.mwProgress = { at: Date.now(), i: mw.i, used: Array.from(mw.used || []), planDone: !!mw.planDone, total: mw.total || 0,
+      items: mw.items.map(x => ({ id: x.q.id, why: x.why || '', pick: x.pick, stage: x.stage, reason: x.reason || null, nowRight: !!x.nowRight, sib: x.sib || null, sibPick: x.sibPick, ok: x.ok })) };
+    persist();
+  }catch(e){}
+}
+function mwRestore(){
+  const p = DATA.mwProgress; if(!p || !Array.isArray(p.items) || !p.items.length) return null;
+  if(Date.now() - (p.at || 0) > 3 * 86400000){ mwClear(); return null; }
+  const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
+  const items = [];
+  p.items.forEach(x => {
+    const q = byId[x.id]; if(!q || !Array.isArray(q.choices) || q.choices.length !== 4) return;
+    if(x.stage === 'try' && !(x.sib && Array.isArray(x.sib.choices))) x = { ...x, stage:'fix', sib:null, sibPick:null };
+    items.push({ q, why: x.why || '', pick: typeof x.pick === 'number' ? x.pick : -1, stage: x.stage || 'why', reason: x.reason || null, nowRight: !!x.nowRight, sib: x.sib || null, sibPick: x.sibPick === undefined ? null : x.sibPick, ok: x.ok === undefined ? null : x.ok });
+  });
+  if(!items.length || items.every(x => x.stage === 'done')){ mwClear(); return null; }
+  let i = Math.min(Math.max(0, p.i || 0), items.length - 1);
+  if(items[i].stage === 'done'){ const nx = items.findIndex(x => x.stage !== 'done'); if(nx >= 0) i = nx; }
+  return { items, i, used:new Set(p.used || []), notes:{}, planDone: !!p.planDone, total: p.total || (DATA.missed || []).length, resumed:true };
+}
 function mwClean(t){ return String(t || '').replace(/^\s*(Wrong|Correct|Incorrect)\s*[—–-]\s*/i, '').trim(); }
 function mwYourPick(q){
   const picks = (DATA.wrongChoiceHistory || {})[q.id] || {}; let best = -1, bn = 0;
@@ -20911,15 +21020,18 @@ function mwSibling(q, used){
 }
 function mwOpen(n, prefer){
   const host = document.getElementById('mwHost'); if(!host) return false;
-  const qs = mwPick(n || 5, prefer);
+  const back = prefer ? null : mwRestore();
+  const qs = back ? back.items : mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
-  mw = { items: qs.map(q => ({ q, why: (mwPick.why || {})[q.id] || '', pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
+  if(back){ mw = back; }
+  else mw = { items: qs.map(q => ({ q, why: (mwPick.why || {})[q.id] || '', pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
   if(host.parentElement !== document.body){ mw.home = host.parentElement; document.body.appendChild(host); }
   mw.opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   document.body.classList.add('mw-active');
   lockBodyScroll();
   mwRender();
+  if(back){ try{ const d = back.items.filter(x => x.stage === 'done').length; setCoach(`Picking up where you left off: miss ${back.i + 1} of ${back.items.length}${d ? ', ' + d + ' already done' : ''}.`, false); }catch(e){} }
   host.scrollTop = 0;
   const h = document.getElementById('mwTitle'); if(h){ h.tabIndex = -1; h.style.outline = 'none'; h.focus({ preventScroll:true }); }
   return true;
@@ -20989,7 +21101,8 @@ function mwRender(){
   const body = document.getElementById('mwBody'), title = document.getElementById('mwTitle'); if(!body) return;
   const it = mw.items[mw.i];
   mwDots();
-  if(mw.stage === 'wrap' || !it){ title.textContent = 'What to take from this'; body.innerHTML = mwWrapHtml(); return; }
+  if(mw.stage === 'wrap' || !it){ title.textContent = 'What to take from this'; body.innerHTML = mwWrapHtml(); mwClear(); return; }
+  mwSave();
   const q = it.q;
   const scn = q.scenario ? `<div class="mw-scn">${escapeHtml(q.scenario)}</div>` : '';
   if(it.stage === 'why'){
@@ -21178,7 +21291,7 @@ function mwWrapHtml(){
     + `<button type="button" class="btn ghost" onclick="mwClose()">Back to your plan</button></div>`;
 }
 function mwCards(){ const cs = (mw && mw.cards) || []; mwClose(); if(cs.length) startFlashcardSet(cs, 'picked'); }
-function mwMore(){ if(!mw) return; const o = mw.opener, h = mw.home; mw = null; document.body.classList.remove('mw-active'); const ok = mwOpen(5); if(ok && mw){ mw.opener = o; if(h) mw.home = h; } }
+function mwMore(){ if(!mw) return; mwClear(); const o = mw.opener, h = mw.home; mw = null; document.body.classList.remove('mw-active'); const ok = mwOpen(5); if(ok && mw){ mw.opener = o; if(h) mw.home = h; } }
 function startMissedReview(){
   if(!DATA.missed.length){ try{ setCoach('Nothing to review yet. Questions you miss land here, so an adaptive session is the quickest way to start. Tap Study to begin one.', false); }catch(e){} return; }
   const pool = shuffle(allQuestions().filter(q=>DATA.missed.includes(q.id)));
@@ -27738,7 +27851,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.415';
+const BUILD_ID = '2026-10-22.418';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
