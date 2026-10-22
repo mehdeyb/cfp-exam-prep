@@ -10954,7 +10954,7 @@ function podcastAutoFresh(){
     if(!podcastIsStale(key, type)) return;
     const tag = key + '|' + podcastPlanSig() + '|' + computeStats().totalAnswered;
     if(window._podFreshTag === tag) return; window._podFreshTag = tag;
-    generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Fresh for today. Tap play.'; }catch(e){} });
+    generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st && !podcastIsStale(key, type) && !/flashcards/.test(st.textContent)) st.textContent = 'Fresh for today. Tap play.'; }catch(e){} });
   }catch(e){}
 }
 function podcastAutoDefault(){
@@ -11510,6 +11510,19 @@ async function generatePodcastEpisode(forceNew, refine){
   }catch(e){
     if(!stillOnSameSelection()) return;
     generateBtn.disabled = false;
+    // The AI could not be reached: read the episode from the flashcards instead, as with no key, so audio review still works.
+    try{
+      if(!(DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey])){
+        const sc = offlinePodcastScript(domainMeta, episodeType, episodeLength);
+        if(sc){
+          if(!DATA.podcastEpisodes) DATA.podcastEpisodes = {}; if(!DATA.podcastGeneratedAt) DATA.podcastGeneratedAt = {}; if(!DATA.podcastPersonalized) DATA.podcastPersonalized = {};
+          DATA.podcastEpisodes[cacheKey] = sc; DATA.podcastGeneratedAt[cacheKey] = Date.now() - 6 * 3600000; DATA.podcastPersonalized[cacheKey] = false;
+          persist(); podcastDomainChanged(); generateBtn.textContent = 'Rewrite this episode';
+          const st = document.getElementById('podcastStatus'); if(st) st.textContent = "Couldn't reach the AI, so this episode is read from your flashcards. Rewrite it later for a fresh one.";
+          return;
+        }
+      }
+    }catch(_){}
     generateBtn.textContent = (DATA.podcastEpisodes && DATA.podcastEpisodes[cacheKey]) ? 'Rewrite this episode' : 'Generate this episode'; try{ renderPodcastHero(); }catch(_){}
     transcript.className = 'podcast-transcript';
     transcript.innerHTML = '';
@@ -25325,11 +25338,13 @@ function tutorGuessIntent(t){
   if(/podcast/.test(t)) return null;
   if(/\b(exam|sit|sitting|test day)\b/.test(t) && !/\?\s*$/.test(t) && tutorParseDate(t)) return 'date';
   if(/readiness|\bscore\b/.test(t)) return 'readiness';
+  if(/cheat ?sheet|study sheet|one[- ]pager|summar|mnemonic|memory (aid|trick)/.test(t)) return 'sheet';
+  if(/diagnos|where do i stand|where i stand|close (the |my )?gaps?|what do i need to (see|close|fix|learn)/.test(t)) return 'diagnose';
   if(/\bnpv\b|\birr\b|cfj|uneven cash|net present value|internal rate/.test(t)) return 'cashflow';
   if(/tvm|calculator|time value/.test(t)) return 'tvm';
   if(/study guide/.test(t)) return 'guide';
   if(/decision tool|\btrust\b|entity/.test(t)) return 'tools';
-  if(/progress|diagnos|breakdown|how am i doing/.test(t)) return 'progress';
+  if(/progress|breakdown|how am i doing/.test(t)) return 'progress';
   if(/exam date|when is my exam/.test(t)) return 'date';
   if(/\bnext\b|what (should|do|can) i|best (use|move|step)|today|\bplan\b|where (do|should) i (start|begin)|what now|help me study|ready to study/.test(t)) return 'next';
   if(/weak|worst|struggl|\bgaps?\b|focus/.test(t)) return 'weak';
@@ -25400,6 +25415,28 @@ function tutorLocalGuide(text){
       tutorGuideBubble(n ? `You have ${n} missed question${n === 1 ? '' : 's'} banked. Each comes back as a fresh question on the same idea, which tests the idea rather than the wording.` : 'Nothing is banked as missed yet. Do a session first and the ones you miss will collect here.', [
         n ? { label: 'Review my missed questions', primary: true, run: () => startMissedReview() } : { label: 'Start an adaptive session', primary: true, run: () => startAdaptive() },
       ]);
+    } else if(kind === 'diagnose'){
+      const dm = diagnosisModel(), gaps = dm.rows.filter(x => x.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3);
+      const e = dm.e;
+      if(!gaps.length){ tutorGuideBubble(`${e.total - e.nNew} of ${e.total} topics seen and nothing is clearly weak yet. A short diagnostic would measure the topics you have barely tried.`, [{ label: 'Run a quick diagnostic', primary: true, run: () => tutorGuideBubble(tutorRunDiagnostic({ count: 8 })) }]); }
+      else {
+        const line = x => `${x.name} (${x.state}${x.st.acc !== null ? ', ' + Math.round(x.st.acc * 100) + '% over ' + x.st.attempts : ''}${x.missedN ? ', ' + x.missedN + ' still missed' : ''})`;
+        tutorGuideBubble(`Where you stand: ${e.total - e.nNew} of ${e.total} topics seen, ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried. Biggest gaps by exam weight: ${gaps.map(line).join('; ')}.`, [
+          { label: 'Repair ' + gaps[0].name, primary: true, run: () => { showTab('study'); startSubtopicDrill(gaps[0].dom, gaps[0].idx); } },
+          { label: 'Run a quick diagnostic', run: () => tutorGuideBubble(tutorRunDiagnostic({ count: 8 })) },
+          { label: 'Shape today\'s plan around these', run: () => tutorGuideBubble(tutorShapePlan({ focus: 'repair', pin_topics: gaps.slice(0, 2).map(x => x.name), reason: 'Your biggest gaps by exam weight come first today.' })) },
+        ]);
+      }
+    } else if(kind === 'sheet'){
+      const ph = (/\b(?:on|for|about|of)\s+(.{3,}?)[?.!]*$/i.exec(text) || [])[1];
+      const m = (ph && tutorFlagMatch(ph)) || tutorFlagMatch(text); const dm = diagnosisModel();
+      const row = m ? dm.rows.find(x => x.key === m.key + '-' + m.idx) : (ph ? null : dm.rows.filter(x => x.state !== 'solid').sort((a, b) => b.score - a.score)[0]);
+      const cards = row ? (covTopicCards()[row.key] || []).map(id => allFlashcards().find(c => c.id === id)).filter(Boolean).slice(0, 8) : [];
+      if(!row || cards.length < 3){ tutorGuideBubble('I could not match that to an official topic with enough cards to build a sheet. Try the topic as it appears in the blueprint, or open Reference to browse.', [{ label: 'Open Reference', primary: true, run: () => showTab('reference') }]); }
+      else {
+        tutorCreateMaterial({ kind: 'cheat_sheet', title: row.name + ': cheat sheet', topic: row.name, content: cards.map(c => '- **' + c.term + '**: ' + String(c.def).slice(0, 170)).join('\n') })
+          .then(res => { if(/^Created/.test(res)) tutorGuideBubble('Built from your own cards on ' + row.name + ' and saved to your workshop on the Study tab. Reading it, then drilling the topic, is the quickest way to make it stick.', [{ label: 'Drill ' + row.name, primary: true, run: () => { showTab('study'); startSubtopicDrill(row.dom, row.idx); } }]); else tutorGuideBubble(String(res).replace(/^Error: /, '')); });
+      }
     } else if(kind === 'quiz'){
       tutorGuideBubble('A mixed adaptive session is the best default: it blends domains, leans on your weak areas and brings back what is due.', [
         { label: 'Start adaptive session', primary: true, run: () => startAdaptive() },
@@ -25440,7 +25477,7 @@ function tutorLocalGuide(text){
 }
 
 // Without an API key the tutor still answers from what the app holds: the closest flashcards and a way to study them.
-function tutorOfflineAnswer(text){
+function tutorOfflineAnswer(text, down){
   try{
     const stop = new Set('what does mean about explain tell with that this have from your their which when where would could should give help make memory trick walk through question concepts concept key know need exam into than then them they were been will just like also very more most some such only over under again'.split(' '));
     const norm = fcNorm(text), toks = norm.trim().split(' ').filter(w => w.length > 3 && !stop.has(w));
@@ -25458,12 +25495,12 @@ function tutorOfflineAnswer(text){
       return { c, sc };
     }).filter(x => x.sc >= 3).sort((a, b) => b.sc - a.sc);
     let picks = scored.slice(0, 3).map(x => x.c), lead;
-    if(picks.length){ lead = 'I can\'t write a fresh explanation without an API key, but here is what your flashcards say about it:'; }
+    if(picks.length){ lead = (down ? 'I can\'t reach the AI right now' : 'I can\'t write a fresh explanation without an API key') + ', but here is what your flashcards say about it:'; }
     else if(dm){
       let pool = []; try{ pool = fcGapCards().filter(c => c.domain === dm.key); }catch(e){}
       if(pool.length < 3) pool = pool.concat(cards.filter(c => c.domain === dm.key && pool.indexOf(c) < 0 && getSpacedStat(DATA.flashcardStats, c.id).seen === 0));
       picks = pool.slice(0, 3);
-      lead = 'I can\'t write a fresh explanation without an API key, but these ' + dm.name + ' cards are the quickest way to build it:';
+      lead = (down ? 'I can\'t reach the AI right now' : 'I can\'t write a fresh explanation without an API key') + ', but these ' + dm.name + ' cards are the quickest way to build it:';
     }
     if(!picks.length) return false;
     const body = lead + '\n\n' + picks.map(c => c.term + ': ' + c.def).join('\n\n');
@@ -25471,7 +25508,7 @@ function tutorOfflineAnswer(text){
       { label: 'Study these cards', primary: true, run: () => { startFlashcardSet(picks.concat(cards.filter(c => c.domain === picks[0].domain && picks.indexOf(c) < 0).slice(0, 9)), 'topic'); } },
       dm ? { label: 'Drill ' + dm.name, run: () => startDrill(dm.key) } : null,
       { label: 'Open Reference', run: () => showTab('reference') },
-      { label: 'Add an API key', run: () => openSettings() },
+      down ? { label: 'Try the tutor again', run: () => sendTutorMessage(text) } : { label: 'Add an API key', run: () => openSettings() },
     ];
     tutorGuideBubble(body, acts);
     return true;
@@ -25564,6 +25601,7 @@ async function sendTutorMessage(presetText){
     typingBubble.textContent = "Couldn't get a response: " + msg + " — " + describeAiError(e);
     status.textContent = 'Tutor hit a snag — see above.';
     status.classList.add('err');
+    try{ if(!tutorLocalGuide(text)) tutorOfflineAnswer(text, true); }catch(_){} // the app still helps from what it holds while the AI is unreachable
   }
 
   tutorBusy = false;
@@ -26237,7 +26275,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.339';
+const BUILD_ID = '2026-10-21.340';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
