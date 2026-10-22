@@ -1590,6 +1590,7 @@
   .plan-today .pt-use{font:inherit;font-weight:600;color:var(--gold);background:none;border:none;padding:6px 2px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
   .plan-today .pt-min.sug::after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-left:4px;vertical-align:middle;}
   .plan-today .pt-sub{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
+  .plan-today .pt-more{display:block;width:100%;min-height:44px;margin:6px 0;padding:10px 12px;border-radius:14px;border:1px dashed var(--hair-strong);background:none;color:var(--gold);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;}
   .plan-today .pt-today{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:-4px 0 10px;}
   .plan-today .pt-today-l{font-size:11.5px;color:var(--muted);margin-right:2px;}
   .plan-today .pt-min.sm{min-height:36px;padding:5px 11px;font-size:11px;}
@@ -9862,9 +9863,11 @@ function conductorWrapHtml(c){
     <ul class="cd-parts" style="padding:0;">${c.log.map(x => `<li><div>${escapeHtml(x.title)}<small>${escapeHtml(x.reason === 'skipped' ? 'Skipped' : x.text)}</small></div></li>`).join('')}</ul>
     <div class="cd-actions"><button type="button" class="btn" onclick="conductorClose(true)">Done for today</button></div>`;
 }
+function planBreakMin(m){ return m >= 300 ? 15 : 10; }
+function planBreakAt(m, total){ return m >= 300 ? total / 2 : Math.min(105, total / 2); }
 // A long sitting (3.5 hours or more) gets one real break once about half the work is done.
 function conductorBreakDue(c){
-  try{ return c.minutes >= 200 && !c.breakTaken && conductorUsedMin(c) >= Math.min(105, c.minutes / 2.2) && c.log.length >= 3; }catch(e){ return false; }
+  try{ return c.minutes >= 200 && !c.breakTaken && conductorUsedMin(c) >= planBreakAt(c.minutes, c.minutes / 1.1) && c.log.length >= 3; }catch(e){ return false; }
 }
 function conductorBreakDone(){ const c = conductorState(); if(!c) return; c.breakTaken = true; persist(); clearInterval(window._cdBrk); conductorShow('between'); }
 function conductorShow(kind){
@@ -9878,13 +9881,13 @@ function conductorShow(kind){
     const parts = conductorFit(conductorCandidates(fake, plan), 0, c.minutes);
     const tot = parts.reduce((a, x) => a + x.minutes, 0);
     const withBreak = c.minutes >= 200 && parts.length >= 5 && tot >= 150;
-    let cum = 0, brkAt = -1; if(withBreak){ for(let i = 0; i < parts.length - 1; i++){ cum += parts[i].minutes; if(cum >= Math.min(105, tot / 2)){ brkAt = i; break; } } }
-    const endAt = new Date(Date.now() + (tot + (brkAt >= 0 ? 10 : 0)) * 60000); const endTxt = endAt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+    let cum = 0, brkAt = -1; if(withBreak){ for(let i = 0; i < parts.length - 1; i++){ cum += parts[i].minutes; if(cum >= planBreakAt(c.minutes, tot)){ brkAt = i; break; } } }
+    const endAt = new Date(Date.now() + (tot + (brkAt >= 0 ? planBreakMin(c.minutes) : 0)) * 60000); const endTxt = endAt.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
     let focusTxt = ''; try{ const bf = podcastBriefing().focus.slice(0, 2).map(f => f.label); if(bf.length) focusTxt = 'Focus today: ' + bf.join('; ') + '. '; }catch(e){}
     const resumed = plan.steps.some(x => x.done); // some of today is already finished
     html = `<div class="cd-kicker">${resumed ? 'Rest of today' : "Today's session"} · ${escapeHtml(plan.phase.label)}</div><h3 class="cd-title" id="cdTitle">${parts.length} part${parts.length === 1 ? '' : 's'}${resumed ? ' left' : ''}, about ${tot} minutes</h3>
-      <p class="cd-text">${escapeHtml(focusTxt)}Done around ${escapeHtml(endTxt)}${brkAt >= 0 ? ', with one 10 minute break' : ''}.${(endAt.getHours() >= 23 && endAt.getMinutes() >= 30) || endAt.getHours() < 5 ? ' That runs late: stopping after the break and finishing tomorrow protects your sleep, which is when practice settles.' : ''} After each part I check how it went and adjust what comes next. Skip a part or stop whenever you like.</p>
-      <ol class="cd-parts">${parts.map((x, i) => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>` + (i === brkAt ? `<li class="cd-brk"><div>Break<small>10 min, away from the screen</small></div></li>` : '')).join('')}</ol>
+      <p class="cd-text">${escapeHtml(focusTxt)}Done around ${escapeHtml(endTxt)}${brkAt >= 0 ? ', with one ' + planBreakMin(c.minutes) + ' minute break' : ''}.${(endAt.getHours() >= 23 && endAt.getMinutes() >= 30) || endAt.getHours() < 5 ? ' That runs late: stopping after the break and finishing tomorrow protects your sleep, which is when practice settles.' : ''} After each part I check how it went and adjust what comes next. Skip a part or stop whenever you like.</p>
+      <ol class="cd-parts">${parts.map((x, i) => `<li><div>${escapeHtml(x.title)}<small>about ${x.minutes} min</small></div></li>` + (i === brkAt ? `<li class="cd-brk"><div>Break<small>${planBreakMin(c.minutes)} min, away from the screen</small></div></li>` : '')).join('')}</ol>
       <div class="cd-next"><b>Starting with: ${escapeHtml(parts[0].title)}</b><span>${escapeHtml(CONDUCTOR_CUES[parts[0].id] || 'Take it one question at a time.')}</span></div>
       <div class="cd-actions"><button type="button" class="btn" onclick="conductorLaunchNext()">${resumed ? 'Continue' : 'Begin'}</button><button type="button" class="cd-link" onclick="conductorClose(false)">Not now</button></div>`;
   } else if(kind === 'between' || kind === 'menu'){
@@ -9900,11 +9903,11 @@ function conductorShow(kind){
         <button type="button" class="cd-link" onclick="conductorHide()">Close</button><button type="button" class="cd-link" onclick="conductorFinishNow()">End session</button></div>`;
     } else if(conductorBreakDue(c)){
       html = `<div class="cd-kicker">${conductorProgress(c).done} of ${conductorTotal(c)} parts done \u00b7 halfway</div>${conductorDots(c)}
-        <h3 class="cd-title" id="cdTitle">Take a 10 minute break</h3>
+        <h3 class="cd-title" id="cdTitle">Take a ${planBreakMin(c.minutes)} minute break</h3>
         <p class="cd-text">You have been at it for about ${Math.round(conductorUsedMin(c))} minutes. Stand up, drink water, look at something far away, and stay off the screen. Practice after a real rest sticks better than one long push.</p>
         <div class="cd-next"><b>When you are back: ${escapeHtml(nxt.title)}</b><span>${escapeHtml(nxt.why)} About ${nxt.minutes} min.</span></div>
         <div class="cd-actions"><button type="button" class="btn" onclick="conductorBreakDone()">I\u2019m back <span id="cdBreakT" style="opacity:.7;"></span></button><button type="button" class="cd-link" onclick="conductorBreakDone()">Skip the break</button></div>`;
-      setTimeout(() => { const t0 = Date.now(); clearInterval(window._cdBrk); window._cdBrk = setInterval(() => { const e = document.getElementById('cdBreakT'); if(!e){ clearInterval(window._cdBrk); return; } const r = Math.max(0, 600 - Math.floor((Date.now() - t0) / 1000)); e.textContent = '\u00b7 ' + Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }, 1000); }, 50);
+      setTimeout(() => { const t0 = Date.now(); clearInterval(window._cdBrk); window._cdBrk = setInterval(() => { const e = document.getElementById('cdBreakT'); if(!e){ clearInterval(window._cdBrk); return; } const r = Math.max(0, planBreakMin(c.minutes) * 60 - Math.floor((Date.now() - t0) / 1000)); e.textContent = '\u00b7 ' + Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }, 1000); }, 50);
     } else {
       html = `<div class="cd-kicker">${conductorProgress(c).done} of ${conductorTotal(c)} parts done</div>${conductorDots(c)}
         <h3 class="cd-title" id="cdTitle">${escapeHtml(last ? last.title : 'Part done')}</h3>
@@ -10100,6 +10103,7 @@ function planAdvanceDismiss(){ _planAdv = null; try{ renderTodayPlan(); }catch(e
 function planAdvanceReveal(){
   setTimeout(() => { try{ renderTodayPlan(); const e = document.getElementById('ptAdv'); if(e && document.getElementById('tab-study') && document.getElementById('tab-study').offsetParent !== null) e.scrollIntoView({behavior:'smooth', block:'center'}); }catch(_){} }, 120);
 }
+function ptToggleAll(){ window._ptAll = !window._ptAll; renderTodayPlan(); }
 function renderTodayPlan(){
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
@@ -10139,7 +10143,13 @@ function renderTodayPlan(){
       <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
-  const rows = stepRows.join('');
+  // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
+  let rows;
+  if(stepRows.length > 11 && !window._ptAll){
+    const fi = Math.max(0, plan.steps.findIndex(x => !x.done)), st0 = Math.max(0, fi - 2), en0 = Math.min(stepRows.length, st0 + 9);
+    rows = (st0 > 0 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${st0} earlier step${st0 === 1 ? '' : 's'} (show all ${stepRows.length})</button>` : '') + stepRows.slice(st0, en0).join('')
+      + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
+  } else rows = stepRows.join('') + (stepRows.length > 11 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
@@ -27542,7 +27552,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.402';
+const BUILD_ID = '2026-10-22.403';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
