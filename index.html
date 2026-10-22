@@ -5860,7 +5860,7 @@ async function handleSaveGeminiKey(){
   try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
   catch(e){
     // Google answered but every model was busy: the key itself got through, so keep it.
-    if(e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500)){ await saveGeminiKeyToStorage(key); input.value = ''; status.textContent = 'Saved. Google\'s models are busy right now, so the first answer may take a moment; the app retries on its own.'; status.classList.remove('err'); await checkAIAvailability(); return; }
+    if(e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500 || (_geminiDiag || []).some(d => /answered (429|5\d\d)/.test(d)))){ await saveGeminiKeyToStorage(key); input.value = ''; status.textContent = 'Saved. Google\'s models are busy right now, so the first answer may take a moment; the app retries on its own.'; status.classList.remove('err'); await checkAIAvailability(); return; }
     geminiKey = prev; geminiHelpLinks(e); status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e) + (_geminiDiag.length ? ' (' + _geminiDiag.join(' | ') + ')' : ''); status.classList.add('err'); return; }
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
@@ -5877,6 +5877,7 @@ function geminiHelpLinks(err){
   const el = document.getElementById('geminiHelp'); if(!el) return;
   const lines = (_geminiDiag || []).slice(); if(err && err.message) lines.push((err.provider === 'gemini' ? 'AI Studio' : '') + ' ' + err.message);
   const seen = {}, out = [];
+  if((_geminiDiag || []).some(d => /answered (429|5\d\d)/.test(d))){ el.style.display = 'none'; el.innerHTML = ''; return; }
   lines.forEach(t => {
     if(!/has not been used|is disabled|SERVICE_DISABLED|not enabled/i.test(t)) return;
     const m = String(t).match(/project[s]?[\s=\/:]+(\d{8,})/i); if(!m) return;
@@ -15861,7 +15862,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
     else body.contents.unshift({ role:'user', parts:[{ text: si }] });
   }
   let response;
-  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = /^AQ\./.test(geminiKey) ? ['vertex', 'studio'] : ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved, saved === 'studio' ? 'vertex' : 'studio'] : base }; }
+  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved, saved === 'studio' ? 'vertex' : 'studio'] : base }; }
   const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
   let lastErr = null;
   for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
@@ -15984,6 +15985,7 @@ function describeAiError(err){
     if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
     if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
     const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
+    if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)) return status === 429 ? 'Gemini is rate-limiting this key — wait a bit and try again.' : "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
     if(/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured|not enabled/i.test(_gtxt)) return "Google's Gemini service is switched off for the project this key belongs to. Easiest fix: open aistudio.google.com/apikey, tap Create API key (choose a new project), and paste that key in Settings. A key made there has the service on already.";
     if(status === 403 && /referer|referrer|restrict|blocked|IP address/i.test(_gtxt)) return 'this Gemini key has restrictions (website or app limits) that block the app. Make a new unrestricted key at aistudio.google.com/apikey and paste it in Settings.';
     if(status === 401 || status === 403) return 'Google refused the Gemini key — check it in Settings, or make a new one at aistudio.google.com/apikey.';
@@ -26633,7 +26635,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.358';
+const BUILD_ID = '2026-10-22.359';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
