@@ -2817,6 +2817,7 @@
   .mw-more summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--muted);font-size:13.5px;}
   .mw-more p{margin:0 0 10px;} .mw-more p span{color:var(--muted);font-size:13px;}
   .mw-note p{margin:0 0 6px;} .mw-note p:last-child{margin-bottom:0;}
+  .mw-why{margin:10px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted);} .mw-why b{display:inline;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px;color:var(--muted);opacity:.85;}
   .mw-sub{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:1px;}
   .mw-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
   .mw-verdict{font-weight:600;font-size:16px;margin:2px 0 10px;color:var(--paper);}
@@ -20378,6 +20379,7 @@ function mwBreakdown(it){
   if(r && r.steps) out += sec('Next time, do this', `<ol>${r.steps.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`);
   return out;
 }
+function mwWhy(t){ return `<p class="mw-why"><b>Why this step</b>${escapeHtml(t)}</p>`; }
 function mwHead(it, extra){
   const d = DOMAINS.find(x => x.key === it.q.domain) || {};
   const times = Math.max(0, ...Object.values((DATA.wrongChoiceHistory || {})[it.q.id] || {}).map(Number));
@@ -20405,7 +20407,7 @@ function mwRender(){
     let reasons = MW_REASONS.filter(r => r.k !== 'calc' || q.calcSteps || q.calcType || stemLooksComputational(q));
     if(!TRAP_RE.test(q.q || '')) reasons = reasons.filter(r => r.k !== 'read').concat(reasons.filter(r => r.k === 'read'));
     body.innerHTML = mwHead(it) + scn + `<div class="mw-q">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
-      + (hasPick ? `<div class="mw-ask"><b>What made ${mwLetter(it.pick)} look right?</b><div class="mw-chips">${reasons.map(r => `<button type="button" class="mw-chip" onclick="mwReason('${r.k}')">${escapeHtml(r.label)}</button>`).join('')}</div><button type="button" class="mw-skip" onclick="mwReason('')">Skip, just show me</button></div>`
+      + (hasPick ? `<div class="mw-ask"><b>What made ${mwLetter(it.pick)} look right?</b><div class="mw-chips">${reasons.map(r => `<button type="button" class="mw-chip" onclick="mwReason('${r.k}')">${escapeHtml(r.label)}</button>`).join('')}</div><button type="button" class="mw-skip" onclick="mwReason('')">Skip, just show me</button>${mwWhy('Putting into words why a wrong answer looked right (self-explanation) corrects the belief behind it better than just reading the answer. Your reason also tells the app which kind of fix you need.')}</div>`
         : `<p class="hint" style="margin:0;">You missed this one before. Tap the answer you would choose now.</p>`);
     return;
   }
@@ -20424,7 +20426,7 @@ function mwRender(){
     if(it.reason === 'read'){ const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|PRIMARY)\b/); if(m) tip = `<b>${escapeHtml(r.label)}</b>The word that decided it: ${escapeHtml(m[1])}. ${escapeHtml(r.tip)}`; }
     const canNote = aiFeaturesAvailable && !q.calcSteps && !q.calcType && it.pick >= 0;
     body.innerHTML = mwHead(it) + scn + `<div class="mw-q sm">${highlightQualifiers(q.q)}</div><ul class="mw-choices">${choices}</ul>`
-      + `<div class="mw-break">${mwBreakdown(it)}</div>`
+      + `<div class="mw-break">${mwBreakdown(it)}${mwWhy(it.pick >= 0 ? 'Seeing the right answer beside the tempting one, with the fact that separates them, targets the exact confusion. Reading the right answer alone leaves the old belief in place.' : 'Saying why the answer holds, not just that it does, is what lets you get it right when the wording changes.')}</div>`
       + (canNote ? `<div class="mw-note loading" id="mwNote"><b>From your tutor</b>Writing a closer look at why that one is tempting…</div>` : '')
       + `<div class="mw-actions"><button type="button" class="btn" onclick="mwTry()">Try a similar one</button><button type="button" class="btn ghost" onclick="mwAskTutor()">Ask the tutor</button></div>`;
     if(canNote) mwFetchNote(it);
@@ -20441,7 +20443,8 @@ function mwRender(){
     }).join('');
     const last = mw.i >= mw.items.length - 1;
     body.innerHTML = mwHead(it, 'similar idea') + (s.scenario ? `<div class="mw-scn">${escapeHtml(s.scenario)}</div>` : '') + `<div class="mw-q">${highlightQualifiers(s.q)}</div><ul class="mw-choices">${choices}</ul>`
-      + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div><div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
+      + (answered ? '' : mwWhy('A different question on the same idea is real recall. Re-reading the same one only tests whether you recognise it, and this shows if you learned the idea or just the wording.'))
+      + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div>${mwWhy(it.ok ? 'Getting it right after a miss, on different wording, is what builds durable memory. The original comes back later, since spaced repeats beat cramming.' : 'A miss here is useful: it shows the idea is not secure. The original is now due again sooner, so you meet it again before it fades.')}<div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
     return;
   }
 }
@@ -27136,7 +27139,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.387';
+const BUILD_ID = '2026-10-22.388';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
