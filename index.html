@@ -3720,8 +3720,9 @@
           <div class="api-key-connected" id="geminiConnected" style="display:none;margin-top:12px;">
             <span><b class="akc-name">Gemini</b> <span id="geminiHealthText">✓ Connected as your backup AI.</span></span>
             <div class="akc-actions"><button class="linklike" onclick="testGeminiConnection()">Test</button>
-            <button class="linklike" onclick="handleClearGeminiKey()">Disconnect</button></div>
+            <button class="linklike" onclick="handleClearGeminiKey()">Replace key</button></div>
           </div>
+          <div class="hint" id="geminiHelp" style="display:none;margin-top:10px;"></div>
           <div class="hint" id="aiBuildLine" style="margin-top:2px;font-size:11.5px;"></div>
         </div>
 
@@ -5860,24 +5861,41 @@ async function handleSaveGeminiKey(){
   catch(e){
     // Google answered but every model was busy: the key itself got through, so keep it.
     if(e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500)){ await saveGeminiKeyToStorage(key); input.value = ''; status.textContent = 'Saved. Google\'s models are busy right now, so the first answer may take a moment; the app retries on its own.'; status.classList.remove('err'); await checkAIAvailability(); return; }
-    geminiKey = prev; status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e) + (_geminiDiag.length ? ' (' + _geminiDiag.join(' | ') + ')' : ''); status.classList.add('err'); return; }
+    geminiKey = prev; geminiHelpLinks(e); status.textContent = ((e && (e.code === 'TIMEOUT' || e.code === 'NETWORK')) ? 'Could not check the key: ' : 'Google rejected that: ') + describeAiError(e) + (_geminiDiag.length ? ' (' + _geminiDiag.join(' | ') + ')' : ''); status.classList.add('err'); return; }
   await saveGeminiKeyToStorage(key);
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
-  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; geminiOk(true); }catch(e){}
+  try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; geminiOk(true); geminiHelpLinks(null); }catch(e){}
 }
 async function handleClearGeminiKey(){
-  if(!confirm('Disconnect Gemini? Your Claude key, if any, keeps working.')) return;
+  if(!confirm('Remove the saved Gemini key so you can paste a new one? Your Claude key, if any, keeps working.')) return;
   try{ await storageSet(GEMINI_KEY_STORAGE, ''); }catch(e){}
-  geminiKey = null; _claudeDownUntil = 0;
+  geminiKey = null; _claudeDownUntil = 0; try{ geminiHelpLinks(null); }catch(e){}
   await checkAIAvailability();
+}
+function geminiHelpLinks(err){
+  const el = document.getElementById('geminiHelp'); if(!el) return;
+  const lines = (_geminiDiag || []).slice(); if(err && err.message) lines.push((err.provider === 'gemini' ? 'AI Studio' : '') + ' ' + err.message);
+  const seen = {}, out = [];
+  lines.forEach(t => {
+    if(!/has not been used|is disabled|SERVICE_DISABLED|not enabled/i.test(t)) return;
+    const m = String(t).match(/project[s]?[\s=\/:]+(\d{8,})/i); if(!m) return;
+    const vertex = /vertex|agent platform|aiplatform/i.test(t);
+    const api = vertex ? 'aiplatform.googleapis.com' : 'generativelanguage.googleapis.com', key = api + m[1];
+    if(seen[key]) return; seen[key] = 1;
+    out.push('<a href="https://console.developers.google.com/apis/api/' + api + '/overview?project=' + m[1] + '" target="_blank" rel="noopener">Switch on ' + (vertex ? 'Vertex AI' : 'the Gemini API') + ' for project ' + m[1] + '</a>');
+  });
+  if(!out.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  out.sort((x, y) => (/Vertex/.test(x) ? 1 : 0) - (/Vertex/.test(y) ? 1 : 0));
+  el.innerHTML = 'Google needs this switched on once for the key\'s project. Tap, press Enable on the page that opens, wait a minute, then tap Test:<br>' + out.join('<br>');
+  el.style.display = 'block';
 }
 function geminiOk(ok){ try{ const b = document.getElementById('geminiConnected'); if(b) b.classList.toggle('warn', !ok); }catch(e){} }
 async function testGeminiConnection(){
   const el = document.getElementById('geminiHealthText'); if(!geminiKey) return;
   if(el) el.textContent = 'Testing Gemini…'; const t0 = Date.now();
-  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; geminiOk(true); }
-  catch(e){ if(el) el.textContent = '⚠ Not working: ' + describeAiError(e); geminiOk(false); }
+  try{ const r = await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); if(!/\S/.test(String(r))) throw Object.assign(new Error('empty'), { code:'BAD_REPLY' }); if(el) el.textContent = '✓ Working · ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's'; geminiOk(true); geminiHelpLinks(null); }
+  catch(e){ if(el) el.textContent = '⚠ Not working: ' + describeAiError(e); geminiOk(false); geminiHelpLinks(e); }
 }
 async function handleClearApiKey(){
   if(!confirm('Disconnect your API key? AI features will pause until you reconnect one.')) return;
@@ -26602,7 +26620,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.356';
+const BUILD_ID = '2026-10-22.357';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
