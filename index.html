@@ -6588,6 +6588,7 @@ async function loadData(){
   // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
   if(DATA.lastTab && DATA.lastTab !== 'study'){ await runDeferredInit(); showTab(DATA.lastTab); }
   else requestAnimationFrame(() => setTimeout(() => { if(window.requestIdleCallback) requestIdleCallback(() => { runDeferredInit(); }, { timeout: 1500 }); else runDeferredInit(); }, 0));
+  window._dataReady = true;
   if(loadFailed){
     persistFailureWarned = true;
     setStorageWarning(true);
@@ -7427,7 +7428,7 @@ function renderReadinessGauge(stats){
   if(ringFill){
     const circumference = 2 * Math.PI * 52;
     ringFill.style.strokeDasharray = circumference.toFixed(3);
-    ringFill.style.strokeDashoffset = (circumference * (1 - stats.readiness/100)).toFixed(3);
+    ringFill.style.strokeDashoffset = (circumference * (1 - (typeof stats.readinessExact === 'number' ? stats.readinessExact : stats.readiness)/100)).toFixed(3);
   }
   animateStatNumber(document.getElementById('statAnswered'), stats.totalAnswered, 'answered');
   animateStatNumber(document.getElementById('statAccuracy'), stats.accuracy===null ? '—' : stats.accuracy, 'accuracy', stats.accuracy===null ? '' : '%');
@@ -8142,15 +8143,29 @@ function renderReadinessExtras(stats){
     } else { estEl.style.display = 'none'; }
   }
 
+  // Where the score stood when today began, so a day's work shows up as movement right away instead of only after a week.
+  let dayDelta = null;
+  try{
+    const dk = localDayKey(), r0 = DATA.readinessDay;
+    if(!window._dataReady){ /* saved progress is not loaded yet: wait, so the day's starting point is the real one */ }
+    else if(!r0 || r0.day !== dk || r0.ver !== READINESS_VERSION){ DATA.readinessDay = { day: dk, ver: READINESS_VERSION, start: stats.readinessExact }; persist(); }
+    else dayDelta = Math.round((stats.readinessExact - r0.start) * 10) / 10;
+  }catch(e){}
   if(trendEl){
     const d = computeReadinessDelta(stats.readiness);
-    if(!d){ trendEl.style.display = 'none'; }
+    const todayTxt = (dayDelta !== null && Math.abs(dayDelta) >= 0.1) ? `${dayDelta > 0 ? '▲' : '▼'} ${Math.abs(dayDelta).toFixed(1)} today` : '';
+    if(!d && !todayTxt){ trendEl.style.display = 'none'; }
+    else if(!d){
+      trendEl.className = 'score-trend ' + (dayDelta > 0 ? 'up' : 'down'); trendEl.textContent = todayTxt;
+      trendEl.setAttribute('aria-label', `Readiness ${dayDelta > 0 ? 'up' : 'down'} ${Math.abs(dayDelta).toFixed(1)} points today`); trendEl.style.display = 'block';
+    }
     else {
       const n = Math.abs(d.delta);
       let cls, txt;
       if(d.delta > 0){ cls = 'up'; txt = `▲ ${n} ${d.windowLabel}`; }
       else if(d.delta < 0){ cls = 'down'; txt = `▼ ${n} ${d.windowLabel}`; }
       else { cls = 'flat'; txt = `Steady ${d.windowLabel}`; }
+      if(todayTxt){ txt = todayTxt + ' · ' + txt; if(dayDelta > 0 && d.delta <= 0) cls = 'up'; }
       trendEl.className = 'score-trend ' + cls;
       trendEl.textContent = txt;
       trendEl.setAttribute('aria-label', d.delta===0 ? `Readiness steady ${d.windowLabel}` : `Readiness ${d.delta>0?'up':'down'} ${n} point${n===1?'':'s'} ${d.windowLabel}`);
@@ -8197,12 +8212,25 @@ function renderReadinessExtras(stats){
     const ex = stats.exam ? ` Your last ${stats.exam.sittings} timed sitting${stats.exam.sittings===1?'':'s'} (${Math.round(stats.exam.accuracy*100)}% right) pull the estimate toward them.` : '';
     estimateBlock = `<div class="rb-est"><b>Estimated accuracy on exam-style questions</b><span>About ${stats.expectedAccuracy}%, likely between ${lo}% and ${hi}%, from ${stats.triedTotal} question${stats.triedTotal===1?'':'s'} tried. The range narrows as you try more of the bank.${ex} The readiness score above counts only what you know beyond guessing, which earns 25% on four-choice questions, so ${stats.expectedAccuracy}% accuracy shows as ${stats.readiness} of 100.</span></div>`;
   }
+  // How fast it really moves, from the student's own saved sessions, so a slow day is not mistaken for a stuck score.
+  let speedBlock = '';
+  try{
+    const ss = (DATA.sessions || []).filter(x => typeof x.readinessAtEnd === 'number' && x.readinessVer === READINESS_VERSION && x.date).slice(-12);
+    if(ss.length >= 3){
+      const qn = ss.slice(1).reduce((a, x) => a + sessionQuestionCount(x), 0), gain = ss[ss.length - 1].readinessAtEnd - ss[0].readinessAtEnd;
+      if(qn >= 30){
+        const per100 = Math.round(gain / qn * 1000) / 10;
+        speedBlock = `<div class="rb-est"><b>How fast it moves</b><span>Across your last ${ss.length} sessions it ${gain >= 0 ? 'rose' : 'fell'} ${Math.abs(gain).toFixed(1)} points over ${qn} questions, about ${per100 >= 0 ? '+' : ''}${per100} per 100. Each answer moves it a fraction of a point because the score covers the whole exam; trying new topics and keeping old ones fresh both raise it.</span></div>`;
+      }
+    }
+  }catch(e){}
   panel.innerHTML = `
     <div class="rb-head">
       <h3>Where your ${stats.readiness} comes from</h3>
       <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
     ${estimateBlock}
+    ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
     <div class="rb-rows">${rows}</div>
     ${penaltyRow}
@@ -26993,7 +27021,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.382';
+const BUILD_ID = '2026-10-22.383';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
