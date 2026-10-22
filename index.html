@@ -3012,6 +3012,7 @@
   .pst-c.right{border-color:var(--correct);background:var(--correct-tint);} .pst-c.right i{color:var(--correct);} .pst-c.pick{border-color:var(--incorrect);background:var(--incorrect-tint);} .pst-c.pick i{color:var(--incorrect);}
   .pst-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .pst-col{background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px;} .pst-col h4{margin:0 0 8px;font-size:15px;color:var(--paper);} .pst-col ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5;}
   .pst-slide .tutor-chart-row{max-width:100%;}
+  .ck-walks{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 14px;} .ck-walks-l{width:100%;font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);} .ck-walks .btn{padding:8px 14px;font-size:13px;}
   .pcal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-top:6px;} @media (max-width:560px){.pcal{grid-template-columns:1fr;gap:12px;} .pcal-pad{order:-1;} .pcal-steps li:not(.cur){display:none;} .pcal-steps li.cur{font-size:15.5px;}}
   .pcal-dots{display:flex;gap:6px;justify-content:center;margin-top:10px;} .pcal-dots button{width:22px;height:6px;border-radius:3px;border:0;padding:0;background:rgba(127,127,127,.3);cursor:pointer;transition:background .25s,width .25s;} .pcal-dots button.on{background:var(--gold);width:34px;} .pcal-dots button.done{background:var(--gold);opacity:.5;}
   .pcal-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:pc;} .pcal-steps li{counter-increment:pc;padding:8px 10px 8px 34px;position:relative;border-radius:10px;font-size:14px;line-height:1.4;color:var(--text-dim,inherit);opacity:.55;border:1px solid transparent;} .pcal-steps li::before{content:counter(pc);position:absolute;left:10px;top:8px;font:600 11px 'IBM Plex Mono',monospace;color:var(--gold);} .pcal-steps li.cur{opacity:1;background:var(--surface2);border-color:var(--hair);} .pcal-steps li.done{opacity:.8;}
@@ -3626,6 +3627,7 @@
     </div>
     <div class="card" id="calcKeysCard">
       <div class="card-head"><h2>Your HP 10bII+</h2><div class="note">keystrokes, checked against HP's guide</div></div>
+      <div class="ck-walks" id="ckWalks"><span class="ck-walks-l">Walk it on the keypad</span><button type="button" class="btn ghost" onclick="ckWalk('pvann')">Loan payment</button><button type="button" class="btn ghost" onclick="ckWalk('fv')">Future value</button><button type="button" class="btn ghost" onclick="ckWalk('npv')">NPV and IRR</button><button type="button" class="btn ghost" onclick="ckWalk('eff')">Nominal to effective</button><button type="button" class="btn ghost" onclick="ckWalk('amort')">Loan balance</button></div>
       <div class="ed-item" data-ck="setup"><b>Before every problem</b>Orange Shift, <span class="ck-k">C</span> clears everything. Then set P/YR to match the problem: <span class="ck-k">12</span> Shift <span class="ck-k">PMT</span> (P/YR) for monthly, 4 quarterly, 2 semiannual, 1 yearly. The factory setting is 12. With P/YR set, I/YR is always the annual rate, and N is the years then Shift <span class="ck-k">N</span> (xP/YR), which multiplies by P/YR. Shift <span class="ck-k">MAR</span> (BEG/END) toggles BEGIN, which shows on screen. Leave it off unless payments come at the start of the period.</div>
       <div class="ed-item" data-ck="tvm"><b>Time value</b>Type a value, press its key: N, I/YR, PV, PMT, FV. There is no compute key; with four filled in, press the fifth to solve. Money you pay out is negative.</div>
       <div class="ed-item" data-ck="cf"><b>Cash flows, NPV, IRR</b>Clear, set P/YR to 1. Time 0 first: amount, <span class="ck-k">CFj</span> (outlay negative). A flow that repeats: type the count, then Shift <span class="ck-k">CFj</span> (Nj). NPV: rate, <span class="ck-k">I/YR</span>, then Shift <span class="ck-k">PRC</span> (NPV). IRR: Shift <span class="ck-k">CST</span> (IRR/YR), no rate needed.</div>
@@ -12676,6 +12678,14 @@ function stageCalcHtml(sl){
   return `<div class="pst-kicker">HP 10bII+ keys</div><div class="pst-title">${E(sl.title)}</div><div class="pcal"><ol class="pcal-steps">${li}</ol><div><div class="pcal-pad">${pad}</div><div class="pcal-dots">${sl.steps.map((_, i) => `<button type="button" aria-label="Step ${i + 1}" class="${i === ci ? 'on' : i < ci ? 'done' : ''}" onclick="stageCalcJump(${i})"></button>`).join('')}</div><div class="pcal-msg" id="pcalMsg">${pr ? 'Tap the glowing key (' + Math.min(ti + 1, taps.length || 1) + ' of ' + (taps.length || 1) + ').' : 'Tap any key to try it.'}</div></div></div>`
     + `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageCalcGo(-1)"${ci ? '' : ' disabled'}>Back</button><button type="button" class="btn" onclick="stageCalcGo(1)"${ci < sl.steps.length - 1 ? '' : ' disabled'}>Next step</button><button type="button" class="btn ghost" onclick="stageCalcPractice()">${pr ? 'Show the keys' : 'Practice the taps'}</button><span class="pst-dim" style="align-self:center;font-size:12.5px;">${ci + 1} of ${sl.steps.length}${taps.length ? '' : ' · no keys to light for this step'}</span></div>`;
 }
+const CK_WALKS = {
+  pvann: ['Loan payment, $200,000 for 30 years at 6%, monthly', ['Orange Shift, then [C ALL]', 'Type 12, then orange Shift and [P/YR]', 'Type 360, press [N]', 'Type 6, press [I/YR]', 'Type 200000, press [PV]', 'Type 0, press [FV]', 'Press [PMT] (it shows a negative: money you pay out)']],
+  fv: ['Future value, $10,000 for 20 years at 7%, annual', ['Orange Shift, then [C ALL]', 'Type 1, then orange Shift and [P/YR]', 'Type 20, press [N]', 'Type 7, press [I/YR]', 'Type 10000, press [+/−], press [PV]', 'Type 0, press [PMT]', 'Press [FV]']],
+  npv: ['NPV and IRR of uneven cash flows', ['Orange Shift, then [C ALL]', 'Type 1, then orange Shift and [P/YR]', 'Type 50000, press [+/−], press [CFj] (time 0 outlay)', 'Type 20000, press [CFj]', 'Type 3, then orange Shift and [Nj] (a flow that repeats 3 times)', 'Type 8, press [I/YR]', 'Orange Shift, then [NPV]', 'Orange Shift, then [IRR/YR]']],
+  eff: ['Nominal 10% compounded monthly to effective', ['Orange Shift, then [C ALL]', 'Type 10, then orange Shift and [NOM%]', 'Type 12, then orange Shift and [P/YR]', 'Orange Shift, then [EFF%] (10.47)', 'Type 1, then orange Shift and [P/YR] to reset it']],
+  amort: ['Balance after 12 payments', ['Solve the payment first (see Loan payment), then keep those numbers in', 'Type 1, press [INPUT]', 'Type 12, then orange Shift and [AMORT]', 'Press [=] to step through principal, interest, then balance']]
+};
+function ckWalk(k){ const w = CK_WALKS[k]; if(!w) return; const sl = stageCalcSlide(w[0], w[1]); if(!sl) return; stageShow(sl, 'calc'); stageOpenFull(); }
 function tvmShowKeysOnScreen(){
   const p = tvmCurrent; if(!p || !p.known || p.cf){ hpSay(p && p.cf ? 'Cash-flow problems: clear, key each flow with CFj, then NPV or IRR.' : 'Open a problem first.'); return; }
   const f = v => { const a = Math.abs(v), r = Math.round(a * 1e6) / 1e6; return String(r); };
@@ -28614,7 +28624,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.429';
+const BUILD_ID = '2026-10-22.430';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
