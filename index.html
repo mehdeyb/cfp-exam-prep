@@ -3698,7 +3698,7 @@
           <div class="api-key-box" id="geminiBox" style="margin-top:12px;">
             <p class="hint" style="margin-top:0;"><b>Backup: Google Gemini.</b> Optional. If Claude is down, overloaded or out of credit, Gemini answers instead, so the tutor and generated practice keep working. It also works on its own with no Claude key. Get a free key at aistudio.google.com. It stays encrypted in this browser and goes only to Google.</p>
             <div class="api-key-row">
-              <input type="password" id="geminiKeyInput" class="tutor-input" aria-label="Gemini API key" placeholder="AIza..." onkeydown="if(event.key==='Enter') handleSaveGeminiKey();">
+              <input type="password" id="geminiKeyInput" class="tutor-input" aria-label="Gemini API key" placeholder="AIza… or AQ.…" onkeydown="if(event.key==='Enter') handleSaveGeminiKey();">
               <button class="btn" onclick="handleSaveGeminiKey()">Connect</button>
             </div>
             <div class="tutor-status" id="geminiKeyStatus" role="alert"></div>
@@ -5716,7 +5716,7 @@ async function unlockWithPassphrase(blob, pass){
   return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv: _unb64(iv)}, await _passKey(pass, _unb64(salt)), _unb64(ct)));
 }
 // Anything that looks like a key is masked before it can reach a log or a message.
-function redactSecrets(t){ return String(t == null ? '' : t).replace(/sk-ant-[A-Za-z0-9_\-]{6,}/g, 'sk-ant-…').replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza…'); }
+function redactSecrets(t){ return String(t == null ? '' : t).replace(/sk-ant-[A-Za-z0-9_\-]{6,}/g, 'sk-ant-…').replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza…').replace(/\bAQ\.[0-9A-Za-z_.\-]{16,}/g, 'AQ.…'); }
 async function loadApiKey(){
   try{
     const v = await storageGet(API_KEY_STORAGE);
@@ -5835,7 +5835,7 @@ async function handleSaveGeminiKey(){
   const input = document.getElementById('geminiKeyInput'), status = document.getElementById('geminiKeyStatus');
   const key = (input.value || '').trim();
   if(!key){ status.textContent = 'Paste a key first.'; status.classList.add('err'); return; }
-  if(!/^AIza[0-9A-Za-z_\-]{20,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza"). Double-check and try again.'; status.classList.add('err'); return; }
+  if(!/^[A-Za-z0-9_.\-]{30,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza" or "AQ."). Double-check and try again.'; status.classList.add('err'); return; }
   status.textContent = 'Checking the key…'; status.classList.remove('err');
   const prev = geminiKey; geminiKey = key;
   try{ await geminiRequestOnce({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16 }); }
@@ -23923,11 +23923,11 @@ async function restoreFromBackup(){
   let restoredGemini = null;
   if(typeof parsed._geminiKeyEnc === 'string' && typeof parsed._apiKeyEnc !== 'string'){
     const passG = prompt('This backup includes your Gemini key, locked with a passphrase. Enter the passphrase to restore it (leave blank to skip the key).');
-    if(passG){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, passG); if(/^AIza/.test(k)) restoredGemini = k; else alert('That passphrase did not unlock the key. Your progress will still be restored.'); }catch(e){ alert('That passphrase did not unlock the key. Your progress will still be restored.'); } }
+    if(passG){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, passG); if(/^(AIza|AQ\.)/.test(k)) restoredGemini = k; else alert('That passphrase did not unlock the key. Your progress will still be restored.'); }catch(e){ alert('That passphrase did not unlock the key. Your progress will still be restored.'); } }
   }
   if(typeof parsed._apiKeyEnc === 'string'){
     const pass = prompt('This backup includes your AI key, locked with a passphrase. Enter the passphrase to restore it (leave blank to skip the key).');
-    if(pass && typeof parsed._geminiKeyEnc === 'string'){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, pass); if(/^AIza/.test(k)) restoredGemini = k; }catch(e){} }
+    if(pass && typeof parsed._geminiKeyEnc === 'string'){ try{ const k = await unlockWithPassphrase(parsed._geminiKeyEnc, pass); if(/^(AIza|AQ\.)/.test(k)) restoredGemini = k; }catch(e){} }
     if(pass){ try{ const k = await unlockWithPassphrase(parsed._apiKeyEnc, pass); if(/^sk-ant-/.test(k)) restoredKey = k; else alert('That passphrase did not unlock the key. Your progress will still be restored.'); }catch(e){ alert('That passphrase did not unlock the key. Your progress will still be restored.'); } }
   }
   delete parsed._apiKey; delete parsed._apiKeyEnc; delete parsed._geminiKeyEnc; delete parsed._backupMeta;
@@ -26441,7 +26441,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-21.341';
+const BUILD_ID = '2026-10-21.342';
 let _updChecking = false;
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
@@ -26691,7 +26691,7 @@ async function syncNow(reason){
       remoteData = remote.data;
       merged = syncMergeData(local.data, JSON.parse(JSON.stringify(remote.data)));
       if(remote.keyEncG && !local.keyEncG){
-        try{ const k = await unlockWithPassphrase(remote.keyEncG, SYNC.token); if(/^AIza/.test(k)){ await saveGeminiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
+        try{ const k = await unlockWithPassphrase(remote.keyEncG, SYNC.token); if(/^(AIza|AQ\.)/.test(k)){ await saveGeminiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
       }
       if(remote.keyEnc && !local.keyEnc){
         try{ const k = await unlockWithPassphrase(remote.keyEnc, SYNC.token); if(/^sk-ant-/.test(k)){ await saveApiKeyToStorage(k); try{ checkAIAvailability(); }catch(e){} } }catch(e){}
