@@ -7091,12 +7091,13 @@ async function kokoroSpeak(chunk, state, gen, onend, onerror){
 }
 
 // ---- Soft sounds: a quiet cue for right and wrong answers, lesson checks and slide changes. Off with one switch in Settings. ----
-let _sndCtx = null;
+let _sndCtx = null, _sndCloseT = null;
 function soundsOn(){ return !(DATA && DATA.soundsOff); }
 function soundCue(kind){
   try{
     if(!soundsOn()) return;
     const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    if(kind === 'step' && typeof naturalSpeechState !== 'undefined' && naturalSpeechState.active) return; // never layer a sound over the spoken lesson
     if(!_sndCtx) _sndCtx = new AC();
     if(_sndCtx.state === 'suspended') _sndCtx.resume();
     const t0 = _sndCtx.currentTime + 0.01;
@@ -7108,6 +7109,8 @@ function soundCue(kind){
       g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(vol, t0 + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + len);
       o.connect(g); g.connect(_sndCtx.destination); o.start(t0 + d); o.stop(t0 + d + len + 0.03);
     });
+    // Release the audio device right after, so a held sound context can never silence spoken lessons on iPhone or iPad.
+    clearTimeout(_sndCloseT); _sndCloseT = setTimeout(() => { try{ if(_sndCtx){ _sndCtx.close(); _sndCtx = null; } }catch(e){} }, 1200);
   }catch(e){}
 }
 function handleSoundsToggle(cb){ DATA.soundsOff = !cb.checked; persist(); if(cb.checked) soundCue('right'); }
@@ -29501,7 +29504,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.482';
+const BUILD_ID = '2026-10-23.483';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
