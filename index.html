@@ -7594,7 +7594,9 @@ let _aqMemo = null;
 function allQuestions(){
   const g = DATA.generatedBank, m = _aqMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
-  const out = QUESTIONS.concat(g);
+  // The same question can arrive twice (the bank plus a generated copy); keep the first of each stem and answer.
+  const seen = new Set(), out = [];
+  QUESTIONS.concat(g || []).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
 }
@@ -19826,7 +19828,7 @@ const FD_GENS = {
   },
   'Rule of 72': () => {
     if(Math.random() < 0.5){
-      const r = fdPick([3,4,6,8,9,12]), ans = 72/r;
+      const r = fdPick([2,3,4,5,6,8,9,10,12,15]), ans = 72/r;
       return { scenario:`At a steady ${r}% annual return, about how many years does it take money to double? (Use the Rule of 72.)`, unit:'years', answer:ans, tol:0.05, keys:[`Enter 72, press [÷], enter ${r}, press [=] — the display shows ${fdNum(ans,0)} years.`], steps:[`Years to double ≈ 72 ÷ rate`, `72 ÷ ${r} = ${fdNum(ans,0)} years`] };
     }
     const n = fdPick([6,8,9,12,18,24]), ans = 72/n;
@@ -19937,7 +19939,7 @@ const FD_GENS = {
       keys:[`Enter ${rp}, press [−], enter ${rb}, press [=] — the display shows ${rp-rb} (the active return).`, `Press [÷], enter ${te}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}.`], steps:[`IR = (Rp − Rb) ÷ tracking error`, `Active return: ${rp} − ${rb} = ${rp-rb}%`, `${rp-rb} ÷ ${te} = ${fdNum(ans,2)}`] };
   },
   'Effective Annual Rate': () => {
-    const r = fdPick([6,8,10,12,18]), m = fdPick([2,4,12]);
+    const r = fdPick([5,6,7,8,9,10,12,15,18,24]), m = fdPick([2,4,12]);
     const ans = (Math.pow(1 + r/100/m, m) - 1)*100;
     return { scenario:`A savings account advertises ${r}% compounded ${m === 12 ? 'monthly' : m === 4 ? 'quarterly' : 'semi-annually'}. What is the effective annual rate? (Percent, two decimals.)`, unit:'%', answer:ans, tol:0.03,
       keys:[`Enter ${r}, press [÷], enter ${m}, press [÷], enter 100, press [+], enter 1, press [=] — the display shows ${fdK(1+r/100/m)}.`, `Press orange Shift, then [×] (the yˣ function printed above it), enter ${m}, press [=] — the display shows ${fdNum(Math.pow(1+r/100/m,m),5)}.`, `Press [−], enter 1, press [=], then press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`EAR = (1 + r ÷ m)ᵐ − 1`, `Periodic rate: ${r} ÷ ${m} = ${fdNum(r/m,3)}%`, `(1 + ${fdNum(r/100/m,5)})^${m} − 1 = ${fdNum(ans,2)}%`],
@@ -19979,7 +19981,7 @@ const FD_GENS = {
       trap: x => Math.abs(x + ans) < 0.04 ? 'The sign is reversed. When yields rise, bond prices fall, and when yields fall, prices rise.' : null };
   },
   'Forward Rate': () => {
-    const s1 = fdPick([2,3,3.5,4]), s2 = s1 + fdPick([0.5,1,1.5]);
+    const s1 = fdPick([1.5,2,2.5,3,3.5,4,4.5,5]), s2 = s1 + fdPick([0.5,0.75,1,1.25,1.5,2]);
     const ans = (Math.pow(1+s2/100,2)/(1+s1/100) - 1)*100;
     return { scenario:`The one-year spot rate is ${s1}% and the two-year spot rate is ${s2}% (annual rates). What is the implied one-year forward rate one year from now? (Percent, two decimals.)`, unit:'%', answer:ans, tol:0.05,
       keys:[`Enter ${fdK(1+s2/100)}, press [×], enter ${fdK(1+s2/100)}, press [=] — the display shows ${fdNum(Math.pow(1+s2/100,2),5)} (the two-year factor).`, `Press [÷], enter ${fdK(1+s1/100)}, press [=] — the display shows ${fdNum(Math.pow(1+s2/100,2)/(1+s1/100),5)}.`, `Press [−], enter 1, press [=], then press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`(1 + s₂)² = (1 + s₁)(1 + f)`, `(1 + ${s2/100})² ÷ (1 + ${s1/100}) = ${fdNum(Math.pow(1+s2/100,2)/(1+s1/100),5)}`, `Subtract 1: ${fdNum(ans,2)}%`] };
@@ -20126,7 +20128,7 @@ Object.assign(FD_GENS, {
       keys:[`Reduction: ${Math.min(m,36)} × 5/9 = ${fdNum(Math.min(m,36)*5/9,2)}%${m > 36 ? `, plus ${m-36} × 5/12 = ${fdNum((m-36)*5/12,2)}%` : ''}, total ${fdNum(red,2)}%.`, `Enter ${pia}, press [×], enter ${fdK(1-red/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`First 36 months: 5/9 of 1% each`, m > 36 ? `Months 37 to ${m}: 5/12 of 1% each` : `No months beyond 36`, `Benefit = ${fdMoney(pia)} × (1 − ${fdNum(red/100,4)}) = ${fdMoney(ans)}`] };
   },
   'Delayed Retirement Credit': () => {
-    const pia = fdPick([2000,2400,2800,3200]), m = fdPick([12,24,36]), cr = m*2/3, ans = pia*(1+cr/100);
+    const pia = fdPick([1800,2000,2200,2400,2600,2800,3000,3200,3600]), m = fdPick([6,12,18,24,30,36]), cr = m*2/3, ans = pia*(1+cr/100);
     return { scenario:`A worker with full retirement age 67 and a PIA of ${fdMoney(pia)} a month waits ${m} months past FRA to claim. What is her monthly benefit?`, unit:'$', answer:ans, tol:1.5,
       keys:[`Credit: ${m} × 2/3 = ${fdNum(cr,0)}%.`, `Enter ${pia}, press [×], enter ${fdK(1+cr/100)}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Credit = ${m} months × 2/3 of 1% = ${fdNum(cr,0)}%`, `Benefit = ${fdMoney(pia)} × ${fdK(1+cr/100)} = ${fdMoney(ans)}`] };
   },
@@ -20145,7 +20147,7 @@ Object.assign(FD_GENS, {
       trap: x => Math.abs(x - 0.4*(te - X)) < 5 && A ? 'That leaves out the adjusted taxable gifts. They are added back to the taxable estate before the exclusion is applied.' : null };
   },
   'Self-Employment Tax': () => {
-    const ne = fdPick([60000,80000,100000,120000,150000]), base = ne*0.9235, ans = base*0.153;
+    const ne = fdPick([45000,60000,72000,80000,95000,100000,120000,135000,150000,175000]), base = ne*0.9235, ans = base*0.153;
     return { scenario:`A sole proprietor has net profit of ${fdMoney(ne)} on Schedule C, well below the Social Security wage base. What is her self-employment tax?`, unit:'$', answer:ans, tol:2,
       keys:[`Enter ${ne}, press [×], enter 0.9235, press [=] — the display shows ${fdNum(base,2)} (net earnings subject to the tax).`, `Press [×], enter 0.153, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Net earnings subject to tax = ${fdMoney(ne)} × 92.35% = ${fdMoney(base)}`, `SE tax = ${fdMoney(base)} × 15.3% = ${fdMoney(ans)}`, `Half of it, ${fdMoney(ans/2)}, is deductible above the line.`],
       trap: x => Math.abs(x - ne*0.153) < 2 ? 'The 15.3% applies to 92.35% of net profit, not to the full amount.' : null };
@@ -20218,7 +20220,7 @@ FORMULAS.push(
 );
 Object.assign(FD_GENS, {
   'Taxable Gift (Annual Exclusion)': () => {
-    const gift = fdPick([30000,50000,75000,100000]), n = fdPick([2,3,4]), split = Math.random() < 0.5, ex = split ? 38000 : 19000;
+    const gift = fdPick([45000,55000,60000,75000,90000,100000,120000]), n = fdPick([2,3,4]), split = Math.random() < 0.5, ex = split ? 38000 : 19000;
     const per = Math.max(0, gift - ex), ans = per*n;
     return { scenario:`${split ? 'A married couple, electing gift splitting,' : 'A widow'} gives ${fdMoney(gift)} ${split ? 'in total' : 'in cash'} to each of ${n} children this year. Using the 2026 annual exclusion of $19,000 per donee, what is the total amount of taxable gifts?`, unit:'$', answer:ans, tol:2,
       keys:[`Exclusion per child: ${split ? '2 × $19,000 = $38,000' : '$19,000'}.`, `Enter ${gift}, press [−], enter ${ex}, press [=] — the display shows ${per}. Press [×], enter ${n}, press [=] — the display shows ${ans}.`], steps:[`Taxable per child = ${fdMoney(gift)} − ${fdMoney(ex)} = ${fdMoney(per)}`, `× ${n} children = ${fdMoney(ans)}`],
@@ -20243,14 +20245,14 @@ Object.assign(FD_GENS, {
       trap: x => Math.abs(x - nii*0.038) < 2 && nii !== base ? 'The tax applies to the lesser of the investment income and the MAGI above the threshold, not always the full investment income.' : null };
   },
   'Home Sale Exclusion (§121)': () => {
-    const mfj = Math.random() < 0.5, ex = mfj ? 500000 : 250000, cost = fdPick([300000,350000,400000]), imp = fdPick([20000,40000,60000]), sale = fdPick([800000,900000,1000000]), sc = Math.round(sale*0.06/1000)*1000;
+    const mfj = Math.random() < 0.5, ex = mfj ? 500000 : 250000, cost = fdPick([250000,300000,350000,400000]), imp = fdPick([20000,40000,60000]), sale = mfj ? fdPick([1000000,1150000,1300000,1500000,1700000]) : fdPick([650000,750000,850000,1000000,1200000]), sc = Math.round(sale*0.06/1000)*1000;
     const gain = sale - sc - cost - imp, ans = Math.max(0, gain - ex);
     return { scenario:`${mfj ? 'A married couple' : 'A single owner'} sells a home they have lived in for ten years for ${fdMoney(sale)}, paying ${fdMoney(sc)} in selling costs. They bought it for ${fdMoney(cost)} and spent ${fdMoney(imp)} on improvements. How much of the gain is taxable?`, unit:'$', answer:ans, tol:2,
       keys:[`Gain: enter ${sale}, press [−], enter ${sc}, press [−], enter ${cost}, press [−], enter ${imp}, press [=] — the display shows ${gain}.`, `Press [−], enter ${ex}, press [=] — the display shows ${gain - ex}${ans === 0 ? ', so nothing is taxable (answer 0)' : ''}.`], steps:[`Amount realized = ${fdMoney(sale)} − ${fdMoney(sc)} = ${fdMoney(sale-sc)}`, `Adjusted basis = ${fdMoney(cost)} + ${fdMoney(imp)} = ${fdMoney(cost+imp)}`, `Gain = ${fdMoney(gain)}; less the ${fdMoney(ex)} exclusion = ${fdMoney(ans)} taxable`],
       trap: x => Math.abs(x - (gain - ex + sc)) < 2 && sc ? 'Selling costs reduce the amount realized, so they reduce the gain before the exclusion.' : null };
   },
   'SEP-IRA Contribution (Self-Employed)': () => {
-    const np = fdPick([80000,100000,120000,150000]), se = np*0.9235*0.153, ans = 0.2*(np - se/2);
+    const np = fdPick([60000,75000,80000,95000,100000,120000,135000,150000,175000]), se = np*0.9235*0.153, ans = 0.2*(np - se/2);
     return { scenario:`A self-employed consultant has net profit of ${fdMoney(np)} (before any retirement contribution) and well below the Social Security wage base. What is the maximum SEP-IRA contribution for her?`, unit:'$', answer:ans, tol:Math.max(3, ans*0.002),
       keys:[`SE tax: enter ${np}, press [×], enter 0.9235, press [×], enter 0.153, press [=] — the display shows ${fdNum(se,2)}.`, `Half of it: press [÷], enter 2, press [=] — ${fdNum(se/2,2)}. Net profit less that: ${np} − ${fdNum(se/2,2)} = ${fdNum(np-se/2,2)}.`, `Press [×], enter 0.2, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`SE tax = ${fdMoney(np)} × 92.35% × 15.3% = ${fdMoney(se)}`, `Net earnings for the plan = ${fdMoney(np)} − ${fdMoney(se/2)} = ${fdMoney(np - se/2)}`, `Contribution = 20% × ${fdMoney(np - se/2)} = ${fdMoney(ans)}`],
       trap: x => Math.abs(x - 0.25*np) < Math.max(3, ans*0.002) ? 'For a self-employed owner the effective rate is 20% of net earnings after the SE tax deduction, not 25% of net profit.' : null };
@@ -20358,7 +20360,7 @@ Object.assign(FD_GENS, {
       trap: x => Math.abs(x - v) < 0.05 ? 'That is the variance. Take the square root to get the standard deviation.' : null };
   },
   'Current Ratio': () => {
-    const ca = fdPick([18,24,30,45])*1000, cl = fdPick([10,12,15,20])*1000, ans = ca/cl;
+    const ca = fdPick([15,18,22,24,30,36,45,60])*1000, cl = fdPick([8,10,12,15,18,20,25])*1000, ans = ca/cl;
     return { scenario:`A client has current assets of ${fdMoney(ca)} and current liabilities of ${fdMoney(cl)}. What is the current ratio? (Two decimals.)`, unit:'', answer:ans, tol:0.015,
       keys:[`Enter ${ca}, press [÷], enter ${cl}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Current ratio = current assets ÷ current liabilities`, `${fdMoney(ca)} ÷ ${fdMoney(cl)} = ${fdNum(ans,2)}`],
       trap: x => Math.abs(x - cl/ca) < 0.015 ? 'That is flipped. Assets go on top.' : null };
@@ -20374,7 +20376,7 @@ Object.assign(FD_GENS, {
       keys:[`Enter ${d}, press [÷], enter ${pr}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Yield = annual dividend ÷ price`, `${d} ÷ ${pr} = ${fdNum(ans,2)}%`] };
   },
   'Current Yield (bond)': () => {
-    const par = 1000, cr = fdPick([4,5,6,7]), pr = fdPick([920,950,1040,1080]), c = par*cr/100, ans = c/pr*100;
+    const par = 1000, cr = fdPick([3,4,4.5,5,6,7,8]), pr = fdPick([890,920,950,980,1020,1040,1080,1120]), c = par*cr/100, ans = c/pr*100;
     return { scenario:`A $1,000 par bond pays a ${cr}% coupon and trades at ${fdMoney(pr)}. What is its current yield?`, unit:'%', answer:ans, tol:0.05,
       keys:[`Annual coupon: ${par} × ${cr/100} = ${c}.`, `Enter ${c}, press [÷], enter ${pr}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Current yield = annual coupon ÷ price`, `${fdMoney(c)} ÷ ${fdMoney(pr)} = ${fdNum(ans,2)}%`],
       trap: x => Math.abs(x - cr) < 0.05 ? 'That is the coupon rate, which uses par. Current yield uses today\'s price.' : null };
@@ -29283,7 +29285,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.472';
+const BUILD_ID = '2026-10-22.473';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
