@@ -1863,6 +1863,19 @@
   #tutorCard #tutorContextNote{display:none;}
   #tutorCard > #tutorSnapshot{display:none;}
   #tutorCard #podHeroKicker, #tutorCard #podHeroSub, #tutorCard .tt-ask > p.hint, #tutorCard .chip-more{display:none !important;}
+  /* A loaded lesson: header and connection note stay first, then the stage and a one-row transport, then the plan line and the conversation. */
+  #tutorCard > .card-head{order:-10;} #tutorCard > .api-key-nudge{order:-9;}
+  #tutorCard #lessonsCard.has-lesson #podcastPlayer{order:2;margin:0 0 10px;}
+  #tutorCard #lessonsCard.has-lesson #podcastHero{display:block;order:3;background:none;border:0;padding:0;margin:0 0 10px;}
+  #tutorCard #lessonsCard.has-lesson #podcastHero .pod-hero-title, #tutorCard #lessonsCard.has-lesson #podcastHero .pod-hero-btn{display:none;}
+  #tutorCard #lessonsCard.has-lesson #ttPlanStrip{margin:0;padding:0;border:0;}
+  #tutorCard .pst-body{min-height:140px;}
+  #tutorCard:has(#lessonsCard.has-lesson) #tutorThread{min-height:100px;}
+  #tutorCard .podcast-player-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:8px 12px;}
+  #tutorCard .podcast-player-panel > .pp-cap, #tutorCard .podcast-player-panel > .pp-prog, #tutorCard .podcast-player-panel > .podcast-status{grid-column:1 / -1;}
+  #tutorCard .podcast-player-panel > .pp-cap{grid-row:1;} #tutorCard .podcast-player-panel > .pp-prog{grid-row:2;} #tutorCard .podcast-player-panel .podcast-player-controls{grid-column:1;grid-row:3;} #tutorCard .podcast-player-panel > .podcast-status{grid-row:4;}
+  #tutorCard .podcast-player-panel .podcast-player-secondary-row{grid-column:2;grid-row:3;margin:0;}
+  #tutorCard #podcastSleepSelect, #tutorCard .pp-more, #tutorCard #podcastGeneratedNote, #tutorCard #podcastRefine{display:none !important;}
   #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
@@ -2467,18 +2480,12 @@
      the intro, stats and idea buttons move beneath, and fold away once you are talking. */
   #tutorCard{display:flex;flex-direction:column;}
   #tutorCard > *{order:9;}
-  #tutorCard > .card-head{order:0;}
-  #tutorCard > #tutorApiKeyHint{order:1;}
-  #tutorCard #tutorThread{order:2;max-height:max(200px, calc(var(--vh-real, 100vh) - 440px));}
-  #tutorCard #tutorChips{order:3;flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  #tutorCard #tutorChips{flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   #tutorCard #tutorChips::-webkit-scrollbar{display:none;}
   #tutorCard #tutorChips .chip{flex:none;white-space:nowrap;}
-  #tutorCard .tutor-input-row{order:4;flex-wrap:nowrap;margin-bottom:6px;}
+  #tutorCard .tutor-input-row{flex-wrap:nowrap;margin-bottom:6px;}
   #tutorCard .tutor-input-row .btn{width:auto;flex:none;}
   #tutorCard .tutor-input-row .tutor-input{width:auto;min-width:0;}
-  #tutorCard #tutorStatus{order:5;}
-  #tutorCard > #tutorSnapshot{order:7;}
-  #tutorCard p.hint{order:8;}
   #tutorCard.has-convo p.hint,#tutorCard.has-convo > #tutorSnapshot{display:none;}
   @media (min-width:641px){ #tutorCard #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 400px));} }
   @media (orientation:landscape) and (max-height:520px){
@@ -29717,7 +29724,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.501';
+const BUILD_ID = '2026-10-23.502';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
