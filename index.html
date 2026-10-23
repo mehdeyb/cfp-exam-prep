@@ -1808,6 +1808,21 @@
   .pod-hero-sub{font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:12px;}
   .pod-hero-btn{width:100%;min-height:48px;font-size:15px;}
   .pod-seg{display:flex;gap:6px;margin-top:12px;}
+  /* Tutor tab: lessons and conversation are one surface, sharing one header and one set of stats. */
+  .tt-lessons{margin:0 0 6px;}
+  body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
+  #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
+  .tt-lessons > .card-head{margin-bottom:4px;}
+  .tt-label{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px;padding-top:18px;border-top:1px solid var(--hair);}
+  .tt-lessons .podcast-library{margin-top:12px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:32px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .card-head, html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tutor-snapshot, html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .api-key-nudge{grid-column:1 / -1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tt-lessons{grid-column:1;grid-row:4;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tt-ask{grid-column:2;grid-row:4;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .tt-label{margin-top:0;padding-top:0;border-top:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard > .tt-first{margin:0 0 10px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) .tt-ask > .tt-label{margin-bottom:10px;}
+
   .pod-seg button{flex:1 1 0;min-width:0;font:inherit;font-size:12.5px;min-height:40px;padding:6px 4px;border-radius:20px;border:1px solid var(--hair);background:var(--surface2);color:var(--muted);cursor:pointer;white-space:nowrap;}
   .pod-seg button.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600;}
   .pod-opts{margin-top:10px;display:grid;grid-template-columns:1.3fr 1fr;gap:10px;align-items:center;}
@@ -3651,85 +3666,6 @@
 
   <!-- ================= REFERENCE TAB ================= -->
   <div class="tab-panel" id="tab-reference">
-    <div class="card" id="lessonsCard">
-      <div class="card-head"><h2>Lessons</h2><div class="note">a tutor walks you through it, with slides</div></div>
-      <div class="pod-hero" id="podcastHero">
-        <div class="pod-hero-kicker" id="podHeroKicker"></div>
-        <div class="pod-hero-title" id="podHeroTitle"></div>
-        <div class="pod-hero-sub" id="podHeroSub"></div>
-        <button type="button" class="btn pod-hero-btn" id="podcastHeroBtn" onclick="podcastHeroAction()"></button>
-      </div>
-      <div class="pod-seg" id="podcastTypeSeg" role="group" aria-label="Kind of episode">
-        <button type="button" data-v="personalized" onclick="podcastSetType('personalized')">For you</button>
-        <button type="button" data-v="overview" onclick="podcastSetType('overview')">Overview</button>
-        <button type="button" data-v="formulas" onclick="podcastSetType('formulas')">Formulas</button>
-        <button type="button" data-v="mistakes" onclick="podcastSetType('mistakes')">Mistakes</button>
-      </div>
-      <div class="podcast-selector-grid pod-opts">
-        <select id="podcastDomainSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose a domain for the podcast episode"></select>
-        <div class="pod-seg pod-len" id="podcastLenSeg" role="group" aria-label="Episode length">
-          <button type="button" data-v="short" onclick="podcastSetLength('short')">2 min</button>
-          <button type="button" data-v="standard" onclick="podcastSetLength('standard')">4 min</button>
-          <button type="button" data-v="deep" onclick="podcastSetLength('deep')">7 min</button>
-        </div>
-      </div>
-      <select id="podcastTypeSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
-        <option value="overview">Domain overview</option>
-        <option value="formulas">Key formulas explained</option>
-        <option value="mistakes">Common mistakes on this domain</option>
-        <option value="personalized" selected>Your tutor's pick</option>
-        <option value="custom">A lesson your tutor wrote</option>
-      </select>
-      <select id="podcastLengthSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
-        <option value="short">Short (~2 min)</option>
-        <option value="standard" selected>Standard (~4 min)</option>
-        <option value="deep">Deep dive (~7 min)</option>
-      </select>
-      <div class="podcast-focus" id="podcastFocus" style="display:none;"></div>
-      <div class="podcast-player" id="podcastPlayer" style="display:none;">
-        <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
-          <div class="pst-body" id="pstBody"></div>
-          <div class="pst-now" id="pstNow" aria-hidden="true"></div>
-          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
-        </div>
-        <div class="podcast-player-panel">
-          <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
-          <div class="pp-prog"><input type="range" id="podcastSeek" min="0" max="0" value="0" step="1" aria-label="Position in episode" oninput="podcastSeekPreview(this.value)" onchange="podcastSeekCommit(this.value)"><div class="pp-time"><span id="podcastElapsed">0:00</span><span id="podcastLeft"></span></div></div>
-          <div class="podcast-player-controls">
-            <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipBackBtn" onclick="podcastSkip(-1)" title="Previous sentence" aria-label="Previous sentence"></button>
-            <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
-            <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipForwardBtn" onclick="podcastSkip(1)" title="Next sentence" aria-label="Next sentence"></button>
-            <button class="podcast-icon-btn podcast-icon-btn-skip podcast-stop-btn" id="podcastStopBtn" onclick="stopPodcastPlayback()" title="Stop" aria-label="Stop" hidden><span></span></button>
-          </div>
-          <div class="podcast-player-secondary-row">
-            <select id="podcastSleepSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSleepChanged()" aria-label="Sleep timer">
-              <option value="0" selected>Sleep</option>
-              <option value="10">Sleep 10m</option>
-              <option value="20">Sleep 20m</option>
-              <option value="30">Sleep 30m</option>
-            </select>
-            <select id="podcastSpeedSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSpeedChanged()" aria-label="Playback speed">
-              <option value="0.75">0.75×</option>
-              <option value="1" selected>1×</option>
-              <option value="1.25">1.25×</option>
-              <option value="1.5">1.5×</option>
-            </select>
-          </div>
-          <div class="podcast-status" id="podcastStatus" aria-live="polite"></div>
-          <div class="pp-more"><button class="linklike podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Read along</span></button><button type="button" class="linklike" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Rewrite</button><button type="button" class="linklike" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all</button></div>
-        </div>
-        <div class="podcast-generated-note" id="podcastGeneratedNote" style="display:none;" aria-live="polite"></div>
-        <div class="podcast-refine" id="podcastRefine" style="display:none;"></div>
-        <div class="podcast-after" id="podcastAfter" style="display:none;" aria-live="polite"></div>
-      </div>
-      <div class="ref-scroll" id="podcastTranscriptWrap" style="display:none;"><div id="podcastTranscript" class="podcast-transcript"></div></div>
-      <div class="podcast-library" id="podcastLibrary" style="display:none;">
-        <div class="card-head" id="podcastLibraryToggle">
-          <div class="note" id="podcastLibraryChevron">Your lessons (0)</div>
-        </div>
-        <div id="podcastLibraryList"></div>
-      </div>
-    </div>
     <div class="panel card" id="modePanel">
       <h2>Practice a specific way</h2>
       <p class="hint">For when you want just one thing.</p>
@@ -3995,8 +3931,7 @@
   <!-- ================= TUTOR TAB ================= -->
   <div class="tab-panel" id="tab-tutor">
     <div class="card" id="tutorCard">
-      <div class="card-head"><h2>Ask your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
-      <p class="hint">Ask about anything CFP. Your tutor sees your progress here, never your name or anything outside the app.</p>
+      <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
       <div class="tutor-snapshot" id="tutorSnapshot">
         <div class="stat">
@@ -4018,6 +3953,88 @@
         <button class="btn ghost" onclick="openSettings()">Open Settings</button>
       </div>
 
+    <div class="tt-lessons" id="lessonsCard">
+      <div class="tt-label tt-first">Lesson</div>
+      <div class="pod-hero" id="podcastHero">
+        <div class="pod-hero-kicker" id="podHeroKicker"></div>
+        <div class="pod-hero-title" id="podHeroTitle"></div>
+        <div class="pod-hero-sub" id="podHeroSub"></div>
+        <button type="button" class="btn pod-hero-btn" id="podcastHeroBtn" onclick="podcastHeroAction()"></button>
+      </div>
+      <div class="pod-seg" id="podcastTypeSeg" role="group" aria-label="Kind of episode">
+        <button type="button" data-v="personalized" onclick="podcastSetType('personalized')">For you</button>
+        <button type="button" data-v="overview" onclick="podcastSetType('overview')">Overview</button>
+        <button type="button" data-v="formulas" onclick="podcastSetType('formulas')">Formulas</button>
+        <button type="button" data-v="mistakes" onclick="podcastSetType('mistakes')">Mistakes</button>
+      </div>
+      <div class="podcast-selector-grid pod-opts">
+        <select id="podcastDomainSelect" class="fc-domain-select" onchange="podcastSelectionChanged()" aria-label="Choose a domain for the podcast episode"></select>
+        <div class="pod-seg pod-len" id="podcastLenSeg" role="group" aria-label="Episode length">
+          <button type="button" data-v="short" onclick="podcastSetLength('short')">2 min</button>
+          <button type="button" data-v="standard" onclick="podcastSetLength('standard')">4 min</button>
+          <button type="button" data-v="deep" onclick="podcastSetLength('deep')">7 min</button>
+        </div>
+      </div>
+      <select id="podcastTypeSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
+        <option value="overview">Domain overview</option>
+        <option value="formulas">Key formulas explained</option>
+        <option value="mistakes">Common mistakes on this domain</option>
+        <option value="personalized" selected>Your tutor's pick</option>
+        <option value="custom">A lesson your tutor wrote</option>
+      </select>
+      <select id="podcastLengthSelect" class="pod-hidden" onchange="podcastSelectionChanged()" aria-hidden="true" tabindex="-1">
+        <option value="short">Short (~2 min)</option>
+        <option value="standard" selected>Standard (~4 min)</option>
+        <option value="deep">Deep dive (~7 min)</option>
+      </select>
+      <div class="podcast-focus" id="podcastFocus" style="display:none;"></div>
+      <div class="podcast-player" id="podcastPlayer" style="display:none;">
+        <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
+          <div class="pst-body" id="pstBody"></div>
+          <div class="pst-now" id="pstNow" aria-hidden="true"></div>
+          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
+        </div>
+        <div class="podcast-player-panel">
+          <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
+          <div class="pp-prog"><input type="range" id="podcastSeek" min="0" max="0" value="0" step="1" aria-label="Position in episode" oninput="podcastSeekPreview(this.value)" onchange="podcastSeekCommit(this.value)"><div class="pp-time"><span id="podcastElapsed">0:00</span><span id="podcastLeft"></span></div></div>
+          <div class="podcast-player-controls">
+            <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipBackBtn" onclick="podcastSkip(-1)" title="Previous sentence" aria-label="Previous sentence"></button>
+            <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
+            <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipForwardBtn" onclick="podcastSkip(1)" title="Next sentence" aria-label="Next sentence"></button>
+            <button class="podcast-icon-btn podcast-icon-btn-skip podcast-stop-btn" id="podcastStopBtn" onclick="stopPodcastPlayback()" title="Stop" aria-label="Stop" hidden><span></span></button>
+          </div>
+          <div class="podcast-player-secondary-row">
+            <select id="podcastSleepSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSleepChanged()" aria-label="Sleep timer">
+              <option value="0" selected>Sleep</option>
+              <option value="10">Sleep 10m</option>
+              <option value="20">Sleep 20m</option>
+              <option value="30">Sleep 30m</option>
+            </select>
+            <select id="podcastSpeedSelect" class="fc-domain-select podcast-speed-select" onchange="podcastSpeedChanged()" aria-label="Playback speed">
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+            </select>
+          </div>
+          <div class="podcast-status" id="podcastStatus" aria-live="polite"></div>
+          <div class="pp-more"><button class="linklike podcast-icon-btn-stop" id="podcastTranscriptToggle" onclick="podcastToggleTranscript()" aria-expanded="false"><span>Read along</span></button><button type="button" class="linklike" id="podcastGenerateBtn" onclick="generatePodcastEpisode(true)">Rewrite</button><button type="button" class="linklike" id="podcastQueueBtn" onclick="togglePodcastQueue()">Play all</button></div>
+        </div>
+        <div class="podcast-generated-note" id="podcastGeneratedNote" style="display:none;" aria-live="polite"></div>
+        <div class="podcast-refine" id="podcastRefine" style="display:none;"></div>
+        <div class="podcast-after" id="podcastAfter" style="display:none;" aria-live="polite"></div>
+      </div>
+      <div class="ref-scroll" id="podcastTranscriptWrap" style="display:none;"><div id="podcastTranscript" class="podcast-transcript"></div></div>
+      <div class="podcast-library" id="podcastLibrary" style="display:none;">
+        <div class="card-head" id="podcastLibraryToggle">
+          <div class="note" id="podcastLibraryChevron">Your lessons (0)</div>
+        </div>
+        <div id="podcastLibraryList"></div>
+      </div>
+    </div>
+      <div class="tt-ask" id="ttAsk">
+      <div class="tt-label">Ask</div>
+      <p class="hint" style="margin-top:0;">Ask about anything CFP. Your tutor sees your progress here, never your name or anything outside the app.</p>
       <div class="tutor-thread" id="tutorThread">
         <div class="tutor-msg tutor-msg-bot">
           <div class="tutor-bubble">Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. I can see your progress in this app, so feel free to just say "explain my weakest domain."</div>
@@ -4029,6 +4046,7 @@
         <button class="btn" id="tutorSendBtn" onclick="sendTutorMessage()">Send</button>
       </div>
       <div class="tutor-status" id="tutorStatus" role="status"></div>
+      </div>
     </div>
   </div>
 
@@ -4345,7 +4363,7 @@ function showTab(name, opts){
     // The Reference page is big (hundreds of terms), so it is rebuilt only when what it shows has changed.
     if(name === 'reference' || !window._refRenderedOnce){
       let sig = ''; try{ sig = [allDomainsWeakestFirst().join(','), DATA.answerCounter, allFlashcards().length, DATA.checkedSubtopics.length, Object.keys(DATA.formulaStats || {}).length, Object.values(DATA.formulaStats || {}).reduce((x,f)=>x+((f&&f.attempts)||0),0), localDayKey()].join('|'); }catch(e){ sig = String(Math.random()); }
-      if(name !== 'reference' && !window._refRenderedOnce){
+      if(name !== 'reference' && name !== 'tutor' && !window._refRenderedOnce){
         // First launch: do not make the opening screen wait for the big Reference page; build it just after, when idle.
         if(!window._refIdleTimer) window._refIdleTimer = setTimeout(() => {
           window._refIdleTimer = null;
@@ -4361,6 +4379,7 @@ function showTab(name, opts){
     renderExamDayCallout();
     updateTutorContextNote();
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
+    if(name === 'tutor'){ try{ podcastAutoDefault(); }catch(e){} }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
@@ -7011,7 +7030,7 @@ async function loadData(){
     setTimeout(endBoot, 2000);
   }catch(_){}
   // The Reference page is the heaviest to build, so the opening screen does not wait for it unless it is the one showing.
-  if(DATA.lastTab === 'reference'){ renderReference(); window._refRenderedOnce = true; }
+  if(DATA.lastTab === 'reference' || DATA.lastTab === 'tutor'){ renderReference(); window._refRenderedOnce = true; }
   else if(!window._refIdleTimer) window._refIdleTimer = setTimeout(() => {
     window._refIdleTimer = null;
     const go = () => { if(!window._refRenderedOnce){ try{ renderReference(); window._refRenderedOnce = true; }catch(e){} } };
@@ -12154,8 +12173,14 @@ function renderExamDayCallout(){
 /* ===========================================================
    REFERENCE TAB
 =========================================================== */
+/* Tutor tab: lessons and chat are one surface. Opening a lesson brings the lesson block into view. */
+function openLessons(){
+  showTab('tutor');
+  requestAnimationFrame(() => { try{ const el = document.getElementById('lessonsCard'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){} });
+}
+
 function openPodcastFromStudy(){
-  showTab('reference');
+  openLessons();
   requestAnimationFrame(() => {
     const card = document.getElementById('podcastDomainSelect').closest('.card');
     if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
@@ -12586,7 +12611,7 @@ function tutorLessonOpen(id){
     podcastDomainChanged();
   }catch(e){}
   openPodcastFromStudy();
-  try{ const card = document.getElementById('lessonsCard'); if(card) focusEnter({ tab:'reference', el:card, title:'Your lesson', stepId:'tlesson' }); }catch(e){}
+  try{ const card = document.getElementById('lessonsCard'); if(card) focusEnter({ tab:'tutor', el:card, title:'Your lesson', stepId:'tlesson' }); }catch(e){}
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
     if(!have){ if(aiFeaturesAvailable) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
@@ -12600,7 +12625,7 @@ function podcastOpenTutorPick(){
     podcastDomainChanged();
   }catch(e){}
   openPodcastFromStudy();
-  try{ const card = document.getElementById('podcastTypeSelect').closest('.card'); if(card) focusEnter({ tab:'reference', el:card, title:'Your briefing', stepId:'listen' }); }catch(e){}
+  try{ const card = document.getElementById('podcastTypeSelect').closest('.card'); if(card) focusEnter({ tab:'tutor', el:card, title:'Your briefing', stepId:'listen' }); }catch(e){}
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
     if(!have || podcastIsStale(key, 'personalized')){ if(aiFeaturesAvailable || offlinePodcastScript) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
@@ -27771,7 +27796,7 @@ const TUTOR_POINT_TARGETS = {
   flashcard_deck: { tab:'flashcards', sel:'#fcCard',          label:'Start here' },
   study_stats:    { tab:'study',      sel:'.stat-strip',      label:'Due, answered, accuracy and streak' },
   study_guide:    { tab:'reference',  sel:'#studyGuideCard',    label:'Your one-page study guide' },
-  podcast:        { tab:'reference',  sel:'.card:has(#podcastDomainSelect)', label:'Lessons' },
+  podcast:        { tab:'tutor',  sel:'.card:has(#podcastDomainSelect)', label:'Lessons' },
   ref_toolkit:    { tab:'reference',  sel:'#techCard',        label:'Study toolkit: what works' },
   ref_glossary:   { tab:'reference',  sel:'.card:has(#glossarySearch)', label:'Glossary search' },
   ref_key_numbers:{ tab:'reference',  sel:'.card:has(#keyNumbersTable)', label:'Key numbers for 2026' },
@@ -28288,7 +28313,7 @@ async function executeTutorTool(toolName, toolInput){
         if(playing && paused){ togglePodcastPlayback(); return 'Resumed.'; }
         if(playing) return 'It is already playing.';
         const key = podcastCacheKey(); if(!(DATA.podcastEpisodes && DATA.podcastEpisodes[key])) return 'There is no lesson to resume. Open or write one first.';
-        showTab('reference'); openPodcastFromStudy(); togglePodcastPlayback(); return 'Started the lesson from where it left off.';
+        openPodcastFromStudy(); togglePodcastPlayback(); return 'Started the lesson from where it left off.';
       }
       const args = act === 'work_question' ? { kind:'check', mode:'question', question_id:a.question_id, topic:a.topic } : act === 'work_keys' ? { kind:'check', mode:'calc', title:a.title, steps:a.steps } : act === 'say_back' ? { kind:'check', mode:'recall', title:a.title, prompt:a.prompt } : null;
       if(!args) return 'Error: action must be pause, resume, work_question, work_keys or say_back.';
@@ -28320,7 +28345,7 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'play_podcast'){
       const t = (toolInput && toolInput.type) || 'tutor_pick';
-      showTab('reference');
+      openLessons();
       try{
         const ts = document.getElementById('podcastTypeSelect'), ds = document.getElementById('podcastDomainSelect');
         ts.value = t === 'tutor_pick' ? 'personalized' : t;
@@ -28331,7 +28356,7 @@ async function executeTutorTool(toolName, toolInput){
       openPodcastFromStudy();
       const ask = toolInput && toolInput.request ? 'The student asked for this episode specifically; make sure it covers: ' + String(toolInput.request).slice(0, 400) : undefined;
       generatePodcastEpisode(true, ask).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} });
-      return 'Started writing the episode; it will appear in the Learn tab Lessons card in a few seconds; the student taps play (the phone only allows sound after a tap).';
+      return 'Started writing the episode; it will appear under Lessons in the Tutor tab in a few seconds; the student taps play (the phone only allows sound after a tap).';
     }
     if(toolName === 'open_formula_drill'){
       showTab('study');
@@ -28508,7 +28533,7 @@ async function executeTutorTool(toolName, toolInput){
       if(toolInput.episodeType === 'personalized' && computeStats().totalAnswered === 0){
         return `Can't generate a personalized episode yet -- the student hasn't answered any questions, so there's nothing real to build it from.`;
       }
-      showTab('reference');
+      openLessons();
       document.getElementById('podcastTypeSelect').value = toolInput.episodeType;
       document.getElementById('podcastLengthSelect').value = length;
       if(domainMeta) document.getElementById('podcastDomainSelect').value = domainMeta.key;
@@ -29521,7 +29546,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.490';
+const BUILD_ID = '2026-10-23.491';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
