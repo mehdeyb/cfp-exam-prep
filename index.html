@@ -1917,9 +1917,21 @@
   .os-seg button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--hair);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .os-seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
   .os-hide{display:none !important;}
+  .os-fit:not(.os-end){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);}
+  .os-fit{padding-bottom:22px;}
+  .pt-fitmore{display:block;width:100%;margin:10px 0 0;padding:10px 0;background:none;border:0;border-top:1px solid var(--hair);font:inherit;font-size:13px;font-weight:600;color:var(--gold);cursor:pointer;text-align:center;min-height:44px;}
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub > .hub-seg{display:flex;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub[data-view="plan"] > #blueprintCard{display:none !important;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub[data-view="progress"] > #todayPlanCard{display:none !important;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub > #blueprintCard{margin-top:0;padding-top:0;border-top:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyCols{column-count:1;}
+  @media (max-height:900px){
+    body.os-one #nextStepCard .ns-why, body.os-one #nextStepCard .ns-alt, body.os-one #nextStepCard .ns-tag{display:none;}
+    body.os-one #tab-study .score-row{margin-bottom:6px;}
+  }
   .today-ask{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 14px;padding:2px 0;}
   .today-ask::-webkit-scrollbar{display:none;}
   .today-ask button{flex:0 0 auto;min-height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
@@ -11016,6 +11028,9 @@ function planAdvanceReveal(){
 }
 function ptToggleAll(){ window._ptAll = !window._ptAll; renderTodayPlan(); }
 function renderTodayPlan(){
+  try{ return _renderTodayPlanInner.apply(this, arguments); } finally { try{ setTimeout(osFitStudy, 30); }catch(e){} }
+}
+function _renderTodayPlanInner(){
   try{ ppRefresh(); }catch(e){}
   const el = document.getElementById('todayPlanCard');
   if(!el || typeof DATA === 'undefined' || !DATA || !DATA.domainStats) return;
@@ -27833,20 +27848,48 @@ function osFit(tab){
     const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
     const avail = Math.max(260, Math.round(h - top - bb - 16 - (vis.length - 1) * 12));
     const per = Math.floor(avail / vis.length);
-    vis.forEach(c => { if(c.scrollHeight > per + 2){ c.style.maxHeight = per + 'px'; c.classList.add('os-fit'); } });
+    vis.forEach(c => { c.classList.remove('os-end'); if(c.scrollHeight > per + 2){ c.style.maxHeight = per + 'px'; c.classList.add('os-fit'); osFade(c); } });
   }catch(e){}
 }
 function osFitStudy(){
   try{
     const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
     if(document.body.classList.contains('quiz-active')) return;
-    c.style.maxHeight = ''; c.classList.remove('os-fit');
+    c.style.maxHeight = ''; c.classList.remove('os-fit', 'os-end');
+    c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
+    const rowsHost = c.querySelector('.pt-rows');
+    const all = rowsHost ? [...rowsHost.children] : [];
+    all.forEach(r => { r.style.display = ''; });
     const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     const avail = Math.max(240, Math.round(h - top - bb - 14));
-    if(c.scrollHeight > avail + 2){ c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); }
+    if(c.scrollHeight <= avail + 2) return;
+    const steps = all.filter(r => r.classList.contains('pt-step'));
+    const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
+    if(rowsHost && steps.length > 2 && !window._ptAll){
+      // Show the steps that fit whole, never a half-cut row, and say how many are waiting.
+      const foot = mkBtn('', () => { window._ptAll = true; osFitStudy(); }); rowsHost.appendChild(foot);
+      let hidden = 0;
+      for(let k = steps.length - 1; k >= 2 && c.scrollHeight > avail + 2; k--){
+        const r = steps[k]; r.style.display = 'none'; hidden++;
+        const nx = r.nextElementSibling; if(nx && nx.classList.contains('pt-break')) nx.style.display = 'none';
+        foot.textContent = hidden + ' more step' + (hidden === 1 ? '' : 's') + ' later today \u00b7 see all';
+      }
+      if(!hidden) foot.remove();
+      c.querySelectorAll('.pt-block').forEach(x => { if(c.scrollHeight > avail + 2) x.style.display = 'none'; });
+      if(c.scrollHeight <= avail + 2) return;
+    }
+    if(window._ptAll && rowsHost) rowsHost.appendChild(mkBtn('Show fewer', () => { window._ptAll = false; osFitStudy(); }));
+    // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
+    c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
+}
+function osFade(c){
+  if(!c || c._osFade) { if(c) c.dispatchEvent(new Event('scroll')); return; }
+  c._osFade = true;
+  c.addEventListener('scroll', () => { c.classList.toggle('os-end', c.scrollTop + c.clientHeight >= c.scrollHeight - 6); }, { passive:true });
+  c.dispatchEvent(new Event('scroll'));
 }
 window.addEventListener('resize', () => setTimeout(() => { osFit('reference'); osFit('examday'); osFitStudy(); }, 80));
 window.addEventListener('orientationchange', () => setTimeout(() => { osFit('reference'); osFit('examday'); }, 300));
@@ -30152,7 +30195,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.545';
+const BUILD_ID = '2026-10-23.547';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
