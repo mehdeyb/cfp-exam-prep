@@ -1101,6 +1101,15 @@
   .bp-fold .card-head h2{font-size:15px;}
   .bp-guide-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);}
   #bpPlan,#focusPills,#difficultyIndicator{display:none !important;}
+  .hub{padding-top:14px;}
+  .hub > .card{background:none;border:0;box-shadow:none;border-radius:0;padding:0;margin:0;}
+  .hub-seg{margin:0 0 14px;}
+  .hub-seg button{display:inline-flex;align-items:baseline;justify-content:center;gap:8px;}
+  .hub-seg button em{font:500 11px 'IBM Plex Mono',monospace;font-style:normal;opacity:.7;} .hub-seg button em:empty{display:none;}
+  .hub[data-view="plan"] > #blueprintCard,.hub[data-view="progress"] > #todayPlanCard{display:none !important;}
+  .hub #blueprintCard > .card-head{display:none;}
+  .bp-top .stat-strip .stat:nth-child(1),.bp-top .stat-strip .stat:nth-child(3){display:none;}
+  .bp-top .stat-strip{justify-content:flex-start;gap:28px;}
   .bp-top{margin:2px 0 14px;padding-bottom:14px;border-bottom:1px solid var(--hair);}
   .bp-top .rb-panel{margin:0 0 12px;box-shadow:none;background:var(--surface-2,rgba(128,128,128,.06));}
   .bp-top .coach-line{margin:0;}
@@ -2986,7 +2995,10 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols{column-count:2;column-gap:20px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > *{break-inside:avoid;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > .card{margin-bottom:20px;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #todayPlanCard{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #studyHub{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyHub > .hub-seg{display:none;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyHub[data-view] > #todayPlanCard:not([style*="display: none"]),html:is([data-lay="wide"],[data-lay="xwide"]) #studyHub[data-view] > #blueprintCard{display:block !important;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #studyHub > #blueprintCard{margin-top:22px;padding-top:22px;border-top:1px solid var(--hair);}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard,html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #modePanel{column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > #blueprintCard{order:1;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #blueprintCard .bp-cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:36px;align-items:start;}
@@ -3143,9 +3155,12 @@
     <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
     
     <div id="studyCols">
+    <div class="card hub" id="studyHub" data-view="plan">
+      <div class="hub-seg pod-seg" id="hubSeg" role="group" aria-label="Plan or progress">
+        <button type="button" data-v="plan" onclick="hubShow('plan')"><span>Today's plan</span><em id="hubSegPlan"></em></button>
+        <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg"></em></button>
+      </div>
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
-    <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
-
     <div class="card" id="blueprintCard">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
@@ -3243,6 +3258,9 @@
     </div>
 
     </div>
+    </div>
+    <div class="card" id="workshopCard" role="region" aria-label="Your tutor's workshop" style="display:none;"></div>
+
     </div>
 
     <div id="domainPickerHost">
@@ -8136,9 +8154,9 @@ function renderBlueprint(){
     const metaBits = [];
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
     const stg = s.total ? domainStageOf(d.key) : 0;
-    if(stg) metaBits.push('<span class="bp-chip-stage s' + stg + '">' + STAGES[stg - 1].name + '</span>');
+    if(stg >= 3) metaBits.push('<span class="bp-chip-stage s' + stg + '">' + STAGES[stg - 1].name + '</span>'); // the early stage is the same on every row, so only the later ones say anything
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
-    if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : `<span class="bp-chip-cov">all ${dx.length} topics seen</span>`);
+    if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
     chip.className = 'bp-chip' + (inFoundation ? ' foundation-active' : '');
     chip.tabIndex = 0;
@@ -8503,6 +8521,7 @@ function computeReadinessDelta(currentScore){
 }
 
 function toggleReadinessBreakdown(force, skipScroll){
+  try{ hubShow('progress', true); }catch(e){}
   const panel = document.getElementById('readinessBreakdown');
   const btn = document.getElementById('readinessWhyBtn');
   if(!panel || !btn) return;
@@ -10674,6 +10693,7 @@ function renderTodayPlan(){
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
+  try{ hubRefreshSeg(); }catch(e){}
   try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = (plan.days !== null && plan.days >= 2) ? 'none' : ''; }catch(e){} // the countdown lives in the plan's header now
   try{ conductorRefreshPill(); }catch(e){}
 }
@@ -12805,6 +12825,28 @@ function stageCheckPick(k){
   const q = allQuestions().find(x => x.id === sl.qid); if(!q) return;
   sl.pick = k; stageRecordAnswer(q, k); try{ navigator.vibrate && navigator.vibrate(k === q.correct ? 8 : [8, 40, 8]); }catch(e){}
   stageDraw(true);
+}
+// The plan and the progress picture share one card. On a phone one shows at a time; wide screens show both.
+function hubShow(v, noPersist){
+  const hub = document.getElementById('studyHub'); if(!hub) return;
+  if(v !== 'plan' && v !== 'progress') v = 'plan';
+  hub.dataset.view = v;
+  hub.querySelectorAll('#hubSeg button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  if(!noPersist) try{ localStorage.setItem('hubView', v); }catch(e){}
+}
+function hubRevealEl(el){
+  const hub = document.getElementById('studyHub'); if(!hub || !el || !el.closest) return;
+  if(el.closest('#blueprintCard')) hubShow('progress', true); else if(el.closest('#todayPlanCard')) hubShow('plan', true);
+}
+let _hubInit = false;
+function hubRefreshSeg(){
+  if(!_hubInit){ _hubInit = true; let v = 'plan'; try{ v = localStorage.getItem('hubView') || 'plan'; }catch(e){} hubShow(v, true); }
+  try{
+    const p = document.getElementById('hubSegPlan'), g = document.getElementById('hubSegProg'); if(!p || !g) return;
+    const plan = buildStudyPlan(), n = plan.steps.length, d = plan.steps.filter(x => x.done).length;
+    p.textContent = n ? d + '/' + n : '';
+    const cs = computeStats(); g.textContent = cs.totalAnswered ? String(cs.readiness) : '';
+  }catch(e){}
 }
 // One tap from anywhere: a short two-host lesson, with slides, on a topic. The same path the tutor uses.
 async function lessonOnTopic(name, why){
@@ -28611,6 +28653,7 @@ function focusEnter(o){
   _focus = { entering:true, origin: origin ? origin.replace(/^tab-/, '') : null, originY, tab:o.tab, stepId:o.stepId || null, title:String(o.title || '') };
   let el = o.el || null;
   if(!el && o.sel) el = document.querySelector(o.sel);
+  try{ hubRevealEl(el); (o.els || []).forEach(hubRevealEl); }catch(e){}
   if(!(o.els && o.els.length) && el && el.closest){ const card = el.closest('.card'); if(card && panel.contains(card) && !o.exact) el = card; }
   if(el === panel) el = null;
   const els = (o.els && o.els.length) ? o.els.filter(Boolean) : (el ? [el] : []);
@@ -28718,6 +28761,7 @@ function tutorPoint(key, note, isolate){
   showTab(t.tab);
   if(key === 'ref_calc_keys') renderCalcKeysCard();
   let el = document.querySelector(t.sel);
+  try{ hubRevealEl(el); }catch(e){}
   if((!el || el.style.display === 'none') && key === 'next_step') el = document.getElementById('todayPlanCard');
   if(!el || el.style.display === 'none') el = document.querySelector('#tab-' + t.tab + ' .card') || null;
   if(!el) return false;
@@ -29195,7 +29239,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.458';
+const BUILD_ID = '2026-10-22.459';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
