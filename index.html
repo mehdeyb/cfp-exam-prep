@@ -13802,12 +13802,42 @@ function ttIdleBoard(){
   if(!stageInlineVisible()) ttEnsureStage();
   stageShow(sl, 'tutor');
 }
+// Whatever you ask about, the board follows. Before the reply, a term, formula or concept you named goes up at once; after it, if the tutor did not
+// put anything up itself, the board takes the first line of the answer, so the screen always shows the thing being discussed.
+function ttFindSlide(text){
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9%$ ]+/g, ' ') + ' ';
+  let best = null, bl = 0;
+  try{ FORMULAS.forEach(f => { const n = f.name.toLowerCase(); if(n.length >= 5 && t.indexOf(' ' + n.replace(/[^a-z0-9%$ ]+/g, ' ').trim() + ' ') >= 0 && n.length > bl){ bl = n.length; best = { kind:'formula', title:f.name }; } }); }catch(e){}
+  try{ allFlashcards().forEach(c => { const n = String(c.term || '').toLowerCase().replace(/[^a-z0-9%$ ]+/g, ' ').trim(); if(n.length >= 5 && t.indexOf(' ' + n + ' ') >= 0 && n.length > bl){ bl = n.length; best = { kind:'term', term:c.term, def:c.def }; } }); }catch(e){}
+  return best;
+}
+function ttPreBoard(userText){
+  window._ttBoardTurn = false;
+  try{
+    const spec = ttFindSlide(userText); if(!spec) return;
+    const r = stageSlideFromTool(spec); if(r.error) return;
+    if(!stageInlineVisible()) ttEnsureStage();
+    stageShow(r.slide, 'tutor'); window._ttBoardTurn = true;
+  }catch(e){}
+}
+function ttPostBoard(userText, reply){
+  try{
+    if(window._ttBoardTurn) return;
+    const first = String(reply || '').replace(/\[\[[^\]]*\]\]/g, '').split('\n').map(x => x.trim()).filter(Boolean)[0] || '';
+    const sent = (first.match(/^.{20,}?[.!?](\s|$)/) || [first])[0].trim(); if(sent.length < 20) return;
+    const title = stageClip(String(userText || '').replace(/[?.!]+$/, '').replace(/^(can you |please |could you |tell me |explain |what is |what's |what are |how do i |how does )/i, ''), 40) || 'Your question';
+    const sl = { kind:'idea', src:'tutor', at:0, title: title.charAt(0).toUpperCase() + title.slice(1), text: stageClip(sent, 260) };
+    if(!stageInlineVisible()) ttEnsureStage();
+    stageShow(sl, 'tutor'); window._ttBoardTurn = true;
+  }catch(e){}
+}
 function ttBoardHide(){
   const pl = document.getElementById('podcastPlayer'), card = document.getElementById('tutorCard');
   if(card) card.classList.remove('tt-board');
   const lc = document.getElementById('lessonsCard'); if(pl && !(lc && lc.classList.contains('has-lesson'))) pl.style.display = 'none';
 }
 function tutorShowOnScreen(a){
+  window._ttBoardTurn = true;
   const r = stageSlideFromTool(a); if(r.error) return 'Error: ' + r.error;
   const sl = r.slide, playing = naturalSpeechState.active && podcastPlayingKey;
   if(playing){
@@ -28734,7 +28764,7 @@ async function executeTutorTool(toolName, toolInput){
       return `Opened the glossary and searched for "${toolInput.term}," but nothing matched.`;
     }
     if(toolName === 'show_on_screen') return tutorShowOnScreen(toolInput || {});
-    if(toolName === 'show_visual'){
+    if(toolName === 'show_visual'){ window._ttBoardTurn = true;
       const ok = tutorVisualRow(toolInput || {});
       return ok ? 'Drawn in the chat. Now say in one or two sentences what to notice.' : 'Error: that visual had no usable data. Check kind, labels and values, or just explain in words.';
     }
@@ -29078,7 +29108,7 @@ async function sendTutorMessage(presetText){
   const input = document.getElementById('tutorInput');
   const text = (presetText!==undefined ? presetText : input.value).trim();
   if(!text || tutorBusy) return;
-  window._ttOpenUsed = true; try{ tutorClearActions(); }catch(e){}
+  window._ttOpenUsed = true; try{ tutorClearActions(); ttPreBoard(text); }catch(e){}
   input.blur();
   try{ if(ttVoiceOn()){ speechAudioPrime(); if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); } }catch(e){}
   if(!aiFeaturesAvailable){
@@ -29150,7 +29180,7 @@ async function sendTutorMessage(presetText){
     const nextSteps = tutorParseNext(reply); reply = nextSteps.text || reply;
     typingBubble.classList.remove('typing');
     tutorRenderReply(typingBubble, reply, text);
-    try{ tutorAddNext(typingBubble, nextSteps.opts); }catch(e){}
+    try{ tutorAddNext(typingBubble, nextSteps.opts); ttPostBoard(text, reply); }catch(e){}
     ttAddListen(typingBubble, reply);
     if(ttVoiceOn() && document.getElementById('tab-tutor').classList.contains('active')) ttSpeakReply(reply);
     status.textContent = '';
@@ -29855,7 +29885,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.513';
+const BUILD_ID = '2026-10-23.514';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
