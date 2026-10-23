@@ -1920,6 +1920,10 @@
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  .today-ask{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 14px;padding:2px 0;}
+  .today-ask::-webkit-scrollbar{display:none;}
+  .today-ask button{flex:0 0 auto;min-height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .today-ask button:active{background:var(--gold);color:#fff;}
   body.os-one .footer-row{display:none;}
   body.os-one #todayPlanCard .pt-mins, body.os-one #todayPlanCard .pt-today, body.os-one #todayPlanCard .pt-pace, body.os-one #todayPlanCard .pt-sub{display:none;}
   body.os-one #todayPlanCard .card-head{margin-bottom:8px;}
@@ -4547,7 +4551,7 @@ function showTab(name, opts){
     if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} try{ ttIdleBoard(); }catch(e){} }
     if(name === 'tutor'){ ttFit(); setTimeout(ttFit, 120); setTimeout(ttFit, 700); }
     document.body.classList.toggle('os-one', name === 'tutor' || name === 'study' || !!OS_TABS[name]);
-    if(name === 'study'){ setTimeout(osFitStudy, 150); setTimeout(osFitStudy, 900); }
+    if(name === 'study'){ renderTodayAsk(); setTimeout(osFitStudy, 150); setTimeout(osFitStudy, 900); }
     if(OS_TABS[name]){ osApply(name); setTimeout(() => osApply(name), 150); setTimeout(() => osFit(name), 800); }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
@@ -11059,7 +11063,7 @@ function renderTodayPlan(){
       + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
   } else rows = stepRows.join('') + (stepRows.length > 11 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><button type="button" class="plan-tutor-link" onclick="ttAdjustPlan()">Change with tutor</button><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
@@ -11102,6 +11106,7 @@ function renderNextStepCard(stats, refreshed){
     ${(s.bigger && !planTag) ? `<div class="ns-note">Most pressing: ${escapeHtml(s.bigger.charAt(0).toLowerCase() + s.bigger.slice(1))}.</div>` : ''}
     ${s.streakNote ? `<div class="ns-note">${escapeHtml(s.streakNote)}</div>` : ''}`;
   el.style.display = 'block';
+  try{ renderTodayAsk(); }catch(e){}
 }
 
 function runNextStep(){
@@ -27845,6 +27850,24 @@ function osFitStudy(){
 }
 window.addEventListener('resize', () => setTimeout(() => { osFit('reference'); osFit('examday'); osFitStudy(); }, 80));
 window.addEventListener('orientationchange', () => setTimeout(() => { osFit('reference'); osFit('examday'); }, 300));
+// Today is where everything starts: under the next step, a short row of prompts that hand off to the tutor or change the plan.
+function renderTodayAsk(){
+  try{
+    const ns = document.getElementById('nextStepCard'); if(!ns) return;
+    let host = document.getElementById('todayAsk');
+    if(!host){ host = document.createElement('div'); host.id = 'todayAsk'; host.className = 'today-ask'; ns.parentNode.insertBefore(host, ns.nextSibling); }
+    const st = computeStats(); const next = (typeof currentNextStep !== 'undefined' && currentNextStep && currentNextStep.title) ? currentNextStep : null;
+    const items = [];
+    const askTutor = (msg) => () => { showTab('tutor'); setTimeout(() => { try{ sendTutorMessage(msg); }catch(e){} }, 120); };
+    if(window._ttSession) items.push({ l:'Go over my session', f: askTutor('I just finished a ' + (window._ttSession.mode || 'practice') + ' session. Go over it with me: what to fix first, and show it on the board.') });
+    if(next && next.kicker !== 'In progress' && next.launchesSession !== false) items.push({ l:'Teach me this first', f: askTutor('Before I start "' + next.title + '", teach me what I need to know for the exam on it. Show the key idea on the board, then check me.') });
+    if(st.totalAnswered && st.weakestMeta) items.push({ l:'Quiz me on ' + tutorShort(st.weakestMeta.name, 20), f: () => { startDrill(st.weakestMeta.key); } });
+    items.push({ l:'Change my plan', f: () => ttAdjustPlan() });
+    items.push({ l:'Ask the tutor', f: () => { showTab('tutor'); setTimeout(() => { const i = document.getElementById('tutorInput'); if(i) i.focus(); }, 150); } });
+    host.innerHTML = '';
+    items.slice(0, 4).forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.textContent = x.l; b.onclick = x.f; host.appendChild(b); });
+  }catch(e){}
+}
 function ttFit(){
   try{
     const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
@@ -30129,7 +30152,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.543';
+const BUILD_ID = '2026-10-23.545';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
