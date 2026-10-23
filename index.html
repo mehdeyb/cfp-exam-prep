@@ -1846,6 +1846,14 @@
   .tutor-listen.speaking{color:var(--gold);border-color:var(--gold);}
   .tt-lessons{margin:0 0 6px;}
   body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
+  .tt-planstrip{order:-2;margin:0 0 12px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--surface);font-size:13px;line-height:1.4;}
+  .tt-planstrip .tps-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+  .tt-planstrip .linklike{font-size:12px;color:var(--gold);white-space:nowrap;}
+  .tt-planstrip .tps-bar{height:3px;border-radius:2px;background:var(--hair);margin:8px 0 0;overflow:hidden;}
+  .tt-planstrip .tps-bar i{display:block;height:100%;background:var(--gold);}
+  .tt-planstrip .tps-next{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;color:var(--muted);}
+  .tt-planstrip .tps-next .pt-go{flex:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttPlanStrip{order:1;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
   .tt-lessons > .card-head{margin-bottom:4px;}
   .tt-label{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px;padding-top:18px;border-top:1px solid var(--hair);}
@@ -3990,6 +3998,7 @@
 
     <div class="tt-lessons" id="lessonsCard">
       <div class="tt-label tt-first">Lesson</div>
+      <div class="tt-planstrip" id="ttPlanStrip" style="display:none;"></div>
       <div class="pod-hero" id="podcastHero">
         <div class="pod-hero-kicker" id="podHeroKicker"></div>
         <div class="pod-hero-title" id="podHeroTitle"></div>
@@ -10298,9 +10307,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach','listen'],
-    build:      ['cards','adaptive','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach','listen'],
-    sharpen:    ['cards','missed','weak','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach'],
+    build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
+    sharpen:    ['cards','missed','weak','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
@@ -12233,6 +12242,7 @@ function ttAddListen(bubble, reply){
 }
 function ttLiveRefresh(){
   const card = document.getElementById('tutorCard'); if(!card) return;
+  try{ ttPlanStripRefresh(); }catch(e){}
   const live = typeof naturalSpeechState !== 'undefined' && !!naturalSpeechState.active && document.getElementById('podcastPlayer') && document.getElementById('podcastPlayer').style.display !== 'none';
   card.classList.toggle('tt-live', !!live);
   const box = document.getElementById('ttLiveChips'); if(!box) return;
@@ -12609,8 +12619,7 @@ function podcastIsStale(key, type){
     if(!(DATA.podcastEpisodes && DATA.podcastEpisodes[key])) return false;
     if(type === 'personalized') return podcastStalePersonal(key);
     const m = DATA.podcastMeta && DATA.podcastMeta[key]; if(!m || m.day === localDayKey()) return false;
-    const dk = key.split('-')[0], st = DATA.domainStats && DATA.domainStats[dk];
-    return !!st && st.total - (m.dn || 0) >= 5;
+    return true; // written before today: write a fresh one from where you are now, not an old recording
   }catch(e){ return false; }
 }
 function renderPodcastFocus(){
@@ -13829,8 +13838,49 @@ function podcastSavePos(index){
     const key = podcastPlayingKey || podcastCacheKey(); if(!DATA.podcastMeta) DATA.podcastMeta = {};
     const m = DATA.podcastMeta[key] || (DATA.podcastMeta[key] = {}); const n = naturalSpeechState.chunks.length;
     m.pos = (n && index >= n - 2) ? 0 : index;
+    if(n && index >= n - 2) planLessonFinished(key);
     if(++podcastPosWrites % 6 === 0) persist();
   }catch(e){}
+}
+// Hearing a lesson to the end ticks its step in today's plan, so the plan and the lesson are one record.
+function planLessonFinished(key){
+  try{
+    let id = null;
+    if(/^personalized-/.test(key)) id = 'listen';
+    else { const pl = DATA.planLesson; if(pl && pl.day === localDayKey() && key.indexOf('custom-' + pl.id + '-') === 0) id = 'tlesson'; }
+    if(!id) return;
+    const L = planDayLog(); if(L.manual[id]) return;
+    if(!buildStudyPlan().steps.some(x => x.id === id && !x.done)) return;
+    planMarkManualDone(id);
+    ttPlanStripRefresh();
+  }catch(e){}
+}
+// The strip above the lesson: where this sits in today's plan and what comes next.
+function ttPlanStripRefresh(){
+  const el = document.getElementById('ttPlanStrip'); if(!el) return;
+  let html = '';
+  try{
+    const plan = buildStudyPlan();
+    if(plan && plan.steps.length && plan.phase.key !== 'after'){
+      const total = plan.steps.length, done = plan.steps.filter(x => x.done).length;
+      const nxt = plan.steps.find(x => !x.done);
+      const key = (typeof podcastPlayingKey !== 'undefined' && podcastPlayingKey) || (typeof podcastCacheKey === 'function' ? podcastCacheKey() : '');
+      let own = null;
+      if(/^personalized-/.test(key)) own = plan.steps.find(x => x.id === 'listen');
+      else if(DATA.planLesson && key.indexOf('custom-' + DATA.planLesson.id + '-') === 0) own = plan.steps.find(x => x.id === 'tlesson');
+      const adv = (typeof _planAdv !== 'undefined' && _planAdv && Date.now() - _planAdv.at < 45 * 60000) ? _planAdv : null;
+      const pct = Math.round(100 * done / total);
+      let line, go = '';
+      if(own && !own.done) line = `<b>Step ${plan.steps.indexOf(own) + 1} of ${total} in today's plan.</b> Finish this lesson and it checks itself off.`;
+      else if(own && own.done) line = `<b>\u2713 This lesson is done in today's plan.</b>`;
+      else line = adv ? `<b>\u2713 ${escapeHtml(adv.titles.length === 1 ? adv.titles[0] : adv.titles.length + ' steps')} done.</b>` : `<b>Today's plan</b> \u00b7 ${done} of ${total} done`;
+      if(nxt && nxt !== own) go = `<div class="tps-next"><span>Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><button type="button" class="pt-go" onclick="runPlanStep('${nxt.id}')">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'}</button></div>`;
+      else if(!nxt) go = `<div class="tps-next"><span>That is everything on today's plan.</span></div>`;
+      html = `<div class="tps-top"><span>${line}</span><button type="button" class="linklike" onclick="showTab('study')">Open plan</button></div><div class="tps-bar"><i style="width:${pct}%"></i></div>${go}`;
+    }
+  }catch(e){ html = ''; }
+  if(el.dataset.h !== html){ el.dataset.h = html; el.innerHTML = html; }
+  el.style.display = html ? '' : 'none';
 }
 function podcastClearPos(){ try{ const m = DATA.podcastMeta && DATA.podcastMeta[podcastPlayingKey || podcastCacheKey()]; if(m){ m.pos = 0; persist(); } }catch(e){} }
 
@@ -29637,7 +29687,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.492';
+const BUILD_ID = '2026-10-23.493';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
