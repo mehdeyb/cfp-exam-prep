@@ -19530,13 +19530,14 @@ function caseQuestions(id){
   return allQuestions().filter(q => re.test(q.id)).sort((a,b) => parseInt(a.id.split('-')[1],10) - parseInt(b.id.split('-')[1],10));
 }
 let caseGenBusy = false;
-function buildCasePrompt(domainKeys){
+function buildCasePrompt(domainKeys, variant){
   const titles = allCases().map(c => c.title).join('; ');
   const avgStage = domainKeys.reduce((a, k) => a + domainStageOf(k), 0) / Math.max(1, domainKeys.length);
   const caseLevel = avgStage < 2 ? 'Keep the case straightforward: one clear goal, simple figures, one complication, and questions that each test one core idea.' : avgStage < 3 ? 'Give the case two complications and ask questions needing one or two steps of reasoning.' : 'Make the case demanding: several complications, some irrelevant detail, and questions that need the right rule chosen before it is applied.';
   const domLines = domainKeys.map((k,i) => { const d = DOMAINS.find(x => x.key === k); return `${i+1}. "${k}" (${d.name})`; }).join('\n');
-  return `You write realistic client case studies for CFP® exam candidates.
-Write ONE new client situation of 110 to 170 words with specific figures (ages, incomes, balances, goals, a few complications). It must feel different from these existing cases: ${titles}.
+  const variantLine = variant ? `\nThis is a FRESH VERSION for a learner who has already worked the case "${variant.title}". Test the same underlying concepts as these earlier questions, but never the same story: ${variant.stems.map((t, i) => (i + 1) + ') ' + t).join(' ')}\nChange the client names, ages, family, figures and, most importantly, the deciding facts so that a memorized answer from the earlier case would be WRONG for at least three of the new questions (for example a different filing status, plan type, or timing that flips the rule). The correct answer should sit in a different position than before. Do not reuse any earlier names.` : '';
+  return `You write realistic client case studies for CFP® exam candidates.${variantLine}
+Write ONE new client situation of 110 to 170 words with specific figures (ages, incomes, balances, goals, a few complications). It must feel different from these existing cases${variant ? ' (except for the concepts it tests)' : ''}: ${titles}.
 ${caseLevel}
 Then write exactly 5 multiple-choice questions, each of which depends on facts in the case, one per domain in this order:
 ${domLines}
@@ -19588,25 +19589,41 @@ async function generateNewCase(opts){
   say('Writing a new case — reading the facts back for consistency… about half a minute.');
   const epoch = dataEpoch;
   try{
-    const weak = allDomainsWeakestFirst().slice(0,2);
-    const rest = shuffle(DOMAINS.map(d => d.key).filter(k => !weak.includes(k))).slice(0,3);
-    const keys = shuffle(weak.concat(rest));
+    let variant = null, keys;
+    if(opts.variantOf){
+      const oqs = caseQuestions(opts.variantOf), od = caseById(opts.variantOf);
+      if(oqs.length && od){
+        variant = { title: od.title, stems: oqs.slice(0, 5).map(q => String(q.q || '').replace(/\s+/g, ' ').slice(0, 150)) };
+        keys = Array.from(new Set(oqs.map(q => q.domain).filter(Boolean))).slice(0, 5);
+        const extra = shuffle(DOMAINS.map(d => d.key).filter(k => !keys.includes(k)));
+        while(keys.length < 5 && extra.length) keys.push(extra.shift());
+      }
+    }
+    if(!keys){
+      const weak = allDomainsWeakestFirst().slice(0,2);
+      const rest = shuffle(DOMAINS.map(d => d.key).filter(k => !weak.includes(k))).slice(0,3);
+      keys = shuffle(weak.concat(rest));
+    }
     let made = null, maxTokens = 3500;
     for(let attempt = 0; attempt < 3 && !made; attempt++){
       try{
-        const raw = await anthropicMessagesRequest({ messages:[{role:'user', content: buildCasePrompt(keys)}], maxTokens });
+        const raw = await anthropicMessagesRequest({ messages:[{role:'user', content: buildCasePrompt(keys, variant)}], maxTokens });
         made = parseGeneratedCase(raw, keys, attempt >= 2);
         if(!made && !/[\]}]\s*$/.test(String(raw).trim())) maxTokens += 1200;
       }catch(e){ /* try again */ }
     }
     if(epoch !== dataEpoch) return; // progress was reset or restored meanwhile
-    if(!made){ noteGenFailure(); say('A new case is not ready yet. It will be tried again automatically.', true); return; }
+    if(!made){
+      noteGenFailure();
+      if(opts.variantOf){ say('A fresh version is not ready, so this is a replay. Answer from the ideas, not from memory of the story.', true); startCase(opts.variantOf, { replay:true }); return; }
+      say('A new case is not ready yet. It will be tried again automatically.', true); return;
+    }
     noteGenSuccess();
     const id = 'gc' + Date.now().toString(36);
     made.questions.forEach((q,i) => { q.id = id + '-' + (i+1); q.caseGen = true; });
     DATA.generatedBank = DATA.generatedBank.concat(made.questions);
     DATA.generatedCases.push({ id, title: made.title, createdAt: Date.now() });
-    while(DATA.generatedCases.length > 8){
+    while(DATA.generatedCases.length > 16){
       const old = DATA.generatedCases.shift();
       DATA.generatedBank = DATA.generatedBank.filter(q => !String(q.id).startsWith(old.id + '-'));
       if(DATA.caseStats) delete DATA.caseStats[old.id];
@@ -19614,7 +19631,7 @@ async function generateNewCase(opts){
     pruneRetiredQuestionIds();
     await persist();
     if(!(opts.auto && session)) renderAll(); // never redraw underneath a session in progress
-    if(!opts.auto && document.body.classList.contains('domain-picker-active')) startCase(id);
+    if((!opts.auto && document.body.classList.contains('domain-picker-active')) || opts.variantOf) startCase(id);
     else if(!session) setCoach(`New case ready: ${made.title}. You'll find it under Case studies.`, false);
   } finally {
     caseGenBusy = false;
@@ -19680,11 +19697,19 @@ function caseAdaptOrder(qs, lvl, target, doneIds){
   pool.sort((a, b) => Math.abs((lvl[a.id] || 2) - target) - Math.abs((lvl[b.id] || 2) - target) || pos.get(a.id) - pos.get(b.id));
   return pool;
 }
-function startCase(id){
+function startCase(id, o){
   const def = caseById(id);
   if(!def) return;
   const qs = caseQuestions(id);
   if(!qs.length) return;
+  // A case already worked is never replayed as it was: the AI writes a fresh version (new people, new figures, deciding facts changed) so the concept is what carries over, not the answers.
+  if(!(o && o.replay) && ((DATA.caseStats || {})[id] || {}).attempts && aiFeaturesAvailable && !caseGenBusy){
+    document.body.classList.remove('domain-picker-active');
+    try{ closeDomainPicker(); }catch(e){}
+    try{ setCoach('Writing a fresh version of "' + def.title + '" with new facts, so you work the idea rather than remember the answers. About half a minute.', false); }catch(e){}
+    generateNewCase({ variantOf:id });
+    return;
+  }
   try{ if(!DATA.caseStarts || typeof DATA.caseStarts !== 'object') DATA.caseStarts = {}; const cst = DATA.caseStarts[id] || { n:0, last:0 }; cst.n++; cst.last = Date.now(); DATA.caseStarts[id] = cst; persist(); }catch(e){}
   document.body.classList.remove('domain-picker-active');
   // Fresh choice order every run, and the order of questions follows how you are doing (see caseAdaptOrder).
@@ -19705,7 +19730,7 @@ function maybeAutoGenerateCase(){
     if(!aiFeaturesAvailable || caseGenBusy || isGenerating || genBackoffActive() || session) return;
     if((DATA.answerCounter || 0) < 20) return;
     const gens = DATA.generatedCases || [];
-    if(gens.length >= 30) return;
+    if(gens.length >= 16) return;
     const untried = allCases().filter(c => !((DATA.caseStats || {})[c.id] || {}).attempts).length;
     if(untried > 1) return;
     const newest = gens.reduce((m, c) => Math.max(m, c.createdAt || 0), 0);
@@ -30621,7 +30646,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.602';
+const BUILD_ID = '2026-10-23.603';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
