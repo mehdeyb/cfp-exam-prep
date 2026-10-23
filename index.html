@@ -13990,7 +13990,7 @@ function renderStudyTechniques(){
   const pick = document.getElementById('techPick'), list = document.getElementById('techList'); if(!pick || !list) return;
   const p = studyTechniquePick();
   pick.innerHTML = '<div class="tech-pick"><div class="tp-label">Try this today</div><div class="tp-title">' + p.t.name + '</div><div class="tp-why">' + p.why + '</div>' + (p.t.cta ? '<button type="button" class="btn" onclick="studyTechniqueRun(\'' + p.t.id + '\')">' + p.t.cta + '</button>' : '') + '</div>';
-  list.innerHTML = STUDY_TECHNIQUES.map(t => '<details class="tech-item"><summary><span class="ti-name">' + t.name + '</span><span class="ti-tag' + (t.top ? '' : ' mod') + '">' + t.tag + '</span><span class="ti-chev" aria-hidden="true">▾</span></summary><div class="ti-body"><p>' + t.what + '</p><p><b>For the CFP exam:</b> ' + t.how + '</p>' + (t.cta ? '<button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + t.id + '\')">' + t.cta + '</button>' : '') + '</div></details>').join('');
+  list.innerHTML = STUDY_TECHNIQUES.filter(t => t.id !== p.t.id).map(t => '<details class="tech-item"><summary><span class="ti-name">' + t.name + '</span><span class="ti-tag' + (t.top ? '' : ' mod') + '">' + t.tag + '</span><span class="ti-chev" aria-hidden="true">▾</span></summary><div class="ti-body"><p>' + t.what + '</p><p><b>For the CFP exam:</b> ' + t.how + '</p>' + (t.cta ? '<button type="button" class="btn ghost" onclick="studyTechniqueRun(\'' + t.id + '\')">' + t.cta + '</button>' : '') + '</div></details>').join('');
 }
 function renderReference(){
   try{ renderStudyTechniques(); }catch(e){}
@@ -29250,7 +29250,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.464';
+const BUILD_ID = '2026-10-22.465';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
