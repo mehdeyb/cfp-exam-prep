@@ -27864,13 +27864,18 @@ function osFit(tab){
       const cap = sbs ? avail : (i === tallest ? avail - (nat.reduce((x, y) => x + y, 0) - nat[i]) : nat[i]);
       if(nat[i] > cap + 2 && cap > 120){ c.style.maxHeight = cap + 'px'; c.classList.add('os-fit'); osFade(c); }
     });
+    vis.forEach(c => { c.style.zoom = ''; });
+    if(!vis.some(c => c.classList.contains('os-fit'))){
+      if(sbs) vis.forEach(c => osGrow(c, avail, 1.3));
+      else { const tot = nat.reduce((x, y) => x + y, 0) + (vis.length - 1) * 12; const z = Math.min(1.3, avail / tot); if(z >= 1.04) vis.forEach(c => { c.style.zoom = String(Math.round(z * 100) / 100); }); }
+    }
   }catch(e){}
 }
 function osFitStudy(){
   try{
     const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
     if(document.body.classList.contains('quiz-active')) return;
-    c.style.maxHeight = ''; c.classList.remove('os-fit', 'os-end');
+    c.style.maxHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end');
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     const rowsHost = c.querySelector('.pt-rows');
@@ -27880,12 +27885,12 @@ function osFitStudy(){
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     const avail = Math.max(240, Math.round(h - top - bb - 14));
-    if(c.scrollHeight <= avail + 2) return;
+    if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
     const shed = [...c.querySelectorAll('.pt-pace, .pt-sub, .pt-block, .pt-today, .pt-mins')];
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     for(const x of shed){ if(c.scrollHeight <= avail + 2) break; x.classList.add('os-shed'); x.style.display = 'none'; }
-    if(c.scrollHeight <= avail + 2) return;
+    if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(rowsHost && steps.length > 2 && !window._ptAll){
@@ -27898,11 +27903,25 @@ function osFitStudy(){
         foot.textContent = hidden + ' more step' + (hidden === 1 ? '' : 's') + ' later today \u00b7 see all';
       }
       if(!hidden) foot.remove();
-      if(c.scrollHeight <= avail + 2) return;
+      if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     }
     if(window._ptAll && rowsHost) rowsHost.appendChild(mkBtn('Show fewer', () => { window._ptAll = false; osFitStudy(); }));
     // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
+  }catch(e){}
+}
+// Spare room is used: whatever fits with room left over is scaled up to fill it (type, spacing and buttons together), never beyond a comfortable size.
+function osGrow(c, avail, maxZ){
+  try{
+    if(!c) return; c.style.zoom = '';
+    const h0 = c.getBoundingClientRect().height; if(!h0 || c.classList.contains('os-fit')) return;
+    let z = Math.min(maxZ || 1.3, avail / h0); if(z < 1.04) return;
+    for(let k = 0; k < 6; k++){
+      c.style.zoom = String(Math.round(z * 100) / 100);
+      if(c.getBoundingClientRect().height <= avail + 1) return;
+      z = 1 + (z - 1) * 0.7; if(z < 1.03){ c.style.zoom = ''; return; }
+    }
+    c.style.zoom = '';
   }catch(e){}
 }
 function osFade(c){
@@ -30215,7 +30234,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.552';
+const BUILD_ID = '2026-10-23.553';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
