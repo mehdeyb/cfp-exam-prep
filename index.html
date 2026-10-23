@@ -3063,6 +3063,17 @@
   .pst-from{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
   .pst-title{font-family:'Fraunces',serif;font-size:24px;line-height:1.2;font-weight:600;color:var(--paper);margin:0 0 8px;}
   .pst-text{font-size:15px;line-height:1.55;color:var(--paper);} .pst-text.pst-lg{font-family:'Fraunces',serif;font-size:21px;line-height:1.4;} .pst-dim{color:var(--muted);}
+  .pst-body{position:relative;} .pst-ghost{position:absolute;left:18px;right:18px;top:16px;pointer-events:none;animation:pstOut .22s ease-in forwards;} .pst-ghost[data-dir="b"]{animation-name:pstOutB;}
+  @keyframes pstOut{to{opacity:0;transform:translateY(-14px) scale(.98);filter:blur(3px);}} @keyframes pstOutB{to{opacity:0;transform:translateY(14px) scale(.98);filter:blur(3px);}}
+  .scr-body .pst-ghost{left:2px;right:2px;top:8px;}
+  .pst-w{display:inline-block;opacity:0;animation:pstWord .38s ease-out forwards;white-space:pre-wrap;} @keyframes pstWord{from{opacity:0;transform:translateY(6px);filter:blur(2px);}to{opacity:1;transform:none;filter:none;}}
+  @keyframes pstDraw{to{stroke-dashoffset:0;}} @keyframes pstGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+  .scr-eq{display:inline-flex;align-items:flex-end;gap:3px;height:14px;opacity:.35;transition:opacity .3s;} .scr-eq i{width:3px;height:30%;background:var(--gold);border-radius:2px;} .scr-eq.on{opacity:1;} .scr-eq.on i{animation:pstEq .9s ease-in-out infinite;} .scr-eq.on i:nth-child(2){animation-delay:.15s;} .scr-eq.on i:nth-child(3){animation-delay:.3s;} .scr-eq.on i:nth-child(4){animation-delay:.45s;} @keyframes pstEq{0%,100%{height:25%;}50%{height:100%;}}
+  .scr-foot .btn,.pst-acts .btn,.scr-chips button,.scr-speed{transition:transform .12s ease,background .2s,opacity .2s;} .scr-foot .btn:active,.pst-acts .btn:active,.scr-chips button:active,.scr-speed:active{transform:scale(.95);}
+  @media (prefers-reduced-motion:reduce){.pst-w,.pst-ghost,.scr-eq.on i{animation:none !important;opacity:1;}}
+  .pst-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;} .pst-meta span{font:500 11.5px 'IBM Plex Mono',monospace;color:var(--muted);border:1px solid var(--hair);border-radius:10px;padding:3px 9px;}
+  .pst-exam{margin-top:12px;padding:10px 12px;border-left:3px solid var(--gold);background:var(--gold-soft);border-radius:0 8px 8px 0;font-size:13.5px;line-height:1.5;color:var(--paper);} .pst-exam b{display:block;font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+  .scr-up{font:500 12px 'IBM Plex Mono',monospace;color:var(--muted);padding:8px 2px 0;} .scr-up span{color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;}
   .scr-lp{margin:6px 0 12px;} .scr-prog{height:4px;border-radius:3px;background:var(--hair);overflow:hidden;} .scr-prog i{display:block;height:100%;width:0;background:var(--gold);border-radius:3px;transition:width .4s ease;}
   .scr-prog-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font:500 11.5px 'IBM Plex Mono',monospace;color:var(--muted);} .scr-speed{background:none;border:1px solid var(--hair);border-radius:12px;padding:3px 10px;font:inherit;color:var(--paper);min-height:28px;cursor:pointer;} #scrTitle{font-size:20px;line-height:1.2;}
   .rb-move span{display:block;margin-top:6px;} .rb-move span b{display:inline;text-transform:none;letter-spacing:0;font-family:inherit;font-size:inherit;color:var(--paper);} .rb-move .btn{margin-top:10px;}
@@ -3293,10 +3304,11 @@
         </div>
         <div class="scr-lp" id="scrLp" style="display:none;">
           <div class="scr-prog"><i id="scrProgFill"></i></div>
-          <div class="scr-prog-meta"><span id="scrEl">0:00</span><button type="button" class="scr-speed" id="scrSpeed" onclick="stageSpeedCycle()" aria-label="Playback speed">1×</button><span id="scrLeft">-0:00</span></div>
+          <div class="scr-prog-meta"><span id="scrEl">0:00</span><span class="scr-eq" id="scrEq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button type="button" class="scr-speed" id="scrSpeed" onclick="stageSpeedCycle()" aria-label="Playback speed">1×</button><span id="scrLeft">-0:00</span></div>
         </div>
         <div class="scr-dots" id="scrDots"></div>
         <div class="pst-body scr-body" id="scrBody" aria-live="polite"></div>
+        <div class="scr-up" id="scrUp" style="display:none;"></div>
         <div class="pst-now scr-now" id="scrNow" aria-hidden="true"></div>
         <div class="scr-ask" id="scrAsk">
           <div class="scr-chips" id="scrChips"></div>
@@ -12508,6 +12520,7 @@ function podcastUpdateProgress(index){
   const el = document.getElementById('podcastElapsed'), left = document.getElementById('podcastLeft');
   if(el) el.textContent = podcastFmt(before / 150 / sp);
   if(left) left.textContent = '-' + podcastFmt((total - before) / 150 / sp);
+  try{ const eq0 = document.getElementById('scrEq'); if(eq0) eq0.classList.toggle('on', !!(naturalSpeechState.active && !naturalSpeechState.paused)); }catch(e){}
   try{ const f = document.getElementById('scrProgFill'); if(f) f.style.width = Math.round(before / total * 100) + '%'; const e2 = document.getElementById('scrEl'), l2 = document.getElementById('scrLeft'); if(e2) e2.textContent = podcastFmt(before / 150 / sp); if(l2) l2.textContent = '-' + podcastFmt((total - before) / 150 / sp); }catch(e){}
 }
 function stageSpeedCycle(){
@@ -13090,7 +13103,7 @@ function stageSlideNode(sl){
   } else if(sl.kind === 'intro'){
     d.innerHTML = `<div class="pst-idb"><div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div></div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Press play. Terms, formulas and quick checks show up here as your tutor goes.</div>'}`;
   } else if(sl.kind === 'term'){
-    d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
+    d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${stageTermExtras(sl)}${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
   } else if(sl.kind === 'formula'){
     const vars = (Array.isArray(sl.vars) ? sl.vars : []).slice(0, 6).map(v => `<li><b>${E(stageClip(v.sym || v[0], 12))}</b><span>${E(stageClip(v.meaning || v[1], 70))}</span></li>`).join('');
     d.dataset.chart = (typeof FORMULA_CHARTS !== 'undefined' && FORMULA_CHARTS[sl.title]) ? sl.title : '';
@@ -13119,14 +13132,49 @@ function stageSlideNode(sl){
   if(sl.src === 'tutor'){ const b = document.createElement('div'); b.className = 'pst-from'; b.textContent = 'From your tutor'; d.insertBefore(b, d.firstChild); }
   return d;
 }
+const _stageExtraCache = {};
+function stageTermExtras(sl){
+  try{
+    const c = allFlashcards().find(x => x.term === sl.term); if(!c) return '';
+    const dm = DOMAINS.find(d => d.key === c.domain), st = (DATA.flashcardStats || {})[c.id];
+    const bits = [];
+    if(dm) bits.push(`<span>${E2(dm.code)} · ${dm.weight}% of the exam</span>`);
+    if(st && st.seen) bits.push(`<span>Seen ${st.seen}×${typeof st.known === 'number' ? ', knew it ' + st.known : ''}</span>`); else bits.push('<span>New to you</span>');
+    const base = String(c.term).replace(/\s*\(.*?\)\s*/g, ' ').trim().toLowerCase();
+    let ex = _stageExtraCache[c.id];
+    if(ex === undefined){
+      ex = null;
+      if(base.length >= 6){ const q = allQuestions().find(q => Array.isArray(q.choices) && q.domain === c.domain && String(q.q).toLowerCase().includes(base)); if(q) ex = { q:String(q.q).replace(/\s+/g, ' ').slice(0, 130), n:allQuestions().filter(z => Array.isArray(z.choices) && z.domain === c.domain && String(z.q).toLowerCase().includes(base)).length, miss:(DATA.missed || []).includes(q.id) }; }
+      _stageExtraCache[c.id] = ex;
+    }
+    return `<div class="pst-meta">${bits.join('')}</div>` + (ex ? `<div class="pst-exam"><b>How it is tested${ex.n > 1 ? ' (' + ex.n + ' practice questions)' : ''}</b>${E2(ex.q)}</div>` : '');
+  }catch(e){ return ''; }
+}
+function E2(t){ return escapeHtml(String(t == null ? '' : t)); }
+function stageUpNext(){
+  const el = document.getElementById('scrUp'); if(!el) return;
+  const cur = stageState.cur, deck = stageState.deck || [];
+  if(!cur || cur.src === 'tutor' || !deck.length){ el.style.display = 'none'; return; }
+  const nx = deck.find(x => x.at > (cur.at || 0) && x.kind !== 'intro');
+  if(!nx){ el.style.display = 'none'; return; }
+  const lab = { term:'Term', formula:'Formula', question:'A question you missed', number:'Figure', keynums:'Numbers', stand:'Your accuracy', point:'Key idea', recap:'Recap', calc:'Keys', chart:'Chart', compare:'Compare', table:'Table', bar:'Chart', check:'Check' };
+  const nm = nx.kind === 'question' ? '' : (nx.term || nx.title || nx.big || '');
+  el.innerHTML = `<span>Up next</span> ${E2(lab[nx.kind] || 'Idea')}${nm && nx.kind !== 'point' && nx.kind !== 'keynums' ? ': ' + E2(stageClip(nm, 40)) : ''}`;
+  el.style.display = '';
+}
 function stageHosts(){ return ['pstBody', 'scrBody'].map(id => document.getElementById(id)).filter(Boolean); }
 function stageDraw(soft){
   const sl = stageState.cur; if(!sl) return;
   const sid = stageId(sl), same = soft === true || stageState.drawn === sid; // same slide again (a step or a tap): update in place, no re-entrance
   const back = stageState.hi < (stageState.prevHi == null ? 0 : stageState.prevHi); stageState.prevHi = stageState.hi; stageState.drawn = sid;
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   stageHosts().forEach(h => {
     const node = stageSlideNode(sl); if(!node) return;
+    let ghost = null;
+    if(!same && !calm){ const old = h.querySelector(':scope > .pst-slide'); if(old && old.children.length){ ghost = old.cloneNode(true); ghost.classList.add('pst-ghost'); ghost.dataset.dir = back ? 'b' : 'f'; } }
     h.innerHTML = ''; h.appendChild(node);
+    if(ghost){ h.appendChild(ghost); setTimeout(() => { try{ ghost.remove(); }catch(e){} }, 260); }
+    if(!same && !calm){ try{ stageWordReveal(node); stageDrawLines(node); }catch(e){} }
     if(same){ h.classList.remove('pst-in'); return; }
     [...node.children].forEach((c, i) => c.style.setProperty('--i', i));
     h.classList.toggle('pst-back', back); h.classList.remove('pst-in'); void h.offsetWidth; h.classList.add('pst-in');
@@ -13138,6 +13186,7 @@ function stageDraw(soft){
   if(pv) pv.disabled = stageState.hi <= 0; if(nx) nx.disabled = live;
   const ct = document.getElementById('scrCount'); if(ct) ct.textContent = stageState.hist.length > 1 ? (stageState.hi + 1) + ' of ' + stageState.hist.length : '';
   stageDots();
+  try{ stageUpNext(); }catch(e){}
 }
 function stageSlideSummary(sl){
   if(!sl) return '';
@@ -13172,6 +13221,21 @@ async function stageAsk(preset){
 function stageToTutor(){
   const sl = stageState.cur; const ctx = stageSlideSummary(sl), q = stageState.lastAsk || 'Walk me through this.';
   stageCloseFull(); askTutorAbout('I am looking at this on my study screen: ' + ctx + ' ' + q);
+}
+// Text arrives word by word, and chart lines draw themselves, so a new slide feels written rather than swapped.
+function stageWordReveal(node){
+  node.querySelectorAll('.pst-text:not(.pst-dim)').forEach(el => {
+    if(el.children.length || el.dataset.wr) return; const words = el.textContent.split(/(\s+)/); if(words.filter(w => w.trim()).length > 46) return;
+    el.dataset.wr = '1'; let n = 0; el.textContent = '';
+    words.forEach(w => { if(!w.trim()){ el.appendChild(document.createTextNode(w)); return; } const sp = document.createElement('span'); sp.className = 'pst-w'; sp.textContent = w; sp.style.animationDelay = (260 + Math.min(900, n * 34)) + 'ms'; n++; el.appendChild(sp); });
+  });
+}
+function stageDrawLines(node){
+  node.querySelectorAll('svg polyline, svg path').forEach(p => {
+    const st = p.getAttribute('stroke'), fl = p.getAttribute('fill'); if(!st || st === 'none' || (fl && fl !== 'none')) return;
+    p.setAttribute('pathLength', '1'); p.style.strokeDasharray = '1'; p.style.strokeDashoffset = '1'; p.style.animation = 'pstDraw .9s .3s ease-out forwards';
+  });
+  node.querySelectorAll('svg rect').forEach((r, i) => { r.style.transformBox = 'fill-box'; r.style.transformOrigin = 'bottom'; r.style.animation = 'pstGrow .5s ' + (0.2 + Math.min(0.6, i * 0.06)) + 's ease-out both'; });
 }
 function stageCountUp(el){
   const t = el.textContent, m = t.match(/-?[\d,]*\.?\d+/); if(!m) return;
@@ -13422,6 +13486,7 @@ function stageTransportSync(){
     const lp = document.getElementById('scrLp'), ti = document.getElementById('scrTitle'), sp = document.getElementById('scrSpeed'), sel = document.getElementById('podcastSpeedSelect');
     if(lp) lp.style.display = has ? '' : 'none';
     if(ti) ti.textContent = has ? stageClip(podcastLabelForCacheKey(stageState.deckKey), 44) : 'On screen';
+    try{ const eq = document.getElementById('scrEq'); if(eq) eq.classList.toggle('on', !!(naturalSpeechState.active && !naturalSpeechState.paused)); }catch(e){}
     if(sp && sel) sp.textContent = (sel.options[sel.selectedIndex] || {}).text || '1×';
     if(has && !naturalSpeechState.active){ const t = DATA.podcastEpisodes[stageState.deckKey]; const ch = splitIntoSpeechChunks(t); const pos = podcastSavedPos(stageState.deckKey) || 0; const w = c => String(c.text).split(/\s+/).length, tot = ch.reduce((a, c) => a + w(c), 0) || 1, bef = ch.slice(0, pos).reduce((a, c) => a + w(c), 0), spv = podcastSpeedValue(); const f = document.getElementById('scrProgFill'); if(f) f.style.width = Math.round(bef / tot * 100) + '%'; const e2 = document.getElementById('scrEl'), l2 = document.getElementById('scrLeft'); if(e2) e2.textContent = podcastFmt(bef / 150 / spv); if(l2) l2.textContent = '-' + podcastFmt((tot - bef) / 150 / spv); }
   }catch(e){}
@@ -29330,7 +29395,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.476';
+const BUILD_ID = '2026-10-23.478';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
