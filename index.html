@@ -656,6 +656,12 @@
   .fkeys[open] summary::after{content:' ▴';}
   .fkeys-ex{font-size:12px;color:var(--muted,#8a8a8e);margin:2px 0 4px;}
   .fd-note{font-size:12px;color:var(--muted);}
+  .fd-concept{margin:12px 0 4px;padding:12px 14px;border:1px solid var(--hair);border-radius:12px;background:var(--surface-2,rgba(128,128,128,.06));}
+  .fd-concept-q{font-size:14px;font-weight:600;line-height:1.4;}
+  .fd-concept-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .fd-cc{font:inherit;font-size:13.5px;padding:8px 14px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);cursor:pointer;min-height:40px;}
+  .fd-cc.right{border-color:var(--correct);background:var(--correct-tint,transparent);} .fd-cc.wrong{border-color:var(--incorrect);}
+  .fd-concept-why{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.5;}
   .fd-tutor{margin-top:10px;width:100%;}
   .plan-fold>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
   .plan-fold>summary::-webkit-details-marker{display:none;}
@@ -18594,14 +18600,44 @@ function caseProgressLine(){
   const nextTxt = tried < total && next ? ` Up next: ${next.title}.` : ' You have worked every case. A new one is written when you run low. If you replay one, answer from the facts and the ideas, not from memory of the story.';
   return `${tried} of ${total} cases tried, averaging ${avg}% at your best.${nextTxt}`;
 }
+// Case questions all carry the same story, so the bank's own difficulty rating (scenario = 3) cannot tell them apart.
+// This ranks the questions inside one case by how much they ask of you (figures to use, length, answer wording, trick phrasing)
+// and splits them into three levels, easiest third to hardest third.
+function caseQuestionLevels(qs){
+  const raw = qs.map(q => {
+    const txt = q.q + ' ' + q.choices.join(' ');
+    const nums = (txt.match(/\$?\d[\d,.]*%?/g) || []).length;
+    const avgC = q.choices.reduce((a, c) => a + c.length, 0) / Math.max(1, q.choices.length);
+    const rat = Array.isArray(q.rationale) ? q.rationale.join(' ').length : String(q.rationale || '').length;
+    const flag = /\b(EXCEPT|NOT|LEAST|MOST appropriate|BEST|FIRST|primary|both)\b/.test(q.q) ? 1 : 0;
+    let pers = 0; try{ const st = (DATA.questionStats || {})[q.id]; if(st && st.seen) pers = ((st.correct || 0) / st.seen < 0.5) ? 0.6 : -0.3; }catch(e){}
+    return { id:q.id, v: nums * 0.25 + q.q.length / 70 + avgC / 45 + rat / 260 + flag + pers };
+  });
+  const sorted = raw.slice().sort((a, b) => a.v - b.v), out = {};
+  sorted.forEach((r, i) => { out[r.id] = i < sorted.length / 3 ? 1 : i < sorted.length * 2 / 3 ? 2 : 3; });
+  return out;
+}
+// Puts the question closest to the current level next, keeping the original story order as the tiebreak.
+function caseAdaptOrder(qs, lvl, target, doneIds){
+  const done = doneIds || [];
+  const pool = qs.filter(q => !done.includes(q.id));
+  const pos = new Map(qs.map((q, i) => [q.id, i]));
+  pool.sort((a, b) => Math.abs((lvl[a.id] || 2) - target) - Math.abs((lvl[b.id] || 2) - target) || pos.get(a.id) - pos.get(b.id));
+  return pool;
+}
 function startCase(id){
   const def = caseById(id);
   if(!def) return;
   const qs = caseQuestions(id);
   if(!qs.length) return;
   document.body.classList.remove('domain-picker-active');
-  beginSession(qs, 'case', null);
-  session.caseId = id;
+  // Fresh choice order every run, and the order of questions follows how you are doing (see caseAdaptOrder).
+  const lvl = caseQuestionLevels(qs);
+  const cs0 = (DATA.caseStats || {})[id] || {};
+  const start = (cs0.best || 0) >= 80 ? 3 : (cs0.attempts || 0) === 0 && caseFit(id).avg < 2 ? 1 : 2;
+  const first = caseAdaptOrder(qs.map(q => shuffleQuestionChoices(q)), lvl, start, null);
+  beginSession(first, 'case', null);
+  session.caseId = id; session.caseLevels = lvl; session.caseTarget = start; session.caseSteps = [];
   renderQuestion(); // relabel the scenario now that the case is known
 }
 // New case studies are written ahead of need: once at most one case is
@@ -20292,14 +20328,101 @@ const FD_NAMES = Object.keys(FD_GENS);
 let fd = { name:null, prob:null, answered:false, filter:'mixed', tally:{ n:0, ok:0 }, last:null, opener:null, home:null };
 function fdStats(name){ if(!DATA.formulaStats) DATA.formulaStats = {}; return DATA.formulaStats[name] || { attempts:0, correct:0, streak:0, lastAt:0 }; }
 function fdAccuracy(name){ const s = fdStats(name); return s.attempts ? s.correct/s.attempts : null; }
+// Each formula has its own level, 1 to 3, that moves with how you are doing: two clean answers lift it, two misses in a row drop it.
+// Level 1 shows the formula and uses a plain setup. Level 2 hides it behind a peek and wraps the problem in a client story with a
+// number that does not belong. Level 3 hides the formula and adds a what-if question about the idea, so you cannot get by on the wording.
+const FD_LEVEL_NAMES = ['', 'Foundation', 'Application', 'Exam level'];
+function fdLevelOf(name){
+  const s = fdStats(name);
+  if(s.lvl >= 1 && s.lvl <= 3) return s.lvl;
+  const f = FORMULAS.find(x => x.name === name);
+  if(!f || !f.formula || !s.attempts) return 1;
+  const stg = domainStageOf(f.domain), acc = s.correct / s.attempts;
+  if(s.attempts >= (stg === 1 ? 7 : 5) && acc >= 0.75 && (s.streak || 0) >= 3) return 3; // an old save lands where its record says it belongs
+  if(s.attempts >= 3 && acc >= 0.6) return 2;
+  return 1;
+}
+function fdMoveLevel(s, ok, peeked){
+  let note = '';
+  const lvl = s.lvl >= 1 ? s.lvl : fdLevelOf(fd.name);
+  s.lvl = lvl;
+  if(ok){ if(!peeked){ s.lvlRun = (s.lvlRun || 0) + 1; s.lvlMiss = 0; } }
+  else { s.lvlMiss = (s.lvlMiss || 0) + 1; s.lvlRun = 0; }
+  if(ok && !peeked && s.lvlRun >= (lvl === 1 ? 2 : 3) && lvl < 3){ s.lvl = lvl + 1; s.lvlRun = 0; note = `Moving up to Level ${s.lvl}, ${FD_LEVEL_NAMES[s.lvl]}. ` + (s.lvl === 2 ? 'The formula now sits behind a peek, and the problems come as client stories with extra facts you have to ignore.' : 'The formula is hidden, and you will get what-if questions on the idea behind it.'); }
+  else if(!ok && s.lvlMiss >= 2 && lvl > 1){ s.lvl = lvl - 1; s.lvlMiss = 0; note = `Dropping back to Level ${s.lvl}, ${FD_LEVEL_NAMES[s.lvl]}, to rebuild this one. ` + (s.lvl === 1 ? 'The formula is shown again.' : 'The formula is behind a peek again.'); }
+  return note;
+}
+// Level 2 and 3 problems arrive in a client story and carry a fact that does not belong, so the setup has to be read, not recognised.
+const FD_LEADS = ['A client asks you to run the numbers.', 'In a meeting, a client wants a quick answer.', 'You are reviewing a client file.', 'A client emails with a question.', 'Your colleague asks you to check a figure.', 'You are preparing a client recommendation.'];
+const FD_NOISE = [
+  () => `The client also mentions a ${fdMoney(fdPick([8000,12000,15000,20000]))} emergency fund and a ${fdPick([2,3])}% savings account, which do not enter this calculation.`,
+  () => `The client is ${fdPick([38,42,47,51,55,58])} years old and pays an advisory fee of ${fdPick(['0.75','1.0','1.25'])}%, which does not change this figure.`,
+  () => `They also own a ${fdMoney(fdPick([210000,340000,480000]))} home, which is not part of this problem.`,
+  () => `Their tax filing status is ${fdPick(['single','married filing jointly'])}, which does not affect this calculation.`,
+  () => `They have ${fdPick(['two','three','one'])} ${'children'}, which has no effect on the numbers here.`
+];
+function fdLevelize(prob, lvl){
+  if(!prob || lvl < 2) return prob;
+  const p = Object.assign({}, prob);
+  const noise = fdPick(FD_NOISE)();
+  p.scenario = (Math.random() < 0.6 ? fdPick(FD_LEADS) + ' ' : '') + prob.scenario + (lvl >= 2 ? ' ' + noise : '');
+  p.levelized = true;
+  return p;
+}
+// Concept checks: which way does each input push the result? Asked about the idea, never the wording or the numbers.
+const FD_DIR = {
+  'Future Value': { out:'the future value', v:[['the interest rate',1,'a higher rate makes each year of compounding add more'],['the number of years',1,'more years means more compounding'],['the amount invested today',1,'the starting amount scales the whole result']] },
+  'Present Value': { out:'the amount needed today', v:[['the interest rate',-1,'a higher rate does more of the growing, so less is needed up front'],['the number of years',-1,'more time to grow means a smaller start is enough'],['the target amount',1,'a bigger goal needs a bigger start']] },
+  'Rule of 72': { out:'the years to double', v:[['the annual return',-1,'a faster return doubles the money sooner']] },
+  'Real Rate of Return': { out:'the real return', v:[['the nominal return',1,'a bigger nominal return leaves more after inflation'],['the inflation rate',-1,'inflation takes purchasing power away']] },
+  'Front-end (housing) ratio': { out:'the front-end ratio', v:[['the housing payment',1,'it is the top of the fraction'],['gross income',-1,'it is the bottom of the fraction']] },
+  'Back-end (total debt) ratio': { out:'the back-end ratio', v:[['other monthly debt payments',1,'they add to the top of the fraction'],['gross income',-1,'it is the bottom of the fraction']] },
+  'CAPM — Expected Return': { out:'the required return', v:[['beta',1,'more market risk earns more of the market premium'],['the market return',1,'a bigger market premium is scaled up by beta']] },
+  'Sharpe Ratio': { out:'the Sharpe ratio', v:[['the portfolio return',1,'more excess return per unit of risk'],['the standard deviation',-1,'more risk spreads the same excess return thinner'],['the risk-free rate',-1,'it shrinks the excess return']] },
+  'Holding Period Return': { out:'the holding period return', v:[['the ending value',1,'a bigger ending value is more gain'],['the income received',1,'income is part of the total return'],['the beginning value',-1,'a bigger cost base makes the same gain a smaller percentage']] },
+  'Coefficient of Variation': { out:'the coefficient of variation', v:[['the standard deviation',1,'more risk per unit of return'],['the average return',-1,'more return makes the same risk look smaller']] },
+  'Taxable-Equivalent Yield': { out:'the taxable-equivalent yield', v:[['the tax-free yield',1,'it is the starting point'],['the marginal tax rate',1,'a higher bracket makes tax-free income worth more']] },
+  'Effective Annual Rate': { out:'the effective annual rate', v:[['the stated rate',1,'it sets the base growth'],['the number of compounding periods',1,'more frequent compounding earns interest on interest sooner']] },
+  'Cap Rate': { out:'the cap rate', v:[['net operating income',1,'it is the top of the fraction'],['the property value',-1,'the same income on a higher price is a lower yield']] },
+  'Debt Ratio': { out:'the debt ratio', v:[['total liabilities',1,'they are the top of the fraction'],['total assets',-1,'more assets dilute the same debt']] },
+  'Loan-to-Value Ratio': { out:'the loan-to-value ratio', v:[['the loan amount',1,'more borrowed against the same property'],['the appraised value',-1,'a bigger value shrinks the share that is borrowed']] },
+  'Payback Period': { out:'the payback period', v:[['the initial investment',1,'there is more to earn back'],['the annual cash flow',-1,'bigger cash flows repay it faster']] },
+  'Profitability Index': { out:'the profitability index', v:[['the present value of inflows',1,'more value returned per dollar spent'],['the initial investment',-1,'more spent for the same inflows']] },
+  'Price-to-Earnings Ratio': { out:'the P/E ratio', v:[['the share price',1,'you pay more per dollar of earnings'],['earnings per share',-1,'the same price buys more earnings']] },
+  'Dividend Yield': { out:'the dividend yield', v:[['the annual dividend',1,'more income per share'],['the share price',-1,'the same dividend on a higher price is a lower yield']] },
+  'Current Ratio': { out:'the current ratio', v:[['current assets',1,'more short-term resources'],['current liabilities',-1,'more short-term obligations']] },
+  'Savings Ratio': { out:'the savings ratio', v:[['the amount saved',1,'it is the top of the fraction'],['gross income',-1,'the same savings from a bigger income is a smaller share']] },
+  'Gordon Growth (Dividend Discount) Model': { out:'the stock value', v:[['the next dividend',1,'more cash flow to value'],['the required return',-1,'a higher required return discounts the cash flows harder'],['the growth rate',1,'faster growth makes the future dividends bigger']] },
+  'Perpetuity (Present Value)': { out:'the present value', v:[['the annual payment',1,'more income is worth more'],['the discount rate',-1,'a higher rate discounts the stream harder']] },
+  'Treynor Ratio': { out:'the Treynor ratio', v:[['the excess return',1,'more reward'],['beta',-1,'more market risk for the same reward']] },
+  'Straight-Line Depreciation': { out:'the annual depreciation', v:[['the asset cost',1,'there is more to write off'],['the salvage value',-1,'less is left to depreciate'],['the useful life',-1,'the same amount is spread over more years']] },
+  'Effective Tax Rate': { out:'the effective tax rate', v:[['total tax paid',1,'it is the top of the fraction'],['taxable income',-1,'the same tax on a bigger base is a smaller rate']] },
+  'Debt Service Coverage Ratio': { out:'the debt service coverage ratio', v:[['net operating income',1,'more income to cover the payments'],['the annual debt payments',-1,'bigger payments are harder to cover']] },
+  'Refinance Break-Even': { out:'the break-even time', v:[['the closing costs',1,'there is more to earn back'],['the monthly savings',-1,'bigger savings pay it back sooner']] },
+  'Liquidity (Emergency Fund) Ratio': { out:'the liquidity ratio', v:[['liquid assets',1,'more cash on hand'],['monthly expenses',-1,'the same cash covers fewer months']] },
+  'Sustainable Growth Rate': { out:'the sustainable growth rate', v:[['the retention ratio',1,'more profit kept to reinvest'],['return on equity',1,'each reinvested dollar earns more']] },
+  'Capitalization of Earnings (Business Value)': { out:'the business value', v:[['the earnings',1,'more earnings, more value'],['the capitalization rate',-1,'a higher required yield means a lower price']] }
+};
+function fdConceptQuestion(name){
+  const d = FD_DIR[name]; if(!d) return null;
+  const v = d.v, pick = fdPick(v), word = up => up ? 'higher' : 'lower';
+  const dirQ = () => { const up = Math.random() < 0.5, eff = pick[1] * (up ? 1 : -1);
+    return { prompt:`Everything else the same, if ${pick[0]} were ${word(up)}, ${d.out} would be…`, choices:['Higher','Lower','Unchanged'], correct: eff > 0 ? 0 : 1, why: `${pick[0].charAt(0).toUpperCase() + pick[0].slice(1)}: ${pick[2]}.` }; };
+  if(Math.random() < 0.5 || v.length < 2) return dirQ();
+  const want = Math.random() < 0.5 ? 1 : -1; // raise or lower the result
+  const combos = []; v.forEach(x => { combos.push({ t:`${word(true)} ${x[0]}`, eff:x[1] }); combos.push({ t:`${word(false)} ${x[0]}`, eff:-x[1] }); });
+  const right = combos.filter(c => c.eff === want), wrong = combos.filter(c => c.eff !== want && !right.some(r => r.t.split(' ').slice(1).join(' ') === c.t.split(' ').slice(1).join(' ')));
+  if(!right.length || wrong.length < 2) return dirQ();
+  const r = fdPick(right), w = shuffle(wrong).slice(0, 2), choices = shuffle([r, ...w]);
+  const src = v.find(x => r.t.endsWith(x[0]));
+  return { prompt:`Which change would ${want > 0 ? 'raise' : 'lower'} ${d.out}?`, choices: choices.map(c => c.t.charAt(0).toUpperCase() + c.t.slice(1)), correct: choices.indexOf(r), why: `${src[0].charAt(0).toUpperCase() + src[0].slice(1)}: ${src[2]}.` };
+}
 // Support fades as a formula is learned: the formula shown, then hidden behind a peek, then nothing (worked example -> faded -> unaided).
 function fdSupportLevel(name){
   const s = fdStats(name), f = FORMULAS.find(x => x.name === name);
   if(!f || !f.formula) return 'unaided';
-  const stg = domainStageOf(f.domain), acc = s.attempts ? s.correct / s.attempts : 0;
-  if(s.attempts < (stg === 1 ? 4 : 2) || acc < 0.5 || (s.missRun || 0) >= 2) return 'guided';
-  if(s.attempts >= (stg === 1 ? 7 : 5) && (((s.streak || 0) >= 3 && acc >= 0.75) || (stg >= 3 && (s.streak || 0) >= 2 && acc >= 0.7))) return 'unaided'; // at least a few tries with the formula hidden first
-  return 'try';
+  const L = fdLevelOf(name);
+  return L === 1 ? 'guided' : L === 2 ? 'try' : 'unaided';
 }
 function fdRenderSupport(){
   const box = document.getElementById('fdSupport'); if(!box) return;
@@ -20318,8 +20441,10 @@ function fdChooseName(){
   if(fd.filter !== 'mixed' && FD_GENS[fd.filter]) return fd.filter;
   const weights = FD_NAMES.map(n => {
     if(n === fd.last && FD_NAMES.length > 1) return 0;
-    const acc = fdAccuracy(n);
-    return acc === null ? 4 : 1 + 3*(1 - acc);
+    const acc = fdAccuracy(n), st = fdStats(n);
+    const age = st.lastAt ? Math.min(2, (Date.now() - st.lastAt) / (3 * 86400000)) : 0; // formulas you have not touched in days come back
+    const base = acc === null ? 4 : 1 + 3*(1 - acc);
+    return base * (1 + age * 0.5) * (fdLevelOf(n) === 3 && acc !== null && acc >= 0.85 ? 0.6 : 1); // a formula you own at the top level appears less
   });
   let r = Math.random() * weights.reduce((a,b)=>a+b,0);
   for(let i = 0; i < weights.length; i++){ r -= weights[i]; if(r <= 0) return FD_NAMES[i]; }
@@ -20373,13 +20498,13 @@ function fdSetFilter(v){ fd.filter = v; fdNext(); }
 function fdNext(){
   fd.name = fdChooseName();
   fd.last = fd.name;
-  { const seenT = fd.recentTexts || (fd.recentTexts = []); let pr = FD_GENS[fd.name](), tries = 0; while(tries++ < 8 && pr && seenT.indexOf(pr.scenario) >= 0) pr = FD_GENS[fd.name](); fd.prob = pr; seenT.push(pr.scenario); if(seenT.length > 12) seenT.shift(); }
+  { const seenT = fd.recentTexts || (fd.recentTexts = []); fd.lvl = fdLevelOf(fd.name); let pr = FD_GENS[fd.name](), tries = 0; while(tries++ < 8 && pr && seenT.indexOf(pr.scenario) >= 0) pr = FD_GENS[fd.name](); pr = fdLevelize(pr, fd.lvl); fd.prob = pr; fd.concept = null; seenT.push(pr.scenario); if(seenT.length > 12) seenT.shift(); }
   fd.answered = false;
   fd.level = fdSupportLevel(fd.name); fd.peeked = false;
   fdRenderSupport();
   const f = FORMULAS.find(x => x.name === fd.name);
   const dm = f && DOMAINS.find(d => d.key === f.domain);
-  document.getElementById('fdTag').textContent = fdPosText() + ' · ' + fd.name + (dm ? ' · ' + dm.name : '');
+  document.getElementById('fdTag').textContent = fdPosText() + ' · ' + fd.name + (dm ? ' · ' + dm.name : '') + ' · Level ' + fd.lvl + ' ' + FD_LEVEL_NAMES[fd.lvl];
   document.getElementById('fdScenario').textContent = fd.prob.scenario;
   const inp = document.getElementById('fdInput');
   inp.value = ''; inp.disabled = false;
@@ -20410,6 +20535,7 @@ function fdCheck(){
   const p = fd.prob, ok = Math.abs(x - p.answer) <= p.tol;
   const s = fdStats(fd.name);
   s.attempts++; if(ok){ s.correct++; if(!fd.peeked) s.streak = (s.streak||0) + 1; s.missRun = 0; } else { s.streak = 0; s.missRun = (s.missRun||0) + 1; } s.lastAt = Date.now();
+  fd.levelNote = ''; try{ fd.levelNote = fdMoveLevel(s, ok, fd.peeked); }catch(e){}
   DATA.formulaStats[fd.name] = s;
   DATA.formulaDrillCount = (DATA.formulaDrillCount || 0) + 1; DATA.formulaDrillLastAt = Date.now();
   try{ planDayLog().formula++; }catch(e){}
@@ -20450,6 +20576,22 @@ function fdCheck(){
   }
   const f = FORMULAS.find(y => y.name === fd.name);
   if(f){ const n = document.createElement('div'); n.className = 'fd-note'; n.textContent = f.note; res.appendChild(n); }
+  try{
+    const chance = fd.lvl === 1 ? 0.3 : fd.lvl === 2 ? 0.6 : 0.95;
+    const cq = ok && Math.random() < chance ? fdConceptQuestion(fd.name) : null;
+    if(cq){
+      const box = document.createElement('div'); box.className = 'fd-concept';
+      const h = document.createElement('div'); h.className = 'fd-concept-q'; h.textContent = 'Quick idea check: ' + cq.prompt; box.appendChild(h);
+      const row = document.createElement('div'); row.className = 'fd-concept-row';
+      cq.choices.forEach((t, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fd-cc'; b.textContent = t; b.onclick = () => {
+        if(box.dataset.done) return; box.dataset.done = '1';
+        const good = i === cq.correct; row.querySelectorAll('.fd-cc').forEach((x, k) => { x.disabled = true; if(k === cq.correct) x.classList.add('right'); else if(k === i) x.classList.add('wrong'); });
+        const e = document.createElement('div'); e.className = 'fd-concept-why'; e.textContent = (good ? 'Yes. ' : 'Not quite. ') + cq.why; box.appendChild(e);
+        const st = fdStats(fd.name); st.cons = st.cons || { n:0, ok:0 }; st.cons.n++; if(good) st.cons.ok++; if(!good){ st.lvlRun = 0; } DATA.formulaStats[fd.name] = st; persist();
+      }; row.appendChild(b); });
+      box.appendChild(row); res.appendChild(box);
+    }
+  }catch(e){}
   { const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn ghost fd-tutor';
     tb.textContent = ok ? 'Quiz me on why it works' : 'Walk me through it with the tutor';
     tb.onclick = () => fdAskTutor(ok, x); res.appendChild(tb); }
@@ -20462,6 +20604,7 @@ function fdCheck(){
 // A short coaching line after an answer: what the pattern says and what to do
 // about it. Only fires on meaningful moments, so it stays worth reading.
 function fdCoachLine(ok, s){
+  if(fd.levelNote) return fd.levelNote;
   if(!ok && s.missRun >= 2) return `That is ${s.missRun} misses in a row on ${fd.name}. Before typing, write the formula, list each given with its unit, then compute. The working below shows where it can slip.`;
   if(ok && s.streak === 3) return `Three in a row on ${fd.name}. Mixed practice will now lean toward your shakier formulas.`;
   if(fd.tally.n >= 8 && fd.tally.n % 8 === 0){
@@ -20488,7 +20631,7 @@ function fdRenderStatus(){
   const s = fdStats(fd.name);
   const acc = s.attempts ? Math.round(s.correct/s.attempts*100) + '% right over ' + s.attempts + (s.attempts===1?' try':' tries') : 'first time with this one';
   const t = fd.tally.n ? `<b>This sitting:</b> ${fd.tally.ok} of ${fd.tally.n}` : '<b>This sitting:</b> just started';
-  const lv = fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula hidden' : ' · unaided';
+  const lv = (fd.lvl ? ' · Level ' + fd.lvl : '') + (fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula behind a peek' : ' · unaided');
   let plan = '';
   try{
     const pl = buildStudyPlan(), st = pl.steps.find(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && x.unit === 'problems');
@@ -24552,6 +24695,7 @@ function selectAnswerCore(i){
   session.lastSelectedIndex = i;
   const q = session.queue[session.index];
   const isCorrect = (i === q.correct);
+  try{ if(session.mode === 'case' && session.caseLevels){ const lv = session.caseLevels[q.id] || 2; session.caseSteps = (session.caseSteps || []).concat([{ id:q.id, lv, ok:isCorrect }]); session.caseTarget = Math.max(1, Math.min(3, (session.caseTarget || 2) + (isCorrect ? (lv >= (session.caseTarget || 2) ? 1 : 0) : -1))); } }catch(e){}
   try{ revealCaseCues(q); }catch(e){}
   document.querySelectorAll('.confidence-pill').forEach(p => p.disabled = true);
   { const cr = document.getElementById('confidenceRow'); if(cr) cr.classList.add('done'); }
@@ -25119,8 +25263,20 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
 function nextQuestion(){
   stopSpeech();
   if(session.index < session.queue.length-1){
+    let note = '';
+    try{
+      if(session.mode === 'case' && session.caseLevels){
+        const done = session.queue.slice(0, session.index + 1), rest = session.queue.slice(session.index + 1);
+        const prevLv = session.caseLevels[done[done.length - 1].id] || 2;
+        const ordered = caseAdaptOrder(rest, session.caseLevels, session.caseTarget || 2, []);
+        session.queue = done.concat(ordered);
+        const nl = session.caseLevels[session.queue[session.index + 1].id] || 2;
+        note = nl > prevLv ? 'Next: a tougher one, since you are handling these.' : nl < prevLv ? 'Next: a gentler one to rebuild your footing.' : '';
+      }
+    }catch(e){}
     session.index++;
     renderQuestion();
+    if(note){ try{ const row = document.getElementById('takeRow'); if(row){ row.textContent = note; row.style.display = ''; } }catch(e){} }
   } else {
     finishSession();
   }
@@ -29025,7 +29181,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.455';
+const BUILD_ID = '2026-10-22.456';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
