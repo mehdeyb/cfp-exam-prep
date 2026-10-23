@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Blueprint — CFP® Practice Exam Studio</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com https://aiplatform.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://api.anthropic.com https://generativelanguage.googleapis.com https://aiplatform.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0F1A2C">
 <meta name="color-scheme" content="dark light">
@@ -4164,6 +4164,11 @@
         <div class="settings-section">
           <h3>Voice</h3>
           <p class="hint" style="margin-top:0;">The device voice that reads flashcards, rationales and lessons aloud. Auto picks the most natural-sounding one available. The two lesson hosts use two different voices, and if you choose only one, the other is filled in automatically.</p>
+          <div class="voice-pref-row">
+            <label for="ttsEngineSel">Voice engine <span class="note">(lessons, flashcards, rationales)</span></label>
+            <div class="voice-pref-control"><select id="ttsEngineSel" class="fc-domain-select" onchange="handleTtsEngineChange(this)" aria-label="Voice engine"><option value="device">Device voice</option><option value="natural">Natural voice (downloads once, about 90 MB)</option></select></div>
+          </div>
+          <p class="hint" id="kokoroStatus" style="margin:0 0 10px;" aria-live="polite"></p>
           <p class="hint" id="voiceQualityHint" style="margin:0 0 10px;"></p>
           <label class="settings-check" style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 6px;"><input type="checkbox" id="soundsToggle" onchange="handleSoundsToggle(this)" checked> <span>Soft sounds for answers and lesson steps</span></label>
           <div class="voice-pref-row">
@@ -7005,6 +7010,7 @@ async function loadData(){
   if(DATA.lastTab && DATA.lastTab !== 'study'){ await runDeferredInit(); showTab(DATA.lastTab); }
   else requestAnimationFrame(() => setTimeout(() => { if(window.requestIdleCallback) requestIdleCallback(() => { runDeferredInit(); }, { timeout: 1500 }); else runDeferredInit(); }, 0));
   window._dataReady = true;
+  try{ if(kokoroWanted()) setTimeout(() => { if(KOKORO.state === 'idle') kokoroLoad(); }, 4000); }catch(e){}
   if(loadFailed){
     persistFailureWarned = true;
     setStorageWarning(true);
@@ -7033,6 +7039,55 @@ if(hasSpeechSupport()){
     try{window._vpMark&&window._vpMark('voices')}catch(_){}
     renderVoicePrefOptions();
   });
+}
+
+// ---- Natural voice (Kokoro, runs on this device once downloaded). Optional; the device voice is the fallback. ----
+const KOKORO = { tts:null, state:'idle', ctx:null, src:null, cache:new Map(), voices:{ host1:'af_heart', host2:'am_michael', solo:'af_heart' }, pct:0 };
+function kokoroWanted(){ return !!(DATA && DATA.ttsEngine === 'kokoro'); }
+function kokoroReady(){ return kokoroWanted() && KOKORO.state === 'ready' && !!KOKORO.tts; }
+function kokoroSetStatus(t){ const el = document.getElementById('kokoroStatus'); if(el) el.textContent = t; }
+async function kokoroLoad(){
+  if(KOKORO.state === 'ready' || KOKORO.state === 'loading') return KOKORO.state === 'ready';
+  KOKORO.state = 'loading'; KOKORO.pct = 0; kokoroSetStatus('Downloading the voice (roughly 90 MB, once). Keep this screen open.');
+  try{
+    const mod = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/+esm');
+    const seen = {};
+    KOKORO.tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype:'q8', device:'wasm', progress_callback:p => {
+      try{ if(p && p.file && typeof p.loaded === 'number' && p.total){ seen[p.file] = [p.loaded, p.total]; let l = 0, t = 0; Object.values(seen).forEach(v => { l += v[0]; t += v[1]; }); KOKORO.pct = Math.round(l / t * 100); kokoroSetStatus('Downloading the voice… ' + KOKORO.pct + '%'); } }catch(e){}
+    } });
+    try{ const names = Object.keys(KOKORO.tts.voices || {}); ['af_heart','af_bella','af_nicole'].forEach(n => 0); const pick = (arr, d) => arr.find(n => names.includes(n)) || d; KOKORO.voices = { host1:pick(['af_heart','af_bella','af_sarah'], names[0]), host2:pick(['am_michael','am_adam','bm_george'], names[1] || names[0]), solo:pick(['af_heart','af_bella'], names[0]) }; }catch(e){}
+    KOKORO.state = 'ready'; kokoroSetStatus('Natural voice is ready on this device.'); return true;
+  }catch(e){
+    KOKORO.state = 'idle'; KOKORO.tts = null; DATA.ttsEngine = null; persist();
+    kokoroSetStatus('Could not load the natural voice here, so the device voice stays on. ' + String((e && e.message) || '').slice(0, 80));
+    const sel = document.getElementById('ttsEngineSel'); if(sel) sel.value = 'device';
+    return false;
+  }
+}
+function handleTtsEngineChange(sel){ DATA.ttsEngine = sel.value === 'natural' ? 'kokoro' : null; persist(); if(sel.value === 'natural') kokoroLoad(); else kokoroSetStatus(''); }
+function kokoroStop(){ try{ if(KOKORO.src){ KOKORO.src.onended = null; KOKORO.src.stop(); } }catch(e){} KOKORO.src = null; try{ if(KOKORO.ctx && KOKORO.ctx.state === 'suspended') KOKORO.ctx.resume(); }catch(e){} }
+async function kokoroAudioFor(text, voice, speed){
+  const key = voice + '|' + speed.toFixed(2) + '|' + text;
+  if(KOKORO.cache.has(key)) return KOKORO.cache.get(key);
+  const p = KOKORO.tts.generate(text, { voice, speed }).then(r => ({ data:r.audio, rate:r.sampling_rate }));
+  KOKORO.cache.set(key, p); if(KOKORO.cache.size > 6){ KOKORO.cache.delete(KOKORO.cache.keys().next().value); }
+  return p;
+}
+function kokoroVoiceFor(chunk){ return chunk.speaker === 'HOST1' ? KOKORO.voices.host1 : chunk.speaker === 'HOST2' ? KOKORO.voices.host2 : KOKORO.voices.solo; }
+async function kokoroSpeak(chunk, state, gen, onend, onerror){
+  try{
+    const speed = Math.max(0.7, Math.min(1.6, state.speed * 0.98)), text = applyPronunciationDictionary(chunk.text);
+    const a = await kokoroAudioFor(text, kokoroVoiceFor(chunk), speed);
+    if(gen !== state.generation || !state.active) return;
+    if(!KOKORO.ctx){ const AC = window.AudioContext || window.webkitAudioContext; KOKORO.ctx = new AC(); }
+    if(KOKORO.ctx.state === 'suspended' && !state.paused) await KOKORO.ctx.resume();
+    const buf = KOKORO.ctx.createBuffer(1, a.data.length, a.rate); buf.getChannelData(0).set(a.data);
+    const src = KOKORO.ctx.createBufferSource(); src.buffer = buf; src.connect(KOKORO.ctx.destination);
+    src.onended = () => { if(KOKORO.src === src){ KOKORO.src = null; onend(); } };
+    KOKORO.src = src; src.start();
+    // Get the next sentence ready while this one plays, so the gap between sentences stays natural.
+    const nx = state.chunks[state.index + 1]; if(nx){ try{ kokoroAudioFor(applyPronunciationDictionary(nx.text), kokoroVoiceFor(nx), speed).catch(() => {}); }catch(e){} }
+  }catch(e){ if(gen === state.generation) onerror(); }
 }
 
 // ---- Soft sounds: a quiet cue for right and wrong answers, lesson checks and slide changes. Off with one switch in Settings. ----
@@ -7307,7 +7362,8 @@ function clearMediaSession(){
 function speakChunkedSequence(text, btn, onDone, onChunkStart, speed, startIndex, mediaSessionOpts){
   if(!hasSpeechSupport() || !text) return;
   speechAudioPrime();
-  window.speechSynthesis.cancel();
+  window.speechSynthesis.cancel(); kokoroStop();
+  try{ if(kokoroWanted() && KOKORO.state === 'idle') kokoroLoad(); }catch(e){}
   naturalSpeechState.chunks = splitIntoSpeechChunks(text);
   naturalSpeechState.index = (typeof startIndex === 'number' && startIndex >= 0 && startIndex < naturalSpeechState.chunks.length) ? startIndex : 0;
   naturalSpeechState.paused = false;
@@ -7334,6 +7390,7 @@ function jumpToSpeechChunk(index){
   const state = naturalSpeechState;
   if(!state.active || index < 0 || index >= state.chunks.length) return;
   if(hasSpeechSupport()) window.speechSynthesis.cancel();
+  kokoroStop();
   state.index = index;
   state.paused = false;
   state.chunkSpeaking = false;
@@ -7461,6 +7518,7 @@ function playNextSpeechChunk(){
     if(state.active) finishSpeechSequence();
   };
   if(state.onChunkStart) state.onChunkStart(state.index);
+  if(kokoroReady()){ kokoroSpeak(chunk, state, myGeneration, utter.onend, utter.onerror); return; }
   // Some voices are listed but not installed, and speak() then plays nothing without an error. If nothing starts, retry once with the default voice.
   let started = false; utter.onstart = () => { started = true; };
   setTimeout(() => {
@@ -7481,7 +7539,8 @@ function pauseSpeechSequence(){
   const state = naturalSpeechState;
   if(!state.active) return;
   state.paused = true;
-  if(state.chunkSpeaking && hasSpeechSupport()) window.speechSynthesis.pause();
+  if(KOKORO.src && KOKORO.ctx){ try{ KOKORO.ctx.suspend(); }catch(e){} }
+  else if(state.chunkSpeaking && hasSpeechSupport()) window.speechSynthesis.pause();
   if(hasMediaSessionSupport()) navigator.mediaSession.playbackState = 'paused';
 }
 
@@ -7494,7 +7553,9 @@ function resumeSpeechSequence(){
   // resume() continues that same utterance; if we were paused between
   // chunks (waiting on the pause timer, nothing actively speaking), there's
   // nothing for the browser to resume -- advance to the next chunk directly.
-  if(state.chunkSpeaking && hasSpeechSupport()){
+  if(KOKORO.src && KOKORO.ctx){
+    try{ KOKORO.ctx.resume(); }catch(e){}
+  } else if(state.chunkSpeaking && hasSpeechSupport()){
     window.speechSynthesis.resume();
   } else {
     playNextSpeechChunk();
@@ -7520,6 +7581,7 @@ function stopSpeechSequence(){
   state.chunkSpeaking = false;
   state.voicePair = null;
   if(hasSpeechSupport()) window.speechSynthesis.cancel();
+  kokoroStop();
   if(state.btn) state.btn.classList.remove('speaking');
   clearMediaSession();
   speechAudioRelease();
@@ -19072,7 +19134,7 @@ function closeSettings(){
 }
 
 function renderVoicePrefOptions(){
-  try{ const st = document.getElementById('soundsToggle'); if(st) st.checked = soundsOn(); }catch(e){}
+  try{ const st = document.getElementById('soundsToggle'); if(st) st.checked = soundsOn(); const es = document.getElementById('ttsEngineSel'); if(es) es.value = kokoroWanted() ? 'natural' : 'device'; if(kokoroWanted() && KOKORO.state === 'idle') kokoroSetStatus('Tap Play on a lesson to load the natural voice.'); }catch(e){}
   if(!hasSpeechSupport()) return;
   const voices = window.speechSynthesis.getVoices() || [];
   const englishVoices = voices.filter(v => /^en/i.test(v.lang));
@@ -29439,7 +29501,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.480';
+const BUILD_ID = '2026-10-23.481';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
