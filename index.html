@@ -4164,6 +4164,8 @@
         <div class="settings-section">
           <h3>Voice</h3>
           <p class="hint" style="margin-top:0;">The device voice that reads flashcards, rationales and lessons aloud. Auto picks the most natural-sounding one available. The two lesson hosts use two different voices, and if you choose only one, the other is filled in automatically.</p>
+          <p class="hint" id="voiceQualityHint" style="margin:0 0 10px;"></p>
+          <label class="settings-check" style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 6px;"><input type="checkbox" id="soundsToggle" onchange="handleSoundsToggle(this)" checked> <span>Soft sounds for answers and lesson steps</span></label>
           <div class="voice-pref-row">
             <label for="voicePrefPrimary">Primary voice <span class="note">(flashcards, rationales, personalized lesson)</span></label>
             <div class="voice-pref-control">
@@ -7033,6 +7035,28 @@ if(hasSpeechSupport()){
   });
 }
 
+// ---- Soft sounds: a quiet cue for right and wrong answers, lesson checks and slide changes. Off with one switch in Settings. ----
+let _sndCtx = null;
+function soundsOn(){ return !(DATA && DATA.soundsOff); }
+function soundCue(kind){
+  try{
+    if(!soundsOn()) return;
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    if(!_sndCtx) _sndCtx = new AC();
+    if(_sndCtx.state === 'suspended') _sndCtx.resume();
+    const t0 = _sndCtx.currentTime + 0.01;
+    const notes = { right:[[659,0,.11],[880,.09,.2]], wrong:[[220,0,.22]], check:[[784,0,.14],[1047,.1,.22]], step:[[1320,0,.05]], done:[[523,0,.14],[659,.11,.14],[784,.22,.3]] }[kind]; if(!notes) return;
+    const vol = kind === 'step' ? 0.025 : 0.07;
+    notes.forEach(([f, d, len]) => {
+      const o = _sndCtx.createOscillator(), g = _sndCtx.createGain();
+      o.type = kind === 'wrong' ? 'triangle' : 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(vol, t0 + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + len);
+      o.connect(g); g.connect(_sndCtx.destination); o.start(t0 + d); o.stop(t0 + d + len + 0.03);
+    });
+  }catch(e){}
+}
+function handleSoundsToggle(cb){ DATA.soundsOff = !cb.checked; persist(); if(cb.checked) soundCue('right'); }
+
 // Browser text-to-speech quality is capped by whatever voices the
 // device's OS provides — this can't turn it into a premium AI voice.
 // What it CAN do: most devices actually ship more than one English
@@ -7050,6 +7074,9 @@ function scoreVoice(v){
   // "Natural"/"Neural" voices, etc.) — not guaranteed present, but a
   // real, usable signal when it is.
   if(/enhanced|premium|neural|natural|studio/i.test(name)) score += 5;
+  if(/premium|neural|natural|studio/i.test(name)) score += 3;
+  if(/\b(ava|zoe|evan|nathan|joelle|noelle|allison|nicky|serena|oliver|stephanie)\b/i.test(name) && /enhanced|premium/i.test(name)) score += 2;
+  if(/^en-(US|GB)/i.test(v.lang)) score += 1;
   if(/samantha|ava|siri/i.test(name)) score += 2;
   // Microsoft Edge's neural voices -- confirmed labeled "(Natural)" in the
   // voice list, which the pattern above already catches, but the specific
@@ -13180,6 +13207,7 @@ function stageDraw(soft){
     h.classList.toggle('pst-back', back); h.classList.remove('pst-in'); void h.offsetWidth; h.classList.add('pst-in');
     const big = node.querySelector('.pst-big'); if(big) stageCountUp(big);
   });
+  if(!same && stageState.fullOpen && naturalSpeechState.active && !naturalSpeechState.paused) soundCue('step');
   const live = stageState.hi >= stageState.hist.length - 1;
   const lb = document.getElementById('scrLive'); if(lb) lb.style.display = live ? 'none' : '';
   const pv = document.getElementById('scrPrev'), nx = document.getElementById('scrNext');
@@ -16262,7 +16290,7 @@ function fcApplyChoose(i){
   const card = fcQueue[fcIndex], q = fcView.applyQ; if(!card || !q) return;
   fcView.applied = true;
   const right = (i === q.correct);
-  fcView.applyRight = right;
+  fcView.applyRight = right; soundCue(right ? 'right' : 'wrong');
   // A real exam-style answer: it counts everywhere a quiz answer counts (question history, missed list, domain readiness, coach).
   try{
     if(q.id && q.domain && DATA.domainStats[q.domain]){
@@ -19037,6 +19065,7 @@ function closeSettings(){
 }
 
 function renderVoicePrefOptions(){
+  try{ const st = document.getElementById('soundsToggle'); if(st) st.checked = soundsOn(); }catch(e){}
   if(!hasSpeechSupport()) return;
   const voices = window.speechSynthesis.getVoices() || [];
   const englishVoices = voices.filter(v => /^en/i.test(v.lang));
@@ -19066,6 +19095,13 @@ function renderVoicePrefOptions(){
     // silently selecting nothing.
     select.value = saved && pool.some(v => v.name === saved) ? saved : '';
   });
+  try{
+    const hint = document.getElementById('voiceQualityHint'); const best = pickBestVoice();
+    if(hint && best){
+      const good = /premium|enhanced|neural|natural|studio/i.test(best.name);
+      hint.textContent = good ? `Using ${best.name}, one of the higher-quality voices on this device.` : `The best voice on this device is ${best.name}, which sounds flatter than the premium ones. On iPhone or iPad: Settings → Accessibility → Spoken Content → Voices → English, then download Ava (Premium) or Evan (Enhanced) and reopen the app. It will be picked automatically.`;
+    }
+  }catch(e){}
 }
 
 function handleVoicePrefChange(dataKey, selectId){
@@ -22639,7 +22675,7 @@ function mwAnswer(k){
   it.sibPick = k; it.ok = right;
   if(q.isVariant){
     try{ if(!right){ const st0 = DATA.questionStats[it.q.id]; if(st0){ st0.dueAt = Date.now(); } } }catch(e){}
-    try{ creditConceptRetest(q.id, right); const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; } DATA.answerCounter = (DATA.answerCounter || 0) + 1; try{ recordDomainAnswer(q.domain, right, q); }catch(e){} recordStudyDay(); persist(); refreshHeaderStats(); }catch(e){}
+    try{ soundCue(right ? 'check' : 'wrong'); creditConceptRetest(q.id, right); const ds = DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; } DATA.answerCounter = (DATA.answerCounter || 0) + 1; try{ recordDomainAnswer(q.domain, right, q); }catch(e){} recordStudyDay(); persist(); refreshHeaderStats(); }catch(e){}
     mwRender();
     const v0 = document.querySelector('#mwBody .mw-verdict'); if(v0) v0.scrollIntoView({ block:'nearest', behavior:'smooth' });
     return;
@@ -24971,6 +25007,7 @@ function selectAnswerCore(i){
   dt.total++;
   if(isCorrect){ dt.correct++; session.correct++; }
   session.answerLog.push({index: session.index, correct: isCorrect});
+  soundCue(isCorrect ? 'right' : 'wrong');
 
   if(q.takeDir !== 'easier'){
     DATA.domainStats[q.domain].total++;
@@ -29395,7 +29432,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.478';
+const BUILD_ID = '2026-10-23.479';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
