@@ -1910,7 +1910,27 @@
   #tutorCard.tt-idle #lessonsCard .pst-body{display:flex;flex-direction:column;justify-content:center;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{padding:10px 18px 0;}
   #tutorCard.tt-idle #tutorThread{display:none;}
+
+  /* One screen per tab: a tab shows one section at a time, picked from a short row, and the section fits the screen (only a very long list scrolls inside its own frame). */
+  .os-seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 10px;padding:2px 0;-webkit-overflow-scrolling:touch;}
+  .os-seg::-webkit-scrollbar{display:none;}
+  .os-seg button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--hair);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .os-seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .os-hide{display:none !important;}
+  .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
+  #heroIntro{display:none !important;}
+  body.os-one{padding-bottom:0 !important;}
+  body.os-one .footer-row{display:none;}
+  body.os-one #todayPlanCard .pt-mins, body.os-one #todayPlanCard .pt-today, body.os-one #todayPlanCard .pt-pace, body.os-one #todayPlanCard .pt-sub{display:none;}
+  body.os-one #todayPlanCard .card-head{margin-bottom:8px;}
+  html[data-lay="compact"] body.os-one #nextStepCard .ns-why, html[data-lay="compact"] body.os-one #nextStepCard .ns-alt, html[data-lay="compact"] body.os-one #nextStepCard .ns-tag{display:none;}
+  html[data-lay="compact"] body.os-one #nextStepCard .ns-foot{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;}
+  html[data-lay="compact"] body.os-one #tab-study .score-row .stat-row, html[data-lay="compact"] body.os-one #todayPlanCard .seg-hub{margin-top:0;}
+  body.os-one #tab-study .score-row{margin-bottom:10px;gap:10px 16px;}
+  body.os-one #tab-study #readinessBreakdownToggle, body.os-one #tab-study .rb-toggle{margin-top:2px;}
   #tutorCard.tt-idle #ttActions{margin-top:10px;}
+  .plan-tutor-link{margin-left:auto;margin-right:12px;background:none;border:0;padding:6px 2px;font:inherit;font-size:12.5px;font-weight:600;color:var(--gold);text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:32px;}
+  #todayPlanCard .card-head{align-items:center;}
   #tutorCard #podcastPlayer:not([style*="none"]){display:flex !important;flex-direction:column;}
   #tutorCard #podcastPlayer > #podcastStage:not([style*="none"]){flex:1 1 auto;display:flex !important;flex-direction:column;}
   #tutorCard.tt-idle #lessonsCard .pst-body{min-height:0;flex:1 1 auto;}
@@ -4526,6 +4546,9 @@ function showTab(name, opts){
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
     if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} try{ ttIdleBoard(); }catch(e){} }
     if(name === 'tutor'){ ttFit(); setTimeout(ttFit, 120); setTimeout(ttFit, 700); }
+    document.body.classList.toggle('os-one', name === 'tutor' || name === 'study' || !!OS_TABS[name]);
+    if(name === 'study'){ setTimeout(osFitStudy, 150); setTimeout(osFitStudy, 900); }
+    if(OS_TABS[name]){ osApply(name); setTimeout(() => osApply(name), 150); setTimeout(() => osFit(name), 800); }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
@@ -11014,7 +11037,7 @@ function renderTodayPlan(){
       + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
   } else rows = stepRows.join('') + (stepRows.length > 11 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><button type="button" class="plan-tutor-link" onclick="ttAdjustPlan()">Change with tutor</button><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
@@ -12879,7 +12902,7 @@ function tutorModeOptions(){
     o.push({ label:'Case study', run: () => { showTab('study'); openCasePicker(); } });
     o.push({ label:'Calculator practice', run: () => { try{ executeTutorTool('open_tvm_calculator', {}); }catch(e){} } });
     o.push({ label:'My study guide', run: () => { try{ executeTutorTool('open_study_guide', {}); }catch(e){} } });
-    o.unshift({ label:'Change today\u2019s plan', run: () => sendTutorMessage('Today\'s plan may not fit me. Ask me one short question about my time, energy or what changed, then change the plan to fit and show the new plan on the board.') });
+    o.unshift({ label:'Change today\u2019s plan', run: () => ttAdjustPlan() });
   }catch(e){}
   return o;
 }
@@ -13905,7 +13928,7 @@ function ttPostBoard(userText, reply){
   }catch(e){}
 }
 // When the plan changes, the new plan goes on the board so the change is seen, not just announced.
-function ttBoardPlan(note){
+function ttBoardPlan(note, keepOpts){
   try{
     const plan = buildStudyPlan(); const left = plan.steps.filter(x => !x.done).slice(0, 6); if(!left.length) return;
     const r = stageSlideFromTool({ kind:'steps', title: 'Today, updated', steps: left.map(x => ({ title: stageClip(x.title, 70), detail: x.minutes + ' min' + (x.why && x === left[0] ? ' \u00b7 ' + stageClip(x.why, 70) : '') })) });
@@ -13913,8 +13936,31 @@ function ttBoardPlan(note){
     if(!stageInlineVisible()) ttEnsureStage();
     stageShow(r.slide, 'tutor'); window._ttBoardTurn = true;
     try{ renderTodayPlan(); }catch(e){}
-    try{ window._ttOpenUsed = false; tutorLessonOffer(); }catch(e){}
+    if(!keepOpts && !window._ttAdjusting){ try{ window._ttOpenUsed = false; tutorLessonOffer(); }catch(e){} }
   }catch(e){}
+}
+// The plan and the tutor are one thing: this puts today's plan on the board and asks what changed, with buttons that change it right now.
+function ttAdjustPlan(){
+  window._ttAdjusting = true;
+  try{ showTab('tutor'); }catch(e){}
+  setTimeout(() => {
+    try{ ttBoardPlan(null, true); }catch(e){}
+    const after = () => { try{ ttBoardPlan(null, true); }catch(e){} };
+    const say = (t, o) => { try{ tutorSay(t, o); }catch(e){} };
+    const set = (min) => async () => { try{ await executeTutorTool('plan_my_study', { minutes: min }); }catch(e){} after(); say('Done. That is the plan now. Anything else to change?', adjustOpts(true)); };
+    function adjustOpts(again){
+      const o = [
+        { label:'I have less time', run: set(90) },
+        { label:'I have more time', run: set(300) },
+        { label:'Focus on what I miss', run: async () => { try{ await executeTutorTool('shape_today_plan', { focus:'repair', reason:'You asked to focus on what you keep missing.' }); }catch(e){} after(); say('Today now leans on your weak spots.', adjustOpts(true)); } },
+        { label:'Back to automatic', run: async () => { try{ await executeTutorTool('shape_today_plan', { clear:true }); }catch(e){} after(); say('Back to the automatic plan.', adjustOpts(true)); } }
+      ];
+      if(again) o.push({ label:'Looks good', run: () => { window._ttAdjusting = false; try{ window._ttOpenUsed = false; tutorLessonOffer(); }catch(e){} } });
+      else o.push({ label:'Something else', run: () => { window._ttAdjusting = false; sendTutorMessage('Today\'s plan may not fit me. Ask me one short question about what changed, then change the plan to fit and show it on the board.'); } });
+      return o;
+    }
+    say('What changed about today?', adjustOpts(false));
+  }, 80);
 }
 function ttBoardHide(){
   const pl = document.getElementById('podcastPlayer'), card = document.getElementById('tutorCard');
@@ -23383,6 +23429,7 @@ function resumeInProgressSession(){
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
+  try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-study').classList.add('active');
   document.getElementById('modePanel').style.display = 'none';
@@ -23864,6 +23911,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   // no matter which tab the user actually triggered it from. The quiz's
   // own fixed, full-screen positioning covers whatever else is on screen
   // regardless, so other tab panels can still lose their active class.
+  try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-study').classList.add('active');
   document.getElementById('modePanel').style.display = 'none';
@@ -26459,7 +26507,7 @@ function exitToMenu(){
   document.getElementById('modePanel').style.display = 'block';
   document.getElementById('blueprintCard').style.display = 'block';
   { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'block'; }
-  showTab(DATA && DATA.lastTab ? DATA.lastTab : 'study');
+  { const _o = window._quizOrigin; window._quizOrigin = ''; showTab(_o ? 'tutor' : (DATA && DATA.lastTab ? DATA.lastTab : 'study')); }
   closeDomainPicker();
   closeSettings();
   closeTvmTool();
@@ -27709,6 +27757,72 @@ function tutorParseNext(reply){
   const opts = m[1].split('|').map(x => x.trim()).filter(x => x && x.length <= 60).slice(0, 4);
   return { text: String(reply).slice(0, m.index).trim(), opts };
 }
+
+// ---- One screen per tab -------------------------------------------------------------------------------------------
+const OS_TABS = {
+  reference: [
+    { label:'Practice',     test: c => c.id === 'modePanel' || c.id === 'studyGuideCard' },
+    { label:'Toolkit',      test: c => c.id === 'techCard' },
+    { label:'Glossary',     h: /^Glossary/i },
+    { label:'Key numbers',  h: /^Key numbers/i },
+    { label:'Tables',       test: c => c.id === 'refTablesCard' },
+    { label:'HP 10bII+',    test: c => c.id === 'calcKeysCard' },
+    { label:'Formulas',     h: /^Core formulas/i },
+    { label:'Syllabus',     h: /^Syllabus/i }
+  ],
+  examday: [
+    { label:'Where I stand', test: c => c.id === 'edStandingCard' || /^Pacing/i.test(osHead(c)) },
+    { label:'Playbook',      h: /^Case-study playbook/i },
+    { label:'Format & rules',h: /^(Exam format|Calculator policy|What to bring)/i },
+    { label:'Checklist',     test: c => c.id === 'edChecklistCard' }
+  ]
+};
+function osHead(c){ const h = c.querySelector && c.querySelector('h2,h3'); return h ? h.textContent.trim() : ''; }
+window._osSel = window._osSel || {};
+function osApply(tab){
+  const spec = OS_TABS[tab]; const panel = document.getElementById('tab-' + tab); if(!spec || !panel) return;
+  const kids = [...panel.children].filter(c => !c.classList.contains('os-seg') && c.tagName === 'DIV');
+  const groups = spec.map(g => ({ g, els: kids.filter(c => g.test ? g.test(c) : g.h.test(osHead(c))) })).filter(x => x.els.length);
+  if(!groups.length) return;
+  let sel = window._osSel[tab]; if(sel === undefined || sel >= groups.length) sel = 0;
+  let seg = panel.querySelector(':scope > .os-seg');
+  if(!seg){ seg = document.createElement('div'); seg.className = 'os-seg'; seg.setAttribute('role', 'tablist'); panel.insertBefore(seg, panel.firstChild); }
+  if(seg.dataset.n !== String(groups.length)){
+    seg.dataset.n = String(groups.length); seg.innerHTML = '';
+    groups.forEach((x, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = x.g.label; b.setAttribute('role', 'tab'); b.onclick = () => { window._osSel[tab] = i; osApply(tab); try{ window.scrollTo(0, 0); }catch(e){} }; seg.appendChild(b); });
+  }
+  [...seg.children].forEach((b, i) => b.classList.toggle('on', i === sel));
+  kids.forEach(c => { const mine = groups[sel].els.includes(c); c.classList.toggle('os-hide', !mine); });
+  osFit(tab);
+}
+function osFit(tab){
+  try{
+    const panel = document.getElementById('tab-' + tab); if(!panel || !panel.classList.contains('active')) return;
+    const vis = [...panel.children].filter(c => c.tagName === 'DIV' && !c.classList.contains('os-seg') && !c.classList.contains('os-hide') && getComputedStyle(c).display !== 'none');
+    if(!vis.length) return;
+    const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    let used = 0; vis.forEach(c => { c.style.maxHeight = ''; c.classList.remove('os-fit'); });
+    const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
+    const avail = Math.max(260, Math.round(h - top - bb - 16 - (vis.length - 1) * 12));
+    const per = Math.floor(avail / vis.length);
+    vis.forEach(c => { if(c.scrollHeight > per + 2){ c.style.maxHeight = per + 'px'; c.classList.add('os-fit'); } });
+  }catch(e){}
+}
+function osFitStudy(){
+  try{
+    const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
+    if(document.body.classList.contains('quiz-active')) return;
+    c.style.maxHeight = ''; c.classList.remove('os-fit');
+    const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const top = c.getBoundingClientRect().top + (window.scrollY || 0);
+    const avail = Math.max(240, Math.round(h - top - bb - 14));
+    if(c.scrollHeight > avail + 2){ c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); }
+  }catch(e){}
+}
+window.addEventListener('resize', () => setTimeout(() => { osFit('reference'); osFit('examday'); osFitStudy(); }, 80));
+window.addEventListener('orientationchange', () => setTimeout(() => { osFit('reference'); osFit('examday'); }, 300));
 function ttFit(){
   try{
     const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
@@ -27734,7 +27848,7 @@ function tutorAddNext(bubble, opts){
     b.onclick = () => {
       if(typeof tutorBusy !== 'undefined' && tutorBusy) return;
       window._ttOpenUsed = true; tutorClearActions();
-      if(typeof o === 'string') sendTutorMessage(label); else { try{ o.run(); }catch(e){} }
+      if(typeof o === 'string' && /^adjust my plan$/i.test(label)) ttAdjustPlan(); else if(typeof o === 'string') sendTutorMessage(label); else { try{ o.run(); }catch(e){} }
     };
     host.appendChild(b);
   });
@@ -29993,7 +30107,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.532';
+const BUILD_ID = '2026-10-23.541';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
