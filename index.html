@@ -1854,6 +1854,23 @@
   .tt-planstrip .tps-next{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;color:var(--muted);}
   .tt-planstrip .tps-next .pt-go{flex:none;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttPlanStrip{order:1;}
+  /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorContextNote{display:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .card-head{margin-bottom:8px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip{padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-top .linklike{display:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-bar{margin-top:6px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-next{margin-top:6px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-next span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .pt-go{min-height:32px;padding:4px 14px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero:not(.playing){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 12px;margin:0 0 10px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-sub{display:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-title{font-size:17px;margin:2px 0 0;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-btn{grid-column:2;grid-row:1 / span 2;width:auto;min-height:40px;padding:6px 16px;font-size:14px;margin:0;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorThread{max-height:none;min-height:150px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-bubble, html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-msg{font-size:14.5px;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
   .tt-lessons > .card-head{margin-bottom:4px;}
   .tt-label{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px;padding-top:18px;border-top:1px solid var(--hair);}
@@ -3992,8 +4009,8 @@
       </div>
 
       <div class="api-key-nudge" id="tutorApiKeyHint" style="display:none;">
-        <span>No AI connection yet — add your API key in Settings to activate the tutor and the app's other AI-powered tools.</span>
-        <button class="btn ghost" onclick="openSettings()">Open Settings</button>
+        <span>No AI connection yet. Add your API key to switch on the tutor and the app's AI tools.</span>
+        <button class="btn ghost" onclick="openSettings()">Settings</button>
       </div>
 
     <div class="tt-lessons" id="lessonsCard">
@@ -12758,7 +12775,7 @@ function renderPodcastHero(busy){
   const mins = { short:2, standard:4, deep:7 }[len] || 4;
   const set = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
   const ctl = type === 'custom' ? (DATA.tutorLessons || {})[podcastCustomId] : null;
-  set('podHeroKicker', ctl ? 'Written by your tutor' : type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'Built from today’s plan' : 'Written for you today') : 'Domain episode');
+  set('podHeroKicker', ctl ? 'Written by your tutor' : type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'From today’s plan' : 'Written for you today') : 'Domain episode');
   set('podHeroTitle', ctl ? ctl.title : type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'Today’s plan, in audio' : 'Your tutor’s pick') : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
   let sub;
   if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (podcastSavedPos(key) ? ' · you left off partway' : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
@@ -13871,7 +13888,7 @@ function ttPlanStripRefresh(){
       const adv = (typeof _planAdv !== 'undefined' && _planAdv && Date.now() - _planAdv.at < 45 * 60000) ? _planAdv : null;
       const pct = Math.round(100 * done / total);
       let line, go = '';
-      if(own && !own.done) line = `<b>Step ${plan.steps.indexOf(own) + 1} of ${total} in today's plan.</b> Finish this lesson and it checks itself off.`;
+      if(own && !own.done) line = `<b>Step ${plan.steps.indexOf(own) + 1} of ${total} in today's plan</b>`;
       else if(own && own.done) line = `<b>\u2713 This lesson is done in today's plan.</b>`;
       else line = adv ? `<b>\u2713 ${escapeHtml(adv.titles.length === 1 ? adv.titles[0] : adv.titles.length + ' steps')} done.</b>` : `<b>Today's plan</b> \u00b7 ${done} of ${total} done`;
       if(nxt && nxt !== own) go = `<div class="tps-next"><span>Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><button type="button" class="pt-go" onclick="runPlanStep('${nxt.id}')">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'}</button></div>`;
@@ -29687,7 +29704,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.493';
+const BUILD_ID = '2026-10-23.494';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
