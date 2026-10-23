@@ -1889,7 +1889,9 @@
   #tutorCard #tutorThread .tutor-msg-bot .tutor-bubble{background:transparent;border:0;padding:0;max-width:100%;border-radius:0;font-size:15px;line-height:1.55;}
   #tutorCard #tutorThread .tutor-msg{margin-bottom:10px;}
   #tutorCard #screenEntryBtn{display:none !important;}
-  #tutorCard #ttPlanStrip, #tutorCard #lessonsCard.has-lesson #podcastHero{display:none !important;}
+  #tutorCard #ttPlanStrip, #tutorCard #podcastHero{display:none !important;}
+  .tutor-offer{display:block;margin-top:10px;}
+  .tutor-offer .tutor-show{margin-left:0;}
   #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
@@ -12792,6 +12794,19 @@ function podcastSetCaption(index){
 }
 function podcastSeekPreview(v){ podcastUpdateProgress(parseInt(v, 10)); }
 function podcastSeekCommit(v){ try{ podcastJumpToSentence(parseInt(v, 10)); }catch(e){} }
+// The lesson is the tutor's to offer: the opening message says what it has ready, and one tap plays it.
+function tutorLessonOffer(){
+  const bubble = document.querySelector('#tutorThread .tutor-bubble'); if(!bubble || (typeof tutorMessages !== 'undefined' && tutorMessages.length)) return;
+  const old = bubble.querySelector('.tutor-offer'); if(old) old.remove();
+  const t = document.getElementById('podHeroTitle'), hb = document.getElementById('podcastHeroBtn');
+  if(!t || !hb || !t.textContent.trim()) return;
+  const lab = hb.textContent.replace(/[▶\s]+/g, ' ').trim();
+  const row = document.createElement('div'); row.className = 'tutor-offer';
+  const sp = document.createElement('span'); sp.textContent = 'Today\u2019s lesson: ' + t.textContent.trim().replace(/^Today.s plan, in audio$/i, 'built from your plan') + '. ';
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-show'; b.textContent = /write/i.test(lab) && !/fresh/i.test(lab) ? 'Teach me this' : lab; b.disabled = hb.disabled;
+  b.onclick = () => podcastHeroAction();
+  row.appendChild(sp); row.appendChild(b); bubble.appendChild(row);
+}
 function renderPodcastHero(busy){
   const type = document.getElementById('podcastTypeSelect').value, dk = document.getElementById('podcastDomainSelect').value;
   const len = document.getElementById('podcastLengthSelect').value, key = podcastCacheKey();
@@ -12810,6 +12825,7 @@ function renderPodcastHero(busy){
   b.disabled = !!busy;
   try{ const lc = document.getElementById('lessonsCard'); if(lc) lc.classList.toggle('has-lesson', !!(text && !podcastIsStale(key, type) && !busy)); }catch(e){}
   b.textContent = busy ? 'Writing…' : text ? (podcastIsStale(key, type) ? 'Write a fresh one' : (podcastSavedPos(key) ? '▶  Resume' : '▶  Play')) : 'Write this lesson';
+  try{ tutorLessonOffer(); }catch(e){}
   document.querySelectorAll('#podcastTypeSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === type));
   document.querySelectorAll('#podcastLenSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === len));
   const opts = document.querySelector('.pod-opts'); const ds = document.getElementById('podcastDomainSelect');
@@ -29615,7 +29631,7 @@ function updateTutorContextNote(){
     const thread = document.getElementById('tutorThread');
     const bubble = thread ? thread.querySelector('.tutor-bubble') : null;
     if(bubble){
-      const existingShow = bubble.querySelector('.tutor-show'); if(existingShow) existingShow.remove();
+      const existingShow = bubble.querySelector('.tutor-show'); if(existingShow) existingShow.remove(); const ex2 = bubble.querySelector('.tutor-offer'); if(ex2) ex2.remove();
       bubble.textContent = stats.totalAnswered
         ? tutorOpeningLine(stats)
         : `Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. Answer a few practice questions and I'll be able to see your progress too — for now, ask me anything about the CFP curriculum.`;
@@ -29627,6 +29643,7 @@ function updateTutorContextNote(){
           bubble.appendChild(b2);
         }
       }
+      try{ tutorLessonOffer(); }catch(e){}
     }
   }
 
@@ -29738,7 +29755,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.504';
+const BUILD_ID = '2026-10-23.505';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
