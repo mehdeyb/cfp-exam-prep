@@ -11929,9 +11929,7 @@ function renderExamDayCallout(){
       const trend = dl ? (dl.delta > 0 ? ` · ▲ ${dl.delta} ${dl.windowLabel}` : (dl.delta < 0 ? ` · ▼ ${Math.abs(dl.delta)} ${dl.windowLabel}` : ` · steady ${dl.windowLabel}`)) : '';
       const gap = stats.parts.slice().sort((a,b)=>b.lost-a.lost)[0];
       rdEl.innerHTML = `
-        <div class="ed-rd-top"><span class="ed-rd-score">${stats.readiness}<small>/100</small></span><span class="ed-rd-band"><b>${escapeHtml(readinessBandLabel(stats.readiness, stats.totalAnswered, stats.accuracyMargin))}</b>${trend}</span></div>
         ${stats.totalAnswered >= 10 && stats.accuracyMargin !== null ? `<div class="ed-rd-gap">Estimated accuracy on exam-style questions: about <b>${stats.expectedAccuracy}%</b> (give or take ${stats.accuracyMargin}).</div>` : ''}
-        <div class="ed-rd-gap">Most room to grow: <b>${escapeHtml(gap.name)}</b> (${gap.earned.toFixed(1)} of ${gap.weight} points).</div>
         ${(()=>{ const ps = paceSummary(stats); return ps ? `<div class="ed-rd-gap">${escapeHtml(ps.text)}</div>` : ''; })()}
         <button type="button" class="linklike" onclick="openReadinessBreakdown()">See where your score comes from →</button>`;
       rdEl.style.display = 'block';
@@ -29246,7 +29244,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.460';
+const BUILD_ID = '2026-10-22.461';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
