@@ -1876,6 +1876,19 @@
   #tutorCard .podcast-player-panel > .pp-cap{grid-row:1;} #tutorCard .podcast-player-panel > .pp-prog{grid-row:2;} #tutorCard .podcast-player-panel .podcast-player-controls{grid-column:1;grid-row:3;} #tutorCard .podcast-player-panel > .podcast-status{grid-row:4;}
   #tutorCard .podcast-player-panel .podcast-player-secondary-row{grid-column:2;grid-row:3;margin:0;}
   #tutorCard #podcastSleepSelect, #tutorCard .pp-more, #tutorCard #podcastGeneratedNote, #tutorCard #podcastRefine{display:none !important;}
+  /* One surface: the board, the player and the tutor's words are a single panel. The tutor speaks beneath the board, not in a separate bubble. */
+  #tutorCard #lessonsCard #podcastPlayer{border:1px solid var(--hair);border-radius:18px;background:var(--surface2);overflow:hidden;margin:0;box-shadow:none;}
+  #tutorCard #lessonsCard #podcastPlayer .pstage{border:0;border-radius:0;box-shadow:none;background:transparent;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel{border:0;border-top:1px solid var(--hair);border-radius:0;background:transparent;}
+  #tutorCard #lessonsCard.has-lesson #podcastHero, #tutorCard #lessonsCard #podcastHero{margin:0;}
+  #tutorCard #lessonsCard.has-lesson #podcastHero{padding:10px 14px 0;background:var(--surface2);border:1px solid var(--hair);border-top:0;border-radius:0;}
+  #tutorCard #lessonsCard.has-lesson #podcastPlayer{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:0;}
+  #tutorCard #tutorThread{background:var(--surface2);border:1px solid var(--hair);border-radius:18px;padding:12px 14px;margin:0 0 10px;}
+  #tutorCard #lessonsCard.has-lesson ~ .tt-ask #tutorThread, #tutorCard:has(#lessonsCard.has-lesson) #tutorThread{border-top:0;border-top-left-radius:0;border-top-right-radius:0;}
+  #tutorCard:has(#lessonsCard.has-lesson) #lessonsCard #podcastHero{border-bottom:0;}
+  #tutorCard #tutorThread .tutor-msg-bot .tutor-bubble{background:transparent;border:0;padding:0;max-width:100%;border-radius:0;font-size:15px;line-height:1.55;}
+  #tutorCard #tutorThread .tutor-msg{margin-bottom:10px;}
+  #tutorCard #screenEntryBtn{display:none !important;}
   #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
@@ -29724,7 +29737,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.502';
+const BUILD_ID = '2026-10-23.503';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
