@@ -1811,28 +1811,28 @@
   /* Tutor tab: lessons and conversation are one surface, sharing one header and one set of stats. */
   /* Phone and tablet portrait: one screen. The lesson (or your tutor's pick) sits on top, the conversation below it, the message box pinned
      at the bottom, and the lesson options underneath. While a lesson plays its slides stay pinned above the conversation. */
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard, html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-ask{display:contents;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-label{display:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero{order:2;margin:0 0 14px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorThread{order:4;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastPlayer{order:2;margin:0 0 12px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastTranscriptWrap{order:3;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttLiveChips{order:5;flex-wrap:nowrap;overflow-x:auto;margin:0 0 8px;padding-bottom:4px;scrollbar-width:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttLiveChips .chip{flex:none;white-space:nowrap;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorChips{order:6;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-input-row{order:7;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorStatus{order:8;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastTypeSeg{order:10;margin-top:18px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard .pod-opts{order:11;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastFocus{order:12;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastLibrary{order:13;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > #tutorSnapshot{order:15;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard p.hint{order:16;}
+  #tutorCard #lessonsCard, #tutorCard .tt-ask{display:contents;}
+  #tutorCard .tt-label{display:none;}
+  #tutorCard #podcastHero{order:2;margin:0 0 14px;}
+  #tutorCard #tutorThread{order:4;}
+  #tutorCard #podcastPlayer{order:2;margin:0 0 12px;}
+  #tutorCard #podcastTranscriptWrap{order:3;}
+  #tutorCard #ttLiveChips{order:5;flex-wrap:nowrap;overflow-x:auto;margin:0 0 8px;padding-bottom:4px;scrollbar-width:none;}
+  #tutorCard #ttLiveChips .chip{flex:none;white-space:nowrap;}
+  #tutorCard #tutorChips{order:6;}
+  #tutorCard .tutor-input-row{order:7;}
+  #tutorCard #tutorStatus{order:8;}
+  #tutorCard #lessonsCard #podcastTypeSeg{order:10;margin-top:18px;}
+  #tutorCard #lessonsCard .pod-opts{order:11;}
+  #tutorCard #lessonsCard #podcastFocus{order:12;}
+  #tutorCard #lessonsCard #podcastLibrary{order:13;}
+  #tutorCard > #tutorSnapshot{order:15;}
+  #tutorCard p.hint{order:16;}
   #tutorCard.tt-live #podcastPlayer{position:sticky;top:0;z-index:6;background:var(--surface);border-radius:18px;box-shadow:0 12px 24px -16px rgba(0,0,0,.5);}
   #tutorCard.tt-live #lessonsCard .pst-body{min-height:150px;}
   #tutorCard.tt-live #lessonsCard .pst-title{font-size:21px;}
   #tutorCard.tt-live #tutorThread{max-height:max(140px, calc(var(--vh-real, 100vh) - 620px));}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-input-row{position:sticky;bottom:calc(var(--tab-h, 64px) + 6px);z-index:5;background:var(--surface);padding:8px 0 6px;box-shadow:0 -10px 14px -10px var(--surface);}
+  #tutorCard .tutor-input-row{position:sticky;bottom:calc(var(--tab-h, 64px) + 6px);z-index:5;background:var(--surface);padding:8px 0 6px;box-shadow:0 -10px 14px -10px var(--surface);}
   .tt-ask #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 420px));}
   #tutorCard.has-convo .tt-ask > p.hint{display:none;}
   #tutorCard.tt-board #lessonsCard:not(.has-lesson) #podcastHero{display:none;}
@@ -1846,44 +1846,40 @@
   .tutor-listen.speaking{color:var(--gold);border-color:var(--gold);}
   .tt-lessons{margin:0 0 6px;}
   body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
-  .tt-planstrip{order:-2;margin:0 0 12px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--surface);font-size:13px;line-height:1.4;}
+  .tt-planstrip{grid-column:1 / -1;margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--hair);font-size:12.5px;line-height:1.4;}
   .tt-planstrip .tps-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
   .tt-planstrip .linklike{display:none;}
   .tt-planstrip .tps-bar{height:3px;border-radius:2px;background:var(--hair);margin:8px 0 0;overflow:hidden;}
   .tt-planstrip .tps-bar i{display:block;height:100%;background:var(--gold);}
   .tt-planstrip .tps-next{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;color:var(--muted);}
   .tt-planstrip .tps-next .pt-go{flex:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttPlanStrip{order:1;}
+  #tutorCard #ttPlanStrip{order:1;}
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
   #tutorCard #tutorContextNote{display:none;}
   #tutorCard > #tutorSnapshot{display:none;}
   #tutorCard #podcastLibrary{display:none !important;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .card-head{margin-bottom:8px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard .tutor-input-row{bottom:12px;}
+  #tutorCard > .card-head{margin-bottom:8px;}
   #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
   #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip{padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-top .linklike{display:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-bar{margin-top:6px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-next{margin-top:6px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-next span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .pt-go{min-height:32px;padding:4px 14px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero:not(.playing){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 12px;margin:0 0 10px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-sub{display:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-title{font-size:17px;margin:2px 0 0;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero .pod-hero-btn{grid-column:2;grid-row:1 / span 2;width:auto;min-height:40px;padding:6px 16px;font-size:14px;margin:0;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorThread{max-height:none;min-height:150px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-bubble, html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-msg{font-size:14.5px;}
+  #tutorCard .tt-planstrip{padding:8px 0 0;margin:8px 0 0;font-size:12.5px;}
+  #tutorCard .tt-planstrip .tps-top .linklike{display:none;}
+  #tutorCard .tt-planstrip .tps-bar{margin-top:6px;}
+  #tutorCard .tt-planstrip .tps-next{margin-top:6px;}
+  #tutorCard .tt-planstrip .tps-next span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  #tutorCard .tt-planstrip .pt-go{min-height:32px;padding:4px 14px;}
+  #tutorCard #podcastHero:not(.playing){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 12px;margin:0 0 10px;}
+  #tutorCard #podcastHero .pod-hero-sub{display:none;}
+  #tutorCard #podcastHero .pod-hero-title{font-size:17px;margin:2px 0 0;}
+  #tutorCard #podcastHero .pod-hero-btn{grid-column:2;grid-row:1 / span 2;width:auto;min-height:40px;padding:6px 16px;font-size:14px;margin:0;}
+  #tutorCard #tutorThread{max-height:none;min-height:150px;}
+  #tutorCard .tutor-bubble, #tutorCard .tutor-msg{font-size:14.5px;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
   .tt-lessons > .card-head{margin-bottom:4px;}
   .tt-label{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px;padding-top:18px;border-top:1px solid var(--hair);}
   .tt-lessons .podcast-library{margin-top:12px;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:32px;align-items:start;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .card-head, html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tutor-snapshot, html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .api-key-nudge{grid-column:1 / -1;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tt-lessons{grid-column:1;grid-row:4;margin:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard > .tt-ask{grid-column:2;grid-row:4;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) .tt-label{margin-top:0;padding-top:0;border-top:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #lessonsCard > .tt-first{margin:0 0 10px;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) .tt-ask > .tt-label{margin-bottom:10px;}
 
   .pod-seg button{flex:1 1 0;min-width:0;font:inherit;font-size:12.5px;min-height:40px;padding:6px 4px;border-radius:20px;border:1px solid var(--hair);background:var(--surface2);color:var(--muted);cursor:pointer;white-space:nowrap;}
   .pod-seg button.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:600;}
@@ -4017,12 +4013,12 @@
 
     <div class="tt-lessons" id="lessonsCard">
       <div class="tt-label tt-first">Lesson</div>
-      <div class="tt-planstrip" id="ttPlanStrip" style="display:none;"></div>
       <div class="pod-hero" id="podcastHero">
         <div class="pod-hero-kicker" id="podHeroKicker"></div>
         <div class="pod-hero-title" id="podHeroTitle"></div>
         <div class="pod-hero-sub" id="podHeroSub"></div>
         <button type="button" class="btn pod-hero-btn" id="podcastHeroBtn" onclick="podcastHeroAction()"></button>
+        <div class="tt-planstrip" id="ttPlanStrip" style="display:none;"></div>
       </div>
       <div class="pod-seg" id="podcastTypeSeg" role="group" aria-label="Kind of episode">
         <button type="button" data-v="personalized" onclick="podcastSetType('personalized')">For you</button>
@@ -29700,7 +29696,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.498';
+const BUILD_ID = '2026-10-23.499';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
