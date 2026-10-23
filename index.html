@@ -1856,6 +1856,8 @@
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttPlanStrip{order:1;}
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorContextNote{display:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > #tutorSnapshot{display:none;}
+  #tutorCard #podcastLibrary{display:none !important;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .card-head{margin-bottom:8px;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
@@ -29511,7 +29513,6 @@ function tutorSuggestions(){
     add('f_simple', 'Simpler, please', 80, say('Explain that again more simply, with one plain example.'), true);
     add('f_exam', 'How the exam tests it', 75, say('How would the exam test that? Show me the trap answers people fall for.'), true);
     add('f_check', 'Check in tomorrow', 55, say('Leave me a check-in for tomorrow on what we just covered.'), true);
-    add('f_back', 'Back to my plan', 50, () => { try{ showTab('study'); const el = document.getElementById('todayPlanCard'); if(el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }catch(e){} });
   }
   if(!DATA.examDate) add('date', 'Set my exam date', 99, () => askTutorCapabilityPrefill('My exam date is '));
   if(days !== null && days >= 0 && days <= 3) add('eve', days <= 1 ? 'Exam-day walkthrough' : 'Walk me through exam eve', 96, say(`My exam is in ${days} day${days === 1 ? '' : 's'}. What should I do, and not do, between now and when I walk into the test center?`));
@@ -29524,8 +29525,8 @@ function tutorSuggestions(){
     const pl = buildStudyPlan();
     if(pl && pl.steps && pl.steps.length){
       const nxt = pl.steps.find(x => !x.done);
-      if(nxt && typeof nxt.run === 'function' && !session) add('plan_next', 'Start: ' + tutorShort(nxt.title, 24), talking ? 62 : 93, () => { showTab('study'); nxt.run(); });
-      else if(!nxt) add('plan_done', 'Plan done. What now?', talking ? 48 : 92, say("I finished today's plan. Based on how I did, what is worth doing next, if anything, and what should I leave for tomorrow?"), true);
+      // The plan strip above the lesson already carries the Start button; a chip for it would only repeat it.
+      if(!nxt) add('plan_done', 'Plan done. What now?', talking ? 48 : 92, say("I finished today's plan. Based on how I did, what is worth doing next, if anything, and what should I leave for tomorrow?"), true);
     }
   }catch(e){}
   const nm = (DATA.missed || []).length;
@@ -29704,7 +29705,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.494';
+const BUILD_ID = '2026-10-23.495';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
