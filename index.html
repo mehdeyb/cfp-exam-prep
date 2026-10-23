@@ -1943,7 +1943,6 @@
   .today-ask button{flex:0 0 auto;min-height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .today-ask button:active{background:var(--gold);color:#fff;}
   body.os-one .footer-row{display:none;}
-  body.os-one #todayPlanCard .pt-mins, body.os-one #todayPlanCard .pt-today, body.os-one #todayPlanCard .pt-pace, body.os-one #todayPlanCard .pt-sub{display:none;}
   body.os-one #todayPlanCard .card-head{margin-bottom:8px;}
   html[data-lay="compact"] body.os-one #nextStepCard .ns-why, html[data-lay="compact"] body.os-one #nextStepCard .ns-alt, html[data-lay="compact"] body.os-one #nextStepCard .ns-tag{display:none;}
   html[data-lay="compact"] body.os-one #nextStepCard .ns-foot{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;}
@@ -27873,6 +27872,7 @@ function osFitStudy(){
     if(document.body.classList.contains('quiz-active')) return;
     c.style.maxHeight = ''; c.classList.remove('os-fit', 'os-end');
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
+    c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     const rowsHost = c.querySelector('.pt-rows');
     const all = rowsHost ? [...rowsHost.children] : [];
     all.forEach(r => { r.style.display = ''; });
@@ -27880,6 +27880,11 @@ function osFitStudy(){
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     const avail = Math.max(240, Math.round(h - top - bb - 14));
+    if(c.scrollHeight <= avail + 2) return;
+    // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
+    const shed = [...c.querySelectorAll('.pt-pace, .pt-sub, .pt-block, .pt-today, .pt-mins')];
+    c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
+    for(const x of shed){ if(c.scrollHeight <= avail + 2) break; x.classList.add('os-shed'); x.style.display = 'none'; }
     if(c.scrollHeight <= avail + 2) return;
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
@@ -27893,7 +27898,6 @@ function osFitStudy(){
         foot.textContent = hidden + ' more step' + (hidden === 1 ? '' : 's') + ' later today \u00b7 see all';
       }
       if(!hidden) foot.remove();
-      c.querySelectorAll('.pt-block').forEach(x => { if(c.scrollHeight > avail + 2) x.style.display = 'none'; });
       if(c.scrollHeight <= avail + 2) return;
     }
     if(window._ptAll && rowsHost) rowsHost.appendChild(mkBtn('Show fewer', () => { window._ptAll = false; osFitStudy(); }));
@@ -30211,7 +30215,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.551';
+const BUILD_ID = '2026-10-23.552';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
