@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Blueprint — CFP® Practice Exam Studio</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://api.anthropic.com https://generativelanguage.googleapis.com https://aiplatform.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob: https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co https://api.anthropic.com https://generativelanguage.googleapis.com https://aiplatform.googleapis.com https://api.github.com https://gist.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0F1A2C">
 <meta name="color-scheme" content="dark light">
@@ -7044,13 +7044,14 @@ if(hasSpeechSupport()){
 // ---- Natural voice (Kokoro, runs on this device once downloaded). Optional; the device voice is the fallback. ----
 const KOKORO = { tts:null, state:'idle', ctx:null, src:null, cache:new Map(), voices:{ host1:'af_heart', host2:'am_michael', solo:'af_heart' }, pct:0 };
 function kokoroWanted(){ return !!(DATA && DATA.ttsEngine === 'kokoro'); }
-function kokoroReady(){ return kokoroWanted() && KOKORO.state === 'ready' && !!KOKORO.tts; }
+function kokoroReady(){ return kokoroWanted() && KOKORO.state === 'ready' && !!KOKORO.tts && !KOKORO.slow; }
 function kokoroSetStatus(t){ const el = document.getElementById('kokoroStatus'); if(el) el.textContent = t; }
 async function kokoroLoad(){
   if(KOKORO.state === 'ready' || KOKORO.state === 'loading') return KOKORO.state === 'ready';
-  KOKORO.state = 'loading'; KOKORO.pct = 0; kokoroSetStatus('Downloading the voice (roughly 90 MB, once). Keep this screen open.');
+  KOKORO.state = 'loading'; KOKORO.pct = 0; KOKORO.slow = false; KOKORO.rtf = 0; KOKORO.n = 0; kokoroSetStatus('Downloading the voice (roughly 90 MB, once). Keep this screen open.');
   try{
     const mod = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/+esm');
+    try{ const env = mod.env || (mod.default && mod.default.env); if(env && env.backends && env.backends.onnx && env.backends.onnx.wasm){ env.backends.onnx.wasm.numThreads = 1; env.backends.onnx.wasm.proxy = false; } }catch(e){}
     const seen = {};
     KOKORO.tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype:'q8', device:'wasm', progress_callback:p => {
       try{ if(p && p.file && typeof p.loaded === 'number' && p.total){ seen[p.file] = [p.loaded, p.total]; let l = 0, t = 0; Object.values(seen).forEach(v => { l += v[0]; t += v[1]; }); KOKORO.pct = Math.round(l / t * 100); kokoroSetStatus('Downloading the voice… ' + KOKORO.pct + '%'); } }catch(e){}
@@ -7070,15 +7071,20 @@ async function kokoroAudioFor(text, voice, speed){
   const key = voice + '|' + speed.toFixed(2) + '|' + text;
   if(KOKORO.cache.has(key)) return KOKORO.cache.get(key);
   const p = KOKORO.tts.generate(text, { voice, speed }).then(r => ({ data:r.audio, rate:r.sampling_rate }));
-  KOKORO.cache.set(key, p); if(KOKORO.cache.size > 6){ KOKORO.cache.delete(KOKORO.cache.keys().next().value); }
+  KOKORO.cache.set(key, p); if(KOKORO.cache.size > 8){ KOKORO.cache.delete(KOKORO.cache.keys().next().value); }
   return p;
 }
 function kokoroVoiceFor(chunk){ return chunk.speaker === 'HOST1' ? KOKORO.voices.host1 : chunk.speaker === 'HOST2' ? KOKORO.voices.host2 : KOKORO.voices.solo; }
 async function kokoroSpeak(chunk, state, gen, onend, onerror){
   try{
     const speed = Math.max(0.7, Math.min(1.6, state.speed * 0.98)), text = applyPronunciationDictionary(chunk.text);
+    const tg0 = performance.now(), fresh = !KOKORO.cache.has(kokoroVoiceFor(chunk) + '|' + speed.toFixed(2) + '|' + text);
+    if(fresh){ const st = document.getElementById('podcastStatus'); if(st && !state.paused) st.textContent = 'Preparing the natural voice…'; }
     const a = await kokoroAudioFor(text, kokoroVoiceFor(chunk), speed);
     if(gen !== state.generation || !state.active) return;
+    { const st = document.getElementById('podcastStatus'); if(st && st.textContent === 'Preparing the natural voice…') st.textContent = ''; }
+    // If this phone makes speech slower than it plays, the gaps would be worse than the device voice, so step down for the rest of the session.
+    if(fresh){ const took = (performance.now() - tg0) / 1000, len = a.data.length / a.rate; KOKORO.rtf = KOKORO.rtf ? KOKORO.rtf * 0.6 + (took / len) * 0.4 : took / len; KOKORO.n = (KOKORO.n || 0) + 1; if(KOKORO.n >= 3 && KOKORO.rtf > 1.4){ KOKORO.slow = true; kokoroSetStatus('The natural voice is too slow on this device, so the device voice is being used.'); const st2 = document.getElementById('podcastStatus'); if(st2) st2.textContent = 'Natural voice is too slow here; switched to the device voice.'; } }
     if(!KOKORO.ctx){ const AC = window.AudioContext || window.webkitAudioContext; KOKORO.ctx = new AC(); }
     if(KOKORO.ctx.state === 'suspended' && !state.paused) await KOKORO.ctx.resume();
     const buf = KOKORO.ctx.createBuffer(1, a.data.length, a.rate); buf.getChannelData(0).set(a.data);
@@ -7086,8 +7092,8 @@ async function kokoroSpeak(chunk, state, gen, onend, onerror){
     src.onended = () => { if(KOKORO.src === src){ KOKORO.src = null; onend(); } };
     KOKORO.src = src; src.start();
     // Get the next sentence ready while this one plays, so the gap between sentences stays natural.
-    const nx = state.chunks[state.index + 1]; if(nx){ try{ kokoroAudioFor(applyPronunciationDictionary(nx.text), kokoroVoiceFor(nx), speed).catch(() => {}); }catch(e){} }
-  }catch(e){ if(gen === state.generation) onerror(); }
+    [1, 2].forEach(k => { const nx = state.chunks[state.index + k]; if(nx){ try{ kokoroAudioFor(applyPronunciationDictionary(nx.text), kokoroVoiceFor(nx), speed).catch(() => {}); }catch(e){} } });
+  }catch(e){ if(gen === state.generation){ KOKORO.state = 'failed'; kokoroSetStatus('The natural voice stopped working here (' + String((e && e.message) || e).slice(0, 60) + '), so the device voice is being used.'); try{ state.generation++; playNextSpeechChunk(); }catch(e2){ onerror(); } } }
 }
 
 // ---- Soft sounds: a quiet cue for right and wrong answers, lesson checks and slide changes. Off with one switch in Settings. ----
@@ -29504,7 +29510,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.485';
+const BUILD_ID = '2026-10-23.486';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
