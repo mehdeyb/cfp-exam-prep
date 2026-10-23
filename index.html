@@ -4505,9 +4505,9 @@
           <div class="ev-mode-status" id="tnModeStatus"></div>
         </div>
 
-        <div class="settings-section">
+        <div class="settings-section voice-min">
           <h3>Voice</h3>
-          <p class="hint" style="margin-top:0;">The device voice that reads flashcards, rationales and lessons aloud. Auto picks the most natural-sounding one available. The two lesson hosts use two different voices, and if you choose only one, the other is filled in automatically.</p>
+          <p class="hint" style="display:none;"></p>
           <div class="voice-pref-row">
             <label for="ttsEngineSel">Voice engine <span class="note">(lessons, flashcards, rationales)</span></label>
             <div class="voice-pref-control"><select id="ttsEngineSel" class="fc-domain-select" onchange="handleTtsEngineChange(this)" aria-label="Voice engine"><option value="device">Device voice</option><option value="natural">Natural voice (downloads once, about 90 MB)</option></select></div>
@@ -4515,21 +4515,21 @@
           <p class="hint" id="kokoroStatus" style="margin:0 0 10px;" aria-live="polite"></p>
           <p class="hint" id="voiceQualityHint" style="margin:0 0 10px;"></p>
           <label class="settings-check" style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 6px;"><input type="checkbox" id="soundsToggle" onchange="handleSoundsToggle(this)"> <span>Soft sounds for answers and lesson steps</span></label>
-          <div class="voice-pref-row">
+          <div class="voice-pref-row" style="display:none;">
             <label for="voicePrefPrimary">Primary voice <span class="note">(flashcards, rationales, personalized lesson)</span></label>
             <div class="voice-pref-control">
               <select id="voicePrefPrimary" class="fc-domain-select" onchange="handleVoicePrefChange('preferredVoiceName','voicePrefPrimary')" aria-label="Primary voice"></select>
               <button class="btn ghost voice-preview-btn" onclick="previewVoiceFromSelect('voicePrefPrimary')">Preview</button>
             </div>
           </div>
-          <div class="voice-pref-row">
+          <div class="voice-pref-row" style="display:none;">
             <label for="voicePrefHost1">Lesson host 1</label>
             <div class="voice-pref-control">
               <select id="voicePrefHost1" class="fc-domain-select" onchange="handleVoicePrefChange('preferredHost1VoiceName','voicePrefHost1')" aria-label="Lesson host 1 voice"></select>
               <button class="btn ghost voice-preview-btn" onclick="previewVoiceFromSelect('voicePrefHost1')">Preview</button>
             </div>
           </div>
-          <div class="voice-pref-row">
+          <div class="voice-pref-row" style="display:none;">
             <label for="voicePrefHost2">Lesson host 2</label>
             <div class="voice-pref-control">
               <select id="voicePrefHost2" class="fc-domain-select" onchange="handleVoicePrefChange('preferredHost2VoiceName','voicePrefHost2')" aria-label="Lesson host 2 voice"></select>
@@ -30441,7 +30441,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.586';
+const BUILD_ID = '2026-10-23.587';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
