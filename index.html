@@ -7532,7 +7532,7 @@ function playNextSpeechChunk(){
       u2.onend = utter.onend; u2.onerror = utter.onerror;
       let st2 = false; u2.onstart = () => { st2 = true; };
       window.speechSynthesis.speak(u2);
-      setTimeout(() => { if(!st2 && myGeneration === state.generation && state.active){ const el = document.getElementById('podcastStatus'); if(el) el.textContent = 'No sound? Switch the side switch off silent, raise the volume, and check Settings for the voice.'; } }, 2500);
+      setTimeout(() => { if(!st2 && myGeneration === state.generation && state.active){ const el = document.getElementById('podcastStatus'); if(el) el.textContent = 'No sound? Switch the side switch off silent, raise the volume, and check Settings for the voice.'; try{ const up = document.getElementById('scrUp'); if(up){ up.textContent = 'No sound? Turn the silent switch off, raise the volume, then close and reopen the app.'; up.style.display = ''; } }catch(e){} } }, 2500);
     }catch(e){}
   }, 2500);
   window.speechSynthesis.speak(utter);
@@ -29504,7 +29504,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.484';
+const BUILD_ID = '2026-10-23.485';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
