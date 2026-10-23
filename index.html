@@ -1933,6 +1933,12 @@
   #studyCols.pt-dense .pt-num{width:20px;height:20px;font-size:10.5px;}
   #studyCols.pt-dense .pt-why{display:none;}
   #studyCols.pt-dense .pt-how{display:none;}
+  #studyCols.pt-dense.pt-tiny .pt-title{-webkit-line-clamp:1;font-size:12.5px;line-height:1.2;}
+  #studyCols.pt-dense.pt-tiny .pt-step{align-items:center;}
+  #studyCols.pt-dense.pt-tiny .pt-step{padding:3px 0;}
+  #studyCols.pt-tiny .pt-go{min-height:28px;padding:2px 11px;font-size:11.5px;}
+  #studyCols.pt-tiny .pt-time, #studyCols.pt-tiny .pt-nextlabel, #studyCols.pt-tiny .pt-step a, #studyCols.pt-tiny .pt-mark, #studyCols.pt-tiny .linklike{display:none !important;}
+  #studyCols.pt-tiny .pt-num{width:18px;height:18px;}
   #studyCols.pt-dense .pt-body{display:flex;flex-wrap:wrap;column-gap:8px;align-items:baseline;}
   #studyCols.pt-dense .pt-body > .pt-title{flex:1 1 100%;}
   #studyCols.pt-dense .pt-time{margin:0;}
@@ -1996,6 +2002,7 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active{grid-template-columns:auto minmax(0,1fr);column-gap:20px;row-gap:10px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1;grid-row:1;flex-direction:row;align-items:center;gap:20px;margin:0;}
   body.os-one #tab-study #todayAsk{display:none !important;}
+  html:has(body.os-one), body.os-one{overflow-x:hidden;}
   /* No fades or tinted bars at the bottom: everything there is see-through. */
   .os-fit:not(.os-end), .os-fit{-webkit-mask-image:none !important;mask-image:none !important;}
   body.os-one .tabbar{background:transparent !important;box-shadow:none !important;border-top:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;}
@@ -27966,8 +27973,9 @@ function osApply(tab){
   kids.forEach(c => { const mine = groups[sel].els.includes(c); c.classList.toggle('os-hide', !mine); });
   osFit(tab);
 }
-function osFit(tab){
+function osFit(tab, extra){
   try{
+    extra = extra || 0;
     const panel = document.getElementById('tab-' + tab); if(!panel || !panel.classList.contains('active')) return;
     const vis = [...panel.children].filter(c => c.tagName === 'DIV' && !c.classList.contains('os-seg') && !c.classList.contains('os-hide') && getComputedStyle(c).display !== 'none');
     if(!vis.length) return;
@@ -27976,7 +27984,7 @@ function osFit(tab){
     let used = 0; vis.forEach(c => { c.style.maxHeight = ''; c.classList.remove('os-fit'); });
     const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
     const sbs = vis.length > 1 && vis[1].getBoundingClientRect().top < vis[0].getBoundingClientRect().bottom - 4;
-    const avail = Math.max(260, Math.round(h - top - bb - 16 - (sbs ? 0 : (vis.length - 1) * 12)));
+    const avail = Math.max(260, Math.round(h - top - bb - 16 - extra - (sbs ? 0 : (vis.length - 1) * 12)));
     const per = sbs ? avail : Math.floor(avail / vis.length);
     const nat = vis.map(c => c.scrollHeight);
     const tallest = nat.indexOf(Math.max.apply(null, nat));
@@ -28000,7 +28008,7 @@ function osFitStudy(extra){
     extra = extra || 0;
     const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
     if(document.body.classList.contains('quiz-active')) return;
-    c.style.maxHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense');
+    c.style.maxHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense', 'pt-tiny');
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     const rowsHost = c.querySelector('.pt-rows');
@@ -28022,6 +28030,9 @@ function osFitStudy(extra){
     // Still too much: shrink the whole thing a little rather than hide or scroll anything.
     for(const z of [0.94, 0.88, 0.82, 0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
     c.style.zoom = '';
+    // Still too many for the screen: one-line rows, then a gentle scale-down, before ever resorting to scrolling.
+    c.classList.add('pt-tiny'); if(c.scrollHeight <= avail + 2) return;
+    { const nat = c.getBoundingClientRect().height; let z = Math.max(0.7, avail / nat); if(z < 1){ for(let k = 0; k < 6; k++){ c.style.zoom = String(Math.round(z * 100) / 100); if(c.getBoundingClientRect().height <= avail + 1) return; z = Math.max(0.7, z - 0.05); } } c.style.zoom = ''; }
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(false && rowsHost && steps.length > 2 && !window._ptAll){
@@ -28096,6 +28107,15 @@ function quizFit(){
   new MutationObserver(go).observe(document.body, { attributes:true, attributeFilter:['class'] });
   window.addEventListener('resize', go);
 })();
+(function(){ const b0 = osFit; window.osFit = osFit = function(tab, extra){
+  b0(tab, extra);
+  try{
+    const panel = document.getElementById('tab-' + tab); if(!panel || !panel.classList.contains('active') || (extra || 0) > 60) return;
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const over = Math.ceil(document.documentElement.scrollHeight - Math.max(h, document.documentElement.clientHeight));
+    if(over > 1) osFit(tab, (extra || 0) + over + 2);
+  }catch(e){}
+}; })();
 (function(){ const base = osFitStudy; window.osFitStudy = osFitStudy = function(extra){
   base(extra);
   try{
@@ -30409,7 +30429,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.581';
+const BUILD_ID = '2026-10-23.583';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
