@@ -1923,6 +1923,12 @@
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  .pt-nextlabel{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
+  .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
+  .pt-step.next .pt-go{background:var(--gold);color:#fff;border-color:var(--gold);}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-reference.active{column-width:auto;column-count:1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one .os-seg{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-reference #modePanel .mode-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub > .hub-seg{display:flex;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub[data-view="plan"] > #blueprintCard{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyHub[data-view="progress"] > #todayPlanCard{display:none !important;}
@@ -11065,9 +11071,9 @@ function _renderTodayPlanInner(){
     const btn = st.done ? '' : (st.manual
       ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button><button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button></span>`
       : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
-    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext && doneN > 0 ? ' next' : ''}">
+    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body"><div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(isNext && st.why) ? '<div class="pt-why">' + escapeHtml(st.why.length > 150 ? st.why.slice(0, 147).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -11104,7 +11110,9 @@ function renderNextStepCard(stats, refreshed){
   currentNextStep = s;
   if(_nsBefore !== nsOwnsNext()){ try{ renderTodayPlan(); }catch(e){} }
   // Today's plan is the next best step: when the recommendation is the plan's own session, the plan card carries the Start button and this card steps aside.
-  if(nsOwnsNext()){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  // The next best step IS the first open step in today's plan, so it has no box of its own; only the app's own moments (exam day, tomorrow) get one.
+  { let inPlan = false; try{ const pl0 = buildStudyPlan(); const f0 = pl0.steps.find(x => !x.done); inPlan = !!(s.planStepId || s.kicker === 'In progress' || (f0 && f0.title === s.title)); }catch(e){}
+    if(nsOwnsNext() || (inPlan && !/^(Exam day|Tomorrow)/.test(s.kicker || ''))){ el.style.display = 'none'; el.innerHTML = ''; try{ renderTodayAsk(); }catch(e){} return; } }
   // When the recommendation is also a step in today's plan, say which one, so the two read as one thread.
   let planTag = '';
   try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && (x.title === s.title || (s.kicker === 'In progress' && x.id === 'resume'))); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
@@ -27846,9 +27854,17 @@ function osFit(tab){
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     let used = 0; vis.forEach(c => { c.style.maxHeight = ''; c.classList.remove('os-fit'); });
     const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
-    const avail = Math.max(260, Math.round(h - top - bb - 16 - (vis.length - 1) * 12));
-    const per = Math.floor(avail / vis.length);
-    vis.forEach(c => { c.classList.remove('os-end'); if(c.scrollHeight > per + 2){ c.style.maxHeight = per + 'px'; c.classList.add('os-fit'); osFade(c); } });
+    const sbs = vis.length > 1 && vis[1].getBoundingClientRect().top < vis[0].getBoundingClientRect().bottom - 4;
+    const avail = Math.max(260, Math.round(h - top - bb - 16 - (sbs ? 0 : (vis.length - 1) * 12)));
+    const per = sbs ? avail : Math.floor(avail / vis.length);
+    const nat = vis.map(c => c.scrollHeight);
+    const tallest = nat.indexOf(Math.max.apply(null, nat));
+    vis.forEach((c, i) => {
+      c.classList.remove('os-end');
+      // Cards keep their natural height; only the tallest gives way, and only by what the screen is short.
+      const cap = sbs ? avail : (i === tallest ? avail - (nat.reduce((x, y) => x + y, 0) - nat[i]) : nat[i]);
+      if(nat[i] > cap + 2 && cap > 120){ c.style.maxHeight = cap + 'px'; c.classList.add('os-fit'); osFade(c); }
+    });
   }catch(e){}
 }
 function osFitStudy(){
@@ -30195,7 +30211,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.547';
+const BUILD_ID = '2026-10-23.551';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
