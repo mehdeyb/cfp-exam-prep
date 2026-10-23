@@ -15847,7 +15847,19 @@ const TREE_META = {
 function toolForQuestion(q){
   for(const key of Object.keys(TOOL_PRACTICE_SETS)){ if((TOOL_PRACTICE_SETS[key] || []).includes(q.id)) return key; }
   const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' ');
-  const hit = RESULT_TOOL_MATCH.find(t => t.re.test(hay));
+  // Beyond the hand-checked question sets, a tree is offered only when the question itself asks which option fits that tree's decision.
+  const stem = q.q || '';
+  const PICK = {
+    trust: /\b(which|what) (type|kind|form)s? of trust\b|\bwhich trust\b|\b(best|most appropriate|most suitable) (type of )?(trust|vehicle)\b|\btrust (would|is) (best|most appropriate|most suitable)\b/i,
+    entity: /\b(which|what)\b[^.?]{0,50}\b(entity|business structure|form of business|type of business)\b|\b(entity|structure)\b[^.?]{0,40}\b(best|most appropriate|most suitable)\b/i,
+    roth: /\bbackdoor\b|\bpro-rata\b|\b(can|may|eligible)\b[^.?]{0,50}\b(contribute|fund)\b[^.?]{0,40}\bRoth\b/i,
+    ira: /\b(deductible|deduct)\b[^.?]{0,60}\b(traditional IRA|IRA contribution)\b|\b(traditional IRA|IRA contribution)\b[^.?]{0,60}\b(deductible|deduct)\b/i,
+    socialSecurity: /\b(when|what age|which age|best age|optimal)\b[^.?]{0,60}\b(claim|begin|start)\w*[^.?]{0,40}\b(Social Security|benefits?)\b|\bshould\b[^.?]{0,60}\b(claim|delay)\w*/i,
+    college: /\b(which|what) (type of |kind of )?(529|Coverdell|UTMA|UGMA|education credit|savings vehicle|account|savings bond|education funding)\b|\b(best|most appropriate|most suitable) (way|vehicle|account|credit|strategy)[^.?]{0,40}\b(education|college|tuition)\b/i,
+    optionsMatrix: /\b(which|what)\b[^.?]{0,50}\b(option|position|strategy)\b/i,
+    qualifiedPlans: /\b(which|what)\b[^.?]{0,50}\b(plan|retirement plan)\b[^.?]{0,40}\b(best|appropriate|suitable|fits?)\b|\bbest\b[^.?]{0,40}\bplan\b/i
+  };
+  const hit = RESULT_TOOL_MATCH.find(t => t.re.test(hay) && PICK[t.key] && PICK[t.key].test(stem));
   return hit ? hit.key : null;
 }
 function showToolForQuestion(q, isCorrect){
@@ -26664,6 +26676,7 @@ function startChatRevisit(){
 
 // A miss on a topic one of the Tools cards covers points to that card, so the picture is one tap from the mistake.
 const RESULT_TOOL_MATCH = [
+  { key:'college', name:'College funding: which vehicle?', re:/\b(529|Coverdell|education (savings|funding|credit)|college (fund|sav|cost)\w*|American Opportunity|Lifetime Learning|Series EE|UTMA|UGMA|FAFSA)\b/i },
   { key:'trust', name:'Which trust fits?', re:/\b(trusts?|CRUT|CRAT|CLAT|QPRT|GRAT|ILIT|SLAT|crummey|grantor)\b/i },
   { key:'entity', name:'Which business entity fits?', re:/\b(S corporation|S corp|LLC|C corporation|C corp|sole proprietor|general partnership|business entity|pass-through entity)\b/i },
   { key:'roth', name:'Roth IRA: direct, backdoor or none?', re:/\bbackdoor\b|\bpro-rata\b|\bRoth IRA\b[^.?]{0,80}\b(phase|income|MAGI|eligib)\w*|\b(phase|income|MAGI|eligib)\w*[^.?]{0,80}\bRoth IRA\b/i },
@@ -30604,7 +30617,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.600';
+const BUILD_ID = '2026-10-23.601';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
