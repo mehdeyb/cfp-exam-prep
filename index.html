@@ -12841,7 +12841,7 @@ function podcastAutoSlides(text, key, domainKey, label){
   termsAll.sort((a, b) => b.v.length - a.v.length);
   const forms = FORMULAS.filter(f => (!domainKey || f.domain === domainKey || f.domain === 'general') && f.name.length >= 5).map(f => ({ f, v: f.name.toLowerCase() })).sort((a, b) => b.v.length - a.v.length);
   const missed = (DATA.missed || []).map(id => allQuestions().find(q => q.id === id)).filter(q => q && Array.isArray(q.choices) && q.choices.length === 4 && (!domainKey || q.domain === domainKey)).slice(0, 40).map(q => ({ q, w: mwWords(q.q + ' ' + q.choices[q.correct]) }));
-  const seenTerm = new Map(), seenQ = new Set(); let last = -9, lastQ = -9;
+  const seenTerm = new Map(), seenQ = new Set(); let last = -9, lastQ = -9, lastCheck = -9, nChecks = 0;
   // Where you stand in this domain, early on, so the lesson starts from your own numbers.
   try{
     const dm0 = domainKey && DOMAINS.find(d => d.key === domainKey), ds0 = domainKey && DATA.domainStats && DATA.domainStats[domainKey];
@@ -12866,6 +12866,11 @@ function podcastAutoSlides(text, key, domainKey, label){
     // 4. the numbers
     const nums = t.match(numRe);
     if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; return; }
+    // 4a. every so often the lesson stops and asks you one, from the bank, on what was just said
+    if(nChecks < 3 && i >= 4 && i - lastCheck >= 6 && t.length >= 50){
+      const cq = stageFindQuestion(t);
+      if(cq && !seenQ.has(cq.id) && (!domainKey || cq.domain === domainKey)){ seenQ.add(cq.id); nChecks++; lastCheck = i; out.push({ at:i, kind:'check', mode:'question', src:'auto', qid:cq.id, title:'Quick check' }); last = i; return; }
+    }
     // 4b. a set of the key numbers this sentence is about
     if(i - last >= 2){
       const cw2 = mwWords(t); let bestK = null, bk = 0;
@@ -12940,7 +12945,7 @@ function stageRecordAnswer(q, k){
 function stageCheckPick(k){
   const sl = stageState.cur; if(!sl || sl.kind !== 'check' || typeof sl.pick === 'number') return;
   const q = allQuestions().find(x => x.id === sl.qid); if(!q) return;
-  sl.pick = k; stageRecordAnswer(q, k); try{ navigator.vibrate && navigator.vibrate(k === q.correct ? 8 : [8, 40, 8]); }catch(e){}
+  sl.pick = k; stageRecordAnswer(q, k); soundCue(k === q.correct ? 'check' : 'wrong'); try{ navigator.vibrate && navigator.vibrate(k === q.correct ? 8 : [8, 40, 8]); }catch(e){}
   stageDraw(true);
 }
 // The plan and the progress picture share one card. On a phone one shows at a time; wide screens show both.
@@ -13181,12 +13186,14 @@ function E2(t){ return escapeHtml(String(t == null ? '' : t)); }
 function stageUpNext(){
   const el = document.getElementById('scrUp'); if(!el) return;
   const cur = stageState.cur, deck = stageState.deck || [];
-  if(!cur || cur.src === 'tutor' || !deck.length){ el.style.display = 'none'; return; }
-  const nx = deck.find(x => x.at > (cur.at || 0) && x.kind !== 'intro');
-  if(!nx){ el.style.display = 'none'; return; }
+  if(!cur || !deck.length){ el.style.display = 'none'; return; }
+  const checks = deck.filter(x => x.kind === 'check' && typeof x.pick === 'number'), okc = checks.filter(x => { const q = allQuestions().find(z => z.id === x.qid); return q && x.pick === q.correct; }).length;
+  const tally = checks.length ? `<span>Checks</span> ${okc} of ${checks.length} right &nbsp;·&nbsp; ` : '';
+  const nx = cur.src === 'tutor' ? null : deck.find(x => x.at > (cur.at || 0) && x.kind !== 'intro');
+  if(!nx){ if(tally){ el.innerHTML = tally.replace(/ &nbsp;·&nbsp; $/, ''); el.style.display = ''; } else el.style.display = 'none'; return; }
   const lab = { term:'Term', formula:'Formula', question:'A question you missed', number:'Figure', keynums:'Numbers', stand:'Your accuracy', point:'Key idea', recap:'Recap', calc:'Keys', chart:'Chart', compare:'Compare', table:'Table', bar:'Chart', check:'Check' };
   const nm = nx.kind === 'question' ? '' : (nx.term || nx.title || nx.big || '');
-  el.innerHTML = `<span>Up next</span> ${E2(lab[nx.kind] || 'Idea')}${nm && nx.kind !== 'point' && nx.kind !== 'keynums' ? ': ' + E2(stageClip(nm, 40)) : ''}`;
+  el.innerHTML = `${tally}<span>Up next</span> ${E2(lab[nx.kind] || 'Idea')}${nm && nx.kind !== 'point' && nx.kind !== 'keynums' ? ': ' + E2(stageClip(nm, 40)) : ''}`;
   el.style.display = '';
 }
 function stageHosts(){ return ['pstBody', 'scrBody'].map(id => document.getElementById(id)).filter(Boolean); }
@@ -29432,7 +29439,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.479';
+const BUILD_ID = '2026-10-23.480';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
