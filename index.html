@@ -1870,7 +1870,7 @@
   #tutorCard #lessonsCard.has-lesson #podcastHero .pod-hero-title, #tutorCard #lessonsCard.has-lesson #podcastHero .pod-hero-btn{display:none;}
   #tutorCard #lessonsCard.has-lesson #ttPlanStrip{margin:0;padding:0;border:0;}
   #tutorCard .pst-body{min-height:140px;}
-  #tutorCard:has(#lessonsCard.has-lesson) #tutorThread{min-height:100px;}
+  #tutorCard:has(#lessonsCard.has-lesson) #tutorThread{min-height:0;}
   #tutorCard .podcast-player-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:8px 12px;}
   #tutorCard .podcast-player-panel > .pp-cap, #tutorCard .podcast-player-panel > .pp-prog, #tutorCard .podcast-player-panel > .podcast-status{grid-column:1 / -1;}
   #tutorCard .podcast-player-panel > .pp-cap{grid-row:1;} #tutorCard .podcast-player-panel > .pp-prog{grid-row:2;} #tutorCard .podcast-player-panel .podcast-player-controls{grid-column:1;grid-row:3;} #tutorCard .podcast-player-panel > .podcast-status{grid-row:4;}
@@ -1890,10 +1890,23 @@
   #tutorCard #tutorThread .tutor-msg{margin-bottom:10px;}
   #tutorCard #tutorThread .tutor-msg + .tutor-msg{border-top:1px solid var(--hair);padding-top:12px;}
   #tutorCard #screenEntryBtn{display:none !important;}
+  #tutorCard #tutorChips, #tutorCard #ttLiveChips, #tutorCard .pstage .pst-acts{display:none !important;}
+  .tt-actions{display:none;flex-wrap:wrap;gap:8px;margin:0 0 10px;order:5;}
+  .tt-actions.on{display:flex;animation:riseIn .28s var(--ease-out);}
+  #tutorCard.tt-idle .pst-full{display:none !important;}
+  #tutorCard #ttVoiceBtn{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-radius:17px;display:inline-flex;align-items:center;justify-content:center;}
+  #tutorCard #ttVoiceBtn.off{opacity:.45;}
+  #tutorCard #lessonsCard .pst-body{min-height:clamp(190px, 29vh, 400px);}
+  #tutorCard #lessonsCard .pst-title{font-size:25px;line-height:1.2;}
+  #tutorCard:has(#lessonsCard.has-lesson) #lessonsCard .pst-body{min-height:clamp(190px, 28vh, 340px);}
+  #tutorCard #ttBoardHideBtn{display:none !important;}
+  #tutorCard #tutorThread{max-height:clamp(120px, 24vh, 260px);overflow-y:auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:clamp(260px, 40vh, 460px);}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #tutorThread{max-height:clamp(160px, 26vh, 300px);}
   #todayPlanCard .plan-fold > .card-head > h2{display:none;}
   #tutorCard #ttPlanStrip, #tutorCard #podcastHero{display:none !important;}
   .tutor-next{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px;}
-  .tutor-nextbtn{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;min-height:38px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;text-align:left;}
+  .tutor-nextbtn{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;min-height:34px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;text-align:left;}
   .tutor-nextbtn:active{background:var(--gold-tint);}
   .tutor-nextbtn.picked{background:var(--gold);color:#fff;}
   .tutor-nextbtn:disabled:not(.picked){opacity:.4;}
@@ -1916,7 +1929,7 @@
   #tutorCard #podcastHero .pod-hero-sub{display:none;}
   #tutorCard #podcastHero .pod-hero-title{font-size:17px;margin:2px 0 0;}
   #tutorCard #podcastHero .pod-hero-btn{grid-column:2;grid-row:1 / span 2;width:auto;min-height:40px;padding:6px 16px;font-size:14px;margin:0;}
-  #tutorCard #tutorThread{max-height:none;min-height:max(150px, calc(var(--vh-real, 100vh) - 560px));}
+  #tutorCard #tutorThread{max-height:none;min-height:0;}
   #tutorCard .tutor-bubble, #tutorCard .tutor-msg{font-size:14.5px;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
   .tt-lessons > .card-head{margin-bottom:4px;}
@@ -4135,6 +4148,7 @@
           <div class="tutor-bubble">Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. I can see your progress in this app, so feel free to just say "explain my weakest domain."</div>
         </div>
       </div>
+      <div class="tt-actions" id="ttActions" role="group" aria-label="Where next"></div>
       <div class="tutor-suggest" id="ttLiveChips" role="group" aria-label="About this slide" style="display:none;"></div>
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
@@ -4475,7 +4489,7 @@ function showTab(name, opts){
     renderExamDayCallout();
     updateTutorContextNote();
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
-    if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} }
+    if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} try{ ttIdleBoard(); }catch(e){} }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
@@ -12271,7 +12285,7 @@ function renderExamDayCallout(){
 =========================================================== */
 /* Tutor tab: lessons and chat are one surface. Opening a lesson brings the lesson block into view. */
 function ttVoiceOn(){ return !!(DATA && DATA.tutorVoice !== false) && hasSpeechSupport(); }
-function ttVoiceSync(){ const b = document.getElementById('ttVoiceBtn'); if(!b) return; const sup = hasSpeechSupport(); b.style.display = sup ? '' : 'none'; const on = ttVoiceOn(); b.textContent = on ? 'Voice on' : 'Voice off'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+function ttVoiceSync(){ const b = document.getElementById('ttVoiceBtn'); if(!b) return; const sup = hasSpeechSupport(); b.style.display = sup ? '' : 'none'; const on = ttVoiceOn(); b.innerHTML = SPEAKER_SVG; b.classList.toggle('off', !on); b.title = on ? 'Voice on' : 'Voice off'; b.setAttribute('aria-label', on ? 'Voice on. Tap to mute' : 'Voice off. Tap to turn on'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
 function ttToggleVoice(){ DATA.tutorVoice = !(DATA.tutorVoice !== false); persist(); if(DATA.tutorVoice === false){ try{ if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); }catch(e){} } else { try{ speechAudioPrime(); }catch(e){} } ttVoiceSync(); }
 // What the tutor says, cleaned for the ear: no list letters, markdown or links.
 function ttSpeakable(t){
@@ -12296,15 +12310,16 @@ function ttLiveRefresh(){
   try{ ttPlanStripRefresh(); }catch(e){}
   const live = typeof naturalSpeechState !== 'undefined' && !!naturalSpeechState.active && document.getElementById('podcastPlayer') && document.getElementById('podcastPlayer').style.display !== 'none';
   card.classList.toggle('tt-live', !!live);
-  const box = document.getElementById('ttLiveChips'); if(!box) return;
-  if(!live){ box.style.display = 'none'; box.dataset.k = ''; return; }
+  try{ card.classList.toggle('tt-idle', !live && !!(stageState.cur && stageState.cur.title === 'Today with your tutor' && !(typeof tutorMessages !== 'undefined' && tutorMessages.length))); }catch(e){}
+  const host = document.getElementById('ttActions'); if(!host) return;
+  // While a lesson plays, the action row follows the slide on screen; options the tutor wrote itself are never overwritten.
+  if(!live){ if(host.dataset.src === 'auto'){ tutorClearActions(); host.dataset.src = ''; host.dataset.k = ''; } return; }
+  if(host.dataset.src === 'tutor' && host.children.length) return;
   const k = (stageState && stageState.cur && stageState.cur.kind) || 'point';
-  if(box.dataset.k !== k){
-    box.dataset.k = k;
+  if(host.dataset.k !== k || host.dataset.src !== 'auto'){
     const c = k === 'question' ? ['Why is my pick wrong?', 'Give me a memory trick', 'Quiz me on this idea'] : k === 'calc' ? ['What should the display show?', 'Why this order?'] : k === 'formula' ? ['Work an example', 'When do I use this?'] : k === 'term' ? ['Use it in an example', 'What is it confused with?'] : ['Explain this simpler', 'Why does this matter?', 'Quiz me on this'];
-    box.innerHTML = c.map(x => `<button type="button" class="chip" onclick="sendTutorMessage(this.textContent)">${escapeHtml(x)}</button>`).join('');
+    tutorAddNext(null, c); host.dataset.src = 'auto'; host.dataset.k = k;
   }
-  box.style.display = 'flex';
 }
 setInterval(() => { try{ const p = document.getElementById('tab-tutor'); if(p && p.classList.contains('active')) ttLiveRefresh(); }catch(e){} }, 1000);
 function openLessons(){
@@ -12806,14 +12821,23 @@ function podcastSetCaption(index){
 function podcastSeekPreview(v){ podcastUpdateProgress(parseInt(v, 10)); }
 function podcastSeekCommit(v){ try{ podcastJumpToSentence(parseInt(v, 10)); }catch(e){} }
 // The lesson is the tutor's to offer: the opening message says what it has ready, and one tap plays it.
+// One tap starts a lesson and it plays itself: write it if needed, then go. The audio is primed inside the tap so the phone allows sound.
+function ttStartLesson(){
+  try{ speechAudioPrime(); }catch(e){}
+  const key = podcastCacheKey(), type = document.getElementById('podcastTypeSelect').value;
+  const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
+  if(have && !podcastIsStale(key, type)){ if(!(naturalSpeechState.active && !naturalSpeechState.paused)) togglePodcastPlayback(); return; }
+  renderPodcastHero(true);
+  generatePodcastEpisode(true).then(() => { try{ renderPodcastHero(); if(!naturalSpeechState.active) togglePodcastPlayback(); }catch(e){} });
+}
 function tutorLessonOffer(){
-  const bubble = document.querySelector('#tutorThread .tutor-bubble'); if(!bubble || (typeof tutorMessages !== 'undefined' && tutorMessages.length)) return;
-  const old = bubble.querySelector('.tutor-next'); if(old) old.remove();
+  const bubble = document.querySelector('#tutorThread .tutor-bubble'); if(!bubble || window._ttOpenUsed || (typeof tutorMessages !== 'undefined' && tutorMessages.length)) return;
+  const lcx = document.getElementById('lessonsCard'); if(lcx && lcx.classList.contains('has-lesson')) return;
   const t = document.getElementById('podHeroTitle'), hb = document.getElementById('podcastHeroBtn');
   const opts = [];
   if(t && hb && t.textContent.trim()){
     const lab = hb.textContent.replace(/[\u25b6\s]+/g, ' ').trim();
-    opts.push({ label: /resume/i.test(lab) ? 'Resume my lesson' : 'Teach me today\u2019s lesson', run: () => podcastHeroAction() });
+    opts.push({ label: /resume/i.test(lab) ? 'Resume my lesson' : 'Teach me today\u2019s lesson', run: () => ttStartLesson() });
   }
   try{
     const st = computeStats();
@@ -13753,6 +13777,20 @@ function ttEnsureStage(){
   if(getComputedStyle(pl).display === 'none') pl.style.display = 'block';
   sg.style.display = 'block'; card.classList.add('tt-board');
   return true;
+}
+// The board is the centrepiece: it is never empty. Before anything is taught it says where you stand today.
+function ttIdleBoard(){
+  if(typeof stageState === 'undefined' || stageState.cur || (naturalSpeechState && naturalSpeechState.active)) return;
+  if(typeof tutorMessages !== 'undefined' && tutorMessages.length) return;
+  const lc = document.getElementById('lessonsCard'); if(lc && lc.classList.contains('has-lesson')) return;
+  const st = computeStats(), days = getDaysUntilExam(); const bits = [];
+  if(days !== null && days >= 0) bits.push(days === 0 ? 'Exam day.' : days + (days === 1 ? ' day' : ' days') + ' to the exam.');
+  if(st.totalAnswered && st.weakestMeta) bits.push(st.weakestMeta.name + ' is your weakest area.');
+  try{ const nxt = buildStudyPlan().steps.find(x => !x.done); if(nxt) bits.push('Next in your plan: ' + nxt.title + '.'); }catch(e){}
+  const text = bits.length ? bits.join(' ') : 'Ask me anything about the CFP curriculum, or pick a place to start below.';
+  const sl = { kind:'idea', src:'tutor', at:0, title:'Today with your tutor', text: stageClip(text, 260) };
+  if(!stageInlineVisible()) ttEnsureStage();
+  stageShow(sl, 'tutor');
 }
 function ttBoardHide(){
   const pl = document.getElementById('podcastPlayer'), card = document.getElementById('tutorCard');
@@ -27538,22 +27576,22 @@ function tutorParseNext(reply){
   const opts = m[1].split('|').map(x => x.trim()).filter(x => x && x.length <= 60).slice(0, 4);
   return { text: String(reply).slice(0, m.index).trim(), opts };
 }
+function tutorClearActions(){ const h = document.getElementById('ttActions'); if(h){ h.innerHTML = ''; h.classList.remove('on'); h.dataset.src = ''; h.dataset.k = ''; } }
 function tutorAddNext(bubble, opts){
-  if(!bubble || !opts || !opts.length) return;
-  const old = bubble.querySelector('.tutor-next'); if(old) old.remove();
-  const row = document.createElement('div'); row.className = 'tutor-next'; row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Where next');
+  const host = document.getElementById('ttActions'); if(!host) return;
+  host.innerHTML = '';
+  if(!opts || !opts.length){ host.classList.remove('on'); return; }
   opts.forEach(o => {
     const label = typeof o === 'string' ? o : o.label;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-nextbtn'; b.textContent = label;
     b.onclick = () => {
       if(typeof tutorBusy !== 'undefined' && tutorBusy) return;
-      row.querySelectorAll('button').forEach(x => { x.disabled = true; if(x === b) x.classList.add('picked'); });
+      window._ttOpenUsed = true; tutorClearActions();
       if(typeof o === 'string') sendTutorMessage(label); else { try{ o.run(); }catch(e){} }
     };
-    row.appendChild(b);
+    host.appendChild(b);
   });
-  bubble.appendChild(row);
-  try{ const th = document.getElementById('tutorThread'); if(th) th.scrollTop = th.scrollHeight; }catch(e){}
+  host.dataset.src = 'tutor'; host.classList.add('on');
 }
 // A line from the tutor that is not a reply to anything: the app speaking as the tutor, with its own buttons.
 function tutorSay(text, opts){
@@ -29030,6 +29068,7 @@ async function sendTutorMessage(presetText){
   const input = document.getElementById('tutorInput');
   const text = (presetText!==undefined ? presetText : input.value).trim();
   if(!text || tutorBusy) return;
+  window._ttOpenUsed = true; try{ tutorClearActions(); }catch(e){}
   input.blur();
   try{ if(ttVoiceOn()){ speechAudioPrime(); if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); } }catch(e){}
   if(!aiFeaturesAvailable){
@@ -29627,7 +29666,7 @@ function tutorSuggestions(){
     const lesson = (type, domKey) => () => { try{
       window._podPicked = true;
       if(domKey){ const d = document.getElementById('podcastDomainSelect'); if(d) d.value = domKey; }
-      podcastSetType(type); podcastHeroAction();
+      podcastSetType(type); ttStartLesson();
       const pl = document.getElementById('podcastPlayer'); if(pl) pl.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }catch(e){} };
     if(answered >= 10) add('l_form', 'Lesson: formulas', 70, lesson('formulas'));
@@ -29683,9 +29722,9 @@ function updateTutorContextNote(){
     const bubble = thread ? thread.querySelector('.tutor-bubble') : null;
     if(bubble){
       const existingShow = bubble.querySelector('.tutor-show'); if(existingShow) existingShow.remove(); const ex2 = bubble.querySelector('.tutor-offer'); if(ex2) ex2.remove();
-      bubble.textContent = stats.totalAnswered
-        ? tutorOpeningLine(stats)
-        : `Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. Answer a few practice questions and I'll be able to see your progress too — for now, ask me anything about the CFP curriculum.`;
+      // The board above already shows where you stand; the tutor just asks where to go.
+      bubble.textContent = stats.totalAnswered ? 'Where do you want to start?' : "Hi, I'm your CFP study tutor. Where do you want to start? Answer a few practice questions and I'll see your progress too.";
+      try{ const rt0 = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null; if(rt0) bubble.textContent += ' Last time: \u201c' + (rt0.q.length > 60 ? rt0.q.slice(0, 57) + '\u2026' : rt0.q) + '\u201d.'; }catch(e){}
       if(stats.totalAnswered){
         const rt = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null;
         if(rt){
@@ -29806,7 +29845,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.507';
+const BUILD_ID = '2026-10-23.512';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
