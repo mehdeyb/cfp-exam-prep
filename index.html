@@ -3063,6 +3063,7 @@
   .pst-from{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
   .pst-title{font-family:'Fraunces',serif;font-size:24px;line-height:1.2;font-weight:600;color:var(--paper);margin:0 0 8px;}
   .pst-text{font-size:15px;line-height:1.55;color:var(--paper);} .pst-text.pst-lg{font-family:'Fraunces',serif;font-size:21px;line-height:1.4;} .pst-dim{color:var(--muted);}
+  .rb-move span{display:block;margin-top:6px;} .rb-move span b{display:inline;text-transform:none;letter-spacing:0;font-family:inherit;font-size:inherit;color:var(--paper);} .rb-move .btn{margin-top:10px;}
   .pst-kn{display:grid;gap:8px;margin:6px 0;} .pst-kn-r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:15px;} .pst-kn-r b{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:17px;white-space:nowrap;}
   .pst-meter{position:relative;height:10px;border-radius:6px;background:var(--hair);margin:10px 0 14px;overflow:visible;} .pst-meter i{display:block;height:100%;border-radius:6px;background:var(--gold);transform-origin:left;animation:rbGrow .9s .2s ease-out both;} .pst-meter u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--paper);opacity:.55;} .pst-fchart{margin-top:12px;}
   .pst-sweep{border-left:3px solid var(--gold);padding-left:14px;background:linear-gradient(90deg,var(--gold-soft),transparent) no-repeat;background-size:0% 100%;animation:pstSweep .9s .25s ease-out forwards;} .pst-sweep.pst-warn{border-left-color:var(--incorrect);background-image:linear-gradient(90deg,color-mix(in srgb,var(--incorrect) 14%,transparent),transparent);} @keyframes pstSweep{to{background-size:100% 100%;}} @media (prefers-reduced-motion:reduce){.pst-sweep{animation:none;background-size:100% 100%;}}
@@ -7633,11 +7634,13 @@ const READINESS_FLOOR = 0.25;      // chance of a right answer by guessing on a 
 const READINESS_TRANSFER = 0.5;    // for flashcards: how much of what tried cards show is assumed to carry to untried ones
 const READINESS_PRIOR_WEIGHT = 8;  // how many guessing-level answers each domain's first-attempt record is pulled toward
 const READINESS_BOX_P = [0.25, 0.70, 0.80, 0.88, 0.94, 0.98]; // chance of a right answer by review-schedule step
-const READINESS_VERSION = 4;       // bump whenever the model changes, so old saved scores are not compared with new ones
+const READINESS_VERSION = 5;       // bump whenever the model changes, so old saved scores are not compared with new ones
 
 // The chance you would get this item right now. It starts from the review step reached, blends in the
 // item's lifetime record, and fades toward guessing the longer the item has been overdue.
+let _readinessNoFade = false;
 function recallProbability(stat, nowMs, noFade){
+  if(_readinessNoFade) noFade = true;
   if(!stat || !(stat.seen > 0)) return READINESS_FLOOR;
   const box = Math.max(0, Math.min(READINESS_BOX_P.length-1, stat.box|0));
   const lifetime = Math.max(READINESS_FLOOR, (stat.correct + 1)/(stat.seen + 2));
@@ -7847,6 +7850,12 @@ function computeStats(){
   const weakestStat = DATA.domainStats[weakestKey];
   const weakestMastery = weakestStat.total ? Math.round((weakestStat.correct/weakestStat.total)*100) : null;
   return { totalAnswered, accuracy, readiness, readinessExact: weighted * calibrationFactor, weakestMeta, weakestMastery, parts, calibration, rawReadiness: weighted, expectedAccuracy: Math.round(expectedAcc*100), accuracyMargin: margin, triedTotal, exam };
+}
+
+// What forgetting costs right now: the score if nothing were overdue, minus the score as it stands.
+function readinessFadeLoss(stats){
+  try{ _readinessNoFade = true; const f = computeStats(); return Math.max(0, f.readinessExact - stats.readinessExact); }catch(e){ return 0; }
+  finally{ _readinessNoFade = false; }
 }
 
 // Every domain, weakest-mastery-first (domains with real data), then
@@ -8616,7 +8625,7 @@ function renderReadinessExtras(stats){
   try{
     const dk = localDayKey(), r0 = DATA.readinessDay;
     if(!window._dataReady){ /* saved progress is not loaded yet: wait, so the day's starting point is the real one */ }
-    else if(!r0 || r0.day !== dk || r0.ver !== READINESS_VERSION){ DATA.readinessDay = { day: dk, ver: READINESS_VERSION, start: stats.readinessExact }; persist(); }
+    else if(!r0 || r0.day !== dk || r0.ver !== READINESS_VERSION){ DATA.readinessDay = { day: dk, ver: READINESS_VERSION, start: stats.readinessExact, fade: readinessFadeLoss(stats) }; persist(); }
     else dayDelta = Math.round((stats.readinessExact - r0.start) * 10) / 10;
   }catch(e){}
   if(trendEl){
@@ -8692,11 +8701,27 @@ function renderReadinessExtras(stats){
       }
     }
   }catch(e){}
+  // Why the number moves, in plain words: forgetting and misses, with what to do about each.
+  let moveBlock = '';
+  try{
+    const fade = readinessFadeLoss(stats), due = computeDueCounts();
+    const r0 = DATA.readinessDay, startFade = (r0 && r0.ver === READINESS_VERSION && typeof r0.fade === 'number') ? r0.fade : null;
+    const lines = [];
+    if(dayDelta !== null && dayDelta <= -0.3){
+      const fadeMove = startFade === null ? 0 : fade - startFade;
+      if(fadeMove >= 0.3) lines.push(`<b>Down ${Math.abs(dayDelta).toFixed(1)} today.</b> About ${Math.min(Math.abs(dayDelta), fadeMove).toFixed(1)} of it is reviews going overdue: material you have not seen in a while counts for less, even though you did nothing wrong.`);
+      if(Math.abs(dayDelta) - Math.max(0, fadeMove) >= 0.3) lines.push(`${fadeMove >= 0.3 ? 'The rest' : `<b>Down ${Math.abs(dayDelta).toFixed(1)} today.</b> It`} comes from answers you got wrong or marked "very sure" and missed: each one lowers the estimate for that topic until you get it right again.`);
+    }
+    if(fade >= 0.4) lines.push(`Overdue reviews are holding the score down by ${fade.toFixed(1)} right now${due ? `, with ${due} due` : ''}. Clearing them wins it back.`);
+    if(stats.calibration.penalty >= 0.5) lines.push(`Overconfidence is costing ${stats.calibration.penalty.toFixed(1)} (see below).`);
+    if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
+  }catch(e){}
   panel.innerHTML = `
     <div class="rb-head">
       <h3>Where your ${stats.readiness} comes from</h3>
       <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
+    ${moveBlock}
     ${estimateBlock}
     ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
@@ -29285,7 +29310,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.473';
+const BUILD_ID = '2026-10-23.474';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
