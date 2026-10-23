@@ -2698,6 +2698,15 @@
   #tab-study.active{display:flex;flex-direction:column;}
   #studyCols{display:flex;flex-direction:column;}
   #studyCols > #blueprintCard{order:2;}
+  /* Where you stand lives under the trend in Your progress, not as a card on Exam Day. */
+  .bp-stand{margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);}
+  .bp-stand-head{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .bp-stand #edCountdown,.bp-stand #edStandingText{display:none !important;}
+  .bp-stand .ed-readiness{margin:0;}
+  .bp-stand .ed-rd-gap{font-size:13px;line-height:1.4;margin:0 0 4px;}
+  .bp-stand .ed-pacing{margin-top:8px;padding-top:8px;}
+  .bp-stand .ed-pacing .hint{display:none;}
+  .bp-stand .ed-tutor .note{margin-top:8px !important;}
   #studyCols > #modePanel{order:3;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols{display:block;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #studyCols > *{order:0;}
@@ -3609,6 +3618,17 @@
           <div class="progress-readout" id="progressReadout" style="display:none;" aria-live="polite"></div>
         </div>
       </div>
+    <div class="bp-stand" id="edStandingCard">
+      <div class="bp-stand-head">Where you stand for exam day</div>
+      <div id="edCountdown" style="display:none;"></div>
+      <div class="ed-readiness" id="edReadiness" style="display:none;"></div>
+      <p class="hint" id="edStandingText">Start answering practice questions in the Today tab and this panel will track how your prep compares heading into exam day.</p>
+      <div id="edPacing" style="display:none;"></div>
+      <div class="ed-tutor" id="edTutor" style="display:none;">
+        <div class="note" style="margin-top:14px;font-size:12px;">Talk it through with your tutor</div>
+        <div class="tutor-chips" id="edTutorChips" style="margin:8px 0 0;"></div>
+      </div>
+    </div>
       <div class="bp-focus">
         <div class="focus-pills" id="focusPills" hidden></div>
         <div class="difficulty-indicator" id="difficultyIndicator" style="display:none !important;" hidden></div>
@@ -4200,17 +4220,6 @@
 
   <!-- ================= EXAM DAY TAB ================= -->
   <div class="tab-panel" id="tab-examday">
-    <div class="card" id="edStandingCard">
-      <div class="card-head"><h2>Where you stand</h2><div class="note">updates from your practice history</div></div>
-      <div id="edCountdown" style="display:none;"></div>
-      <div class="ed-readiness" id="edReadiness" style="display:none;"></div>
-      <p class="hint" id="edStandingText">Start answering practice questions in the Today tab and this panel will track how your prep compares heading into exam day.</p>
-      <div id="edPacing" style="display:none;"></div>
-      <div class="ed-tutor" id="edTutor" style="display:none;">
-        <div class="note" style="margin-top:14px;font-size:12px;">Talk it through with your tutor</div>
-        <div class="tutor-chips" id="edTutorChips" style="margin:8px 0 0;"></div>
-      </div>
-    </div>
     <div class="card">
       <div class="card-head"><h2>Pacing</h2><div class="note">about two minutes a question</div></div>
       <div id="edTiming"></div>
@@ -28888,7 +28897,7 @@ const TUTOR_POINT_TARGETS = {
   ref_calc_keys:  { tab:'reference',  sel:'#calcKeysCard', label:'Your HP 10bII+ keystrokes' },
   ref_formulas:   { tab:'reference',  sel:'.card:has(#formulasList)', label:'Core formulas' },
   ref_syllabus:   { tab:'reference',  sel:'.card:has(#syllabusList)', label:'Syllabus checklist' },
-  exam_standing:  { tab:'examday',    sel:'#edStandingCard',  label:'Where you stand for exam day' },
+  exam_standing:  { tab:'study',      sel:'#edStandingCard',  label:'Where you stand for exam day' },
   exam_pacing:    { tab:'examday',    sel:'.card:has(#edTiming)', label:'Pacing for the real exam' },
   exam_checklist: { tab:'examday',    sel:'#edChecklistCard', label:'Exam-week checklist' },
   exam_bring:     { tab:'examday',    sel:'.card:has(.ed-grid):has(.ed-item b)', label:'What to bring' },
@@ -30646,7 +30655,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.603';
+const BUILD_ID = '2026-10-23.604';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
