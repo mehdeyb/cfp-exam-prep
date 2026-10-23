@@ -3019,6 +3019,18 @@
     body.flashcard-fullscreen .fc-card .fc-domain{font-size:12.5px;}
     body.flashcard-fullscreen .fc-contrast,body.flashcard-fullscreen .fc-retell{font-size:16px;}
   }
+  /* Tablets: the card is the centrepiece. It sits in the middle of the screen, as large as the screen allows, with the rating buttons directly under it. */
+  @media (min-width:700px) and (min-height:560px){
+    body.flashcard-fullscreen #flashcardFullscreenHost{align-items:center;padding-bottom:24px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner{align-self:center;max-width:min(940px,100%);padding-top:0;}
+    body.flashcard-fullscreen .fc-card{min-height:clamp(300px,46vh,600px);display:flex;flex-direction:column;justify-content:center;}
+    body.flashcard-fullscreen .fc-card .fc-front{font-size:clamp(34px,6vh,54px);}
+    body.flashcard-fullscreen .fc-card .fc-front.fc-front-def{font-size:clamp(24px,4vh,36px);}
+    body.flashcard-fullscreen .fc-card .fc-back{font-size:clamp(20px,3.3vh,28px);}
+    body.flashcard-fullscreen .fc-contrast,body.flashcard-fullscreen .fc-retell{font-size:clamp(15px,2.2vh,19px);}
+    body.flashcard-fullscreen .fc-actions{position:static;box-shadow:none;background:none;padding:14px 0 0;margin-top:0;}
+    body.flashcard-fullscreen .fc-actions .btn.learning,body.flashcard-fullscreen .fc-actions .btn.know{min-height:60px;font-size:18px;}
+  }
   body.flashcard-fullscreen .fc-back-term{font-size:clamp(22px,3.3vh,28px);margin-bottom:10px;}
   @media (min-width:700px) and (min-height:800px){ body.flashcard-fullscreen .fc-back-term{font-size:32px;} }
   .pt-lead{margin:10px 0 6px;padding:14px 14px 12px;border-radius:14px;background:var(--gold-soft);border:1px solid color-mix(in srgb,var(--gold) 35%,transparent);}
@@ -29954,7 +29966,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.524';
+const BUILD_ID = '2026-10-23.525';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
