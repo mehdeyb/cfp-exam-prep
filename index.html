@@ -22615,7 +22615,7 @@ function saveInProgressSession(){
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
     variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null,
-    selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null,
+    selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null, caseLevels: session.caseLevels || null, caseTarget: session.caseTarget || null, caseSteps: session.caseSteps || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
   };
@@ -22647,7 +22647,7 @@ function resumeInProgressSession(){
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, variantAttempted: saved.variantAttempted || {},
-    selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null,
+    selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
@@ -25493,6 +25493,17 @@ function renderResultCase(){
   }
   note.innerHTML = line;
   el.appendChild(note);
+  try{
+    const st = session.caseSteps || [];
+    if(st.length >= 3){
+      const by = [1, 2, 3].map(l => { const x = st.filter(z => z.lv === l); return { l, n:x.length, ok:x.filter(z => z.ok).length }; }).filter(x => x.n);
+      const nm = { 1:'Easier', 2:'Middle', 3:'Harder' };
+      const lv = document.createElement('div'); lv.className = 'rr-note'; lv.style.margin = '0 0 10px';
+      const hard = by.find(x => x.l === 3), easy = by.find(x => x.l === 1);
+      lv.innerHTML = '<b>By difficulty:</b> ' + by.map(x => `${nm[x.l]} ${x.ok} of ${x.n}`).join(' · ') + '. ' + (hard && hard.ok / hard.n >= 0.67 ? 'You held up on the hardest ones, which is the exam-level skill.' : easy && easy.ok < easy.n ? 'Misses on the easier ones usually mean a fact slipped; reread the story before choosing.' : 'The harder ones are where the points are, so replay this case later; the order and answer letters will differ.');
+      el.appendChild(lv);
+    }
+  }catch(e){}
   const cl = Object.values(session.cueLog || {}).filter(x => x.flagged > 0);
   if(cl.length){
     const dec = cl.reduce((a, x) => a + x.decisive, 0), fnd = cl.reduce((a, x) => a + x.found, 0), ex = cl.reduce((a, x) => a + x.extras, 0);
@@ -29184,7 +29195,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.457';
+const BUILD_ID = '2026-10-22.458';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
