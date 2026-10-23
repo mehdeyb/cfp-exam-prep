@@ -23529,6 +23529,7 @@ function cardForQuestion(q){
   const df = key => { const m = window._dfMemo; if(m[key] === undefined){ let n = 0; for(const b of window._qBlobs) if(b.indexOf(key) >= 0) n++; m[key] = n; } return m[key]; };
   const words = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length > 4 && !/^[0-9]+$/.test(w)));
   const stemW = words(q.q + ' ' + (q.scenario || '')), coreW = words(((q.choices || [])[q.correct] || '') + ' ' + (q.rationale || []).join(' '));
+  const own = (DATA.generatedFlashcards || []).find(c => c.fromQ === q.id); if(own) return own;
   let best = null, bestScore = 0;
   allFlashcards().forEach(c => {
     if(c.domain !== q.domain) return;
@@ -23550,11 +23551,45 @@ function cardForQuestion(q){
   });
   return bestScore >= 260 ? best : null;
 }
+// When no card in the deck covers the idea a missed question tested, the app writes one for exactly that idea, adds it to the deck
+// (so it comes back in reviews) and shows it in place. It only runs for a live miss, once per question, and never blocks the screen.
+const _qcMaking = {};
+async function makeCardForQuestion(q, pickedIdx){
+  if(!aiFeaturesAvailable || _qcMaking[q.id] || isGenerating || (DATA.generatedFlashcards || []).length >= FLASHCARD_CAP) return null;
+  _qcMaking[q.id] = true;
+  const epoch = dataEpoch;
+  try{
+    const meta = DOMAINS.find(d => d.key === q.domain); if(!meta) return null;
+    const right = (q.choices || [])[q.correct] || '', picked = (typeof pickedIdx === 'number' && q.choices) ? q.choices[pickedIdx] : '';
+    const have = allFlashcards().filter(f => f.domain === q.domain).map(f => f.term).join(', ');
+    const prompt = `You write one concise flashcard (term + definition) for a CFP® exam candidate studying "${meta.name}".
+They just missed this question: ${q.q}
+Correct answer: ${right}
+${picked ? 'They chose: ' + picked + '\n' : ''}Why: ${(q.rationale || []).slice(0, 2).join(' ')}
+Write exactly 1 flashcard for the single rule, term or distinction that would have prevented this miss. It must be about what this question tests, not a neighbouring topic. Do not reuse any of these terms: ${have.slice(0, 1500) || '(none)'}
+The definition is one sentence, under 25 words, accurate, and usable as an exam-prep flashcard.
+Return ONLY a raw JSON array, no markdown, in exactly this shape: [{"term":"short term or concept name","def":"one-sentence definition under 25 words"}]`;
+    const raw = await callClaude(prompt, 600);
+    if(epoch !== dataEpoch) return null;
+    let fresh = safeParseFlashcards(raw, q.domain);
+    fresh = dedupeGenerated(fresh, allFlashcards(), f => f.term).slice(0, 1);
+    if(!fresh.length) return null;
+    fresh[0].fromQ = q.id; fresh[0].id = 'qfc-' + q.id + '-' + Date.now().toString(36);
+    DATA.generatedFlashcards = (DATA.generatedFlashcards || []).concat(fresh);
+    persist();
+    return fresh[0];
+  }catch(e){ return null; }
+  finally{ delete _qcMaking[q.id]; }
+}
 function showCardForQuestion(q, isCorrect){
   const box = document.getElementById('qCardLink'); if(!box) return;
   box.style.display = 'none'; box.innerHTML = '';
   if(isCorrect || !isStudyMode() || isGenQ(q)) return;
-  const c = cardForQuestion(q); if(!c) return;
+  const c = cardForQuestion(q);
+  if(!c){
+    makeCardForQuestion(q, session && session.lastSelectedIndex).then(nc => { if(nc && session && session.queue && session.queue[session.index] === q) showCardForQuestion(q, false); }).catch(() => {});
+    return;
+  }
   // Skip it when the explanation above already says the same thing, so nothing is shown twice.
   const words = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length > 3));
   const dw = words(c.def), rw = words((q.rationale || []).join(' ') + ' ' + ((q.choices || [])[q.correct] || ''));
@@ -30481,7 +30516,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.596';
+const BUILD_ID = '2026-10-23.597';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
