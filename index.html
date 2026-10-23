@@ -28082,8 +28082,11 @@ function quizFit(){
     const avail = h - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 84;
     const span = () => { const a = top.getBoundingClientRect().top, b = card.getBoundingClientRect().bottom; return b - a; };
     const nat = span(); if(!nat) return;
-    let z = Math.min(1.4, avail / nat), ok = false;
-    if(z >= 1.04){
+    let z = Math.min(1.4, Math.max(0.74, avail / nat)), ok = false;
+    if(z < 1){
+      // After an answer is revealed there is more to show: it all scales to fit rather than scrolling.
+      for(let k = 0; k < 6; k++){ qv.style.zoom = String(Math.round(z * 100) / 100); if(span() <= avail + 1){ ok = true; break; } z = Math.max(0.74, z - 0.04); }
+    } else if(z >= 1.04){
       for(let k = 0; k < 5; k++){
         qv.style.zoom = String(Math.round(z * 100) / 100);
         if(span() <= avail + 1){ ok = true; break; }
@@ -28092,7 +28095,7 @@ function quizFit(){
     }
     // Whatever room is left is split above and below, so the question sits in the middle of the screen.
     const left = avail - (ok ? span() : nat);
-    if(left > 12) qv.style.marginTop = Math.round(left / 2 / (ok ? parseFloat(qv.style.zoom) : 1)) + 'px';
+    if(left > 12) qv.style.marginTop = Math.round(left / 2 / (ok ? (parseFloat(qv.style.zoom) || 1) : 1)) + 'px';
   }catch(e){}
 }
 (function(){
@@ -30428,7 +30431,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.584';
+const BUILD_ID = '2026-10-23.585';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
