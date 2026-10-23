@@ -1933,6 +1933,22 @@
   #studyCols.pt-dense .pt-num{width:20px;height:20px;font-size:10.5px;}
   #studyCols.pt-dense .pt-why{display:none;}
   #studyCols.pt-dense .pt-how{display:none;}
+  #studyCols .pt-step:not(.next):not(.done) .pt-why{display:none;}
+  #studyCols.pt-rich .pt-step:not(.next):not(.done) .pt-why{display:block;}
+  #studyCols.pt-dense.pt-dt .pt-step:not(.next) .pt-time{display:block;}
+  #studyCols.pt-dense.pt-dfull .pt-title{-webkit-line-clamp:unset;display:block;overflow:visible;}
+  #studyCols.pt-dense.pt-dwhy .pt-step:not(.next) .pt-why{display:block;font-size:11.5px;color:var(--muted);line-height:1.3;}
+  /* Real-data readiness block on wide screens: two slim rows instead of five. */
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto auto auto auto 1fr;column-gap:14px;row-gap:2px;align-items:baseline;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-meta{grid-column:2 / -1;grid-row:1;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-band{grid-column:2;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{grid-column:3;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-trend{grid-column:4;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{grid-column:5;grid-row:2;justify-self:start;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est, html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-trend, html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-band{white-space:nowrap;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{flex-wrap:nowrap;gap:16px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip .stat{white-space:nowrap;}
   #studyCols.pt-dense.pt-tiny .pt-title{-webkit-line-clamp:1;font-size:12.5px;line-height:1.2;}
   #studyCols.pt-dense.pt-tiny .pt-step{align-items:center;}
   #studyCols.pt-dense.pt-tiny .pt-step{padding:3px 0;}
@@ -11201,7 +11217,7 @@ function _renderTodayPlanInner(){
       : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
     return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(isNext && st.why) ? '<div class="pt-why">' + escapeHtml(st.why.length > 150 ? st.why.slice(0, 147).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -28017,7 +28033,7 @@ function osFitStudy(extra){
     extra = extra || 0;
     const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
     if(document.body.classList.contains('quiz-active')) return;
-    c.style.maxHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense', 'pt-tiny');
+    c.style.maxHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense', 'pt-tiny', 'pt-dt', 'pt-dfull', 'pt-dwhy', 'pt-rich');
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     const rowsHost = c.querySelector('.pt-rows');
@@ -28029,13 +28045,20 @@ function osFitStudy(extra){
     let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
     const avail = Math.max(240, Math.round(h - top - bb - 14 - notes - extra));
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
+    c.classList.add('pt-rich'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.3); return; } c.classList.remove('pt-rich');
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
     const shed = [...c.querySelectorAll('.pt-pace, .pt-sub, .pt-block, .pt-today, .pt-mins')];
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     for(const x of shed){ if(c.scrollHeight <= avail + 2) break; x.classList.add('os-shed'); x.style.display = 'none'; }
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     // Tighter rows before any step is hidden: every step stays visible whenever it can.
-    c.classList.add('pt-dense'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.2); return; }
+    // Richest row style that still fits wins: reason line, then full titles with times, then times, then the lean rows.
+    c.classList.add('pt-dense');
+    for(const extra of [['pt-dt','pt-dfull','pt-dwhy'], ['pt-dt','pt-dfull'], ['pt-dt'], []]){
+      c.classList.remove('pt-dt','pt-dfull','pt-dwhy'); extra.forEach(k => c.classList.add(k));
+      if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.4); return; }
+    }
+    c.classList.remove('pt-dt','pt-dfull','pt-dwhy');
     // Still too much: shrink the whole thing a little rather than hide or scroll anything.
     for(const z of [0.94, 0.88, 0.82, 0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
     c.style.zoom = '';
@@ -30441,7 +30464,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.587';
+const BUILD_ID = '2026-10-23.591';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
