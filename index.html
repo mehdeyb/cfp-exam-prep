@@ -9048,7 +9048,22 @@ function renderReadinessExtras(stats){
 // ---- Next best step ----
 let currentNextStep = null;
 
+// The next best step and today's plan are one thread: the recommendation is the plan's first open step, except where the app owns
+// the moment (a half-done session, a guided sitting, the last two days).
 function computeNextStep(stats){
+  const step = computeNextStepRaw(stats);
+  try{
+    if(_inPlanBuild || !step || session) return step;
+    if(/^(In progress|Your session|Today's session|Exam day|Tomorrow)/.test(step.kicker || '')) return step;
+    const pl = buildStudyPlan(); const first = pl.steps.find(x => !x.done && typeof x.run === 'function'); if(!first) return step;
+    if(step.title === first.title) return step;
+    const partial = (first.have || 0) > 0 && first.need > 0;
+    return { kicker: step.kicker === 'Start here' ? 'Start here' : 'Next in today\'s plan', title: first.title, why: first.why || step.why,
+      cta: partial ? 'Continue' : 'Start', meta: first.minutes + ' min', run: () => runPlanStep(first.id), planStepId: first.id,
+      alt: step.alt || null, launchesSession: step.launchesSession };
+  }catch(e){ return step; }
+}
+function computeNextStepRaw(stats){
   const parts = stats.parts;
   const studiedToday = (DATA.studyDates || []).includes(localDayKey());
   const streak = computeStreak();
@@ -10154,6 +10169,12 @@ function buildStudyPlanCore(minutes){
       }
       return null;
     },
+    resume: () => {
+      const sv = DATA.inProgressSession; if(!sv || session) return null;
+      const total = (sv.queue || []).length, done = (sv.answerLog || []).length; if(!total || done >= total) return null;
+      return { id:'resume', forced:true, title:'Finish your ' + resumeSessionLabel(sv), minutes: Math.max(3, Math.ceil((total - done) * 1.2)), need: total, have: done, unit:'questions',
+        why:'Finishing it first keeps your spaced-review schedule on track.', run: () => resumeInProgressSession() };
+    },
     missed: () => {
       if(missedN < 3 && !L.targets.missed) return null;
       const n = planTarget('missed', Math.min(missedN, phase.key === 'taper' ? 10 : 15));
@@ -10480,6 +10501,7 @@ function buildStudyPlanCore(minutes){
     steps.push(st); used += st.minutes;
   };
   if(!['rest','exam','after'].includes(phase.key) && DATA.planLesson && DATA.planLesson.day === localDayKey()) order.splice(Math.min(2, order.length), 0, 'tlesson'); // the tutor's own lesson sits near the top
+  if(DATA.inProgressSession && !session) place('resume');
   order.forEach(k => place(k));
   if(!['taper','rest','exam','after'].includes(phase.key)){
     ['gap2','weak2','adaptive2','weak3'].forEach(k => {
@@ -11066,7 +11088,7 @@ function renderNextStepCard(stats, refreshed){
   if(nsOwnsNext()){ el.style.display = 'none'; el.innerHTML = ''; return; }
   // When the recommendation is also a step in today's plan, say which one, so the two read as one thread.
   let planTag = '';
-  try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && x.title === s.title); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
+  try{ const pl = buildStudyPlan(); const i = pl.steps.findIndex(x => !x.done && (x.title === s.title || (s.kicker === 'In progress' && x.id === 'resume'))); if(i >= 0) planTag = `Step ${i + 1} of ${pl.steps.length} in today's plan`; }catch(e){}
   el.innerHTML = `
     <div class="ns-kicker"><span class="ns-label"><span class="ns-dot"></span>Next best step</span><span class="ns-tag">${escapeHtml(s.kicker)}</span></div>
     <div class="ns-title">${escapeHtml(s.title)}</div>
@@ -30107,7 +30129,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.541';
+const BUILD_ID = '2026-10-23.542';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
