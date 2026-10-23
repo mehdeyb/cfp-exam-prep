@@ -20654,7 +20654,8 @@ function fdCardLine(){
   if(!tried) return `${FD_NAMES.length} formulas, each with fresh numbers every time. Work it out, type the answer, and see the working and the common slip behind a wrong one.`;
   let a = 0, c = 0; FD_NAMES.forEach(n => { const s = fdStats(n); a += s.attempts; c += s.correct; });
   const w = fdWeakest();
-  return `${tried} of ${FD_NAMES.length} formulas practised, ${Math.round(c/a*100)}% right overall.` + (w ? ` Shakiest: ${w}.` : '');
+  const top = FD_NAMES.filter(n => fdStats(n).attempts && fdLevelOf(n) === 3).length;
+  return `${tried} of ${FD_NAMES.length} formulas practised, ${Math.round(c/a*100)}% right overall` + (top ? `, ${top} at Exam level.` : '.') + (w ? ` Shakiest: ${w}.` : '');
 }
 document.addEventListener('keydown', function(e){
   if(!document.body.classList.contains('fd-active')) return;
@@ -26769,6 +26770,8 @@ function buildTutorSystemPrompt(){
     const lastPg = Object.values(DATA.podcastMeta || {}).filter(m => m && m.at).sort((a, b) => b.at - a.at)[0];
     if(eps) timeContext += ` They have ${eps} lesson${eps === 1 ? '' : 's'} saved${lastPg ? ' (latest ' + modeAgoText(lastPg.at) + ', on ' + (lastPg.focus || []).slice(0, 2).join(' and ') + ')' : ''}; offer play_podcast when a spoken recap would help, and tell them which focus you will stress.`;
     const fw = (typeof FD_NAMES !== 'undefined' ? FD_NAMES : []).map(n => ({ n, st: fdStats(n) })).filter(x => x.st.attempts >= 3 && x.st.correct / x.st.attempts < 0.6).sort((a, b) => a.st.correct / a.st.attempts - b.st.correct / b.st.attempts).slice(0, 3);
+    { const lv = FD_NAMES.map(n => ({ n, s: fdStats(n) })).filter(x => x.s.attempts >= 2); const top = lv.filter(x => fdLevelOf(x.n) === 3).length, low = lv.filter(x => fdLevelOf(x.n) === 1 && x.s.attempts >= 4).slice(0, 3).map(x => x.n);
+      if(lv.length) timeContext += ` Formula drills adapt: each formula has a level 1 to 3 that moves up on clean answers and down on misses; they are at level 3 on ${top} of ${lv.length} practised` + (low.length ? ` and stuck at level 1 on ${low.join(', ')}` : '') + '.'; }
     if(fw.length) timeContext += ` Calculation drills they get wrong most: ${fw.map(x => `${x.n} (${Math.round(x.st.correct / x.st.attempts * 100)}% over ${x.st.attempts})`).join(', ')}. Offer open_formula_drill on these when it fits.`;
   }catch(e){}
   timeContext += tutorCoverageBlock();
@@ -29181,7 +29184,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.456';
+const BUILD_ID = '2026-10-22.457';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
