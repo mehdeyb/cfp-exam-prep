@@ -1839,8 +1839,7 @@
   .podcast-turn-host2::before{content:"Host 2";color:var(--teal);}
   .podcast-transcript-loading{color:var(--muted);font-style:italic;}
   .podcast-library{margin-top:16px;border-top:1px solid var(--hair);padding-top:14px;}
-  .podcast-library .card-head{cursor:pointer;min-height:44px;align-items:center;border-radius:8px;padding:0 8px;margin:0 -8px 8px;transition:background var(--t-fast) var(--ease);}
-  .podcast-library .card-head:hover{background:var(--surface2);}
+  .podcast-library .card-head{cursor:default;min-height:36px;align-items:center;border-radius:8px;padding:0 8px;margin:0 -8px 8px;transition:background var(--t-fast) var(--ease);}
   .podcast-library .card-head .note{font-size:13px;font-family:'IBM Plex Sans',sans-serif;color:var(--paper);}
   .podcast-library-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:13px;}
   .podcast-library-row:last-child{border-bottom:none;}
@@ -3703,10 +3702,10 @@
       </div>
       <div class="ref-scroll" id="podcastTranscriptWrap" style="display:none;"><div id="podcastTranscript" class="podcast-transcript"></div></div>
       <div class="podcast-library" id="podcastLibrary" style="display:none;">
-        <div class="card-head" id="podcastLibraryToggle" onclick="togglePodcastLibrary()" role="button" tabindex="0">
-          <div class="note" id="podcastLibraryChevron">Your lessons (0) — tap to expand ▾</div>
+        <div class="card-head" id="podcastLibraryToggle">
+          <div class="note" id="podcastLibraryChevron">Your lessons (0)</div>
         </div>
-        <div id="podcastLibraryList" style="display:none;"></div>
+        <div id="podcastLibraryList"></div>
       </div>
     </div>
     <div class="panel card" id="modePanel">
@@ -12159,8 +12158,8 @@ function renderPodcastLibrary(){
     return;
   }
   library.style.display = 'block';
-  const wasExpanded = list.style.display === 'block';
-  chevron.textContent = `Your lessons (${keys.length}) — tap to ${wasExpanded ? 'collapse ▴' : 'expand ▾'}`;
+  list.style.display = 'block';
+  chevron.textContent = `Your lessons (${keys.length})`;
   list.innerHTML = '';
   keys.slice().sort().forEach(key => {
     const row = document.createElement('div');
@@ -29251,7 +29250,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.466';
+const BUILD_ID = '2026-10-22.467';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
