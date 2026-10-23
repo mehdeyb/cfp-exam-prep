@@ -1108,12 +1108,6 @@
   .hub-seg button em{font:500 11px 'IBM Plex Mono',monospace;font-style:normal;opacity:.7;} .hub-seg button em:empty{display:none;}
   .hub[data-view="plan"] > #blueprintCard,.hub[data-view="progress"] > #todayPlanCard{display:none !important;}
   .hub #blueprintCard > .card-head{display:none;}
-  .bp-top .stat-strip .stat:nth-child(1),.bp-top .stat-strip .stat:nth-child(3){display:none;}
-  .bp-top .stat-strip{justify-content:flex-start;gap:28px;}
-  .bp-top{margin:2px 0 14px;padding-bottom:14px;border-bottom:1px solid var(--hair);}
-  .bp-top .rb-panel{margin:0 0 12px;box-shadow:none;background:var(--surface-2,rgba(128,128,128,.06));}
-  .bp-top .coach-line{margin:0;}
-  .bp-top .score-row{margin-bottom:12px;}
   .guide-card{padding-top:14px;padding-bottom:14px;} .guide-card .bp-guide-row{margin:0;padding:0;border:0;}
   .bp-guide-row b{display:block;font-size:14px;}
   .bp-guide-row .note{display:block;font-size:11.5px;color:var(--muted);}
@@ -3150,23 +3144,6 @@
 
 
 
-    <div class="tn-card" id="tutorNoteCard" role="region" aria-label="Note from your tutor" style="display:none;"></div>
-
-    <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
-    
-    <div id="studyCols">
-    <div class="card hub" id="studyHub" data-view="plan">
-      <div class="hub-seg pod-seg" id="hubSeg" role="group" aria-label="Plan or progress">
-        <button type="button" data-v="plan" onclick="hubShow('plan')"><span>Today's plan</span><em id="hubSegPlan"></em></button>
-        <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg"></em></button>
-      </div>
-    <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
-    <div class="card" id="blueprintCard">
-      <div class="card-head">
-        <h2>The Blueprint Bar</h2>
-        <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
-      </div>
-      <div class="bp-top">
     <div class="score-row" id="scoreRow">
       <div class="score-ring-block">
         <div class="score-ring-wrap">
@@ -3199,11 +3176,29 @@
         <div class="stat"><div class="num" id="statStreak">0</div><div class="lbl">Day streak</div></div>
       </div>
     </div>
+
     <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
+
     <div class="coach-line empty" id="coachLine" role="status">
       <span class="coach-dot" id="coachDot"></span>
       <span id="coachText"></span>
     </div>
+
+    <div class="tn-card" id="tutorNoteCard" role="region" aria-label="Note from your tutor" style="display:none;"></div>
+
+    <div class="ns-card ns-top" id="nextStepCard" role="region" aria-label="Next best step" style="display:none;"></div>
+    
+    <div id="studyCols">
+    <div class="card hub" id="studyHub" data-view="plan">
+      <div class="hub-seg pod-seg" id="hubSeg" role="group" aria-label="Plan or progress">
+        <button type="button" data-v="plan" onclick="hubShow('plan')"><span>Today's plan</span><em id="hubSegPlan"></em></button>
+        <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg"></em></button>
+      </div>
+    <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
+    <div class="card" id="blueprintCard">
+      <div class="card-head">
+        <h2>The Blueprint Bar</h2>
+        <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
       </div>
       <div class="bp-cols">
       <div class="bp-colL">
@@ -7772,6 +7767,19 @@ function computeStats(){
       const wc = 0.1*Math.min(1, fAtt/12);
       E = (1-wc)*E + wc*accF;
     }
+    // Teach-back (explaining a concept in your own words): graded recall, another small source.
+    try{
+      const tp = [];
+      cards.forEach(f=>{ const t = DATA.teachStats && DATA.teachStats['c:'+f.id]; if(t && t.n){ const age = (nowMs - (t.last||0))/86400000; const fade = Math.max(0.6, 1 - age/90); tp.push(Math.max(READINESS_FLOOR, (t.score||0)/100 * fade)); } });
+      if(tp.length >= 3){ const Tm = tp.reduce((x,y)=>x+y,0)/tp.length; const wt = 0.08*Math.min(1, tp.length/8); E = (1-wt)*E + wt*Tm; }
+    }catch(e){}
+    // Calculator practice (time value of money templates) supports General Principles.
+    try{
+      if(d.key === 'general'){
+        let ta = 0, tc = 0; Object.values(DATA.tvmTemplateStats || {}).forEach(t=>{ ta += t.a||0; tc += t.c||0; });
+        if(ta >= 6){ const accT = Math.max(READINESS_FLOOR, (tc + 0.5)/(ta + 2)); const wv = 0.08*Math.min(1, ta/20); E = (1-wv)*E + wv*accT; }
+      }
+    }catch(e){}
     domainE[d.key] = E;
     domainInfo[d.key] = { domainQuestions, attemptedN, Q, coverageTarget, coverageFactor, frac };
   });
@@ -8521,7 +8529,6 @@ function computeReadinessDelta(currentScore){
 }
 
 function toggleReadinessBreakdown(force, skipScroll){
-  try{ hubShow('progress', true); }catch(e){}
   const panel = document.getElementById('readinessBreakdown');
   const btn = document.getElementById('readinessWhyBtn');
   if(!panel || !btn) return;
@@ -29239,7 +29246,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.459';
+const BUILD_ID = '2026-10-22.460';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
