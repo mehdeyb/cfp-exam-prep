@@ -14352,7 +14352,7 @@ async function toggleGlossaryExample(item, f){
 Term: ${f.term}
 Definition: ${f.def}
 
-Describe a brief, concrete scenario (a client situation, a number, or a specific application) that shows how this works in practice. 2-3 sentences. Don't just restate the definition.`;
+Describe a brief, concrete scenario (a client situation, a number, or a specific application) that shows how this works in practice. Then add one short sentence on how the exam is likely to test it or the trap to avoid. 3-4 sentences total. Don't just restate the definition, and only use rules or figures you are sure are current.`;
 
   try{
     const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 400 }))
@@ -17219,7 +17219,7 @@ async function requestFlashcardMnemonic(){
 Term: ${card.term}
 Definition: ${card.def}
 
-The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Don't just restate the definition in different words.`;
+The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Don't just restate the definition in different words. If a lookalike term is easy to confuse with this one on the exam, make the trick separate the two.`;
 
   try{
     const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 320 }))
@@ -29969,7 +29969,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.528';
+const BUILD_ID = '2026-10-23.529';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
