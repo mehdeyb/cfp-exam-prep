@@ -3063,6 +3063,8 @@
   .pst-from{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
   .pst-title{font-family:'Fraunces',serif;font-size:24px;line-height:1.2;font-weight:600;color:var(--paper);margin:0 0 8px;}
   .pst-text{font-size:15px;line-height:1.55;color:var(--paper);} .pst-text.pst-lg{font-family:'Fraunces',serif;font-size:21px;line-height:1.4;} .pst-dim{color:var(--muted);}
+  .scr-lp{margin:6px 0 12px;} .scr-prog{height:4px;border-radius:3px;background:var(--hair);overflow:hidden;} .scr-prog i{display:block;height:100%;width:0;background:var(--gold);border-radius:3px;transition:width .4s ease;}
+  .scr-prog-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font:500 11.5px 'IBM Plex Mono',monospace;color:var(--muted);} .scr-speed{background:none;border:1px solid var(--hair);border-radius:12px;padding:3px 10px;font:inherit;color:var(--paper);min-height:28px;cursor:pointer;} #scrTitle{font-size:20px;line-height:1.2;}
   .rb-move span{display:block;margin-top:6px;} .rb-move span b{display:inline;text-transform:none;letter-spacing:0;font-family:inherit;font-size:inherit;color:var(--paper);} .rb-move .btn{margin-top:10px;}
   .pst-kn{display:grid;gap:8px;margin:6px 0;} .pst-kn-r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:15px;} .pst-kn-r b{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:17px;white-space:nowrap;}
   .pst-meter{position:relative;height:10px;border-radius:6px;background:var(--hair);margin:10px 0 14px;overflow:visible;} .pst-meter i{display:block;height:100%;border-radius:6px;background:var(--gold);transform-origin:left;animation:rbGrow .9s .2s ease-out both;} .pst-meter u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--paper);opacity:.55;} .pst-fchart{margin-top:12px;}
@@ -3284,10 +3286,14 @@
     <div id="screenHost" role="dialog" aria-modal="true" aria-label="Screen">
       <div class="scr-inner">
         <div class="dp-header">
-          <h2>On screen</h2>
+          <h2 id="scrTitle">On screen</h2>
           <button class="dp-close" id="scrClose" onclick="stageCloseFull()" aria-label="Close" title="Close">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
+        </div>
+        <div class="scr-lp" id="scrLp" style="display:none;">
+          <div class="scr-prog"><i id="scrProgFill"></i></div>
+          <div class="scr-prog-meta"><span id="scrEl">0:00</span><button type="button" class="scr-speed" id="scrSpeed" onclick="stageSpeedCycle()" aria-label="Playback speed">1×</button><span id="scrLeft">-0:00</span></div>
         </div>
         <div class="scr-dots" id="scrDots"></div>
         <div class="pst-body scr-body" id="scrBody" aria-live="polite"></div>
@@ -12502,6 +12508,12 @@ function podcastUpdateProgress(index){
   const el = document.getElementById('podcastElapsed'), left = document.getElementById('podcastLeft');
   if(el) el.textContent = podcastFmt(before / 150 / sp);
   if(left) left.textContent = '-' + podcastFmt((total - before) / 150 / sp);
+  try{ const f = document.getElementById('scrProgFill'); if(f) f.style.width = Math.round(before / total * 100) + '%'; const e2 = document.getElementById('scrEl'), l2 = document.getElementById('scrLeft'); if(e2) e2.textContent = podcastFmt(before / 150 / sp); if(l2) l2.textContent = '-' + podcastFmt((total - before) / 150 / sp); }catch(e){}
+}
+function stageSpeedCycle(){
+  const sel = document.getElementById('podcastSpeedSelect'); if(!sel) return;
+  const o = [...sel.options], i = o.findIndex(x => x.value === sel.value); sel.value = o[(i + 1) % o.length].value;
+  podcastSpeedChanged(); stageTransportSync();
 }
 function podcastSetCaption(index){
   const cap = document.getElementById('podcastCaption'); if(!cap) return;
@@ -13406,6 +13418,13 @@ function stageTransportSync(){
   const has = !!(DATA.podcastEpisodes && stageState.deckKey && DATA.podcastEpisodes[stageState.deckKey]);
   b.style.display = has ? '' : 'none';
   b.textContent = (naturalSpeechState.active && !naturalSpeechState.paused) ? 'Pause' : (naturalSpeechState.active ? 'Resume' : 'Play lesson');
+  try{
+    const lp = document.getElementById('scrLp'), ti = document.getElementById('scrTitle'), sp = document.getElementById('scrSpeed'), sel = document.getElementById('podcastSpeedSelect');
+    if(lp) lp.style.display = has ? '' : 'none';
+    if(ti) ti.textContent = has ? stageClip(podcastLabelForCacheKey(stageState.deckKey), 44) : 'On screen';
+    if(sp && sel) sp.textContent = (sel.options[sel.selectedIndex] || {}).text || '1×';
+    if(has && !naturalSpeechState.active){ const t = DATA.podcastEpisodes[stageState.deckKey]; const ch = splitIntoSpeechChunks(t); const pos = podcastSavedPos(stageState.deckKey) || 0; const w = c => String(c.text).split(/\s+/).length, tot = ch.reduce((a, c) => a + w(c), 0) || 1, bef = ch.slice(0, pos).reduce((a, c) => a + w(c), 0), spv = podcastSpeedValue(); const f = document.getElementById('scrProgFill'); if(f) f.style.width = Math.round(bef / tot * 100) + '%'; const e2 = document.getElementById('scrEl'), l2 = document.getElementById('scrLeft'); if(e2) e2.textContent = podcastFmt(bef / 150 / spv); if(l2) l2.textContent = '-' + podcastFmt((tot - bef) / 150 / spv); }
+  }catch(e){}
 }
 function stagePlayToggle(){ if(!stageState.deckKey) return; try{ togglePodcastPlayback(); }catch(e){} setTimeout(stageTransportSync, 150); }
 document.addEventListener('keydown', e => {
@@ -29311,7 +29330,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.475';
+const BUILD_ID = '2026-10-23.476';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
