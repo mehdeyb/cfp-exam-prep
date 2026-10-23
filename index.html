@@ -3063,6 +3063,7 @@
   .pst-from{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
   .pst-title{font-family:'Fraunces',serif;font-size:24px;line-height:1.2;font-weight:600;color:var(--paper);margin:0 0 8px;}
   .pst-text{font-size:15px;line-height:1.55;color:var(--paper);} .pst-text.pst-lg{font-family:'Fraunces',serif;font-size:21px;line-height:1.4;} .pst-dim{color:var(--muted);}
+  .pst-sweep{border-left:3px solid var(--gold);padding-left:14px;background:linear-gradient(90deg,var(--gold-soft),transparent) no-repeat;background-size:0% 100%;animation:pstSweep .9s .25s ease-out forwards;} .pst-sweep.pst-warn{border-left-color:var(--incorrect);background-image:linear-gradient(90deg,color-mix(in srgb,var(--incorrect) 14%,transparent),transparent);} @keyframes pstSweep{to{background-size:100% 100%;}} @media (prefers-reduced-motion:reduce){.pst-sweep{animation:none;background-size:100% 100%;}}
   .pst-formula{font-family:'IBM Plex Mono',monospace;font-size:18px;line-height:1.45;color:var(--gold);background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 10px;overflow-wrap:anywhere;}
   .pst-vars{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:13.5px;} .pst-vars li{display:flex;gap:10px;} .pst-vars b{font-family:'IBM Plex Mono',monospace;color:var(--gold);min-width:34px;}
   .pst-big{font-family:'Fraunces',serif;font-size:44px;line-height:1.1;font-weight:600;color:var(--paper);margin:2px 0 8px;}
@@ -12752,7 +12753,7 @@ function podcastAutoSlides(text, key, domainKey, label){
   const seenTerm = new Map(), seenQ = new Set(); let last = -9, lastQ = -9;
   const numRe = /\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand|k))?|\b\d+(?:\.\d+)?\s?(?:%|percent|years?|months?|days?|times)\b/gi;
   chunks.forEach((t, i) => {
-    if(i === 0 || out.length >= 26) return;
+    if(i === 0 || out.length >= 40) return;
     const low = t.toLowerCase();
     // 1. a question you missed that this sentence is about
     if(missed.length && i - lastQ >= 3){
@@ -12768,7 +12769,10 @@ function podcastAutoSlides(text, key, domainKey, label){
     { for(const x of termsAll){ if(stageFind(low, x.v) >= 0 && (seenTerm.get(x.v) || -99) < i - 18){ seenTerm.set(x.v, i); out.push({ at:i, kind:'term', src:'auto', term:x.c.term, def:x.c.def }); last = i; return; } } }
     // 4. the numbers
     const nums = t.match(numRe);
-    if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; }
+    if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; return; }
+    // 5. nothing concrete matched: put the point itself on screen, so the screen keeps moving with the talk
+    const warn = /\b(trap|mistake|careful|watch (?:out|for)|common error|tricky|catch)\b/i.test(t), cue = /\b(remember|key|always|never|exam (?:loves|tests|asks|wants)|the rule|rule of thumb|important|difference|only if|unless|must|first|second|third|finally)\b/i.test(t);
+    if((warn || cue || i - last >= 3) && t.length >= 40){ out.push({ at:i, kind:'point', src:'auto', tone: warn ? 'warn' : 'idea', title: warn ? 'Watch for this' : cue ? 'Key idea' : 'In short', text:stageClip(t, 170) }); last = i; }
   });
   // Questions this episode was built from always get their slide, at the sentence that talks about them most.
   const want = ((DATA.podcastMeta || {})[key] || {}).qids || [];
@@ -13041,7 +13045,7 @@ function stageSlideNode(sl){
     const v = tutorVisualHtml(sl); if(!v) return null;
     d.innerHTML = `<div class="pst-kicker">${E(v.title)}</div>${v.body}${v.note ? `<div class="pst-why">${E(v.note)}</div>` : ''}`;
   } else {
-    d.innerHTML = `<div class="pst-kicker">${E(sl.title || 'Key idea')}</div><div class="pst-text pst-lg">${E(sl.text || '')}</div>`;
+    d.innerHTML = `<div class="pst-kicker">${E(sl.title || 'Key idea')}</div><div class="pst-text pst-lg pst-sweep${sl.tone === 'warn' ? ' pst-warn' : ''}">${E(sl.text || '')}</div>`;
   }
   if(sl.src === 'tutor'){ const b = document.createElement('div'); b.className = 'pst-from'; b.textContent = 'From your tutor'; d.insertBefore(b, d.firstChild); }
   return d;
@@ -29250,7 +29254,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.467';
+const BUILD_ID = '2026-10-22.468';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
