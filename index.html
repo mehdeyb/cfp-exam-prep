@@ -1943,6 +1943,10 @@
   /* Real-data readiness block on wide screens: two slim rows instead of five. */
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto auto auto auto 1fr;column-gap:14px;row-gap:2px;align-items:baseline;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:1 1 0;min-width:0;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .stat-strip{flex:0 0 auto;width:auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{white-space:nowrap;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-meta{grid-column:2 / -1;grid-row:1;margin:0;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-band{grid-column:2;grid-row:2;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{grid-column:3;grid-row:2;}
@@ -30600,7 +30604,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.599';
+const BUILD_ID = '2026-10-23.600';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
