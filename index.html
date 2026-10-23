@@ -3063,6 +3063,8 @@
   .pst-from{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
   .pst-title{font-family:'Fraunces',serif;font-size:24px;line-height:1.2;font-weight:600;color:var(--paper);margin:0 0 8px;}
   .pst-text{font-size:15px;line-height:1.55;color:var(--paper);} .pst-text.pst-lg{font-family:'Fraunces',serif;font-size:21px;line-height:1.4;} .pst-dim{color:var(--muted);}
+  .pst-kn{display:grid;gap:8px;margin:6px 0;} .pst-kn-r{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:15px;} .pst-kn-r b{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:17px;white-space:nowrap;}
+  .pst-meter{position:relative;height:10px;border-radius:6px;background:var(--hair);margin:10px 0 14px;overflow:visible;} .pst-meter i{display:block;height:100%;border-radius:6px;background:var(--gold);transform-origin:left;animation:rbGrow .9s .2s ease-out both;} .pst-meter u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--paper);opacity:.55;} .pst-fchart{margin-top:12px;}
   .pst-sweep{border-left:3px solid var(--gold);padding-left:14px;background:linear-gradient(90deg,var(--gold-soft),transparent) no-repeat;background-size:0% 100%;animation:pstSweep .9s .25s ease-out forwards;} .pst-sweep.pst-warn{border-left-color:var(--incorrect);background-image:linear-gradient(90deg,color-mix(in srgb,var(--incorrect) 14%,transparent),transparent);} @keyframes pstSweep{to{background-size:100% 100%;}} @media (prefers-reduced-motion:reduce){.pst-sweep{animation:none;background-size:100% 100%;}}
   .pst-formula{font-family:'IBM Plex Mono',monospace;font-size:18px;line-height:1.45;color:var(--gold);background:var(--surface2);border:1px solid var(--hair);border-radius:12px;padding:12px 14px;margin:2px 0 10px;overflow-wrap:anywhere;}
   .pst-vars{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;font-size:13.5px;} .pst-vars li{display:flex;gap:10px;} .pst-vars b{font-family:'IBM Plex Mono',monospace;color:var(--gold);min-width:34px;}
@@ -12760,6 +12762,11 @@ function podcastAutoSlides(text, key, domainKey, label){
   const forms = FORMULAS.filter(f => (!domainKey || f.domain === domainKey || f.domain === 'general') && f.name.length >= 5).map(f => ({ f, v: f.name.toLowerCase() })).sort((a, b) => b.v.length - a.v.length);
   const missed = (DATA.missed || []).map(id => allQuestions().find(q => q.id === id)).filter(q => q && Array.isArray(q.choices) && q.choices.length === 4 && (!domainKey || q.domain === domainKey)).slice(0, 40).map(q => ({ q, w: mwWords(q.q + ' ' + q.choices[q.correct]) }));
   const seenTerm = new Map(), seenQ = new Set(); let last = -9, lastQ = -9;
+  // Where you stand in this domain, early on, so the lesson starts from your own numbers.
+  try{
+    const dm0 = domainKey && DOMAINS.find(d => d.key === domainKey), ds0 = domainKey && DATA.domainStats && DATA.domainStats[domainKey];
+    if(dm0 && ds0 && ds0.total >= 4 && chunks.length >= 4){ const pc = Math.round(ds0.correct / ds0.total * 100); out.push({ at:1, kind:'stand', src:'auto', title:'Your accuracy here', pct:pc, target:75, text:ds0.total + ' answered in ' + dm0.name + ', ' + dm0.weight + '% of the exam. The line marks 75%.' }); last = 1; }
+  }catch(e){}
   const numRe = /\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand|k))?|\b\d+(?:\.\d+)?\s?(?:%|percent|years?|months?|days?|times)\b/gi;
   chunks.forEach((t, i) => {
     if(i === 0 || out.length >= 40) return;
@@ -12779,6 +12786,12 @@ function podcastAutoSlides(text, key, domainKey, label){
     // 4. the numbers
     const nums = t.match(numRe);
     if(nums && nums.length){ out.push({ at:i, kind:'number', src:'auto', big:nums[0].replace(/\s+/g, ' '), text:stageClip(t, 150) }); last = i; return; }
+    // 4b. a set of the key numbers this sentence is about
+    if(i - last >= 2){
+      const cw2 = mwWords(t); let bestK = null, bk = 0;
+      KEY_NUMBERS.forEach(k => { if(domainKey && k.domain !== domainKey) return; const kw = mwWords(k.label); let n = 0; kw.forEach(w => { if(cw2.has(w)) n++; }); if(n > bk && n >= 2 && !seenTerm.has('kn:' + k.label)){ bk = n; bestK = k; } });
+      if(bestK){ const rows = KEY_NUMBERS.map(k => { let n = 0; mwWords(k.label).forEach(w => { if(cw2.has(w)) n++; }); return { k, n }; }).filter(x => x.k.domain === bestK.domain && x.n >= 2).sort((p, q) => q.n - p.n).slice(0, 4).map(x => x.k); rows.forEach(k => seenTerm.set('kn:' + k.label, i)); out.push({ at:i, kind:'keynums', src:'auto', title:'Numbers to know', rows:rows.map(k => ({ label:k.label, value:k.value })), text:stageClip(bestK.hook || '', 150) }); last = i; return; }
+    }
     // 5. nothing concrete matched: put the point itself on screen, so the screen keeps moving with the talk
     const warn = /\b(trap|mistake|careful|watch (?:out|for)|common error|tricky|catch)\b/i.test(t), cue = /\b(remember|key|always|never|exam (?:loves|tests|asks|wants)|the rule|rule of thumb|important|difference|only if|unless|must|first|second|third|finally)\b/i.test(t);
     if((warn || cue || i - last >= 3) && t.length >= 40){ out.push({ at:i, kind:'point', src:'auto', tone: warn ? 'warn' : 'idea', title: warn ? 'Watch for this' : cue ? 'Key idea' : 'In short', text:stageClip(t, 170) }); last = i; }
@@ -13040,7 +13053,13 @@ function stageSlideNode(sl){
     d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
   } else if(sl.kind === 'formula'){
     const vars = (Array.isArray(sl.vars) ? sl.vars : []).slice(0, 6).map(v => `<li><b>${E(stageClip(v.sym || v[0], 12))}</b><span>${E(stageClip(v.meaning || v[1], 70))}</span></li>`).join('');
+    d.dataset.chart = (typeof FORMULA_CHARTS !== 'undefined' && FORMULA_CHARTS[sl.title]) ? sl.title : '';
     d.innerHTML = `<div class="pst-kicker">Formula</div><div class="pst-title">${E(sl.title)}</div><div class="pst-formula">${E(sl.formula)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : ''}${vars ? `<ul class="pst-vars">${vars}</ul>` : ''}${typeof FD_GENS !== 'undefined' && FD_GENS[sl.title] ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('formula',${stageEsc(JSON.stringify(sl.title)).replace(/'/g, '&#39;')})">Drill this formula</button></div>` : ''}`;
+  } else if(sl.kind === 'keynums'){
+    d.innerHTML = `<div class="pst-kicker">Numbers to know</div><div class="pst-kn">${(sl.rows || []).map(r => `<div class="pst-kn-r"><span>${E(r.label)}</span><b>${E(r.value)}</b></div>`).join('')}</div>${sl.text ? `<div class="pst-why">${E(sl.text)}</div>` : ''}`;
+  } else if(sl.kind === 'stand'){
+    const pc = sl.pct;
+    d.innerHTML = `<div class="pst-kicker">${E(sl.title)}</div><div class="pst-big">${pc === null ? '—' : pc + '%'}</div><div class="pst-meter"><i style="width:${pc === null ? 0 : pc}%"></i><u style="left:${sl.target}%"></u></div><div class="pst-text">${E(sl.text)}</div>`;
   } else if(sl.kind === 'number'){
     d.innerHTML = `<div class="pst-kicker">${E(sl.title || 'By the numbers')}</div><div class="pst-big">${E(sl.big)}</div><div class="pst-text">${E(sl.text || '')}</div>`;
   } else if(sl.kind === 'compare'){
@@ -13056,6 +13075,7 @@ function stageSlideNode(sl){
   } else {
     d.innerHTML = `<div class="pst-kicker">${E(sl.title || 'Key idea')}</div><div class="pst-text pst-lg pst-sweep${sl.tone === 'warn' ? ' pst-warn' : ''}">${E(sl.text || '')}</div>`;
   }
+  if(d.dataset && d.dataset.chart){ try{ const r = tcBuild(FORMULA_CHARTS[d.dataset.chart].args); if(r && !r.error && r.row){ const w = document.createElement('div'); w.className = 'pst-fchart'; w.appendChild(r.row); d.appendChild(w); } }catch(e){} }
   if(sl.src === 'tutor'){ const b = document.createElement('div'); b.className = 'pst-from'; b.textContent = 'From your tutor'; d.insertBefore(b, d.firstChild); }
   return d;
 }
@@ -29263,7 +29283,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.470';
+const BUILD_ID = '2026-10-22.472';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
