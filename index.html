@@ -1847,6 +1847,11 @@
   .tt-lessons{margin:0 0 6px;}
   body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
   .tt-planstrip{grid-column:1 / -1;margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--hair);font-size:12.5px;line-height:1.4;}
+  .tt-planstrip .tps-line{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:0;font:inherit;color:var(--muted);text-align:left;cursor:pointer;}
+  div.tps-line{cursor:default;}
+  .tps-lead{font-weight:700;color:var(--paper);white-space:nowrap;}
+  .tps-nx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tps-go{color:var(--gold);font-weight:700;white-space:nowrap;}
   .tt-planstrip .tps-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
   .tt-planstrip .linklike{display:none;}
   .tt-planstrip .tps-bar{height:3px;border-radius:2px;background:var(--hair);margin:8px 0 0;overflow:hidden;}
@@ -1857,6 +1862,7 @@
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
   #tutorCard #tutorContextNote{display:none;}
   #tutorCard > #tutorSnapshot{display:none;}
+  #tutorCard #podHeroKicker, #tutorCard #podHeroSub, #tutorCard .tt-ask > p.hint, #tutorCard .chip-more{display:none !important;}
   #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
@@ -1864,7 +1870,7 @@
   #tutorCard > .card-head{margin-bottom:8px;}
   #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
   #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
-  #tutorCard .tt-planstrip{padding:8px 0 0;margin:8px 0 0;font-size:12.5px;}
+  #tutorCard .tt-planstrip{padding:8px 0 0;margin:8px 0 0;font-size:13px;}
   #tutorCard .tt-planstrip .tps-top .linklike{display:none;}
   #tutorCard .tt-planstrip .tps-bar{margin-top:6px;}
   #tutorCard .tt-planstrip .tps-next{margin-top:6px;}
@@ -1874,7 +1880,7 @@
   #tutorCard #podcastHero .pod-hero-sub{display:none;}
   #tutorCard #podcastHero .pod-hero-title{font-size:17px;margin:2px 0 0;}
   #tutorCard #podcastHero .pod-hero-btn{grid-column:2;grid-row:1 / span 2;width:auto;min-height:40px;padding:6px 16px;font-size:14px;margin:0;}
-  #tutorCard #tutorThread{max-height:none;min-height:150px;}
+  #tutorCard #tutorThread{max-height:none;min-height:max(150px, calc(var(--vh-real, 100vh) - 560px));}
   #tutorCard .tutor-bubble, #tutorCard .tutor-msg{font-size:14.5px;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
   .tt-lessons > .card-head{margin-bottom:4px;}
@@ -13891,7 +13897,10 @@ function ttPlanStripRefresh(){
       else line = adv ? `<b>\u2713 ${escapeHtml(adv.titles.length === 1 ? adv.titles[0] : adv.titles.length + ' steps')} done.</b>` : `<b>Today's plan</b> \u00b7 ${done} of ${total} done`;
       if(nxt && nxt !== own) go = `<div class="tps-next"><span>Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><button type="button" class="pt-go" onclick="runPlanStep('${nxt.id}')">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'}</button></div>`;
       else if(!nxt) go = `<div class="tps-next"><span>That is everything on today's plan.</span></div>`;
-      html = `<div class="tps-top"><span>${line}</span><button type="button" class="linklike" onclick="showTab('study')">Open plan</button></div><div class="tps-bar"><i style="width:${pct}%"></i></div>${go}`;
+      const lead = own ? (own.done ? '\u2713 Done' : `Step ${plan.steps.indexOf(own) + 1} of ${total}`) : `${done} of ${total} done`;
+      html = nxt && nxt !== own
+        ? `<button type="button" class="tps-line" onclick="runPlanStep('${nxt.id}')"><span class="tps-lead">${lead}</span><span class="tps-nx">Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><span class="tps-go">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u203a</span></button>`
+        : `<div class="tps-line"><span class="tps-lead">${lead}</span><span class="tps-nx">${nxt ? 'Today\'s plan' : 'Plan done for today'}</span></div>`;
     }
   }catch(e){ html = ''; }
   if(el.dataset.h !== html){ el.dataset.h = html; el.innerHTML = html; }
@@ -29564,12 +29573,12 @@ function tutorSuggestions(){
 }
 function renderTutorChips(){
   const host = document.getElementById('tutorChips'); if(!host) return;
-  const all = tutorSuggestions(); const LIMIT = 6;
+  const all = tutorSuggestions(); const LIMIT = 3;
   const shown = _tutorChipsMore ? all : all.slice(0, LIMIT);
   host.innerHTML = '';
   host.classList.toggle('open', _tutorChipsMore);
   shown.forEach((x, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x.label; b.onclick = () => { if(typeof tutorBusy !== 'undefined' && tutorBusy) return; _tutorChipsMore = false; x.run(); }; host.appendChild(b); });
-  if(all.length > LIMIT){ const m = document.createElement('button'); m.type = 'button'; m.className = 'chip chip-more'; m.textContent = _tutorChipsMore ? 'Less' : 'More'; m.setAttribute('aria-expanded', String(_tutorChipsMore)); m.onclick = () => { _tutorChipsMore = !_tutorChipsMore; renderTutorChips(); }; host.appendChild(m); }
+  if(false && all.length > LIMIT){ const m = document.createElement('button'); m.type = 'button'; m.className = 'chip chip-more'; m.textContent = _tutorChipsMore ? 'Less' : 'More'; m.setAttribute('aria-expanded', String(_tutorChipsMore)); m.onclick = () => { _tutorChipsMore = !_tutorChipsMore; renderTutorChips(); }; host.appendChild(m); }
   host.style.display = shown.length ? '' : 'none';
 }
 
@@ -29708,7 +29717,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.500';
+const BUILD_ID = '2026-10-23.501';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
