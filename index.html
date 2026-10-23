@@ -12180,8 +12180,10 @@ function ebOpenForTopic(wk, weakDom){
   return ebOpenCard(pick, { again: () => ebOpenForTopic(wk, weakDom) });
 }
 
-function askTutorAbout(text){
+function askTutorAbout(text, slide){
   showTab('tutor');
+  // Whatever you were looking at goes on the tutor's board first, so the conversation starts from the same thing on screen.
+  if(slide){ try{ executeTutorTool('show_on_screen', slide); }catch(e){} }
   setTimeout(() => { try{ sendTutorMessage(text); }catch(e){} }, 60);
   try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){}
 }
@@ -12835,6 +12837,7 @@ function tutorLessonOffer(){
   const lcx = document.getElementById('lessonsCard'); if(lcx && lcx.classList.contains('has-lesson')) return;
   const t = document.getElementById('podHeroTitle'), hb = document.getElementById('podcastHeroBtn');
   const opts = [];
+  if(window._ttMissShown) opts.push({ label: 'Why did I miss this?', run: () => sendTutorMessage('Walk me through the question on the board. Why is my pick wrong and what is the right way to think about it? Show the key idea on the board.') });
   if(t && hb && t.textContent.trim()){
     const lab = hb.textContent.replace(/[\u25b6\s]+/g, ' ').trim();
     opts.push({ label: /resume/i.test(lab) ? 'Resume my lesson' : 'Teach me today\u2019s lesson', run: () => ttStartLesson() });
@@ -13783,6 +13786,13 @@ function ttIdleBoard(){
   if(typeof stageState === 'undefined' || stageState.cur || (naturalSpeechState && naturalSpeechState.active)) return;
   if(typeof tutorMessages !== 'undefined' && tutorMessages.length) return;
   const lc = document.getElementById('lessonsCard'); if(lc && lc.classList.contains('has-lesson')) return;
+  try{
+    const ms = DATA.missed || [], lastId = ms[ms.length - 1], qs = lastId && (DATA.questionStats || {})[lastId];
+    if(qs && Date.now() - (qs.lastSeenAt || 0) < 40 * 60000 && allQuestions().some(x => x.id === lastId)){
+      if(!stageInlineVisible()) ttEnsureStage();
+      stageShow({ kind:'question', qid:lastId, src:'tutor', at:0 }, 'tutor'); window._ttMissShown = lastId; return;
+    }
+  }catch(e){}
   const st = computeStats(), days = getDaysUntilExam(); const bits = [];
   if(days !== null && days >= 0) bits.push(days === 0 ? 'Exam day.' : days + (days === 1 ? ' day' : ' days') + ' to the exam.');
   if(st.totalAnswered && st.weakestMeta) bits.push(st.weakestMeta.name + ' is your weakest area.');
@@ -17265,7 +17275,7 @@ function fcKeepInView(){
 function askTutorAboutCard(){
   const c = fcQueue[fcIndex]; if(!c) return;
   if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen();
-  askTutorAbout('I am studying the flashcard "' + c.term + '" (' + c.def + ') Check whether I really understand it: ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.');
+  askTutorAbout('I am studying the flashcard "' + c.term + '" (' + c.def + ') Check whether I really understand it: ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.', { kind:'term', term:c.term, def:c.def });
 }
 let _fcUndo = null;
 function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b) return; const rc = document.getElementById('fcRecap'); const ok = _fcUndo && _fcUndo.queue === fcQueue && !(rc && rc.style.display === 'block'); b.classList.toggle('show', !!ok); }
@@ -29845,7 +29855,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.512';
+const BUILD_ID = '2026-10-23.513';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
