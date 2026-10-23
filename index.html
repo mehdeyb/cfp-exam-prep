@@ -1911,6 +1911,11 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{padding:10px 18px 0;}
   #tutorCard.tt-idle #tutorThread{display:none;}
   #tutorCard.tt-idle #ttActions{margin-top:10px;}
+  #tutorCard #podcastPlayer:not([style*="none"]){display:flex !important;flex-direction:column;}
+  #tutorCard #podcastPlayer > #podcastStage:not([style*="none"]){flex:1 1 auto;display:flex !important;flex-direction:column;}
+  #tutorCard.tt-idle #lessonsCard .pst-body{min-height:0;flex:1 1 auto;}
+  #tutorCard.tt-idle #lessonsCard .pst-title{font-size:clamp(26px,4vh,40px);}
+  #tutorCard.tt-idle #lessonsCard .pst-text{font-size:clamp(18px,2.6vh,24px);}
   #tutorCard.tt-idle #lessonsCard .pst-body{min-height:clamp(110px, 18vh, 200px);}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard:has(#lessonsCard.has-lesson) #lessonsCard .pst-body{min-height:clamp(180px, 28vh, 300px);}
   #tutorCard #lessonsCard .pst-body{min-height:clamp(190px, 29vh, 400px);}
@@ -3298,10 +3303,10 @@
   </div>
 
   <div class="tabbar" id="appTabbar">
-    <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Today</span></button>
+    <button class="tab-btn active" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
+    <button class="tab-btn" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Today</span></button>
     <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Learn</span></button>
     <button class="tab-btn" data-tab="examday" onclick="showTab('examday',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
-    <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
   </div>
 
   <div class="storage-warning" id="storageWarning" style="display:none;" role="alert">
@@ -3937,7 +3942,7 @@
       </div>
       <div id="flashcardFullscreenHost">
         <div class="fc-fullscreen-inner">
-          <button class="dp-close fc-fullscreen-close" id="fcFullscreenCloseBtn" onclick="exitFlashcardFullscreen()" aria-label="Exit fullscreen" title="Exit fullscreen">
+          <button class="dp-close fc-fullscreen-close" id="fcFullscreenCloseBtn" onclick="closeFlashcardsToHome()" aria-label="Exit fullscreen" title="Exit fullscreen">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
           <button type="button" class="fc-undo" id="fcUndoBtn" onclick="undoFlashcardRating()" aria-label="Undo last rating">↶ Undo</button>
@@ -4520,6 +4525,7 @@ function showTab(name, opts){
     updateTutorContextNote();
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
     if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} try{ ttIdleBoard(); }catch(e){} }
+    if(name === 'tutor'){ ttFit(); setTimeout(ttFit, 120); setTimeout(ttFit, 700); }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
@@ -7177,8 +7183,7 @@ async function loadData(){
     if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
   }, 1200);
   // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
-  if(DATA.lastTab && DATA.lastTab !== 'study'){ await runDeferredInit(); showTab(DATA.lastTab); }
-  else requestAnimationFrame(() => setTimeout(() => { if(window.requestIdleCallback) requestIdleCallback(() => { runDeferredInit(); }, { timeout: 1500 }); else runDeferredInit(); }, 0));
+  { await runDeferredInit(); showTab('tutor'); }
   window._dataReady = true;
   try{ if(kokoroWanted()) setTimeout(() => { if(KOKORO.state === 'idle') kokoroLoad(); }, 4000); }catch(e){}
   if(loadFailed){
@@ -16506,6 +16511,7 @@ function renderFlashcardStats(){
 }
 
 function enterFlashcardFullscreen(){
+  try{ const a = document.querySelector('.tab-panel.active'); let o = a ? a.id.replace(/^tab-/,'') : ''; if(o !== 'tutor' && o !== 'study' && window._prevTab && Date.now() - window._prevTab.at < 3000) o = window._prevTab.name; window._fcOrigin = (o === 'tutor' || o === 'study') ? o : ''; }catch(e){ window._fcOrigin = ''; }
   try{ if(_focus) focusExit({ stay:true }); }catch(e){}
   document.body.classList.add('flashcard-fullscreen');
   document.getElementById('appHeader').style.display = 'none';
@@ -16519,6 +16525,10 @@ function enterFlashcardFullscreen(){
   lockBodyScroll();
 }
 
+function closeFlashcardsToHome(){
+  const o = window._fcOrigin; exitFlashcardFullscreen();
+  if(o){ window._fcOrigin = ''; try{ showTab(o); }catch(e){} }
+}
 function exitFlashcardFullscreen(){
   stopSpeech();
   document.body.classList.remove('flashcard-fullscreen');
@@ -27699,6 +27709,20 @@ function tutorParseNext(reply){
   const opts = m[1].split('|').map(x => x.trim()).filter(x => x && x.length <= 60).slice(0, 4);
   return { text: String(reply).slice(0, m.index).trim(), opts };
 }
+function ttFit(){
+  try{
+    const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
+    if(!c || !p || !p.classList.contains('active')) return;
+    c.style.minHeight = '0';
+    const top = c.getBoundingClientRect().top + (window.scrollY || 0);
+    const bar = document.getElementById('appTabbar'); let bottomBar = 0;
+    if(bar && getComputedStyle(bar).position === 'fixed'){ bottomBar = bar.getBoundingClientRect().height; }
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    c.style.minHeight = Math.max(420, Math.round(h - top - bottomBar - 14)) + 'px';
+  }catch(e){}
+}
+window.addEventListener('resize', () => setTimeout(ttFit, 60));
+window.addEventListener('orientationchange', () => setTimeout(ttFit, 300));
 function tutorClearActions(){ const h = document.getElementById('ttActions'); if(h){ h.innerHTML = ''; h.classList.remove('on'); h.dataset.src = ''; h.dataset.k = ''; } }
 function tutorAddNext(bubble, opts){
   const host = document.getElementById('ttActions'); if(!host) return;
@@ -29969,7 +29993,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.529';
+const BUILD_ID = '2026-10-23.532';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
