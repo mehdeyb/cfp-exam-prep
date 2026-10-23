@@ -10872,12 +10872,21 @@ function renderResultReadiness(){
   try{
     const missedHere = (session && session.queue || []).filter((q, i) => { const e = (session.answerLog || []).find(x => x.index === i); return e ? !e.correct : (session.examAnswers && session.examAnswers[i] !== undefined && session.examAnswers[i] !== q.correct); }).filter(q => (DATA.missed || []).includes(q.id) && !isGenQ(q));
     const reviewing = s && /Review misses/i.test(s.cta || '');
-    if(missedHere.length >= 2 && !reviewing && session.mode !== 'review') walk = `<div class="rr-walk"><span>You missed ${missedHere.length} here.</span><button type="button" class="btn ghost" onclick="mwOpenFromResults()">Walk through them</button></div>`;
+    if(missedHere.length >= 2 && !reviewing && session.mode !== 'review') walk = `<div class="rr-walk"><span>You missed ${missedHere.length} here.</span><button type="button" class="btn ghost" onclick="mwOpenFromResults()">Walk through them</button>${aiFeaturesAvailable ? '<button type="button" class="btn ghost" onclick="lessonFromResults()">Hear a lesson on it</button>' : ''}</div>`;
   }catch(e){}
   el.innerHTML = top + nextHtml + walk;
   el.style.display = (top || nextHtml || walk) ? 'block' : 'none';
 }
 
+function lessonFromResults(){
+  const miss = (session && session.queue || []).filter((q, i) => { const e = (session.answerLog || []).find(x => x.index === i); return e && !e.correct; });
+  if(!miss.length) return;
+  const cnt = {}; miss.forEach(q => { cnt[q.domain] = (cnt[q.domain] || 0) + 1; });
+  const dk = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0], dm = DOMAINS.find(d => d.key === dk);
+  const stems = miss.filter(q => q.domain === dk).slice(0, 3).map(q => String(q.q || '').replace(/\s+/g, ' ').slice(0, 110));
+  exitToMenu();
+  lessonOnTopic((dm ? dm.name : 'This topic') + ': what you just missed', 'Built from the questions you missed: ' + stems.join(' | '));
+}
 function mwOpenFromResults(){
   const ids = (session && session.queue || []).filter((q, i) => { const e = (session.answerLog || []).find(x => x.index === i); return e && !e.correct; }).map(q => q.id);
   exitToMenu();
@@ -29254,7 +29263,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.469';
+const BUILD_ID = '2026-10-22.470';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
