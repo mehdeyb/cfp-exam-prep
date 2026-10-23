@@ -1996,6 +1996,12 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active{grid-template-columns:auto minmax(0,1fr);column-gap:20px;row-gap:10px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1;grid-row:1;flex-direction:row;align-items:center;gap:20px;margin:0;}
   body.os-one #tab-study #todayAsk{display:none !important;}
+  /* The pace line and the tutor's note are slim bars locked under the plan. */
+  body.os-one #tab-study.active{display:flex;flex-direction:column;}
+  body.os-one #tab-study #coachLine{order:20;margin:8px 0 0;padding:6px 12px;font-size:12px;line-height:1.35;}
+  body.os-one #tab-study #tutorNoteCard{order:21;margin:6px 0 0;padding:7px 12px;font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  body.os-one #tab-study #tutorNoteCard[style*="none"]{display:none;}
+  body.os-one #tab-study #coachLine.empty{display:none;}
   /* One slim top line: tabs and the two icons share it; the brand line and its row are gone. */
   body.os-one .eyebrow{display:none;}
   body.os-one #appHeader{position:absolute;top:8px;right:max(14px,env(safe-area-inset-right,0px));margin:0;z-index:60;}
@@ -2013,9 +2019,9 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1 / -1;justify-content:space-between;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{flex:1 1 auto;justify-content:space-around;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk button{width:auto;padding:0 16px;min-height:40px;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #coachLine{grid-column:1 / -1;grid-row:2;margin:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #tutorNoteCard{grid-column:1 / -1;grid-row:3;margin:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:1 / -1;grid-row:4;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:1 / -1;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #coachLine{grid-column:1 / -1;grid-row:3;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #tutorNoteCard{grid-column:1 / -1;grid-row:4;margin:0;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:3;column-gap:24px;}
   @media (max-width:900px){ html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:2;} }
@@ -27997,7 +28003,8 @@ function osFitStudy(){
     const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
-    const avail = Math.max(240, Math.round(h - top - bb - 14));
+    let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
+    const avail = Math.max(240, Math.round(h - top - bb - 14 - notes));
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
     const shed = [...c.querySelectorAll('.pt-pace, .pt-sub, .pt-block, .pt-today, .pt-mins')];
@@ -30387,7 +30394,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.577';
+const BUILD_ID = '2026-10-23.578';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
