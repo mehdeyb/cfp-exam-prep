@@ -2010,7 +2010,17 @@
   /* The pace line and the tutor's note are slim bars locked under the plan. */
   body.os-one #tab-study.active{display:flex;flex-direction:column;}
   body.os-one #tab-study #coachLine{order:20;margin:8px 0 0;padding:6px 12px;font-size:12px;line-height:1.35;}
-  body.os-one #tab-study #tutorNoteCard{order:21;margin:6px 0 0;padding:7px 12px;font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  body.os-one #tab-study #tutorNoteCard{order:21;margin:6px 0 0;padding:3px 10px 3px 12px;border-radius:10px;font-size:12px;line-height:1.3;}
+  body.os-one #tab-study #tutorNoteCard:not([style*="none"]){display:flex !important;align-items:center;gap:10px;}
+  body.os-one #tab-study #tutorNoteCard .tn-kicker{margin:0;flex:none;font-size:10.5px;letter-spacing:.05em;white-space:nowrap;}
+  body.os-one #tab-study #tutorNoteCard .tn-text{flex:1 1 auto;min-width:0;font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  body.os-one #tab-study #tutorNoteCard .tn-foot{margin:0;flex:none;gap:10px;}
+  body.os-one #tab-study #tutorNoteCard .tn-go, body.os-one #tab-study #tutorNoteCard .tn-x{min-height:26px;padding:2px 0;font-size:12px;white-space:nowrap;}
+  @media (max-width:640px){
+    body.os-one #tab-study #tutorNoteCard:not([style*="none"]){flex-wrap:wrap;row-gap:0;}
+    body.os-one #tab-study #tutorNoteCard .tn-text{flex:1 1 100%;order:3;-webkit-line-clamp:2;}
+    body.os-one #tab-study #tutorNoteCard .tn-foot{margin-left:auto;}
+  }
   body.os-one #tab-study #tutorNoteCard[style*="none"]{display:none;}
   body.os-one #tab-study #coachLine.empty{display:none;}
   /* One slim top line: tabs and the two icons share it; the brand line and its row are gone. */
@@ -30431,7 +30441,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.585';
+const BUILD_ID = '2026-10-23.586';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
