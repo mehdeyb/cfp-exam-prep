@@ -28003,6 +28003,9 @@ function osFitStudy(){
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     // Tighter rows before any step is hidden: every step stays visible whenever it can.
     c.classList.add('pt-dense'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.2); return; }
+    // Still too much: shrink the whole thing a little rather than hide or scroll anything.
+    for(const z of [0.94, 0.88, 0.82, 0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
+    c.style.zoom = '';
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(false && rowsHost && steps.length > 2 && !window._ptAll){
@@ -28017,7 +28020,6 @@ function osFitStudy(){
       if(!hidden) foot.remove();
       if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     }
-    if(window._ptAll && rowsHost) rowsHost.appendChild(mkBtn('Show fewer', () => { window._ptAll = false; osFitStudy(); }));
     // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
@@ -30378,7 +30380,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.575';
+const BUILD_ID = '2026-10-23.576';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
