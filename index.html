@@ -23520,22 +23520,35 @@ function adaptiveInterleave(queue, reasons){
 // The flashcard that covers the idea a question just tested, shown right under a miss in a study session, so the fix is on screen
 // and the same card is already ranked up on the Flashcards tab for later.
 function cardForQuestion(q){
-  // The card should cover what the question was really testing: the answer and its explanation outrank words that only appear in the setup.
+  // The card must cover the idea the question is about: the topic named in the question itself counts most, then the answer.
+  // A term that shows up all over the bank (like "adjusted gross income") says little about this question, so it counts for less,
+  // and when nothing fits well no card is shown at all rather than an unrelated one.
   const core = fcNorm([(q.choices || [])[q.correct] || '', (q.rationale || []).join(' ')].join(' '));
   const stem = fcNorm([q.q, q.scenario || ''].join(' '));
+  if(!window._qBlobs){ try{ window._qBlobs = allQuestions().map(x => fcNorm([x.q, (x.choices || [])[x.correct] || '', (x.rationale || []).join(' ')].join(' '))); window._dfMemo = {}; }catch(e){ window._qBlobs = []; window._dfMemo = {}; } }
+  const df = key => { const m = window._dfMemo; if(m[key] === undefined){ let n = 0; for(const b of window._qBlobs) if(b.indexOf(key) >= 0) n++; m[key] = n; } return m[key]; };
+  const words = t => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length > 4 && !/^[0-9]+$/.test(w)));
+  const stemW = words(q.q + ' ' + (q.scenario || '')), coreW = words(((q.choices || [])[q.correct] || '') + ' ' + (q.rationale || []).join(' '));
   let best = null, bestScore = 0;
   allFlashcards().forEach(c => {
     if(c.domain !== q.domain) return;
+    let score = 0;
     for(const f of fcTermForms(c)){
-      if(f.weight < 1) continue;
+      if(f.weight < 1 || !/[a-z]{4,}/.test(f.n)) continue;
       const key = ' ' + f.n.trim() + ' ';
       const inCore = core.indexOf(key) >= 0, inStem = stem.indexOf(key) >= 0;
       if(!inCore && !inStem) continue;
-      const score = f.n.length + (inCore ? 1000 : 0);
-      if(score > bestScore){ best = c; bestScore = score; }
+      const generic = df(key) > 18;
+      let sc = f.n.length * 4 + (inStem ? 400 : 0) + (inCore ? 120 : 0);
+      if(generic && !inStem) sc *= 0.15; else if(generic) sc *= 0.6;
+      if(sc > score) score = sc;
     }
+    // Overlap between the card's own wording and what the question and its answer are about.
+    const dw = words(c.term + ' ' + c.def); let ov = 0; dw.forEach(w => { if(stemW.has(w)) ov += 2; else if(coreW.has(w)) ov += 1; });
+    if(score > 0) score += ov * 25;
+    if(score > bestScore){ best = c; bestScore = score; }
   });
-  return best;
+  return bestScore >= 260 ? best : null;
 }
 function showCardForQuestion(q, isCorrect){
   const box = document.getElementById('qCardLink'); if(!box) return;
@@ -30468,7 +30481,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.594';
+const BUILD_ID = '2026-10-23.596';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
