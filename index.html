@@ -1996,6 +1996,19 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active{grid-template-columns:auto minmax(0,1fr);column-gap:20px;row-gap:10px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1;grid-row:1;flex-direction:row;align-items:center;gap:20px;margin:0;}
   body.os-one #tab-study #todayAsk{display:none !important;}
+  /* One slim top line: tabs and the two icons share it; the brand line and its row are gone. */
+  body.os-one .eyebrow{display:none;}
+  body.os-one #appHeader{position:absolute;top:8px;right:max(14px,env(safe-area-inset-right,0px));margin:0;z-index:60;}
+  body.os-one .header-btn-row{gap:6px;}
+  body.os-one .settings-toggle, body.os-one .theme-toggle{width:38px;height:38px;}
+  @media (min-width:641px){
+    body.os-one .wrap{padding-top:4px;}
+    body.os-one .tabbar{margin:0 100px 10px 0;}
+  }
+  @media (max-width:640px){
+    body.os-one #tab-study #scoreRow{padding-right:92px;}
+    body.os-one .wrap{padding-top:4px;}
+  }
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1 / -1;justify-content:space-between;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{flex:1 1 auto;justify-content:space-around;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk button{width:auto;padding:0 16px;min-height:40px;}
@@ -27989,7 +28002,7 @@ function osFitStudy(){
     for(const x of shed){ if(c.scrollHeight <= avail + 2) break; x.classList.add('os-shed'); x.style.display = 'none'; }
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     // Tighter rows before any step is hidden: every step stays visible whenever it can.
-    c.classList.add('pt-dense'); if(c.scrollHeight <= avail + 2) return;
+    c.classList.add('pt-dense'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.2); return; }
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(false && rowsHost && steps.length > 2 && !window._ptAll){
@@ -30365,7 +30378,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.573';
+const BUILD_ID = '2026-10-23.575';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
