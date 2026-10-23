@@ -3098,7 +3098,7 @@
   body.screen-active #screenHost{display:flex;position:fixed;inset:0;z-index:210;background-color:var(--ink);background-image:radial-gradient(ellipse 800px 500px at 10% -10%, var(--bg-glow-1), transparent 60%),radial-gradient(ellipse 800px 500px at 100% 0%, var(--bg-glow-2), transparent 60%);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));animation:quizIn .32s var(--ease);}
   .scr-inner{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;min-height:min(100%,640px);}
   .scr-body{flex:1;padding:8px 2px;min-height:300px;} .scr-body .pst-title{font-size:30px;} .scr-body .pst-text{font-size:17px;} .scr-body .pst-big{font-size:64px;} .scr-body .pst-formula{font-size:22px;}
-  .scr-foot{display:flex;align-items:center;gap:10px;padding:12px 0 4px;} .scr-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .scr-foot{display:flex;align-items:center;gap:10px;padding:12px 0 4px;} .scr-foot #scrPlay{flex:1;background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;} :root[data-theme="dark"] .scr-foot #scrPlay{color:#1a1608;} #podcastStage .pst-idb{display:none;} .scr-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
   @media (max-width:520px){ .pst-cols{grid-template-columns:1fr;} .pst-title{font-size:21px;} }
 
   /* Type floor: body-level text never below 12px, small caps labels never below 11px. */
@@ -3296,10 +3296,10 @@
         </div>
         <div class="scr-foot">
           <button type="button" class="btn ghost" id="scrPrev" onclick="stageStep(-1)" aria-label="Earlier">‹</button>
-          <span class="scr-count" id="scrCount"></span>
+          <button type="button" class="btn" id="scrPlay" onclick="stagePlayToggle()">Play lesson</button>
           <button type="button" class="btn ghost" id="scrNext" onclick="stageStep(1)" aria-label="Later">›</button>
           <button type="button" class="btn ghost" id="scrLive" onclick="stageLive()" style="display:none;">Latest</button>
-          <button type="button" class="btn" id="scrPlay" onclick="stagePlayToggle()" style="margin-left:auto;">Play lesson</button>
+          <span class="scr-count" id="scrCount"></span>
         </div>
       </div>
     </div>
@@ -12137,14 +12137,15 @@ function podcastSelectionChanged(){
 function podcastLabelForCacheKey(key){
   const parts = key.split('-');
   const length = parts.pop(); // length is always the final segment
-  const lengthLabel = length === 'short' ? 'short' : length === 'deep' ? 'deep dive' : 'standard';
-  if(parts[0] === 'personalized') return `From your tutor — about your progress (${lengthLabel})`;
-  if(parts[0] === 'custom'){ const tl = (DATA.tutorLessons || {})[parts[1]]; return `${tl ? tl.title : 'Tutor lesson'} (${lengthLabel})`; }
+  const lengthLabel = length === 'short' ? 'short' : length === 'deep' ? 'deep dive' : '';
+  const lenTag = lengthLabel ? ` (${lengthLabel})` : '';
+  if(parts[0] === 'personalized') return `Your progress, explained${lenTag}`;
+  if(parts[0] === 'custom'){ const tl = (DATA.tutorLessons || {})[parts[1]]; return `${tl ? tl.title : 'Tutor lesson'}${lenTag}`; }
   const [domainKey, type] = parts;
   const domainMeta = DOMAINS.find(d => d.key === domainKey);
   const domainName = domainMeta ? domainMeta.name : domainKey;
-  const typeLabel = type === 'formulas' ? 'Key formulas explained' : type === 'mistakes' ? 'Common mistakes' : 'Domain overview';
-  return `${domainName} — ${typeLabel} (${lengthLabel})`;
+  const typeLabel = type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview';
+  return `${domainName}: ${typeLabel}${lenTag}`;
 }
 
 function renderPodcastLibrary(){
@@ -13022,7 +13023,7 @@ function stageSlideNode(sl){
     const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){} return nx ? `<button type="button" class="btn ghost" onclick="stageCloseFull();planGoNext('${nx.id}')">Next: ${stageEsc(stageClip(nx.title, 34))} →</button>` : ''; })()}${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
-    d.innerHTML = `<div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Terms, formulas, numbers and the questions you missed appear here as they come up.</div>'}`;
+    d.innerHTML = `<div class="pst-idb"><div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div></div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Press play. Terms, formulas and quick checks show up here as your tutor goes.</div>'}`;
   } else if(sl.kind === 'term'){
     d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
   } else if(sl.kind === 'formula'){
@@ -29250,7 +29251,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.465';
+const BUILD_ID = '2026-10-22.466';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
