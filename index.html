@@ -7684,12 +7684,13 @@ function computeStats(){
   const cs = DATA.confidenceStats || {};
   const confidentStat = cs.confident || {correct:0,total:0};
   let calibrationFactor = 1;
-  if(confidentStat.total >= 5 && totalAnswered > 0){
+  if(confidentStat.total >= 8 && totalAnswered > 0){
     const confidentAcc = confidentStat.correct / confidentStat.total;
     const overallAcc = totalCorrect / totalAnswered;
-    if(confidentAcc < overallAcc){
-      calibrationFactor = Math.max(0.85, 1 - (overallAcc - confidentAcc));
-    }
+    // Only the part of the gap beyond ordinary sampling noise counts, so a few unlucky "very sure" answers cannot move the score.
+    const noise = Math.sqrt(Math.max(0.05, overallAcc * (1 - overallAcc)) / confidentStat.total);
+    const gap = overallAcc - confidentAcc - noise;
+    if(gap > 0) calibrationFactor = Math.max(0.85, 1 - gap);
   }
 
   // ---- The estimate itself ----
@@ -29310,7 +29311,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.474';
+const BUILD_ID = '2026-10-23.475';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
