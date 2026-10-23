@@ -3118,21 +3118,22 @@
   /* iPad landscape, fullscreen flashcards: use the width. The card sits on the left; the memory-trick buttons and the worked
      example sit beside it, so nothing important falls below the fold, and the answer bar spans the bottom. */
   @media (orientation:landscape) and (min-width:900px) and (min-height:600px){
-    body.flashcard-fullscreen .fc-fullscreen-inner{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto auto;column-gap:28px;align-items:start;align-content:start;max-width:min(720px,calc(100vw - 120px));width:100%;padding-top:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto auto;column-gap:28px;align-items:stretch;align-content:center;align-self:center;max-width:min(1040px,calc(100vw - 120px));width:100%;padding-top:0;margin:auto;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-progress{grid-column:1 / -1;grid-row:1;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{grid-column:1;grid-row:2 / 5;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{grid-column:1 / -1;grid-row:5;order:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]),
-    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]){grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;max-width:min(1120px,calc(100vw - 120px));}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]){grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;max-width:min(1040px,calc(100vw - 120px));}
     body.flashcard-fullscreen .fc-fullscreen-inner > #fcRecap{grid-column:2;grid-row:2;margin:0;}
-    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-row{grid-column:2;grid-row:3;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;margin-top:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-row{grid-column:2;grid-row:3;flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-self:center;gap:10px;margin-top:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-row .btn.ghost{width:100%;white-space:normal;min-height:46px;font-size:14px;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-box{grid-column:2;grid-row:4;margin-top:4px;font-size:15px;line-height:1.55;align-self:start;}
     /* The card and the two notes inside it read in one column here, because the card is narrower than a full-width one. */
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card,
-    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]) > .fc-card{display:block;padding:28px 30px;min-height:0;}
-    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:sticky;bottom:0;margin-top:14px;}
-    body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px));}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]) > .fc-card{display:flex;padding:28px 30px;min-height:clamp(300px,52vh,520px);}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:static;background:none;margin-top:14px;padding:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{min-height:clamp(300px,52vh,520px);}
+    body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:max(28px,env(safe-area-inset-bottom,0px));}
   }
 
   /* ---------- Screen layout: html[data-lay] follows the real window (rotation, split view) and the Screen layout setting ---------- */
@@ -29966,7 +29967,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.525';
+const BUILD_ID = '2026-10-23.527';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
