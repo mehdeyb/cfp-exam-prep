@@ -3323,8 +3323,8 @@
   </div>
 
   <div class="tabbar" id="appTabbar">
-    <button class="tab-btn active" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
-    <button class="tab-btn" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Today</span></button>
+    <button class="tab-btn active" data-tab="study" onclick="showTab('study',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg><span>Today</span></button>
+    <button class="tab-btn" data-tab="tutor" onclick="showTab('tutor',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4.2c-4.6 0-8.3 3.1-8.3 6.9 0 2.3 1.4 4.4 3.5 5.6-.1.9-.5 1.9-1.2 2.8 1.5-.1 2.8-.7 3.9-1.5.7.1 1.4.2 2.1.2 4.6 0 8.3-3.1 8.3-6.9s-3.7-7.1-8.3-7.1z"/></svg><span>Tutor</span></button>
     <button class="tab-btn" data-tab="reference" onclick="showTab('reference',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 6.2c-1.5-1.3-3.6-2.2-6.2-2.2v13.5c2.6 0 4.7.9 6.2 2.2 1.5-1.3 3.6-2.2 6.2-2.2V4c-2.6 0-4.7.9-6.2 2.2z"/></svg><span>Learn</span></button>
     <button class="tab-btn" data-tab="examday" onclick="showTab('examday',{fromBar:true})"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.7h17M8 3v4M16 3v4"/></svg><span>Exam Day</span></button>
   </div>
@@ -7206,7 +7206,7 @@ async function loadData(){
     if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
   }, 1200);
   // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
-  { await runDeferredInit(); showTab('tutor'); }
+  { await runDeferredInit(); showTab('study'); }
   window._dataReady = true;
   try{ if(kokoroWanted()) setTimeout(() => { if(KOKORO.state === 'idle') kokoroLoad(); }, 4000); }catch(e){}
   if(loadFailed){
@@ -26529,7 +26529,7 @@ function exitToMenu(){
   document.getElementById('modePanel').style.display = 'block';
   document.getElementById('blueprintCard').style.display = 'block';
   { const _fc = document.getElementById('focusCard'); if(_fc) _fc.style.display = 'block'; }
-  { const _o = window._quizOrigin; window._quizOrigin = ''; showTab(_o ? 'tutor' : (DATA && DATA.lastTab ? DATA.lastTab : 'study')); }
+  { const _o = window._quizOrigin; window._quizOrigin = ''; showTab(_o ? _o : (DATA && DATA.lastTab ? DATA.lastTab : 'study')); }
   closeDomainPicker();
   closeSettings();
   closeTvmTool();
@@ -30129,7 +30129,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.542';
+const BUILD_ID = '2026-10-23.543';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
