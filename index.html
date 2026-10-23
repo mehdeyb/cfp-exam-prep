@@ -1870,6 +1870,8 @@
   .cd-parts li::before{content:counter(cd);flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .cd-parts small{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
   .cd-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  .cd-actions .btn:first-child{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;}
+  :root[data-theme="dark"] .cd-actions .btn:first-child{color:#1a1608;}
   .cd-actions .cd-link{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 6px;font-family:inherit;}
   .cd-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:140;display:none;max-width:calc(100vw - 32px);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:10px 16px;min-height:44px;border-radius:22px;border:1px solid var(--gold);background:var(--surface);color:var(--gold);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28);}
   body.quiz-active .cd-pill, body.settings-active .cd-pill{display:none !important;}
@@ -12353,7 +12355,7 @@ function renderPodcastFocus(){
       const b = podcastBriefing();
       if(!b.focus.length){ html = `<b class="pf-h">What your tutor will cover</b>Answer a few questions first and the tutor will build this around your real gaps.`; }
       else {
-        html = `<b class="pf-h">${b.focus.some(f => f.kind === 'plan') ? 'Built from today’s plan' : 'What your tutor will cover'}</b>` + b.focus.slice(0, 3).map(f => `<div class="pf-row"><i>●</i><span>${escapeHtml(f.label)}${f.detail ? `<small>${escapeHtml(f.detail)}</small>` : ''}</span></div>`).join('')
+        html = `<b class="pf-h">${b.focus.some(f => f.kind === 'plan') ? 'In this lesson' : 'What your tutor will cover'}</b>` + b.focus.slice(0, 3).map(f => `<div class="pf-row"><i>●</i><span>${escapeHtml(f.label)}${f.detail ? `<small>${escapeHtml(f.detail)}</small>` : ''}</span></div>`).join('')
           + (DATA.podcastEpisodes && DATA.podcastEpisodes[key] && podcastStalePersonal(key) ? `<div class="pf-stale">Your plan or answers have changed since this was written. A fresh one is on its way.</div>` : '');
       }
     } else {
@@ -29244,7 +29246,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-22.461';
+const BUILD_ID = '2026-10-22.462';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
