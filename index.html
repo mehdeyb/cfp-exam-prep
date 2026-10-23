@@ -1857,7 +1857,7 @@
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
   #tutorCard #tutorContextNote{display:none;}
   #tutorCard > #tutorSnapshot{display:none;}
-  #tutorCard #podcastLibrary{display:none !important;}
+  #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard .tutor-input-row{bottom:12px;}
@@ -29525,6 +29525,18 @@ function tutorSuggestions(){
   }catch(e){}
   const nm = (DATA.missed || []).length;
   if(nm) add('missed', nm === 1 ? 'Walk through my missed question' : `Walk through my ${nm} missed`, talking ? 42 : 86, () => askTutorQuick('missed'));
+  // Lesson choices live in the conversation: one tap sets the lesson and plays it on the board above.
+  if(!talking && typeof podcastSetType === 'function'){
+    const lesson = (type, domKey) => () => { try{
+      window._podPicked = true;
+      if(domKey){ const d = document.getElementById('podcastDomainSelect'); if(d) d.value = domKey; }
+      podcastSetType(type); podcastHeroAction();
+      const pl = document.getElementById('podcastPlayer'); if(pl) pl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }catch(e){} };
+    if(answered >= 10) add('l_form', 'Lesson: formulas', 70, lesson('formulas'));
+    if(answered >= 10 && (DATA.missed || []).length) add('l_mist', 'Lesson: my mistakes', 72, lesson('mistakes'));
+    if(weak && weak.key) add('l_over', 'Lesson: ' + tutorShort(weak.name, 22), 74, lesson('overview', weak.key));
+  }
   const mix = activeMixupPairs(1)[0];
   if(mix) add('mix', `Tell ${tutorShort(mix.a, 14)} from ${tutorShort(mix.b, 14)}`, 88, () => askTutorQuick('mixup'));
   const rec = Object.values(DATA.wrongChoiceHistory || {}).reduce((t, p) => t + Object.values(p).filter(n => n >= 2).length, 0);
@@ -29696,7 +29708,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.499';
+const BUILD_ID = '2026-10-23.500';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
