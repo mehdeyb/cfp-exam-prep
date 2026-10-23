@@ -4170,7 +4170,7 @@
           </div>
           <p class="hint" id="kokoroStatus" style="margin:0 0 10px;" aria-live="polite"></p>
           <p class="hint" id="voiceQualityHint" style="margin:0 0 10px;"></p>
-          <label class="settings-check" style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 6px;"><input type="checkbox" id="soundsToggle" onchange="handleSoundsToggle(this)" checked> <span>Soft sounds for answers and lesson steps</span></label>
+          <label class="settings-check" style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 6px;"><input type="checkbox" id="soundsToggle" onchange="handleSoundsToggle(this)"> <span>Soft sounds for answers and lesson steps</span></label>
           <div class="voice-pref-row">
             <label for="voicePrefPrimary">Primary voice <span class="note">(flashcards, rationales, personalized lesson)</span></label>
             <div class="voice-pref-control">
@@ -7092,7 +7092,7 @@ async function kokoroSpeak(chunk, state, gen, onend, onerror){
 
 // ---- Soft sounds: a quiet cue for right and wrong answers, lesson checks and slide changes. Off with one switch in Settings. ----
 let _sndCtx = null, _sndCloseT = null;
-function soundsOn(){ return !(DATA && DATA.soundsOff); }
+function soundsOn(){ return !!(DATA && DATA.soundsOn === true); }
 function soundCue(kind){
   try{
     if(!soundsOn()) return;
@@ -7113,7 +7113,7 @@ function soundCue(kind){
     clearTimeout(_sndCloseT); _sndCloseT = setTimeout(() => { try{ if(_sndCtx){ _sndCtx.close(); _sndCtx = null; } }catch(e){} }, 1200);
   }catch(e){}
 }
-function handleSoundsToggle(cb){ DATA.soundsOff = !cb.checked; persist(); if(cb.checked) soundCue('right'); }
+function handleSoundsToggle(cb){ DATA.soundsOn = !!cb.checked; persist(); if(cb.checked) soundCue('right'); }
 
 // Browser text-to-speech quality is capped by whatever voices the
 // device's OS provides — this can't turn it into a premium AI voice.
@@ -29504,7 +29504,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.483';
+const BUILD_ID = '2026-10-23.484';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
