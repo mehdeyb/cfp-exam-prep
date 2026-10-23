@@ -29274,10 +29274,8 @@ function tutorOpeningLine(stats){
     let lead = gap === null ? 'Hi, I am your CFP study tutor.' : gap === 0 ? 'Good to see you again today.' : gap === 1 ? 'Welcome back.' : gap >= 3 ? `Welcome back. It has been ${gap} days, so a short warm-up will help.` : 'Welcome back.';
     if(days !== null && days > 0) lead += ` Your exam is ${days} day${days===1?'':'s'} away.`;
     parts.push(lead);
-    parts.push(`You are at ${stats.readiness}/100 readiness.`);
-    const ns = computeNextStep(stats);
-    if(ns && ns.title){ const t = String(ns.title).replace(/[.\s]+$/, ''); const lc = (t.length > 1 && /[A-Z]/.test(t[0]) && !/[A-Z]/.test(t[1])) ? t[0].toLowerCase() + t.slice(1) : t; parts.push(`Next up: ${lc}.`); }
-    else parts.push(`${stats.weakestMeta.name} is the one to work on.`);
+    // Readiness and the next step are already on the plan strip above; say what only the tutor knows.
+    try{ if(stats.weakestMeta && stats.weakestMeta.name) parts.push(`${stats.weakestMeta.name} is your weakest area right now. Ask me about it, or anything else.`); }catch(e){}
   }catch(e){ return `Hi, I am your CFP study tutor. Ask me anything.`; }
   try{ const rt = tutorRecentTopics(5).slice(-1)[0]; if(rt) parts.push(`Last time: \u201c${rt.q.length > 70 ? rt.q.slice(0, 67) + '\u2026' : rt.q}\u201d.`); }catch(e){}
   return parts.join(' ');
@@ -29584,9 +29582,6 @@ function updateTutorContextNote(){
         ? tutorOpeningLine(stats)
         : `Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. Answer a few practice questions and I'll be able to see your progress too — for now, ask me anything about the CFP curriculum.`;
       if(stats.totalAnswered){
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-show'; b.textContent = 'Show me';
-        b.onclick = () => tutorPoint('next_step', 'Start here');
-        bubble.appendChild(b);
         const rt = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null;
         if(rt){
           const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'tutor-show'; b2.textContent = 'Pick that up';
@@ -29705,7 +29700,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.495';
+const BUILD_ID = '2026-10-23.496';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
