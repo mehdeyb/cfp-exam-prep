@@ -1995,7 +1995,9 @@
   /* Wide: readiness and prompts share one band; the whole plan gets the full width below it, in columns. */
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active{grid-template-columns:auto minmax(0,1fr);column-gap:20px;row-gap:10px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1;grid-row:1;flex-direction:row;align-items:center;gap:20px;margin:0;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk{grid-column:2;grid-row:1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;}
+  body.os-one #tab-study #todayAsk{display:none !important;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1 / -1;justify-content:space-between;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{flex:1 1 auto;justify-content:space-around;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk button{width:auto;padding:0 16px;min-height:40px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:1 / -1;grid-row:2;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
@@ -30363,7 +30365,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.572';
+const BUILD_ID = '2026-10-23.573';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
