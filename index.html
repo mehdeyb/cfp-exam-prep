@@ -1848,19 +1848,19 @@
   body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
   .tt-planstrip{order:-2;margin:0 0 12px;padding:10px 12px;border:1px solid var(--hair);border-radius:14px;background:var(--surface);font-size:13px;line-height:1.4;}
   .tt-planstrip .tps-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
-  .tt-planstrip .linklike{font-size:12px;color:var(--gold);white-space:nowrap;}
+  .tt-planstrip .linklike{display:none;}
   .tt-planstrip .tps-bar{height:3px;border-radius:2px;background:var(--hair);margin:8px 0 0;overflow:hidden;}
   .tt-planstrip .tps-bar i{display:block;height:100%;background:var(--gold);}
   .tt-planstrip .tps-next{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;color:var(--muted);}
   .tt-planstrip .tps-next .pt-go{flex:none;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttPlanStrip{order:1;}
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorContextNote{display:none;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > #tutorSnapshot{display:none;}
+  #tutorCard #tutorContextNote{display:none;}
+  #tutorCard > #tutorSnapshot{display:none;}
   #tutorCard #podcastLibrary{display:none !important;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .card-head{margin-bottom:8px;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
-  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
+  #tutorCard > .api-key-nudge{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.35;}
+  #tutorCard > .api-key-nudge .btn{flex:none;min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin:0;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip{padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-top .linklike{display:none;}
   html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-planstrip .tps-bar{margin-top:6px;}
@@ -12781,7 +12781,7 @@ function renderPodcastHero(busy){
   set('podHeroTitle', ctl ? ctl.title : type === 'personalized' ? (podcastPlanSteps().some(x => !x.done) ? 'Today’s plan, in audio' : 'Your tutor’s pick') : (dm ? dm.name : 'Episode') + ' · ' + (type === 'formulas' ? 'key formulas' : type === 'mistakes' ? 'common mistakes' : 'overview'));
   let sub;
   if(text){ const m = Math.max(1, Math.round(podcastEpisodeMinutes(text, podcastSpeedValue()))); const at = DATA.podcastGeneratedAt && DATA.podcastGeneratedAt[key]; sub = m + ' min' + (at ? ' · written ' + podcastTimeAgo(at) : '') + (podcastSavedPos(key) ? ' · you left off partway' : '') + (type === 'personalized' && podcastStalePersonal(key) ? ' · your answers have changed since' : ''); }
-  else sub = (aiFeaturesAvailable ? 'About ' + mins + ' min. Written fresh from your progress, then saved.' : 'Read from your flashcards. Connect an API key in Settings for a full conversation.');
+  else sub = (aiFeaturesAvailable ? 'About ' + mins + ' min, written from your progress today.' : 'About ' + mins + ' min, read from your flashcards.');
   set('podHeroSub', sub);
   const b = document.getElementById('podcastHeroBtn'); if(!b) return;
   b.disabled = !!busy;
@@ -29700,7 +29700,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.496';
+const BUILD_ID = '2026-10-23.498';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
