@@ -1809,6 +1809,41 @@
   .pod-hero-btn{width:100%;min-height:48px;font-size:15px;}
   .pod-seg{display:flex;gap:6px;margin-top:12px;}
   /* Tutor tab: lessons and conversation are one surface, sharing one header and one set of stats. */
+  /* Phone and tablet portrait: one screen. The lesson (or your tutor's pick) sits on top, the conversation below it, the message box pinned
+     at the bottom, and the lesson options underneath. While a lesson plays its slides stay pinned above the conversation. */
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard, html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-ask{display:contents;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tt-label{display:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastHero{order:2;margin:0 0 14px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorThread{order:4;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastPlayer{order:2;margin:0 0 12px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #podcastTranscriptWrap{order:3;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttLiveChips{order:5;flex-wrap:nowrap;overflow-x:auto;margin:0 0 8px;padding-bottom:4px;scrollbar-width:none;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #ttLiveChips .chip{flex:none;white-space:nowrap;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorChips{order:6;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-input-row{order:7;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #tutorStatus{order:8;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastTypeSeg{order:10;margin-top:18px;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard .pod-opts{order:11;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastFocus{order:12;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard #lessonsCard #podcastLibrary{order:13;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard > #tutorSnapshot{order:15;}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard p.hint{order:16;}
+  #tutorCard.tt-live #podcastPlayer{position:sticky;top:0;z-index:6;background:var(--surface);border-radius:18px;box-shadow:0 12px 24px -16px rgba(0,0,0,.5);}
+  #tutorCard.tt-live #lessonsCard .pst-body{min-height:150px;}
+  #tutorCard.tt-live #lessonsCard .pst-title{font-size:21px;}
+  #tutorCard.tt-live #tutorThread{max-height:max(140px, calc(var(--vh-real, 100vh) - 620px));}
+  html:not([data-lay="wide"]):not([data-lay="xwide"]) #tutorCard .tutor-input-row{position:sticky;bottom:calc(var(--tab-h, 64px) + 6px);z-index:5;background:var(--surface);padding:8px 0 6px;box-shadow:0 -10px 14px -10px var(--surface);}
+  .tt-ask #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 420px));}
+  #tutorCard.has-convo .tt-ask > p.hint{display:none;}
+  #tutorCard.tt-board #lessonsCard:not(.has-lesson) #podcastHero{display:none;}
+  #tutorCard > .card-head{flex-wrap:wrap;row-gap:4px;}
+  #tutorCard > .card-head .btn{min-height:32px;padding:4px 12px;font-size:12.5px;width:auto;margin-top:0;}
+  #tutorCard > .card-head #tutorContextNote{flex:1 0 100%;order:5;}
+  #ttBoardHideBtn{display:none;}
+  #tutorCard.tt-board #lessonsCard:not(.has-lesson) #ttBoardHideBtn{display:inline-flex;}
+  #tutorCard.tt-board #lessonsCard:not(.has-lesson) .podcast-player-panel, #tutorCard.tt-board #lessonsCard:not(.has-lesson) #podcastGeneratedNote, #tutorCard.tt-board #lessonsCard:not(.has-lesson) #podcastRefine, #tutorCard.tt-board #lessonsCard:not(.has-lesson) #podcastAfter{display:none;}
+  .tutor-listen{display:inline-flex;align-items:center;gap:6px;margin:4px 0 0 4px;padding:4px 10px;min-height:30px;border-radius:14px;border:1px solid var(--hair);background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;}
+  .tutor-listen.speaking{color:var(--gold);border-color:var(--gold);}
   .tt-lessons{margin:0 0 6px;}
   body.focus-mode #tutorCard > .tutor-snapshot, body.focus-mode #tutorCard > .api-key-nudge{display:none !important;}
   #lessonsCard > .tt-first{order:-3;margin:16px 0 10px;padding-top:0;border-top:0;}
@@ -2405,20 +2440,20 @@
   #tutorCard > *{order:9;}
   #tutorCard > .card-head{order:0;}
   #tutorCard > #tutorApiKeyHint{order:1;}
-  #tutorCard > #tutorThread{order:2;max-height:max(200px, calc(var(--vh-real, 100vh) - 440px));}
-  #tutorCard > #tutorChips{order:3;flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-  #tutorCard > #tutorChips::-webkit-scrollbar{display:none;}
-  #tutorCard > #tutorChips .chip{flex:none;white-space:nowrap;}
-  #tutorCard > .tutor-input-row{order:4;flex-wrap:nowrap;margin-bottom:6px;}
-  #tutorCard > .tutor-input-row .btn{width:auto;flex:none;}
-  #tutorCard > .tutor-input-row .tutor-input{width:auto;min-width:0;}
-  #tutorCard > #tutorStatus{order:5;}
+  #tutorCard #tutorThread{order:2;max-height:max(200px, calc(var(--vh-real, 100vh) - 440px));}
+  #tutorCard #tutorChips{order:3;flex-wrap:nowrap;overflow-x:auto;margin:0 0 10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  #tutorCard #tutorChips::-webkit-scrollbar{display:none;}
+  #tutorCard #tutorChips .chip{flex:none;white-space:nowrap;}
+  #tutorCard .tutor-input-row{order:4;flex-wrap:nowrap;margin-bottom:6px;}
+  #tutorCard .tutor-input-row .btn{width:auto;flex:none;}
+  #tutorCard .tutor-input-row .tutor-input{width:auto;min-width:0;}
+  #tutorCard #tutorStatus{order:5;}
   #tutorCard > #tutorSnapshot{order:7;}
-  #tutorCard > p.hint{order:8;}
-  #tutorCard.has-convo > p.hint,#tutorCard.has-convo > #tutorSnapshot{display:none;}
-  @media (min-width:641px){ #tutorCard > #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 400px));} }
+  #tutorCard p.hint{order:8;}
+  #tutorCard.has-convo p.hint,#tutorCard.has-convo > #tutorSnapshot{display:none;}
+  @media (min-width:641px){ #tutorCard #tutorThread{max-height:max(260px, calc(var(--vh-real, 100vh) - 400px));} }
   @media (orientation:landscape) and (max-height:520px){
-    #tutorCard > #tutorThread{max-height:max(120px, calc(var(--vh-real, 100vh) - 245px));}
+    #tutorCard #tutorThread{max-height:max(120px, calc(var(--vh-real, 100vh) - 245px));}
     #tutorCard.has-convo > .card-head{display:none;}
   }
   /* Flashcards: the card comes first, the explanations and filters sit beneath it,
@@ -3931,7 +3966,7 @@
   <!-- ================= TUTOR TAB ================= -->
   <div class="tab-panel" id="tab-tutor">
     <div class="card" id="tutorCard">
-      <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
+      <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="margin-right:10px;min-height:34px;padding:4px 12px;font-size:12.5px;">Voice on</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
       <div class="tutor-snapshot" id="tutorSnapshot">
         <div class="stat">
@@ -3992,7 +4027,7 @@
         <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
           <div class="pst-body" id="pstBody"></div>
           <div class="pst-now" id="pstNow" aria-hidden="true"></div>
-          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
+          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
         </div>
         <div class="podcast-player-panel">
           <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
@@ -4040,6 +4075,7 @@
           <div class="tutor-bubble">Hi — I'm your CFP study tutor. Ask me to explain a concept, work through why an answer is right or wrong, or quiz you on something specific. I can see your progress in this app, so feel free to just say "explain my weakest domain."</div>
         </div>
       </div>
+      <div class="tutor-suggest" id="ttLiveChips" role="group" aria-label="About this slide" style="display:none;"></div>
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
         <input type="text" id="tutorInput" class="tutor-input" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" onkeydown="if(event.key==='Enter') sendTutorMessage();">
@@ -4379,7 +4415,7 @@ function showTab(name, opts){
     renderExamDayCallout();
     updateTutorContextNote();
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
-    if(name === 'tutor'){ try{ podcastAutoDefault(); }catch(e){} }
+    if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} }
     if(name === 'flashcards') fcRecapRefresh();
     if(name === 'study'){ applyBlueprintCompactStyling(); refreshCoachSurfaces(); }
     if(DATA.lastTab !== name){
@@ -12174,6 +12210,42 @@ function renderExamDayCallout(){
    REFERENCE TAB
 =========================================================== */
 /* Tutor tab: lessons and chat are one surface. Opening a lesson brings the lesson block into view. */
+function ttVoiceOn(){ return !!(DATA && DATA.tutorVoice !== false) && hasSpeechSupport(); }
+function ttVoiceSync(){ const b = document.getElementById('ttVoiceBtn'); if(!b) return; const sup = hasSpeechSupport(); b.style.display = sup ? '' : 'none'; const on = ttVoiceOn(); b.textContent = on ? 'Voice on' : 'Voice off'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+function ttToggleVoice(){ DATA.tutorVoice = !(DATA.tutorVoice !== false); persist(); if(DATA.tutorVoice === false){ try{ if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); }catch(e){} } else { try{ speechAudioPrime(); }catch(e){} } ttVoiceSync(); }
+// What the tutor says, cleaned for the ear: no list letters, markdown or links.
+function ttSpeakable(t){
+  return String(t || '').split('\n').filter(l => !/^\s*[A-E]\)\s/.test(l)).join(' ').replace(/https?:\/\/\S+/g, '').replace(/[*_#`>]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 700);
+}
+function ttSpeakReply(reply, btn){
+  if(!hasSpeechSupport()) return;
+  if(naturalSpeechState.active && podcastPlayingKey) return; // a lesson is playing: never talk over it
+  const t = ttSpeakable(reply); if(!t) return;
+  try{ speakTextNow(t, btn || null); }catch(e){}
+}
+function ttAddListen(bubble, reply){
+  try{
+    const row = bubble && bubble.parentElement; if(!row || !hasSpeechSupport() || row.querySelector('.tutor-listen')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-listen'; b.setAttribute('aria-label', 'Listen to this reply'); b.innerHTML = SPEAKER_SVG + '<span>Listen</span>';
+    b.onclick = () => { if(b.classList.contains('speaking')){ try{ stopSpeechSequence(); }catch(e){} return; } try{ speechAudioPrime(); }catch(e){} ttSpeakReply(reply, b); };
+    row.appendChild(b);
+  }catch(e){}
+}
+function ttLiveRefresh(){
+  const card = document.getElementById('tutorCard'); if(!card) return;
+  const live = typeof naturalSpeechState !== 'undefined' && !!naturalSpeechState.active && document.getElementById('podcastPlayer') && document.getElementById('podcastPlayer').style.display !== 'none';
+  card.classList.toggle('tt-live', !!live);
+  const box = document.getElementById('ttLiveChips'); if(!box) return;
+  if(!live){ box.style.display = 'none'; box.dataset.k = ''; return; }
+  const k = (stageState && stageState.cur && stageState.cur.kind) || 'point';
+  if(box.dataset.k !== k){
+    box.dataset.k = k;
+    const c = k === 'question' ? ['Why is my pick wrong?', 'Give me a memory trick', 'Quiz me on this idea'] : k === 'calc' ? ['What should the display show?', 'Why this order?'] : k === 'formula' ? ['Work an example', 'When do I use this?'] : k === 'term' ? ['Use it in an example', 'What is it confused with?'] : ['Explain this simpler', 'Why does this matter?', 'Quiz me on this'];
+    box.innerHTML = c.map(x => `<button type="button" class="chip" onclick="sendTutorMessage(this.textContent)">${escapeHtml(x)}</button>`).join('');
+  }
+  box.style.display = 'flex';
+}
+setInterval(() => { try{ const p = document.getElementById('tab-tutor'); if(p && p.classList.contains('active')) ttLiveRefresh(); }catch(e){} }, 1000);
 function openLessons(){
   showTab('tutor');
   requestAnimationFrame(() => { try{ const el = document.getElementById('lessonsCard'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){} });
@@ -13590,6 +13662,19 @@ function tutorScreenText(){
   const cs = (sl.kind === 'check' || sl.check) ? (sl.kind === 'check' && sl.mode === 'question' ? ' They are being asked to work that question' + (typeof sl.pick === 'number' ? ' and chose ' + 'ABCD'[sl.pick] + ((allQuestions().find(q => q.id === sl.qid) || {}).correct === sl.pick ? ' (right)' : ' (wrong)') : ' and have not answered yet') + '.' : ' It is a task for them to do' + (sl.passed ? ' (they have continued)' : ' and the lesson is waiting on them') + '.') : '';
   return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are in a lesson: "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a lesson', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen (including kind calc, which lights each step's keys on an HP 10bII+ keypad), so use it to show what you are explaining instead of describing it. You can also run the lesson with lesson_control (pause, resume, make them work a question, tap the keys or say it back). Treat questions as likely about what is playing or showing.${cs}`;
 }
+// The board lives right on the Tutor screen, above the conversation, so what the tutor shows and what it says share one view.
+function ttEnsureStage(){
+  const tab = document.getElementById('tab-tutor'); if(!tab || !tab.classList.contains('active')) return false;
+  const pl = document.getElementById('podcastPlayer'), sg = document.getElementById('podcastStage'), card = document.getElementById('tutorCard'); if(!pl || !sg || !card) return false;
+  if(getComputedStyle(pl).display === 'none') pl.style.display = 'block';
+  sg.style.display = 'block'; card.classList.add('tt-board');
+  return true;
+}
+function ttBoardHide(){
+  const pl = document.getElementById('podcastPlayer'), card = document.getElementById('tutorCard');
+  if(card) card.classList.remove('tt-board');
+  const lc = document.getElementById('lessonsCard'); if(pl && !(lc && lc.classList.contains('has-lesson'))) pl.style.display = 'none';
+}
 function tutorShowOnScreen(a){
   const r = stageSlideFromTool(a); if(r.error) return 'Error: ' + r.error;
   const sl = r.slide, playing = naturalSpeechState.active && podcastPlayingKey;
@@ -13600,8 +13685,11 @@ function tutorShowOnScreen(a){
     st.tutor = (st.tutor || []).concat([sl]).slice(-12); persist();
     if(stageState.deckKey === key){ const text = DATA.podcastEpisodes && DATA.podcastEpisodes[key]; if(text) stageState.deck = podcastDeck(key, text, (document.getElementById('podcastTypeSelect').value === 'personalized') ? '' : document.getElementById('podcastDomainSelect').value, podcastLabelForCacheKey(key) || ''); }
   }
+  let boarded = false;
+  if(!stageInlineVisible()) boarded = ttEnsureStage();
   stageShow(sl, 'tutor');
-  if(!stageInlineVisible()) stageOpenFull();
+  if(boarded){ try{ requestAnimationFrame(() => { const b = document.getElementById('podcastStage'); if(b) b.scrollIntoView({ behavior:'smooth', block:'nearest' }); }); }catch(e){} }
+  else if(!stageInlineVisible()) stageOpenFull();
   return 'Put it on the student\'s screen' + (playing ? ', beside the lesson, and it will come back when they replay this part' : '') + '. Say in a sentence what to look at; do not describe it all.';
 }
 // ---- the full screen ----
@@ -27138,7 +27226,7 @@ function buildTutorSystemPrompt(){
   try{ const dm = diagnosisModel(), top = dm.rows.filter(r => r.state !== 'solid').sort((a, b) => b.score - a.score).slice(0, 3).map(r => r.name + ' (' + r.state + (r.st.acc !== null ? ', ' + Math.round(r.st.acc * 100) + '%' : '') + ')'), st = staleSolidTopics(2).map(r => r.name + ' ' + r.days + 'd');
     timeContext += ` DIAGNOSING AND TEACHING: you control the diagnosis and the plan. Quick read: top gaps ${top.join('; ') || 'none yet'}${st.length ? '; going stale: ' + st.join('; ') : ''}. Work like a tutor who diagnoses before prescribing: (1) call diagnose_learner before advising on what to study, and with a topic to find the exact misconception; (2) when evidence is thin, offer run_diagnostic and wait for a yes; (3) teach the gap right in the chat with an example, a show_visual where a picture helps, a lookup_term or a quick explain_it_back check, instead of only sending them to a quiz; (4) when you know what they need, call shape_today_plan with a focus, pin_topics for repairs and refresh_topics for strengths that are fading, so the plan matches the diagnosis and the strong topics stay fresh; (5) after they practice, diagnose_learner again and say plainly what moved. Never pin more than they can repair today, and always say in one sentence what you changed and why. YOU MAY ALSO DESIGN MATERIAL: when a topic will not stick, a pair of ideas keeps getting mixed up, or a calculation needs a worked model, call create_study_material to make a cheat sheet, memory aid, worked example, side-by-side comparison, flashcards or a short practice set built for exactly their gap (it is saved in their workshop and the cards and questions join their spaced repetition). Make it only when it adds value beyond explaining in chat, keep it accurate and tied to an official topic, and offer to check them on it afterwards. YOU MAY ALSO BUILD NEW TOOLS AND MODES: when none of the app's tools fits what this student needs to pass, call build_custom_tool: a sorter for look-alike classifications they keep mixing up, a step-through for a multi-step method or calculator keystrokes, a decision tree of your own for a judgment the built-in trees do not cover, or a routine that strings the app's sessions into a custom study mode for their situation (for example a short repair routine for their weakest domain). Check open_custom_tool list first so you never duplicate, state the gap in 'why', get every fact right for the exam, and say in one line what you built and how to use it. Build when it will change their result, not to look busy; when they ask for a tool or mode, build what they describe. Later, look at its usage and best score in your list, improve it by rebuilding with the same title, or delete it once it has done its job.`; }catch(err){}
   timeContext += ' LESSONS: you can write a full lesson (create_lesson): you choose the topic, the points and their order, what shows on the screen, the length and one voice or two, and you may add it to today\'s plan when it is the best use of their time (a confusing idea, a worked calculation, a pattern across misses). Do it only when it would teach better than a question or chat, say in one line why, and never stack more than one lesson a day. Weigh the days left: with weeks to go, teach new ground and weak domains; in the last week or two, prefer short lessons that fix the exact mistakes they keep making, and the calculator keys; in the last two days, no new ground, only a calm recap of formulas and the exam-day plan. Use lesson_control to stop and make them work a question, tap the keys or say an idea back whenever that would stick better than more talking.';
-  timeContext += ' SCREEN: you have a full-screen board (show_on_screen). When you walk through any calculation, use kind calc so the student sees the HP keypad with each tap lit and can practice it; use kind question to put a missed question in front of them, and term, formula, number or compare when showing beats saying. Say one line about what to look at. Do not repeat what the screen already shows.';
+  timeContext += ' SCREEN: you teach with a board that sits right above this conversation on the same screen (show_on_screen), and your reply is read aloud in a natural voice. Work like a live tutor: for a concept, a number or a procedure, SHOW it first (term, formula, number, compare, steps, a chart, or kind calc for any calculation so the student sees the HP keypad lit step by step; kind question to put a question in front of them), then say two or three short spoken sentences that point at the board. For a longer idea put up two or three boards in order, one after the other, each with a line of its own. After you teach something, check it with kind check (a question, a say-it-back, or keystrokes) instead of asking "does that make sense". Write for the ear: plain sentences, no markdown, no bullet lists, no symbols that read badly aloud, and under about 90 words. Do not repeat what the board already shows; say what to look at and why it matters. If a lesson is playing, keep it short and let the lesson lead.';
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -28783,6 +28871,7 @@ async function sendTutorMessage(presetText){
   const text = (presetText!==undefined ? presetText : input.value).trim();
   if(!text || tutorBusy) return;
   input.blur();
+  try{ if(ttVoiceOn()){ speechAudioPrime(); if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); } }catch(e){}
   if(!aiFeaturesAvailable){
     renderTutorMessage('user', text);
     input.value = '';
@@ -28851,6 +28940,8 @@ async function sendTutorMessage(presetText){
     const reply = finalTextBlocks.join('').trim() || "Sorry, I didn't quite get a response there — could you try asking again?";
     typingBubble.classList.remove('typing');
     tutorRenderReply(typingBubble, reply, text);
+    ttAddListen(typingBubble, reply);
+    if(ttVoiceOn() && document.getElementById('tab-tutor').classList.contains('active')) ttSpeakReply(reply);
     status.textContent = '';
     try{ tutorGuideAfterMove(reply); }catch(e){}
     tutorMaybeOfferTree(text, reply);
@@ -29546,7 +29637,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.491';
+const BUILD_ID = '2026-10-23.492';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
