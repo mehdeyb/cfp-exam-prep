@@ -1923,6 +1923,35 @@
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  /* Today: the readiness is a slim strip, so the plan gets the screen. Wide screens put the strip and the prompts in a side column and give the plan the rest. */
+  body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:0;align-items:center;text-align:left;}
+  body.os-one #tab-study .score-ring-wrap{grid-row:1 / span 4;}
+  body.os-one #tab-study .score-ring{width:76px;height:76px;}
+  body.os-one #tab-study .score-big{font-size:26px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-meta .label, html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{white-space:nowrap;}
+  body.os-one #tab-study .score-row{flex-wrap:nowrap;align-items:center;margin-bottom:8px;}
+  body.os-one #tab-study .stat-strip{flex:1 1 auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);column-gap:24px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > *{grid-column:1 / -1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1;grid-row:1;flex-direction:column;align-items:stretch;gap:12px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk{grid-column:1;grid-row:2;flex-direction:column;align-items:stretch;overflow:visible;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk button{width:100%;text-align:left;padding:0 16px;min-height:44px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:2;grid-row:1 / span 8;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #studyCols{column-count:1;}
+  /* Today: readiness on one tight row, so the plan gets the screen. */
+  body.os-one #tab-study .score-row{display:flex;flex-wrap:nowrap;align-items:center;gap:16px;margin-bottom:12px;}
+  body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:center;flex:0 1 auto;}
+  body.os-one #tab-study .score-ring-wrap{grid-row:1 / span 3;width:76px;height:76px;}
+  body.os-one #tab-study .score-ring-wrap svg{width:76px;height:76px;}
+  body.os-one #tab-study .score-big{font-size:26px;}
+  body.os-one #tab-study .score-ring-sub{font-size:10px;}
+  body.os-one #tab-study .score-ring-block > *:not(.score-ring-wrap){grid-column:2;margin:0;}
+  body.os-one #tab-study .stat-strip{margin-left:auto;flex:0 1 auto;}
+  @media (min-width:600px){
+    body.os-one #todayPlanCard .pt-rows{column-count:2;column-gap:32px;}
+    body.os-one #todayPlanCard .pt-rows > *{break-inside:avoid;}
+  }
   .pt-nextlabel{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:#fff;border-color:var(--gold);}
@@ -1952,7 +1981,8 @@
   #tutorCard.tt-idle #ttActions{margin-top:10px;}
   .plan-tutor-link{margin-left:auto;margin-right:12px;background:none;border:0;padding:6px 2px;font:inherit;font-size:12.5px;font-weight:600;color:var(--gold);text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:32px;}
   #todayPlanCard .card-head{align-items:center;}
-  #tutorCard #podcastPlayer:not([style*="none"]){display:flex !important;flex-direction:column;}
+  #tutorCard #podcastPlayer:not([style*="none"]){display:flex !important;flex-direction:column;min-height:0;}
+  #tutorCard #lessonsCard #podcastPlayer .pstage .pst-body{min-height:0;overflow-y:auto;}
   #tutorCard #podcastPlayer > #podcastStage:not([style*="none"]){flex:1 1 auto;display:flex !important;flex-direction:column;}
   #tutorCard.tt-idle #lessonsCard .pst-body{min-height:0;flex:1 1 auto;}
   #tutorCard.tt-idle #lessonsCard .pst-title{font-size:clamp(26px,4vh,40px);}
@@ -13943,6 +13973,15 @@ function ttIdleBoard0(){
   if(st.totalAnswered && st.weakestMeta) bits.push(st.weakestMeta.name + ' is your weakest area.');
   try{ const ns0 = computeNextStep(st); if(ns0 && ns0.title) bits.push(ns0.kicker === 'In progress' ? 'You are partway through a session.' : 'Next: ' + ns0.title + '.'); }catch(e){}
   const text = bits.length ? bits.join(' ') : 'Ask me anything about the CFP curriculum, or pick a place to start below.';
+  // The idle board is today's plan, laid out on the screen, with the next step first; the days left and the weakest area sit in its title.
+  try{
+    const plan = buildStudyPlan(); const left = plan.steps.filter(x => !x.done).slice(0, (window.innerHeight < 900 || window.innerWidth < 500) ? 5 : 7);
+    if(left.length){
+      const head = [days !== null && days >= 0 ? (days === 0 ? 'Exam day' : days + (days === 1 ? ' day' : ' days') + ' to go') : '', (st.totalAnswered && st.weakestMeta) ? 'weakest: ' + tutorShort(st.weakestMeta.name, 24) : ''].filter(Boolean).join(' \u00b7 ');
+      const r = stageSlideFromTool({ kind:'steps', title: head || 'Today with your tutor', steps: left.map((x, i) => ({ title: stageClip((i === 0 ? 'Next: ' : '') + x.title, 80), detail: x.minutes + ' min' + (i === 0 && x.why ? ' \u00b7 ' + stageClip(x.why, 110) : '') })) });
+      if(!r.error){ r.slide.idle = true; r.slide.src = 'tutor'; if(!stageInlineVisible()) ttEnsureStage(); stageShow(r.slide, 'tutor'); return; }
+    }
+  }catch(e){}
   const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Today with your tutor', text: stageClip(text, 260) };
   if(!stageInlineVisible()) ttEnsureStage();
   stageShow(sl, 'tutor');
@@ -27954,12 +27993,12 @@ function ttFit(){
   try{
     const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
     if(!c || !p || !p.classList.contains('active')) return;
-    c.style.minHeight = '0';
+    c.style.minHeight = '0'; c.style.height = '';
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     const bar = document.getElementById('appTabbar'); let bottomBar = 0;
     if(bar && getComputedStyle(bar).position === 'fixed'){ bottomBar = bar.getBoundingClientRect().height; }
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    c.style.minHeight = Math.max(420, Math.round(h - top - bottomBar - 14)) + 'px';
+    const fit = Math.max(420, Math.round(h - top - bottomBar - 14)); c.style.minHeight = fit + 'px'; c.style.height = fit + 'px';
   }catch(e){}
 }
 window.addEventListener('resize', () => setTimeout(ttFit, 60));
@@ -30234,7 +30273,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.553';
+const BUILD_ID = '2026-10-23.556';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
