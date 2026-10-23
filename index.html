@@ -1898,6 +1898,17 @@
   #tutorCard #ttVoiceBtn.off{opacity:.45;}
   #tutorCard #ttVoiceBtn svg{width:18px;height:18px;}
   #tutorCard .pst-dots{display:none !important;}
+  /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
+  #tutorCard{min-height:calc(var(--vh-real, 100vh) - var(--tab-h, 64px) - 96px);}
+  #tutorCard #lessonsCard #podcastPlayer{flex:1 1 auto;display:flex;flex-direction:column;}
+  #tutorCard #lessonsCard #podcastPlayer .pstage{flex:1 1 auto;display:flex;flex-direction:column;}
+  #tutorCard #lessonsCard #podcastPlayer .pstage .pst-body{flex:1 1 auto;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel{flex:none;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{min-height:calc(var(--vh-real, 100vh) - 230px);}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-title{font-size:32px;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-text{font-size:18px;} html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-text.pst-lg{font-size:30px;line-height:1.35;}
+  #tutorCard.tt-idle #lessonsCard .pst-body{display:flex;flex-direction:column;justify-content:center;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{padding:10px 18px 0;}
   #tutorCard.tt-idle #tutorThread{display:none;}
   #tutorCard.tt-idle #ttActions{margin-top:10px;}
   #tutorCard.tt-idle #lessonsCard .pst-body{min-height:clamp(110px, 18vh, 200px);}
@@ -1919,7 +1930,7 @@
   #tutorCard:not(.has-convo) #tutorChips{display:none !important;}
   .tutor-offer .tutor-show{margin-left:0;}
   #tutorCard #podcastLibrary, #tutorCard #podcastTypeSeg, #tutorCard .pod-opts, #tutorCard #podcastFocus{display:none !important;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:880px;margin-left:auto;margin-right:auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard{max-width:1040px;margin-left:auto;margin-right:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard #lessonsCard .pst-body{min-height:220px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tutorCard .tutor-input-row{bottom:12px;}
   #tutorCard > .card-head{margin-bottom:8px;}
@@ -29943,7 +29954,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.522';
+const BUILD_ID = '2026-10-23.524';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
