@@ -12832,11 +12832,27 @@ function ttStartLesson(){
   renderPodcastHero(true);
   generatePodcastEpisode(true).then(() => { try{ renderPodcastHero(); if(!naturalSpeechState.active) togglePodcastPlayback(); }catch(e){} });
 }
+// Every way to practise opens from the tutor. This is the second level behind 'Something else', built from where you stand.
+function tutorModeOptions(){
+  const o = [];
+  try{
+    const st = computeStats();
+    o.push({ label:'Practice questions', run: () => { showTab('study'); startAdaptive(); } });
+    if(st.weakestMeta) o.push({ label:'Drill ' + tutorShort(st.weakestMeta.name, 18), run: () => { showTab('study'); startDrill(st.weakestMeta.key); } });
+    const nm = (DATA.missed || []).length; if(nm) o.push({ label:'Redo my ' + nm + ' missed', run: () => { showTab('study'); startMissedReview(); } });
+    o.push({ label:'Flashcards', run: () => { try{ executeTutorTool('start_flashcards', {}); }catch(e){ showTab('study'); } } });
+    o.push({ label:'Case study', run: () => { showTab('study'); openCasePicker(); } });
+    o.push({ label:'Calculator practice', run: () => { try{ executeTutorTool('open_tvm_calculator', {}); }catch(e){} } });
+    o.push({ label:'My study guide', run: () => { try{ executeTutorTool('open_study_guide', {}); }catch(e){} } });
+  }catch(e){}
+  return o;
+}
 function tutorLessonOffer(){
   const bubble = document.querySelector('#tutorThread .tutor-bubble'); if(!bubble || window._ttOpenUsed || (typeof tutorMessages !== 'undefined' && tutorMessages.length)) return;
   const lcx = document.getElementById('lessonsCard'); if(lcx && lcx.classList.contains('has-lesson')) return;
   const t = document.getElementById('podHeroTitle'), hb = document.getElementById('podcastHeroBtn');
   const opts = [];
+  if(window._ttSession) opts.push({ label: 'Go over my session', run: () => { const x = window._ttSession; sendTutorMessage('I just finished a ' + (x.mode || 'practice') + ' session: ' + x.correct + ' of ' + (typeof x.answered === 'number' ? x.answered : x.total) + ' right. Look at what I got wrong, tell me the one pattern behind it and what to do next. Show the key idea on the board.'); } });
   if(window._ttMissShown) opts.push({ label: 'Why did I miss this?', run: () => sendTutorMessage('Walk me through the question on the board. Why is my pick wrong and what is the right way to think about it? Show the key idea on the board.') });
   if(t && hb && t.textContent.trim()){
     const lab = hb.textContent.replace(/[\u25b6\s]+/g, ' ').trim();
@@ -12848,8 +12864,9 @@ function tutorLessonOffer(){
     const nxt = buildStudyPlan().steps.find(x => !x.done);
     if(nxt) opts.push({ label: tutorShort(nxt.title, 30), run: () => runPlanStep(nxt.id) });
   }catch(e){}
-  opts.push({ label: 'Something else', run: () => { const i = document.getElementById('tutorInput'); if(i){ i.focus(); } } });
-  tutorAddNext(bubble, opts.slice(0, 4));
+  opts.splice(3);
+  opts.push({ label: 'Something else', run: () => { const m = tutorModeOptions().slice(0, 6); m.push({ label: 'Ask a question', run: () => { const i = document.getElementById('tutorInput'); if(i) i.focus(); } }); tutorAddNext(null, m); } });
+  tutorAddNext(bubble, opts);
 }
 function renderPodcastHero(busy){
   const type = document.getElementById('podcastTypeSelect').value, dk = document.getElementById('podcastDomainSelect').value;
@@ -13598,10 +13615,10 @@ function stageEntrySync(){
 }
 function stageShow(sl, src){
   if(!sl) return;
-  stageRemember(sl);
+  if(!sl.idle) stageRemember(sl);
   stageState.cur = sl;
   const last = stageState.hist[stageState.hist.length - 1];
-  if(!last || stageId(last) !== stageId(sl)){ stageState.hist.push(sl); if(stageState.hist.length > 40) stageState.hist.shift(); }
+  if(!sl.idle && (!last || stageId(last) !== stageId(sl))){ stageState.hist.push(sl); if(stageState.hist.length > 40) stageState.hist.shift(); }
   stageState.hi = stageState.hist.length - 1;
   stageDraw();
 }
@@ -13783,14 +13800,28 @@ function ttEnsureStage(){
 }
 // The board is the centrepiece: it is never empty. Before anything is taught it says where you stand today.
 function ttIdleBoard(){
-  if(typeof stageState === 'undefined' || stageState.cur || (naturalSpeechState && naturalSpeechState.active)) return;
+  window._ttSession = null; window._ttMissShown = null;
+  ttIdleBoard0();
+  try{ if(!(typeof tutorMessages !== 'undefined' && tutorMessages.length)){ window._ttOpenUsed = false; tutorLessonOffer(); } }catch(e){}
+}
+function ttIdleBoard0(){
+  if(typeof stageState === 'undefined' || (stageState.cur && !stageState.cur.idle) || (naturalSpeechState && naturalSpeechState.active)) return;
   if(typeof tutorMessages !== 'undefined' && tutorMessages.length) return;
   const lc = document.getElementById('lessonsCard'); if(lc && lc.classList.contains('has-lesson')) return;
   try{
     const ms = DATA.missed || [], lastId = ms[ms.length - 1], qs = lastId && (DATA.questionStats || {})[lastId];
     if(qs && Date.now() - (qs.lastSeenAt || 0) < 40 * 60000 && allQuestions().some(x => x.id === lastId)){
       if(!stageInlineVisible()) ttEnsureStage();
-      stageShow({ kind:'question', qid:lastId, src:'tutor', at:0 }, 'tutor'); window._ttMissShown = lastId; return;
+      stageShow({ kind:'question', qid:lastId, src:'tutor', at:0, idle:true }, 'tutor'); window._ttMissShown = lastId; return;
+    }
+  }catch(e){}
+  try{
+    const ss = DATA.sessions || [], ls = ss[ss.length - 1];
+    if(ls && Date.now() - new Date(ls.date).getTime() < 30 * 60000 && ls.total){
+      const names = { adaptive:'Adaptive session', drill:'Domain drill', mock:'Practice exam', fullexam:'Full exam', case:'Case study', review:'Missed questions' };
+      const n = typeof ls.answered === 'number' ? ls.answered : ls.total;
+      const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Just finished', text: (names[ls.mode] || 'Session') + ': ' + ls.correct + ' of ' + n + ' right (' + Math.round(100 * ls.correct / Math.max(1, n)) + '%).' };
+      if(!stageInlineVisible()) ttEnsureStage(); stageShow(sl, 'tutor'); window._ttSession = ls; return;
     }
   }catch(e){}
   const st = computeStats(), days = getDaysUntilExam(); const bits = [];
@@ -13798,7 +13829,7 @@ function ttIdleBoard(){
   if(st.totalAnswered && st.weakestMeta) bits.push(st.weakestMeta.name + ' is your weakest area.');
   try{ const nxt = buildStudyPlan().steps.find(x => !x.done); if(nxt) bits.push('Next in your plan: ' + nxt.title + '.'); }catch(e){}
   const text = bits.length ? bits.join(' ') : 'Ask me anything about the CFP curriculum, or pick a place to start below.';
-  const sl = { kind:'idea', src:'tutor', at:0, title:'Today with your tutor', text: stageClip(text, 260) };
+  const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Today with your tutor', text: stageClip(text, 260) };
   if(!stageInlineVisible()) ttEnsureStage();
   stageShow(sl, 'tutor');
 }
@@ -29885,7 +29916,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.514';
+const BUILD_ID = '2026-10-23.516';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
