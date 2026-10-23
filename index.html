@@ -2013,7 +2013,9 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #scoreRow{grid-column:1 / -1;justify-content:space-between;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{flex:1 1 auto;justify-content:space-around;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #todayAsk button{width:auto;padding:0 16px;min-height:40px;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:1 / -1;grid-row:2;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #coachLine{grid-column:1 / -1;grid-row:2;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #tutorNoteCard{grid-column:1 / -1;grid-row:3;margin:0;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study.active > #studyCols{grid-column:1 / -1;grid-row:4;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:3;column-gap:24px;}
   @media (max-width:900px){ html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:2;} }
@@ -28071,6 +28073,10 @@ function quizFit(){
   }catch(e){}
 }
 (function(){
+  let t2 = 0; const re = () => { clearTimeout(t2); t2 = setTimeout(osFitStudy, 60); };
+  ['coachLine','tutorNoteCard','scoreRow'].forEach(id => { const e = document.getElementById(id); if(e) new MutationObserver(re).observe(e, { childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class','style'] }); });
+})();
+(function(){
   let t = 0; const go = () => { clearTimeout(t); t = setTimeout(quizFit, 70); };
   const qv = document.getElementById('quizView');
   if(qv) new MutationObserver(go).observe(qv, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style','hidden'] });
@@ -30381,7 +30387,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.576';
+const BUILD_ID = '2026-10-23.577';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
