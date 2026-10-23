@@ -2688,6 +2688,11 @@
     body.quiz-active .q-card{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);column-gap:22px;align-items:start;}
     body.quiz-active .q-left{position:sticky;top:6px;align-self:start;max-height:calc(var(--vh-real, 100vh) - 72px);overflow-y:auto;overscroll-behavior:contain;}
     body.quiz-active .confidence-pills{flex-wrap:wrap;}
+    /* Answer on the right; question, then the verdict and explanation, stack on the left so neither side sits empty. */
+    body.quiz-active:not(.exam-sim-mode) .q-card > .q-right{display:contents;}
+    body.quiz-active:not(.exam-sim-mode) .q-card > .q-left{grid-column:1;grid-row:1;position:static;max-height:none;overflow:visible;}
+    body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > #qChoices{grid-column:2;grid-row:1 / span 30;}
+    body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > :not(#qChoices){grid-column:1;}
     body.quiz-active .q-text{margin-bottom:14px;}
     body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
     body.quiz-active .quiz-top{margin-bottom:12px;}
@@ -30358,7 +30363,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.571';
+const BUILD_ID = '2026-10-23.572';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
