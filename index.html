@@ -19635,10 +19635,13 @@ function caseFit(id){
   const avg = ds.reduce((a, k) => a + (((DATA.domainStats[k] || {}).total || 0) ? domainStageOf(k) : 1), 0) / ds.length;
   return avg < 2 ? { avg, tag:'Try drills first', cls:'weak' } : avg < 3 ? { avg, tag:'Good fit', cls:'mid' } : { avg, tag:'Exam level', cls:'strong' };
 }
+// A case that was opened lately, finished or not, goes to the back: the same one never comes round twice in a row.
+function caseRecency(id){ const t = ((DATA.caseStarts || {})[id] || {}).last || 0; return (Date.now() - t) < 36*3600000 ? 1 : 0; }
+function caseStartCount(id){ return ((DATA.caseStarts || {})[id] || {}).n || 0; }
 function nextCaseToTry(excludeId){
   const stats = DATA.caseStats || {};
   const pool = allCases().filter(c => c.id !== excludeId && caseQuestions(c.id).length);
-  pool.sort((a,b) => ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
+  pool.sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
   return pool[0] || null;
 }
 function caseProgressLine(){
@@ -19682,6 +19685,7 @@ function startCase(id){
   if(!def) return;
   const qs = caseQuestions(id);
   if(!qs.length) return;
+  try{ if(!DATA.caseStarts || typeof DATA.caseStarts !== 'object') DATA.caseStarts = {}; const cst = DATA.caseStarts[id] || { n:0, last:0 }; cst.n++; cst.last = Date.now(); DATA.caseStarts[id] = cst; persist(); }catch(e){}
   document.body.classList.remove('domain-picker-active');
   // Fresh choice order every run, and the order of questions follows how you are doing (see caseAdaptOrder).
   const lvl = caseQuestionLevels(qs);
@@ -19701,11 +19705,11 @@ function maybeAutoGenerateCase(){
     if(!aiFeaturesAvailable || caseGenBusy || isGenerating || genBackoffActive() || session) return;
     if((DATA.answerCounter || 0) < 20) return;
     const gens = DATA.generatedCases || [];
-    if(gens.length >= 8) return;
+    if(gens.length >= 30) return;
     const untried = allCases().filter(c => !((DATA.caseStats || {})[c.id] || {}).attempts).length;
     if(untried > 1) return;
     const newest = gens.reduce((m, c) => Math.max(m, c.createdAt || 0), 0);
-    if(Date.now() - newest < 12*3600000) return;
+    if(untried > 0 && Date.now() - newest < 12*3600000) return;
     generateNewCase({auto:true});
   }catch(e){}
 }
@@ -19725,7 +19729,7 @@ function openCasePicker(){
   genBox.appendChild(genNote);
   const oldBox = document.getElementById('caseGenBox'); if(oldBox) oldBox.remove();
   list.parentNode.insertBefore(genBox, list);
-  const order = allCases().sort((a,b) => ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0));
+  const order = allCases().sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0));
   order.forEach(c => {
     const qs = caseQuestions(c.id);
     if(!qs.length) return;
@@ -30617,7 +30621,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.601';
+const BUILD_ID = '2026-10-23.602';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
