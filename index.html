@@ -1149,6 +1149,18 @@
   .bp-chip-due{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);background:var(--gold-tint);padding:1px 6px;border-radius:8px;}
   /* Progress: the exam-day panel repeated the estimate in the header, so it is left out here. */
   #studyHub[data-view="progress"] #edStandingCard{display:none !important;}
+  .bp-value{margin:0 0 14px;}
+  .bp-value-head{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .bp-value-list{list-style:none;margin:0;padding:0;}
+  .bp-value-row{padding:8px 0;border-top:1px solid var(--hair);}
+  .bp-value-row:first-child{border-top:0;}
+  .bp-value-main{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+  .bp-value-name{font-weight:600;font-size:13.5px;}
+  .bp-value-pts{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);white-space:nowrap;}
+  .bp-value-act{font-size:12px;color:var(--muted);margin-top:2px;}
+  .bp-value-pace{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.4;}
+  .bp-value-pace.warn{color:var(--gold);}
+  .bp-value-empty{font-size:12.5px;color:var(--muted);margin:0;line-height:1.4;}
   .bp-chip-right{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
   .bp-chip-rebuilding{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);letter-spacing:.02em;}
   .source-note{margin-top:12px;font-size:11.5px;color:var(--muted-dim);line-height:1.5;}
@@ -3738,6 +3750,7 @@
       <div class="bp-legend" id="bpLegend"></div>
       </div>
       <div class="bp-colR">
+      <div class="bp-value" id="bpValue"></div>
       <div class="bp-trend" id="progressCard">
         <div class="bp-trend-head"><span class="bp-trend-title">Your trend</span><span class="trend-toggle" id="trendToggle" role="group" aria-label="What the line shows" style="display:none;"><button type="button" data-view="score" class="on" aria-pressed="true" onclick="setTrendView('score')">Score</button><button type="button" data-view="ready" aria-pressed="false" onclick="setTrendView('ready')">Readiness</button></span></div>
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
@@ -8815,7 +8828,31 @@ function renderAllLate(){
   try{ refreshCoachIdleMessage(); }catch(e){}
 }
 
+// Progress, right column: where the points are, what to do about each, and the pace needed to reach exam day.
+function renderProgressValue(){
+  const el = document.getElementById('bpValue'); if(!el) return;
+  let html = '';
+  try{
+    const st = computeStats();
+    if(!st.totalAnswered){
+      html = '<div class="bp-value-head">Where the points are</div><p class="bp-value-empty">Answer a few questions and this shows which topics cost you the most points, and what to do about each.</p>';
+    } else {
+      const rows = st.parts.filter(p => p.lost >= 1).sort((a, b) => b.lost - a.lost).slice(0, 4);
+      const list = rows.map(p => {
+        const act = p.lever === 'start' ? 'Not started: begin with new questions'
+          : p.lever === 'coverage' ? 'Mostly untried: new questions'
+          : 'Mostly missed: review what you got wrong';
+        return `<li class="bp-value-row"><div class="bp-value-main"><span class="bp-value-name">${escapeHtml(p.name)}</span><span class="bp-value-pts">${Math.round(p.lost)} of ${p.weight} points open</span></div><div class="bp-value-act">${act}</div></li>`;
+      }).join('');
+      let pace = ''; try{ const pc = computePace(st); if(pc && pc.remaining > 0){ const ps = paceSummary(st); if(ps && ps.text) pace = `<p class="bp-value-pace ${ps.cls || ''}">${escapeHtml(ps.text)}</p>`; } }catch(e){}
+      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${pace}`;
+    }
+  }catch(e){ html = ''; }
+  el.innerHTML = html;
+  el.style.display = html ? '' : 'none';
+}
 function renderBlueprint(){
+  try{ renderProgressValue(); }catch(e){}
   const bar = document.getElementById('bpBar');
   const codeRow = document.getElementById('bpCodeRow');
   const legend = document.getElementById('bpLegend');
@@ -9059,10 +9096,12 @@ function renderProgressChart(){
 
   // A line through two or three sessions is mostly noise: a single rough session makes it look like a crash or a leap. The chart waits for five sessions; until then the sentence above is the whole trend.
   if(points.length < 5){
+    const tc = document.getElementById('progressCard'); if(tc) tc.style.display = 'none';
     const sv = document.getElementById('progressChart'); if(sv) sv.innerHTML = '';
     ['progressScrub','progressLabels','progressDiffRow','progressReadout'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; });
     return;
   }
+  { const tc = document.getElementById('progressCard'); if(tc) tc.style.display = ''; }
   ['progressScrub','progressLabels'].forEach(id => { const e = document.getElementById(id); if(e && e.style.display === 'none') e.style.display = ''; });
   // Build the SVG line chart. viewBox is 340x120; x spans the points
   // evenly, y maps 0-100% onto the vertical space with a little padding.
@@ -31303,7 +31342,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.728';
+const BUILD_ID = '2026-10-24.730';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
