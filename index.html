@@ -11269,7 +11269,8 @@ function buildStudyPlanCore(minutes){
   // strong accuracy puts exam-style work (timed sets, cases) first; a close exam date favors timed work too.
   const longDayExtras = () => {
     const l = (DATA.recentAccuracyLog || []), acc = l.length ? l.filter(e => e.correct).length / l.length : 0;
-    const repair = ['weak4','tutor2','weak5','weak6'], exam = ['checkpoint2','case2','case3','adaptive3'], rest = ['read','cards2','calc2','figures2'];
+    // Two adaptive rounds a day at most, and one key-figures step: a third round or a second figures drill repeats what the day already covers.
+    const repair = ['weak4','tutor2','weak5','weak6'], exam = ['checkpoint2','case2','case3'], rest = ['read','cards2','calc2'];
     const strong = answered >= 100 && acc >= 0.72 && missedN < 12 && (days === null || days <= 10);
     const lead = strong ? exam.concat(repair, rest) : (missedN >= 10 || acc < 0.62) ? repair.concat(rest.slice(0, 1), exam, rest.slice(1)) : rest.slice(0, 1).concat(exam.slice(0, 2), repair.slice(0, 1), rest.slice(1), exam.slice(2), repair.slice(1));
     return lead;
@@ -31725,7 +31726,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.764';
+const BUILD_ID = '2026-10-24.765';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
