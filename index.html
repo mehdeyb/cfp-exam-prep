@@ -10980,10 +10980,13 @@ function buildStudyPlanCore(minutes){
         t = ct.find(x => x.id === planTarget('myToolId', t.id)) || t;
       }
       const fresh = !t.uses;
-      return { id:'mytool', title:`Your tool: ${t.title}`, minutes: t.kind === 'routine' ? 12 : 6,
+      // Counted by a finished run today (ctUsed stamps lastAt when a run completes), not by a tap.
+      const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+      const doneToday = (t.lastAt || 0) >= today0.getTime() ? 1 : 0;
+      return { id:'mytool', title:`Your tool: ${t.title}`, minutes: t.kind === 'routine' ? 12 : 6, need:1, have:doneToday, unit:'run',
         why: (fresh ? 'Your tutor built this for you and you have not tried it yet. ' : 'Your tutor built this for you. ') + t.why + (t.best != null && t.kind === 'sorter' ? ' Best so far: ' + t.best + '%.' : ''),
         how: t.kind === 'sorter' ? ['Tap the bucket each item belongs in, before you read anything else.', 'Read the reason shown after each one.', 'The ones you miss are listed again at the end.'] : t.kind === 'steps' ? ['Read the step and say it back without looking.', 'Tap to reveal the next step.', 'Finish all of them to complete this part.'] : t.kind === 'tree' ? ['Pick the answer at each fork before you read where it leads.', 'Read the result and the reason it fits.'] : ['Start each part in order; each opens the real session.', 'Come back to this card for the next one.'],
-        manual:true, run: () => { ctOpen(t.id, { stepId:'mytool' }); } };
+        run: () => { ctOpen(t.id, { stepId:'mytool' }); } };
     },
     tlesson: () => {
       const pl = DATA.planLesson, tl = pl && pl.day === localDayKey() ? (DATA.tutorLessons || {})[pl.id] : null; if(!tl) return null;
@@ -11193,7 +11196,7 @@ function buildStudyPlanCore(minutes){
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
-    taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
+    taper:      ['cards','missed','calc','figures','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
     after:      []
@@ -31708,7 +31711,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.761';
+const BUILD_ID = '2026-10-24.762';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
