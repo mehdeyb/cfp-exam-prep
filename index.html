@@ -1222,6 +1222,10 @@
   .fr-plan{margin-top:6px;font-size:12px;color:var(--muted);}
   .plan-chip{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:4px 10px;border-radius:12px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap;}
   .plan-chip.done{border-color:var(--correct);color:var(--correct);}
+  .plan-chip{display:inline-flex;align-items:center;gap:8px;}
+  .plan-chip .pc-t{overflow:hidden;text-overflow:ellipsis;max-width:34vw;}
+  .plan-chip .pc-bar{display:inline-block;width:56px;height:4px;border-radius:2px;background:var(--hair);overflow:hidden;flex:0 0 auto;}
+  .plan-chip .pc-bar i{display:block;height:100%;background:currentColor;border-radius:2px;transition:width .4s ease;}
   .plan-result{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border-left:3px solid var(--gold);font-size:13px;line-height:1.5;color:var(--paper);}
   .plan-result.done{border-left-color:var(--correct);}
   .plan-result .pr-why{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
@@ -11778,13 +11782,11 @@ function updatePlanChip(){
   if(!r || !(session.mode === 'adaptive' || session.mode === 'drill' || session.mode === 'review' || session.mode === 'case')){ el.style.display = 'none'; return; }
   const have = Math.min(r.need, r.base + (session.answerLog || []).length);
   const done = have >= r.need;
-  // One counter at a time: "Question 3 of 15" already tells you where you are. The plan figure only appears when it adds
-  // something the question count does not -- a plan step bigger than this run ("Today 13 of 40") or the moment it is finished.
-  const runLen = (session.queue || []).length;
-  if(!done && runLen && r.need <= runLen){ el.style.display = 'none'; return; }
+  // One element for the plan step: its name, how far it is, and a bar. It stays for the whole run, so the tutor banner needs no plan line of its own.
   el.className = 'plan-chip' + (done ? ' done' : '');
   // Once the step is done, this run is extra practice: say so, and do not offer a button that would end the run.
-  el.textContent = done ? 'Plan step done ✓' : `Today ${have} of ${r.need}`;
+  const pct = Math.max(0, Math.min(100, Math.round(100 * have / Math.max(1, r.need))));
+  el.innerHTML = `<span class="pc-t">${escapeHtml(r.title)}</span><span>${done ? 'Done ✓' : have + ' of ' + r.need}</span><span class="pc-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>`;
   el.setAttribute('role','status'); el.removeAttribute('tabindex'); el.style.cursor = ''; el.onclick = null;
   el.title = done ? r.title + ': done' : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
   el.style.display = 'inline-block';
@@ -24999,11 +25001,8 @@ function sessionBriefHtml(){
       const r = session.planRef !== undefined ? session.planRef : planRefForSession(session);
       if(r && r.need > 0){
         const n = session.queue.length, have = Math.min(r.need, r.base);
-        let line;
-        if(have >= r.need) line = `<b>${escapeHtml(r.title)}</b> is done. These ${n} are extra.`;
-        else if(have > 0) line = `<b>${escapeHtml(r.title)}:</b> ${have} of ${r.need} ${r.unit} done today. ${n >= r.need - have ? `${r.need - have} more finish${r.need - have === 1 ? 'es' : ''} it.` : `This run adds ${n}.`}`;
-        else line = `<b>${escapeHtml(r.title)}:</b> ${r.need} ${r.unit} on today's plan, starting now.`;
-        return `<span class="tb-label">Your tutor's plan</span>${line}`;
+        // The plan step is shown once, in the progress chip above the question, so the banner does not repeat it.
+        return '';
       }
     }catch(e){}
   }
@@ -31284,7 +31283,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.712';
+const BUILD_ID = '2026-10-24.713';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
