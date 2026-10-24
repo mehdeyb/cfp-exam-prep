@@ -31025,7 +31025,71 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.668';
+
+/* ===========================================================
+   BACK BUTTON / SWIPE-BACK
+   The phone's back gesture (and a browser's back button) steps out of whatever is on top: an open screen (Settings, a
+   quiz, flashcards, a tool, a guided step), then the tab you came from, and finally lands on Today. Only from Today does
+   it leave the app. One spare history entry is kept while you are anywhere deeper than Today.
+=========================================================== */
+(function(){
+  let over = false, ignore = 0, timer = 0, trail = [], going = false;
+  const cl = () => document.body.classList;
+  function layer(){
+    if(cl().contains('settings-active')) return 'settings';
+    if(cl().contains('quiz-active')) return 'quiz';
+    if(cl().contains('tvm-active')) return 'tvm';
+    if(cl().contains('flashcard-fullscreen')) return 'fc';
+    try{ if(typeof _focus !== 'undefined' && _focus && !_focus.entering) return 'focus'; }catch(e){}
+    return null;
+  }
+  function curTab(){ const a = document.querySelector('.tab-panel.active'); return a ? a.id.replace(/^tab-/, '') : 'study'; }
+  function atRoot(){ return !layer() && curTab() === 'study'; }
+  function sync(){
+    try{
+      if(!atRoot() && !over){ history.pushState({ cfpNav:1 }, ''); over = true; }
+      else if(atRoot() && over){ over = false; ignore++; history.back(); }
+    }catch(e){}
+  }
+  function soon(){ clearTimeout(timer); timer = setTimeout(sync, 70); }
+  function closeLayer(l){
+    try{
+      if(l === 'settings') closeSettings();
+      else if(l === 'quiz') exitToMenu();
+      else if(l === 'tvm') closeTvmTool();
+      else if(l === 'fc') closeFlashcardsToHome();
+      else if(l === 'focus') focusExit();
+    }catch(e){}
+  }
+  function goBackTab(){
+    const here = curTab();
+    if(SUB_SCREENS.includes(here)){ try{ backToPractice(); return; }catch(e){} }
+    let to = 'study';
+    while(trail.length){ const t = trail.pop(); if(t !== here && !SUB_SCREENS.includes(t)){ to = t; break; } }
+    going = true; try{ showTab(to); }finally{ going = false; }
+  }
+  window.addEventListener('popstate', () => {
+    if(ignore > 0){ ignore--; return; }
+    if(!over){ if(history.state && history.state.cfpNav){ over = true; soon(); } return; }
+    over = false;
+    const l = layer();
+    if(l) closeLayer(l); else goBackTab();
+    soon();
+  });
+  const _show = window.showTab;
+  window.showTab = function(name, opts){
+    const before = curTab();
+    const r = _show.apply(this, arguments);
+    if(!going && before !== curTab() && before){ if(trail[trail.length - 1] !== before) trail.push(before); if(trail.length > 20) trail.shift(); }
+    if(curTab() === 'study') trail = [];
+    soon();
+    return r;
+  };
+  try{ new MutationObserver(soon).observe(document.body, { attributes:true, attributeFilter:['class'] }); }catch(e){}
+  try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
+})();
+
+const BUILD_ID = '2026-10-24.669';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
