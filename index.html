@@ -3541,7 +3541,9 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  .bp-chip-wt{display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
   @media (max-width:640px){
+    body.os-one #studyHub[data-view="progress"] .bp-chip-wt{display:inline;}
     body.os-one #studyHub[data-view="progress"] #bpBar, body.os-one #studyHub[data-view="progress"] #bpCodeRow{display:none;}
     body.os-one #studyHub[data-view="progress"] #bpLegend > *{padding-top:5px;padding-bottom:5px;}
     body.os-one #studyHub[data-view="progress"] #diagnosisCard{display:none;}
@@ -8802,6 +8804,7 @@ function renderBlueprint(){
     }
 
     const metaBits = [];
+    metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
     const stg = s.total ? domainStageOf(d.key) : 0;
     if(stg >= 3) metaBits.push('<span class="bp-chip-stage s' + stg + '">' + STAGES[stg - 1].name + '</span>'); // the early stage is the same on every row, so only the later ones say anything
@@ -30931,7 +30934,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.638';
+const BUILD_ID = '2026-10-24.639';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
