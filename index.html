@@ -8961,7 +8961,7 @@ function renderProgressValue(){
             + `</div>`;
         }
       }catch(e){}
-      let since = ''; try{ const la = DATA.lastAdjust; if(la && la.lines && la.lines.length) since = `<p class="bp-since"><b>Since your last session:</b> ${escapeHtml(la.lines.join(' · '))}</p>`; }catch(e){}
+      let since = ''; try{ const la = DATA.lastAdjust; const dl = learnerProfileText().match(/difficulty: ([^.;]+)/); const lines = (la && la.lines ? la.lines.slice() : []); if(dl && dl[1] && !/not enough/.test(dl[1])) lines.push(dl[1].replace(/^recent accuracy is /, 'accuracy is ')); if(lines.length) since = `<p class="bp-since"><b>Since your last session:</b> ${escapeHtml(lines.join(' · '))}</p>`; }catch(e){}
       html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${since}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
     }
   }catch(e){ html = ''; }
@@ -10840,8 +10840,10 @@ function buildStudyPlanCore(minutes){
       if(!need0 && !L.targets.stmtGoal) return null;
       const goal = planTarget('stmtGoal', (acc !== null && acc < 0.6) ? 10 : 8);
       const have = Math.min(goal, L.fmt || 0);
+      const fS = fmtBucket('stmt'), fN = fmtBucket('neg');
+      const fmtLine = (fS.n >= 3 || fN.n >= 3) ? ' Right now: statements ' + (fS.n >= 3 ? Math.round(100 * fS.ok / fS.n) + '%' : 'not enough yet') + ', EXCEPT ' + (fN.n >= 3 ? Math.round(100 * fN.ok / fN.n) + '%' : 'not enough yet') + '.' : '';
       return { id:'stmts', title:`Exam-wording questions (${goal})`, minutes: Math.max(8, Math.round(goal * 1.6)), need:goal, have, unit:'questions',
-        why: acc !== null && acc < 0.7 ? `You have got ${Math.round(acc * 100)}% of the "which statements are correct" and EXCEPT questions right. The exam uses these formats a lot; the fix is judging each statement or choice on its own first.` : f.n < 24 ? `The exam asks many "which statements are correct" questions (I, II, III, IV, then choices like "I and III only") and "all of the following EXCEPT" questions. You have seen ${f.n} so far, and this format rewards practice: judge each statement true or false on its own first, then find the choice that matches.` : 'A short round keeps this format sharp.',
+        why: fmtLine + ' ' + (acc !== null && acc < 0.7 ? `You have got ${Math.round(acc * 100)}% of the "which statements are correct" and EXCEPT questions right. The exam uses these formats a lot; the fix is judging each statement or choice on its own first.` : f.n < 24 ? `The exam asks many "which statements are correct" questions (I, II, III, IV, then choices like "I and III only") and "all of the following EXCEPT" questions. You have seen ${f.n} so far, and this format rewards practice: judge each statement true or false on its own first, then find the choice that matches.` : 'A short round keeps this format sharp.'),
         how:['Read the stem and circle the qualifier (EXCEPT, NOT, LEAST, or "which are correct").','Mark each statement or choice true or false before you pick. For EXCEPT, the odd one out is the answer.','After each one, read why every item is true or false.'],
         run: () => { showTab('study'); if(!startStatementDrill(goal - have > 0 ? goal - have : goal)) showTab('study'); } };
     },
@@ -31650,7 +31652,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.757';
+const BUILD_ID = '2026-10-24.758';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
