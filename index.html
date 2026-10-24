@@ -27387,6 +27387,31 @@ function runSyllabusCoverageCheck(){
   }
 }
 
+
+// Only the AI-written items can be cleaned: a repeat of something already in the bank (or of an earlier AI item) and any AI question whose choices are lopsided.
+function integrityCleanPlan(){
+  const gq = (DATA && DATA.generatedBank) || [], gf = (DATA && DATA.generatedFlashcards) || [];
+  const isRoman = q => (q.choices || []).filter(c => /^(I|II|III|IV|V)(,| and |\s+only$)/.test(c) || /^(I|II|III|IV|V) only$/.test(c) || /^(All|None) of the above/i.test(c)).length >= 3;
+  const seenQ = new Set(QUESTIONS.map(q => normalizeForDedup(q.q)));
+  const dropQ = new Set();
+  gq.forEach((q, i) => { const n = normalizeForDedup(q && q.q); if(!q || !Array.isArray(q.choices) || seenQ.has(n) || (q.choices.length === 4 && !isRoman(q) && !passesDistractorQualityCheck(q))) dropQ.add(i); else seenQ.add(n); });
+  const seenF = new Set(FLASHCARDS.map(f => normalizeForDedup(f.term)));
+  const dropF = new Set();
+  gf.forEach((f, i) => { const n = normalizeForDedup(f && f.term); if(!f || seenF.has(n)) dropF.add(i); else seenF.add(n); });
+  return { dropQ, dropF };
+}
+async function cleanGeneratedContent(){
+  const plan = integrityCleanPlan();
+  if(!plan.dropQ.size && !plan.dropF.size){ try{ runContentIntegrityCheck(); }catch(e){} return; }
+  if(!confirm('Remove ' + plan.dropQ.size + ' AI-written question' + (plan.dropQ.size === 1 ? '' : 's') + ' and ' + plan.dropF.size + ' AI-written card' + (plan.dropF.size === 1 ? '' : 's') + '? These repeat something already in your bank, or have lopsided answer choices. The built-in questions and your progress are not touched.')) return;
+  DATA.generatedBank = (DATA.generatedBank || []).filter((_, i) => !plan.dropQ.has(i));
+  DATA.generatedFlashcards = (DATA.generatedFlashcards || []).filter((_, i) => !plan.dropF.has(i));
+  await persist();
+  try{ rebuildFlashcardQueue(); }catch(e){}
+  try{ renderAll(); }catch(e){}
+  try{ runContentIntegrityCheck(); }catch(e){}
+}
+
 function runContentIntegrityCheck(){
   const allQs = allQuestions();
   const allFcs = allFlashcards();
@@ -27457,7 +27482,8 @@ function runContentIntegrityCheck(){
   if(issues.length === 0){
     resultEl.innerHTML = `<div class="integrity-clean">Checked ${allQs.length} questions, ${allFcs.length} flashcards, and ${TVM_PROBLEMS.length} TVM problems — no structural issues found. This confirms consistency, not that every fact or figure is correct.</div>`;
   } else {
-    resultEl.innerHTML = `<div class="integrity-issues">Checked ${allQs.length} questions, ${allFcs.length} flashcards, and ${TVM_PROBLEMS.length} TVM problems, found:<ul>${issues.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+    const _pl = integrityCleanPlan(), _nc = _pl.dropQ.size + _pl.dropF.size;
+    resultEl.innerHTML = `<div class="integrity-issues">Checked ${allQs.length} questions, ${allFcs.length} flashcards, and ${TVM_PROBLEMS.length} TVM problems, found:<ul>${issues.map(i=>`<li>${i}</li>`).join('')}</ul>${_nc ? `<button type="button" class="btn ghost" style="margin-top:10px;" onclick="cleanGeneratedContent()">Clean up: remove ${_nc} AI-written item${_nc === 1 ? '' : 's'} that cause${_nc === 1 ? 's' : ''} this</button>` : ''}</div>`;
   }
 }
 
@@ -31145,7 +31171,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.682';
+const BUILD_ID = '2026-10-24.683';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
