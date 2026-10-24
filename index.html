@@ -28861,7 +28861,8 @@ function quizFit(){
     const panel = document.getElementById('tab-study'); if(!panel || !panel.classList.contains('active') || (extra || 0) > 60) return;
     const h = vpHeight();
     const over = Math.ceil(document.documentElement.scrollHeight - Math.max(h, document.documentElement.clientHeight));
-    if(over > 1) osFitStudy((extra || 0) + over + 2);
+    // The overflow is a few pixels at most. Carrying it forward on every pass (it reached 130px on an iPad) shrank Today far more than needed, which left the gap.
+    if(over > 1 && (extra || 0) < 20) osFitStudy(Math.min(20, over + 2));
   }catch(e){}
 }; })();
 window.addEventListener('resize', () => setTimeout(() => { osFit('reference'); osFit('examday'); osFitStudy(); }, 80));
@@ -31256,7 +31257,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.696';
+const BUILD_ID = '2026-10-24.697';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
