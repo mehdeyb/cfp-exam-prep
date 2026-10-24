@@ -8883,11 +8883,10 @@ function renderBlueprint(){
     const metaBits = [];
     metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
-    // The stage follows your recent answers, but never runs ahead of the percentage on this row: Exam-ready needs 75%+ (the strong band),
-    // Apply 60%+, Build 50%+. So the word and the number always agree.
+    // The stage is read off the percentage on this row (the same readiness the bar shows): Exam-ready 75%+ (the strong band),
+    // Apply 60%+, Build 50%+, otherwise Foundation. The word and the number always say the same thing.
     if(s.total){
-      const byPct = mastery >= 75 ? 4 : mastery >= 60 ? 3 : mastery >= 50 ? 2 : 1;
-      const stg2 = Math.min(stageTarget(d.key), byPct);
+      const stg2 = mastery >= 75 ? 4 : mastery >= 60 ? 3 : mastery >= 50 ? 2 : 1;
       metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage: ' + STAGES[stg2 - 1].name + ' (from your recent answers, capped by the % shown)">' + STAGES[stg2 - 1].name + '</span>');
     }
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
@@ -31288,7 +31287,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.717';
+const BUILD_ID = '2026-10-24.718';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
