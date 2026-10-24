@@ -2097,6 +2097,9 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:3;column-gap:24px;}
   @media (max-width:900px){ html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:2;} }
+  #blueprintCard.bp-t1 .week-recap, #blueprintCard.bp-t1 #edTutor, #blueprintCard.bp-t1 .progress-hint, #blueprintCard.bp-t1 #edPacing{display:none !important;}
+  #blueprintCard.bp-t2 .progress-diff-row, #blueprintCard.bp-t2 #progressLabels, #blueprintCard.bp-t2 #progressReadout, #blueprintCard.bp-t2 #edStandingText{display:none !important;}
+  #blueprintCard.bp-t3 .bp-focus, #blueprintCard.bp-t3 #diagnosisCard{display:none !important;}
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -11280,7 +11283,7 @@ function conductorRefreshPill(){
     if(act0 && act0.id === 'tab-study' && currentNextStep && currentNextStep.kicker === 'Your session' && ((nc && nc.style.display !== 'none' && nc.offsetParent !== null) || (ld && ld.offsetParent !== null))){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   }
   // The Tutor screen ends in a text box and has its own "Continue your session" prompt, so the pill never sits over it.
-  { const at = document.querySelector('.tab-panel.active'); if(at && at.id === 'tab-tutor'){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; } }
+  { const at = document.querySelector('.tab-panel.active'); if(at && (at.id === 'tab-tutor' || at.id === 'tab-study')){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; } }
   if(c.current && !finished){
     const own = { cards:'flashcards', keys:'reference', teach:'tutor' }[c.current.id];
     const act = document.querySelector('.tab-panel.active');
@@ -28676,6 +28679,23 @@ function osFitStudy(extra){
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
 }
+
+// Your progress has to fit on one screen like everything else: if it still would not after shrinking, the least important lines step aside one group at a time (never the domain list or the trend).
+(function(){ const base = osFitStudy; let busy = false;
+  function over(){ const c = document.getElementById('studyCols'); const sh = document.documentElement.scrollHeight - vpHeight(); return sh > 4 || (c && c.classList.contains("os-fit")); }
+  window.osFitStudy = osFitStudy = function(extra){
+    base(extra);
+    if(busy) return; busy = true;
+    try{
+      const hub = document.getElementById('studyHub'), card = document.getElementById('blueprintCard'), panel = document.getElementById('tab-study');
+      if(!card) return;
+      ['bp-t1','bp-t2','bp-t3'].forEach(k => card.classList.remove(k));
+      if(!hub || hub.dataset.view !== 'progress' || !panel || !panel.classList.contains('active') || document.body.classList.contains('quiz-active')) return;
+      let k = 0;
+      while(over() && k < 3){ k++; card.classList.add('bp-t' + k); base(extra); }
+    }catch(e){} finally { busy = false; }
+  };
+})();
 // Safety net for the fit above: if Today is squeezed into a compact style yet a band of screen is still empty beneath it (a stale size reading), measure again.
 setInterval(() => {
   try{
@@ -31203,7 +31223,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.687';
+const BUILD_ID = '2026-10-24.689';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
