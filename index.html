@@ -10602,7 +10602,8 @@ async function ctRoutineGo(i){
 }
 function ctTutorBlock(){
   const list = ctList(); if(!list.length) return '';
-  return ' TOOLS YOU HAVE BUILT FOR THEM (open_custom_tool): ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', for: ' + x.why + '; used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + ')').join('; ') + '.';
+  const staleDays = x => Math.floor((Date.now() - (x.lastAt || x.t || Date.now())) / (24 * 3600000));
+  return ' TOOLS YOU HAVE BUILT FOR THEM (open_custom_tool): ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', for: ' + x.why + '; used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + (staleDays(x) >= 30 ? '; NOT USED IN ' + staleDays(x) + ' DAYS, retire it with open_custom_tool delete or replace it' : '') + ')').join('; ') + '.';
 }
 function tutorShapePlan(inp){
   inp = inp || {};
@@ -10613,7 +10614,12 @@ function tutorShapePlan(inp){
   const o = { day: localDayKey(), at: Date.now(), focus: (inp.focus && PLAN_FOCI[inp.focus]) ? inp.focus : null, reason: cleanTxt(inp.reason, 160), pins: [], refresh: [], adds: adds.length ? adds : ((planOverrideToday() || {}).adds || []) }, miss = [];
   const add = (arr, out) => (Array.isArray(arr) ? arr : []).slice(0, 3).forEach(t => { const m = tutorFlagMatch(t); if(m && !out.some(x => x.key === m.key && x.idx === m.idx)) out.push({ key: m.key, idx: m.idx, name: m.name }); else if(!m) miss.push(t); });
   add(inp.pin_topics, o.pins); add(inp.refresh_topics, o.refresh);
-  if(!o.focus && !o.pins.length && !o.refresh.length && !adds.length) return 'Error: give a focus (repair, breadth, apply or recall), pin_topics, refresh_topics, or add_steps' + (miss.length ? ' (none of "' + miss.join('", "') + '" matched an official topic)' : '') + '.';
+  // Steps the tutor takes out of today's plan (matched by id or part of the title) and the one it moves to the top.
+  // Keeps any earlier choice unless the tutor sends a new one, and finished steps are never removed.
+  const prevOv = planOverrideToday() || {};
+  o.drops = inp.drop_steps !== undefined ? (Array.isArray(inp.drop_steps) ? inp.drop_steps : []).slice(0, 6).map(x => cleanTxt(x, 60)).filter(Boolean) : (prevOv.drops || []);
+  o.moveTop = inp.move_to_top !== undefined ? cleanTxt(inp.move_to_top, 60) : (prevOv.moveTop || '');
+  if(!o.focus && !o.pins.length && !o.refresh.length && !adds.length && !o.drops.length && !o.moveTop) return 'Error: give a focus (repair, breadth, apply or recall), pin_topics, refresh_topics, or add_steps' + (miss.length ? ' (none of "' + miss.join('", "') + '" matched an official topic)' : '') + '.';
   DATA.planOverride = o;
   { const L = planDayLog(); delete L.targets.freshKey; delete L.targets.focus; }
   persist();
@@ -11234,6 +11240,13 @@ function buildStudyPlanCore(minutes){
     if(ovA && Array.isArray(ovA.adds)) ovA.adds.forEach((a, k) => {
       steps.splice(Math.min(steps.length, 1 + k), 0, { id: a.id, title: a.title, why: a.why, minutes: a.minutes, manual: true, tutorAdded: true, done: !!L.manual[a.id], run: () => { showTab('study'); tutorRunAdded(a); } });
     }); }
+  // The tutor's changes to today: steps it dropped (unfinished ones only) and the step it moved to the top.
+  { const ovD = planOverrideToday();
+    if(ovD){
+      const hit = (st, term) => { const t = String(term || '').toLowerCase(); return !!t && (String(st.id || '').toLowerCase() === t || String(st.title || '').toLowerCase().includes(t)); };
+      for(let i = steps.length - 1; i >= 0; i--){ const st = steps[i]; if(!st.done && (ovD.drops || []).some(d => hit(st, d))){ used -= st.minutes || 0; steps.splice(i, 1); } }
+      if(ovD.moveTop){ const j = steps.findIndex(st => hit(st, ovD.moveTop)); if(j > 0){ const [mv] = steps.splice(j, 1); steps.unshift(mv); } }
+    } }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -30031,11 +30044,11 @@ const TUTOR_TOOLS = [
   {
     name: 'shape_today_plan',
     description: "Reshape TODAY's plan to match what you found. You can also ADD up to 3 activities to it with add_steps, which is how you put a specific quiz, drill or tool into the student's day. 'focus' sets the day's emphasis (repair = fix weak and missed, breadth = cover unseen topics, apply = case studies and tools, recall = key figures and formulas). 'pin_topics' (up to 3) puts specific weak topics first as repair drills. 'refresh_topics' (up to 3) adds a short spaced check on topics that are solid but fading, so strengths stay fresh while weaknesses get the time. 'reason' is shown to the student on the plan, so write it plainly to them in under 140 characters. Use after diagnose_learner or after you see them struggle; keep a balance, so do not pin more than you can repair today. {clear:true} returns the plan to automatic. It never removes required steps; it changes order and targets.",
-    input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, add_steps: { type: 'array', maxItems: 3, description: "Up to 3 activities to ADD to today's plan, shown right after the first part so they are seen. Add one when a specific activity would help this student today and the plan lacks it (a quiz on a domain, a formula drill, calculator practice, flashcards, or a decision tool). Each 'why' must name what you saw in their results.", items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, title: { type: 'string', description: 'Short name for the step, under 70 characters.' }, why: { type: 'string', description: 'One line: the specific reason, tied to their results.' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string' }, tool: { type: 'string' }, minutes: { type: 'integer' } }, required: ['action','title','why'] } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
+    input_schema: { type: 'object', properties: { drop_steps: { type: 'array', items: { type: 'string' }, description: "Titles (or ids) of unfinished steps in today's plan to take out because they do not fit this student today. Finished steps are kept." }, move_to_top: { type: 'string', description: "Title (or id) of one unfinished step in today's plan to move to the top." }, focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, add_steps: { type: 'array', maxItems: 3, description: "Up to 3 activities to ADD to today's plan, shown right after the first part so they are seen. Add one when a specific activity would help this student today and the plan lacks it (a quiz on a domain, a formula drill, calculator practice, flashcards, or a decision tool). Each 'why' must name what you saw in their results.", items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, title: { type: 'string', description: 'Short name for the step, under 70 characters.' }, why: { type: 'string', description: 'One line: the specific reason, tied to their results.' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string' }, tool: { type: 'string' }, minutes: { type: 'integer' } }, required: ['action','title','why'] } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
   },
   {
     name: 'build_custom_tool',
-    description: "Design and build a new interactive tool for this student, saved under 'Built for you' on the Tools tab, when you judge that one would raise their chance of passing and none of the app's existing tools or modes fits. You have free rein over what to make, but make it earn its place: name the specific gap, confusion or hard-to-remember rule it targets in 'why', and check what is already built (open_custom_tool action list) before making another. Kinds: sorter (items the student drops into 2 to 4 buckets with a one-line reason shown after each, for look-alike classifications such as ordinary income vs capital gain, deductible vs not, qualified vs nonqualified; 4 to 16 items, every bucket used), steps (an ordered procedure revealed one step at a time, for calculator keystrokes or a multi-step method), tree (your own decision tree: nodes with ids, question nodes with options pointing to other node ids, and result nodes with a title and body; keep it under about 15 nodes), routine (a custom study mode: 2 to 6 steps that each start one of the app's real sessions, such as a 10-question drill on one domain, then its flashcards, then a formula drill). Every fact you put in a tool must be accurate for the CFP exam; it is saved and reused. Building replaces any tool with the same title. Sorter items: {text, bucket: index into buckets, why}. Tree nodes: {id, question, options:[{label, next}]} or {id, result:true, title, body}. Routine steps: {action: quiz|flashcards|formula|calculator|tool, label, domain, count, focus, formula, mode, tool}.",
+    description: "Design and build a new interactive tool for this student, saved under 'Built for you' on the Tools tab, when you judge that one would raise their chance of passing and none of the app's existing tools or modes fits. To ADJUST a tool already built, send the same title again with the revised content: it replaces the old version and keeps its usage history. You have free rein over what to make, but make it earn its place: name the specific gap, confusion or hard-to-remember rule it targets in 'why', and check what is already built (open_custom_tool action list) before making another. Kinds: sorter (items the student drops into 2 to 4 buckets with a one-line reason shown after each, for look-alike classifications such as ordinary income vs capital gain, deductible vs not, qualified vs nonqualified; 4 to 16 items, every bucket used), steps (an ordered procedure revealed one step at a time, for calculator keystrokes or a multi-step method), tree (your own decision tree: nodes with ids, question nodes with options pointing to other node ids, and result nodes with a title and body; keep it under about 15 nodes), routine (a custom study mode: 2 to 6 steps that each start one of the app's real sessions, such as a 10-question drill on one domain, then its flashcards, then a formula drill). Every fact you put in a tool must be accurate for the CFP exam; it is saved and reused. Building replaces any tool with the same title. Sorter items: {text, bucket: index into buckets, why}. Tree nodes: {id, question, options:[{label, next}]} or {id, result:true, title, body}. Routine steps: {action: quiz|flashcards|formula|calculator|tool, label, domain, count, focus, formula, mode, tool}.",
     input_schema: { type: 'object', properties: {
       kind: { type: 'string', enum: ['sorter','steps','tree','routine'] },
       title: { type: 'string', description: 'Short name, under 60 characters.' },
@@ -31572,7 +31585,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.753';
+const BUILD_ID = '2026-10-24.754';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
