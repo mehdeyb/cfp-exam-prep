@@ -4071,12 +4071,12 @@
       <div class="mode-grid">
         <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
           <h3>Adaptive session</h3>
-          <div class="mode-when"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
+          <div class="mode-when" data-mw="adaptive"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
           <div class="mode-meta" data-mm="adaptive"></div>
         </div>
         <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
           <h3>Domain drill</h3>
-          <div class="mode-when">One domain, at your level.</div>
+          <div class="mode-when" data-mw="drill">One domain, at your level.</div>
           <div class="mode-meta" data-mm="drill"></div>
         </div>
         <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
@@ -4102,7 +4102,7 @@
         </div>
         <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
           <h3>Flashcards</h3>
-          <div class="mode-when">Quick recall, spaced for you.</div>
+          <div class="mode-when" data-mw="flashcards">Quick recall, spaced for you.</div>
           <div class="mode-meta" data-mm="flashcards"></div>
         </div>
         <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
@@ -11416,6 +11416,14 @@ function renderModeMeta(){
     put('adaptive', line('adaptive'));
     { const low = DOMAINS.filter(d => ((DATA.domainStats[d.key] || {}).total || 0) > 0).sort((a, b) => domainStageOf(a.key) - domainStageOf(b.key) || b.weight - a.weight)[0];
       put('drill', [line('drill'), low ? 'Try ' + low.code + ' · ' + STAGES[domainStageOf(low.key) - 1].name : ''].filter(Boolean).join(' · ')); }
+    // The one-line descriptions follow the learner too: they name the weak spot, the due count, what is next.
+    try{
+      const mw = (key, html) => document.querySelectorAll('[data-mw="' + key + '"]').forEach(el => { if(el._mwDefault === undefined) el._mwDefault = el.innerHTML; el.innerHTML = html == null ? el._mwDefault : html; });
+      const low2 = DOMAINS.filter(d => ((DATA.domainStats[d.key] || {}).total || 0) > 0).sort((a, b) => domainStageOf(a.key) - domainStageOf(b.key) || b.weight - a.weight)[0];
+      mw('drill', low2 ? 'Next up: ' + escapeHtml(low2.name) + '.' : null);
+      mw('adaptive', low2 ? '<span data-dyn="adaptiveQ">' + (document.querySelector('[data-dyn="adaptiveQ"]') || {textContent:'15'}).textContent + '</span> mixed questions, weighted to ' + escapeHtml(low2.code) + '.' : null);
+      const fp2 = computeFlashcardProgress(); mw('flashcards', fp2.dueCount ? fp2.dueCount + ' card' + (fp2.dueCount === 1 ? '' : 's') + ' due now.' : null);
+    }catch(e){}
     { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
       const lm = lastOf('mock'), lf = lastOf('fullexam'); const lastEx = (lm && lf) ? (new Date(lm.date) > new Date(lf.date) ? 'mock' : 'fullexam') : (lm ? 'mock' : (lf ? 'fullexam' : null));
       put('exam', [lastEx ? line(lastEx) : '', 'Apply+ in ' + ap + '/' + DOMAINS.length].filter(Boolean).join(' · ')); }
@@ -30823,7 +30831,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.616';
+const BUILD_ID = '2026-10-24.617';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
