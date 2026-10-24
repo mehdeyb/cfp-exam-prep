@@ -8883,6 +8883,8 @@ function renderBlueprint(){
     const metaBits = [];
     metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
+    // The stage is what the recent results support right now, so it always agrees with the percentage beside it.
+    if(s.total){ const stg2 = stageTarget(d.key); metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage from your recent answers in this domain">' + STAGES[stg2 - 1].name + '</span>'); }
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
     if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
@@ -31281,7 +31283,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.715';
+const BUILD_ID = '2026-10-24.716';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
