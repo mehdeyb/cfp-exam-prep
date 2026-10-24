@@ -6704,6 +6704,7 @@ async function checkAIAvailability(){
   } else {
     userApiKey = await loadApiKey();
     geminiKey = await loadGeminiKey();
+    setTimeout(() => { try{ geminiPickBest(); }catch(e){} }, 2500);
     if(userApiKey){
       aiMode = 'direct';
       aiFeaturesAvailable = true;
@@ -18820,6 +18821,22 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
   return reply;
 }
 
+// Gemini does the work whenever Claude is unavailable, so it should run on the best fast model this key can use, not the first name that happens to answer.
+// Once a day: ask Google which models the key can use and put the newest full-size flash model (not lite, preview or experimental) in front.
+async function geminiPickBest(){
+  try{
+    if(!geminiKey) return;
+    const last = +localStorage.getItem('cfp-gemini-scan') || 0; if(Date.now() - last < 20 * 3600 * 1000) return;
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': geminiKey } });
+    if(!r.ok) return;
+    localStorage.setItem('cfp-gemini-scan', String(Date.now()));
+    const j = await r.json();
+    const ok = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace(/^models\//, ''));
+    const ver = n => (/(\d+(?:\.\d+)?)/.exec(n) || [0, 0])[1] * 1;
+    const best = ok.filter(n => /flash/i.test(n) && !/lite|image|tts|live|audio|exp|preview|thinking|robotics|computer|latest/i.test(n)).sort((a, b) => ver(b) - ver(a))[0];
+    if(best && GEMINI_MODELS[0] !== best){ const i = GEMINI_MODELS.indexOf(best); if(i > 0) GEMINI_MODELS.splice(i, 1); if(i !== 0) GEMINI_MODELS.unshift(best); geminiModelIdx = 0; }
+  }catch(e){}
+}
 // ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
 const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
@@ -18877,7 +18894,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
   body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
   if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
-  if(!geminiThinkingRejected && deg < 1) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  if(!geminiThinkingRejected && deg < 1) body.generationConfig.thinkingConfig = { thinkingBudget: (!/lite/i.test(GEMINI_MODELS[Math.min(modelIdx != null ? modelIdx : geminiModelIdx, GEMINI_MODELS.length - 1)] || '') && (maxTokens || 1000) >= 800) ? 1024 : 0 }; // a little thinking on full-size models keeps calculations accurate
   if(geminiSysFolded || deg >= 2){ // some models reject a separate system instruction: put it at the front of the first message instead
     const si = body.systemInstruction.parts[0].text; delete body.systemInstruction;
     if(body.contents.length && body.contents[0].role === 'user' && body.contents[0].parts && body.contents[0].parts[0] && typeof body.contents[0].parts[0].text === 'string') body.contents[0].parts[0].text = si + '\n\n' + body.contents[0].parts[0].text;
@@ -30965,7 +30982,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.645';
+const BUILD_ID = '2026-10-24.646';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
