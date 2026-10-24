@@ -897,7 +897,7 @@
     .tabbar{
       position:fixed;left:0;right:0;bottom:0;z-index:50;margin:0;border-radius:0;
       border:none;border-top:1px solid var(--hair);
-      padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+      padding:6px 4px calc(6px + var(--sab, env(safe-area-inset-bottom,0px)));
       background:var(--surface);box-shadow:0 -4px 20px rgba(0,0,0,0.3);
     }
     .tab-btn{flex-direction:column;gap:3px;font-size:11.5px;padding:7px 2px;border-radius:10px;}
@@ -28292,6 +28292,8 @@ function osApply(tab){
   kids.forEach(c => { const mine = groups[sel].els.includes(c); c.classList.toggle('os-hide', !mine); });
   osFit(tab);
 }
+// The floor of the usable area: the top of the tab bar when it is pinned to the bottom, measured live so no window or inset quirk can leave a gap.
+function osBottom(h, bb){ try{ const bar = document.getElementById('appTabbar'); if(bar && getComputedStyle(bar).position === 'fixed'){ const t = bar.getBoundingClientRect().top; if(t > 100 && t <= h + 1) return t; } }catch(e){} return h - bb; }
 function osFit(tab, extra){
   try{
     extra = extra || 0;
@@ -28303,7 +28305,7 @@ function osFit(tab, extra){
     let used = 0; vis.forEach(c => { c.style.maxHeight = ''; c.classList.remove('os-fit'); });
     const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
     const sbs = vis.length > 1 && vis[1].getBoundingClientRect().top < vis[0].getBoundingClientRect().bottom - 4;
-    const avail = Math.max(260, Math.round(h - top - bb - 16 - extra - (sbs ? 0 : (vis.length - 1) * 12)));
+    const avail = Math.max(260, Math.round(osBottom(h, bb) - top - 16 - extra - (sbs ? 0 : (vis.length - 1) * 12)));
     const per = sbs ? avail : Math.floor(avail / vis.length);
     const nat = vis.map(c => c.scrollHeight);
     const tallest = nat.indexOf(Math.max.apply(null, nat));
@@ -28319,7 +28321,7 @@ function osFit(tab, extra){
       else { const tot = nat.reduce((x, y) => x + y, 0) + (vis.length - 1) * 12; const z = Math.min(1.5, avail / tot); if(z >= 1.04) vis.forEach(c => { c.style.zoom = String(Math.round(z * 100) / 100); }); }
     }
     // Safety: whatever the zoom did, nothing may end below the visible screen.
-    vis.forEach(c => { let z = parseFloat(c.style.zoom) || 1, g = 0; while(z > 1 && g++ < 8 && c.getBoundingClientRect().bottom > h - bb - 16){ z = Math.max(1, z - 0.08); c.style.zoom = z > 1.01 ? String(Math.round(z * 100) / 100) : ''; } });
+    vis.forEach(c => { let z = parseFloat(c.style.zoom) || 1, g = 0; while(z > 1 && g++ < 8 && c.getBoundingClientRect().bottom > osBottom(h, bb) - 16){ z = Math.max(1, z - 0.08); c.style.zoom = z > 1.01 ? String(Math.round(z * 100) / 100) : ''; } });
   }catch(e){}
 }
 function osFitStudy(extra){
@@ -28337,7 +28339,7 @@ function osFitStudy(extra){
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
-    const avail = Math.max(240, Math.round(h - top - bb - 14 - notes - extra));
+    const avail = Math.max(240, Math.round(osBottom(h, bb) - top - 14 - notes - extra));
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     c.classList.add('pt-rich'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.3); return; } c.classList.remove('pt-rich');
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
@@ -28464,7 +28466,7 @@ function quizFit(){
         const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
         const h0 = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
         let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
-        const spare = h0 - bb - 14 - lastB;
+        const spare = osBottom(h0, bb) - 14 - lastB;
         const z = parseFloat(c0.style.zoom) || 1;
         if(spare > 6) c0.style.minHeight = Math.floor((c0.getBoundingClientRect().height + spare) / z) + 'px';
       }
@@ -30781,7 +30783,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.608';
+const BUILD_ID = '2026-10-23.609';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
