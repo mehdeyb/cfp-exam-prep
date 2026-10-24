@@ -3549,6 +3549,11 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  @media (max-width:640px){
+    body.os-one #tutorCard.tt-board .podcast-speed-select{position:absolute;right:10px;top:8px;width:58px;min-height:32px;font-size:12px;padding:0 4px;}
+    body.os-one #tutorCard .podcast-player-panel{position:relative;}
+    body.os-one #tutorCard .pst-now{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding:6px 10px;font-size:13px;margin-top:6px;}
+  }
   #tutorCard .pstage > .pst-now, #tutorCard .pstage > .pst-bar{flex:none;}
   body.os-one #studyHub[data-view="progress"] #diagnosisCard > .card-head{display:none;}
   body.os-one #studyHub[data-view="progress"] .progress-readout .pr-chips, body.os-one #studyHub[data-view="progress"] .progress-hint{display:none;}
@@ -31019,7 +31024,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.659';
+const BUILD_ID = '2026-10-24.660';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
