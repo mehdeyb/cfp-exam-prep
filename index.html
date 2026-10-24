@@ -14234,6 +14234,7 @@ function ttIdleBoard0(){
       const names = { adaptive:'Adaptive session', drill:'Domain drill', mock:'Practice exam', fullexam:'Full exam', case:'Case study', review:'Missed questions' };
       const n = typeof ls.answered === 'number' ? ls.answered : ls.total;
       const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Just finished', text: (names[ls.mode] || 'Session') + ': ' + ls.correct + ' of ' + n + ' right (' + Math.round(100 * ls.correct / Math.max(1, n)) + '%).' };
+      try{ const w = computeStats().weakestMeta, ns1 = computeNextStep(computeStats()); sl.text += (w ? ' Weakest: ' + w.name + '.' : '') + (ns1 && ns1.title ? ' Next: ' + ns1.title + '.' : ''); }catch(e){}
       if(!stageInlineVisible()) ttEnsureStage(); stageShow(sl, 'tutor'); window._ttSession = ls; return;
     }
   }catch(e){}
@@ -30902,7 +30903,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.634';
+const BUILD_ID = '2026-10-24.635';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
