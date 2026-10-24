@@ -2514,6 +2514,9 @@
   body.focus-mode .tab-panel.active{padding-top:max(10px,env(safe-area-inset-top,0px));}
   .ct-val{display:inline-block;margin-left:6px;font-size:11.5px;padding:1px 8px;border-radius:10px;border:1px solid var(--hair-strong);}
   .ct-val.good{color:#2e7d4f;} .ct-val.weak{color:#b3412e;} .ct-val.mid{color:#8A6412;} .ct-val.stale,.ct-val.new{opacity:.75;}
+  .ct-suggest{border:1px dashed var(--hair-strong);border-radius:12px;padding:10px 12px;margin-bottom:10px;}
+  .ct-suggest-t{font-weight:600;font-size:13px;}
+  .ct-suggest-s{font-size:12.5px;opacity:.85;margin:2px 0 8px;}
   .ct-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--hair);}
   .ct-row:first-child{border-top:0;}
   .ct-l{flex:1;min-width:0;}
@@ -10548,12 +10551,26 @@ function ctValue(t){
   else { verdict = 'used'; label = 'Used ' + uses + 'x, completed'; cls = 'mid'; }
   return { verdict, label, cls, uses, days, first, last, delta };
 }
+// A weak spot that no built tool covers yet, offered on the Tools tab; the tutor builds it when asked.
+function ctWeakSuggestion(){
+  try{
+    const list = ctList();
+    const weak = weakSubtopics(3).find(w => !list.some(x => String(x.title || '').toLowerCase().includes(String(w.name || '').toLowerCase()) || String(x.why || '').toLowerCase().includes(String(w.name || '').toLowerCase())));
+    return weak || null;
+  }catch(e){ return null; }
+}
 function ctRenderList(){
   const host = document.getElementById('ctList'), card = document.getElementById('customToolsCard'); if(!host || !card) return;
   const list = ctList();
-  card.style.display = (list.length || _ctRun) ? '' : 'none';
+  const sug = ctWeakSuggestion();
+  const sugHtml = sug ? `<div class="ct-suggest"><div class="ct-suggest-t">Weak spot with no tool yet</div><div class="ct-suggest-s">${escapeHtml(sug.name)} · ${Math.round(100 * sug.st.acc)}% right over ${sug.st.attempts} tries</div><button type="button" class="btn ghost" onclick="ctAskBuild(${JSON.stringify(sug.name).replace(/"/g, '&quot;')})">Ask the tutor to build one</button></div>` : '';
+  card.style.display = (list.length || _ctRun || sug) ? '' : 'none';
   if(list.length && card.classList.contains('cc-card') && !card._ctOpened){ card._ctOpened = true; card.classList.add('cc-open'); }
-  host.innerHTML = list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''} <span class="ct-val ${ctValue(t).cls}">${escapeHtml(ctValue(t).label)}</span></div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
+  host.innerHTML = sugHtml + list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''} <span class="ct-val ${ctValue(t).cls}">${escapeHtml(ctValue(t).label)}</span></div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
+}
+function ctAskBuild(name){
+  showTab('tutor');
+  try{ sendTutorMessage('I keep getting "' + name + '" wrong. Build me a short tool for it if it would help, and say what gap it targets.'); }catch(e){}
 }
 function ctForget(id){ DATA.customTools = ctList().filter(x => x.id !== id); if(!Array.isArray(DATA.customToolsGone)) DATA.customToolsGone = []; if(!DATA.customToolsGone.includes(id)) DATA.customToolsGone.push(id); DATA.customToolsGone = DATA.customToolsGone.slice(-60); persist(); ctRenderList(); }
 function ctConfirmDelete(id){ const t = ctList().find(x => x.id === id); if(t && confirm('Remove "' + t.title + '"?')) ctForget(id); }
@@ -31663,7 +31680,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.759';
+const BUILD_ID = '2026-10-24.760';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
