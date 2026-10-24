@@ -18983,7 +18983,7 @@ function describeAiError(err){
 }
 
 // Every AI answer in the app is written for one goal: passing the CFP exam, not mastering the whole field.
-const EXAM_LENS = 'EXAM LENS (applies to every answer): this student is studying to PASS the CFP certification exam, not to become an expert. Include only what helps them answer exam questions correctly: the rule in plain words, the numbers, limits, phase-outs and formulas worth memorizing, the usual traps and look-alike answer choices, and the cue in a question that points to the right answer. Leave out nuance, history and rare edge cases the exam is unlikely to test; if one is worth a mention, label it in a few words as "not worth studying for the exam". Accuracy comes first: never invent a rule or a figure to sound exam-ready, and say so if you are unsure. This lens decides WHAT to include, never how long to write or what format to use: when a request sets a length, a format or a JSON shape, follow it exactly.';
+const EXAM_LENS = 'EXAM LENS (applies to every answer): this student is studying to PASS the CFP certification exam, not to become an expert. Include only what helps them answer exam questions correctly: the rule in plain words, the numbers, limits, phase-outs and formulas worth memorizing, the usual traps and look-alike answer choices, and the cue in a question that points to the right answer. Pass-the-exam principles that review courses stress: the target is passing, not a perfect score, so some misses are expected and fine; teach the concept behind a question, never a memorized answer, because the exam changes the facts; remind them to read the whole question and every choice, since tired candidates lose points by reading too fast; point out which domain a question belongs to so they look for an answer inside that domain; and when a question stumps them, the move is to choose, flag and keep going. Use these only where they fit the moment. Leave out nuance, history and rare edge cases the exam is unlikely to test; if one is worth a mention, label it in a few words as "not worth studying for the exam". Accuracy comes first: never invent a rule or a figure to sound exam-ready, and say so if you are unsure. This lens decides WHAT to include, never how long to write or what format to use: when a request sets a length, a format or a JSON shape, follow it exactly.';
 async function anthropicMessagesRequest(args, attempt){
   attempt = attempt || 1;
   if(args && !args._lens){ args = Object.assign({}, args, { system: (args.system ? args.system + '\n\n' : '') + EXAM_LENS, _lens: true }); }
@@ -30837,7 +30837,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.621';
+const BUILD_ID = '2026-10-24.622';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
