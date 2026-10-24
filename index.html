@@ -1923,6 +1923,7 @@
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  body.os-one #tab-study #studyHub{margin-bottom:0 !important;}
   /* Phone: the tab bar is a low, compact row that hugs its buttons instead of a full-width strip, so the screen above it is the content's. */
   @media (max-width:640px){
     body.os-one .tabbar{left:0;right:0;width:auto;justify-content:center;gap:2px;padding:2px 8px calc(2px + var(--sab, env(safe-area-inset-bottom,0px)) * 0.5);}
@@ -28345,7 +28346,7 @@ function osFitStudy(extra){
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
-    const avail = Math.max(240, Math.round(osBottom(h, bb) - top - 14 - notes - extra));
+    const avail = Math.max(240, Math.round(osBottom(h, bb) - top - (window.innerWidth <= 640 ? 6 : 14) - notes - extra));
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     c.classList.add('pt-rich'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.3); return; } c.classList.remove('pt-rich');
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
@@ -28362,11 +28363,11 @@ function osFitStudy(extra){
     }
     c.classList.remove('pt-dt','pt-dfull','pt-dwhy');
     // Still too much: shrink the whole thing a little rather than hide or scroll anything.
-    for(const z of [0.94, 0.88, 0.82, 0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
+    for(const z of [0.98,0.96,0.94,0.92,0.9,0.88,0.86,0.84,0.82,0.8,0.78,0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
     c.style.zoom = '';
     // Still too many for the screen: one-line rows, then a gentle scale-down, before ever resorting to scrolling.
     c.classList.add('pt-tiny'); if(c.scrollHeight <= avail + 2) return;
-    { const nat = c.getBoundingClientRect().height; let z = Math.max(0.7, avail / nat); if(z < 1){ for(let k = 0; k < 6; k++){ c.style.zoom = String(Math.round(z * 100) / 100); if(c.getBoundingClientRect().height <= avail + 1) return; z = Math.max(0.7, z - 0.05); } } c.style.zoom = ''; }
+    { const nat = c.getBoundingClientRect().height; let z = Math.max(0.7, avail / nat); if(z < 1){ for(let k = 0; k < 6; k++){ c.style.zoom = String(Math.round(z * 100) / 100); if(c.getBoundingClientRect().height <= avail + 1){ for(let u = 0; u < 8; u++){ const zz = Math.round((z + 0.02) * 100) / 100; if(zz > 1) break; c.style.zoom = String(zz); if(c.getBoundingClientRect().height > avail + 1){ c.style.zoom = String(Math.round(z * 100) / 100); break; } z = zz; } return; } z = Math.max(0.7, z - 0.03); } } c.style.zoom = ''; }
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(false && rowsHost && steps.length > 2 && !window._ptAll){
@@ -28468,6 +28469,20 @@ function quizFit(){
     const c0 = document.getElementById('studyCols');
     if(c0){
       c0.style.minHeight = '';
+      c0.querySelectorAll('.pt-rows > .pt-step').forEach(r => { r.style.minHeight = ''; });
+      if(!c0.classList.contains('os-fit') && window.innerWidth <= 640){
+        // Phone: leftover height goes to the rows themselves, so they sit roomier instead of leaving a gap under the plan.
+        const rows = [...c0.querySelectorAll('.pt-rows > .pt-step')].filter(r => r.offsetParent);
+        if(rows.length){
+          const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
+          const h0 = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+          let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
+          const spare = osBottom(h0, bb) - 8 - lastB;
+          const z = parseFloat(c0.style.zoom) || 1;
+          const add = Math.min(14, Math.floor(spare / z / rows.length));
+          if(add >= 1) rows.forEach(r => { r.style.minHeight = Math.round(r.getBoundingClientRect().height / z + add) + 'px'; });
+        }
+      }
       if(!c0.classList.contains('os-fit')){
         const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
         const h0 = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
@@ -30789,7 +30804,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.610';
+const BUILD_ID = '2026-10-23.613';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
