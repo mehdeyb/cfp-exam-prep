@@ -18823,6 +18823,7 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
 // ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
 const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+try{ const _gm = localStorage.getItem('cfp-gemini-model'); if(_gm){ const i = GEMINI_MODELS.indexOf(_gm); if(i > 0) GEMINI_MODELS.splice(i, 1); if(i !== 0) GEMINI_MODELS.unshift(_gm); } }catch(e){}
 let geminiKey = null, geminiModelIdx = 0, geminiThinkingRejected = false, _claudeDownUntil = 0, _aiLastProvider = null;
 async function loadGeminiKey(){
   try{ const v = await storageGet(GEMINI_KEY_STORAGE); if(!v || !v.length) return null; return v.startsWith('v1:') ? await openSecret(v) : v; }catch(e){ return null; }
@@ -18949,6 +18950,7 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   if(!cand || !cand.content){ const e = new Error('AI response contained no usable text' + (data && data.promptFeedback && data.promptFeedback.blockReason ? ' (blocked: ' + data.promptFeedback.blockReason + ')' : '') + '.'); e.code = 'EMPTY'; e.provider = 'gemini'; throw e; }
   try{ const u = data.usageMetadata; if(u){ if(!DATA.aiTokenUsage) DATA.aiTokenUsage = { totalInput: 0, totalOutput: 0, requestCount: 0, since: Date.now() }; DATA.aiTokenUsage.geminiInput = (DATA.aiTokenUsage.geminiInput || 0) + (u.promptTokenCount || 0); DATA.aiTokenUsage.geminiOutput = (DATA.aiTokenUsage.geminiOutput || 0) + (u.candidatesTokenCount || 0); DATA.aiTokenUsage.geminiRequests = (DATA.aiTokenUsage.geminiRequests || 0) + 1; persist(); } }catch(e){}
   _aiLastProvider = 'gemini';
+  try{ localStorage.setItem('cfp-gemini-model', GEMINI_MODELS[Math.min(modelIdx != null ? modelIdx : geminiModelIdx, GEMINI_MODELS.length - 1)]); }catch(e){}
   if(deg >= 1) geminiThinkingRejected = true; if(deg >= 2) geminiSysFolded = true;
   if(!geminiKeyAt()){ setGeminiKeyAt(Date.now()); try{ if(typeof syncNow === 'function') syncNow('key'); }catch(e){} } // a key that has answered is the one worth sharing between devices
   const parts = cand.content.parts || [];
@@ -30963,7 +30965,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.644';
+const BUILD_ID = '2026-10-24.645';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
