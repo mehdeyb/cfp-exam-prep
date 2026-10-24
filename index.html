@@ -30895,10 +30895,12 @@ function focusEnter(o){
   const nx = (function(){ try{ return tutorNextChoice(o.stepId); }catch(e){ return null; } })();
   bar.innerHTML = '<div class="fb-l"><div class="fb-k">' + (cdPartTag().replace(/ · $/, '') || 'Focus') + '</div><div class="fb-t"></div><div class="pp pp-mini" data-pp="focus" style="display:none;"></div>' + (o.note ? '<div class="fb-n"></div>' : '') + '</div>' +
     (nx ? '<button type="button" class="fb-next"></button>' : '') +
+    (o.tab === 'tools' ? '<button type="button" class="fb-menu">Tools menu</button>' : '') +
     '<button type="button" class="fb-done">' + (fromChat ? 'Back to chat' : 'Done') + '</button>';
   bar.querySelector('.fb-t').textContent = String(o.title || (el && el.querySelector && (el.querySelector('h2,h3,.card-title') || {}).textContent) || 'One thing at a time').replace(/\s+/g, ' ').trim().slice(0, 70);
   { const fn = bar.querySelector('.fb-n'); if(fn) fn.textContent = String(o.note).replace(/\s+/g, ' ').trim().slice(0, 70); }
   bar.querySelector('.fb-done').onclick = () => focusExit({ done:true });
+  { const fm = bar.querySelector('.fb-menu'); if(fm) fm.onclick = () => { focusExit({ stay:true }); try{ showTab('tools'); }catch(e){} try{ window.scrollTo(0, 0); }catch(e){} }; }
   const nb = bar.querySelector('.fb-next'); if(nb && nx) fbNextStyle(nb, nx);
   if(nb) nb.onclick = () => { const id = _focus && _focus.stepId; focusExit({ stay:true, done:true }); if(id === null || id === undefined) {} tutorGoNext(); };
   panel.insertBefore(bar, panel.firstChild);
@@ -31537,7 +31539,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.747';
+const BUILD_ID = '2026-10-24.748';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
