@@ -4286,44 +4286,44 @@
         </div>
         <div class="mode-card" onclick="openDomainPicker()" tabindex="0" role="button">
           <h3>Domain drill</h3>
-          <div class="mode-when" data-mw="drill">One domain, at your level.</div>
+          <div class="mode-when" data-mw="drill">One domain, weakest first, at your level.</div>
           <div class="mode-meta" data-mm="drill"></div>
         </div>
         <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
           <h3>Practice exam</h3>
-          <div class="mode-when"><span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
+          <div class="mode-when">Timed, like the real exam: <span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
           <div class="mode-meta" data-mm="exam"></div>
         </div>
         <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
           <h3>Case studies</h3>
-          <div class="mode-when" id="caseCardText">One client, several questions.</div>
+          <div class="mode-when" id="caseCardText">One client, several questions: connect the facts.</div>
           <div class="mode-meta" data-mm="case"></div>
         </div>
         <div class="mode-card" onclick="startMissedReview()" tabindex="0" role="button">
           <h3>Missed questions</h3>
-          <div class="mode-when" id="missedCardText">What you have gotten wrong.</div>
+          <div class="mode-when" id="missedCardText">Answer what you got wrong again, to lock it in.</div>
           <button type="button" class="mode-alt" id="missedWalkBtn" style="display:none;" onclick="event.stopPropagation(); mwOpen();">Talk through them</button>
           <div class="mode-meta" data-mm="review"></div>
         </div>
         <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
           <h3>Calculator practice</h3>
-          <div class="mode-when">Formula drills and the HP 10bII+ steps.</div>
+          <div class="mode-when">Practise the HP 10bII+ steps and formulas.</div>
           <div class="mode-meta" data-mm="calc"></div>
         </div>
         <div class="mode-card" onclick="showTab('flashcards')" tabindex="0" role="button" id="fcModeCard">
           <h3>Flashcards</h3>
-          <div class="mode-when" data-mw="flashcards">Quick recall, spaced for you.</div>
+          <div class="mode-when" data-mw="flashcards">Spaced recall, before facts fade.</div>
           <div class="mode-meta" data-mm="flashcards"></div>
         </div>
         <div class="mode-card" onclick="showTab('tools')" tabindex="0" role="button" id="toolsModeCard">
           <h3>Decision tools</h3>
-          <div class="mode-when">"Which one fits?" walk-throughs.</div>
+          <div class="mode-when">Practise which choice fits a scenario.</div>
           <div class="mode-meta" data-mm="tools"></div>
         </div>
       </div>
       </div>
     </div>
-    <div class="card guide-card" id="studyGuideCard"><div class="bp-guide-row"><div><b>Study guide</b><span class="note">one page, built from your own progress</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div></div>
+    <div class="card guide-card" id="studyGuideCard"><div class="bp-guide-row"><div><b>Study guide</b><span class="note">reference: one page from your progress, open when you need it</span></div><button class="btn ghost" onclick="openStudyGuide()">Open</button></div></div>
     <div class="card" id="techCard">
       <div class="card-head"><h2>Study toolkit</h2><div class="note">what works, and how to use it here</div></div>
       <div id="techPick"></div>
@@ -10906,11 +10906,13 @@ function buildStudyPlanCore(minutes){
         why:'Finishing it first keeps your spaced-review schedule on track.', run: () => resumeInProgressSession() };
     },
     missed: () => {
-      if(missedN < 3 && !L.targets.missed) return null;
-      const n = planTarget('missed', Math.min(missedN, phase.key === 'taper' ? 10 : 15));
+      // Stuck questions are a subset of the misses and have their own re-test step, so they are counted there, not twice.
+      const stuckIds = stuckIdSet(), own = (DATA.missed || []).filter(id => !stuckIds.has(id)).length;
+      if(own < 3 && !L.targets.missed) return null;
+      const n = planTarget('missed', Math.min(own, phase.key === 'taper' ? 10 : 15));
       return { id:'missed', title:`Review ${n} missed question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.4)), need:n, have: Math.min(cnt.review || 0, n), unit:'questions',
         why:'Each idea you missed comes back as a new question on the same topic, so you show you understand it rather than remember it. Mistakes you made confidently are the ones most worth correcting.',
-        run: () => { showTab('study'); startMissedReview(); } };
+        run: () => { showTab('study'); startMissedReview({ skip: stuckIds }); } };
     },
     stuck: () => {
       // Questions you keep missing the same way are a step of today's plan, not a separate box: the tutor's "re-test these" is a plan step like any other.
@@ -10963,9 +10965,11 @@ function buildStudyPlanCore(minutes){
           need:goal, have, unit:'scenarios',
           run: () => openTreeRun(t.key, { goal: goal - have > 0 ? goal - have : goal, stepId:'tool', title:'Decision tool: ' + t.name }) };
       }
+      // A tool with a drill is counted when a drill finishes today; a tool without one can only be ticked by hand.
+      const drilledToday = ((planDayLog().trees) || []).some(k => k === t.key) ? 1 : 0;
       return { id:'tool', title:`Decision tool: ${t.name}`, minutes:8,
         why:`${whyIntro} Working through the choices yourself teaches which one fits.`,
-        manual:true, run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
+        manual: !TREE_META[t.key], need: TREE_META[t.key] ? 1 : 0, have: drilledToday, unit:'drill', run: () => { if(TREE_SCENARIOS[t.key]) openTreeWalk(t.key); else { showTab('study'); if(TREE_META[t.key]) startTreeDrill(t.key); else tutorPoint('tool_' + t.key, 'The tool for what you keep missing', true); } } };
     },
     mytool: () => {
       // A tool the tutor built for this student: the one never tried first, then the one that has waited longest or scored worst.
@@ -11134,9 +11138,11 @@ function buildStudyPlanCore(minutes){
         try{ const cnt2 = {}; exposureModel().topics.forEach(x => { if(x.state === 'new') cnt2[x.dom] = (cnt2[x.dom] || 0) + 1; }); const k = Object.keys(cnt2).sort((a, b) => cnt2[b] - cnt2[a])[0]; if(k && cnt2[k] >= 3) best = DOMAINS.find(d => d.key === k); }catch(e){}
         if(!best) return null; rd = best;
       }
-      return { id:'read', title:`Read the topic notes: ${rd.name}`, minutes:25,
+      const subsR = SUBTOPICS[rd.key] || [], goalR = Math.min(5, subsR.length);
+      const checkedR = Math.min(goalR, subsR.filter((_, i) => DATA.checkedSubtopics.includes(rd.key + '-' + i)).length);
+      return { id:'read', title:`Read the topic notes: ${rd.name}`, minutes:25, need:goalR, have:checkedR, unit:'topics',
         why: answered >= 150 ? `${rd.name} still has topics you have not met at all. Reading each topic's "what to know" note first gives the questions something to land on.` : `${rd.name} carries the most weight you have not yet earned. Read each topic's "what to know" note, check off the ones you could now explain, and let the questions test the rest.`,
-        manual:true, run: () => { showTab('reference'); const e = document.getElementById('syllabusList'); if(e) focusEnter({ tab:'reference', el:e, title:'Topic notes: ' + rd.name, stepId:'read' }); } };
+        run: () => { showTab('reference'); const e = document.getElementById('syllabusList'); if(e) focusEnter({ tab:'reference', el:e, title:'Topic notes: ' + rd.name, stepId:'read' }); } };
     },
     case2: () => {
       if(answered < 80) return null;
@@ -24346,9 +24352,11 @@ function mwWrapHtml(){
 }
 function mwCards(){ const cs = (mw && mw.cards) || []; mwClose(); if(cs.length) startFlashcardSet(cs, 'picked'); }
 function mwMore(){ if(!mw) return; mwClear(); const o = mw.opener, h = mw.home; mw = null; document.body.classList.remove('mw-active'); const ok = mwOpen(5); if(ok && mw){ mw.opener = o; if(h) mw.home = h; } }
-function startMissedReview(){
+function stuckIdSet(){ try{ return new Set(stuckPoints().open.map(q => q.id)); }catch(e){ return new Set(); } }
+function startMissedReview(o){
   if(!DATA.missed.length){ try{ setCoach('Nothing to review yet. Questions you miss land here, so an adaptive session is the quickest way to start. Tap Study to begin one.', false); }catch(e){} return; }
-  const pool = shuffle(allQuestions().filter(q=>DATA.missed.includes(q.id)));
+  const skip = o && o.skip;
+  const pool = shuffle(allQuestions().filter(q=>DATA.missed.includes(q.id) && !(skip && skip.has(q.id))));
   if(!pool.length){ pruneRetiredQuestionIds(); renderAll(); return; }
   beginSession(pool, 'review', null);
 }
@@ -31711,7 +31719,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.762';
+const BUILD_ID = '2026-10-24.763';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
