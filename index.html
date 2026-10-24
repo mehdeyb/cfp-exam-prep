@@ -1164,31 +1164,19 @@
   .bp-trendrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;}
   .bp-trendrow .bp-value-trend{margin:0;flex:1 1 auto;min-width:0;}
   .bp-spark{flex:0 0 auto;overflow:visible;}
-  /* Subtle motion on Progress only, and only when the device allows it. */
+  /* Restrained motion on Progress: bars and the readiness line draw in once when the page opens; numbers simply fade in.
+     Nothing moves after that, and nothing moves at all when the device asks for reduced motion. */
   @media (prefers-reduced-motion: no-preference){
     @keyframes bpGrowY{from{transform:scaleY(0);}to{transform:scaleY(1);}}
     @keyframes bpGrowX{from{transform:scaleX(0);}to{transform:scaleX(1);}}
-    @keyframes bpRise{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+    @keyframes bpFade{from{opacity:0;}to{opacity:1;}}
     @keyframes bpDraw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
-    #studyHub[data-view="progress"].enter .bp-fill{transform-origin:50% 100%;will-change:transform;animation:bpGrowY .7s cubic-bezier(.2,.7,.2,1) both;}
-    #studyHub[data-view="progress"].enter .bp-value-row,
-    #studyHub[data-view="progress"].enter .bp-snap-cell,
+    #studyHub[data-view="progress"].enter .bp-fill{transform-origin:50% 100%;will-change:transform;animation:bpGrowY .55s ease-out both;}
+    #studyHub[data-view="progress"].enter .bp-hours-bar i{transform-origin:0 50%;animation:bpGrowX .6s ease-out .1s both;}
+    #studyHub[data-view="progress"].enter .bp-spark polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:bpDraw .8s ease-out both;}
+    #studyHub[data-view="progress"].enter .bp-spark circle{animation:bpFade .3s ease .75s both;}
     #studyHub[data-view="progress"].enter .bp-num,
-    #studyHub[data-view="progress"].enter .bp-mix-chip,
-    #studyHub[data-view="progress"].enter .bp-chip-time,
-    #studyHub[data-view="progress"].enter .bp-chip-mv{animation:bpRise .45s ease both;}
-    #studyHub[data-view="progress"].enter .bp-value-row:nth-child(2){animation-delay:.05s;}
-    #studyHub[data-view="progress"].enter .bp-value-row:nth-child(3){animation-delay:.1s;}
-    #studyHub[data-view="progress"].enter .bp-snap-cell:nth-child(2){animation-delay:.05s;}
-    #studyHub[data-view="progress"].enter .bp-snap-cell:nth-child(3){animation-delay:.1s;}
-    #studyHub[data-view="progress"].enter .bp-snap-cell:nth-child(4){animation-delay:.15s;}
-    #studyHub[data-view="progress"].enter .bp-snap-cell:nth-child(5){animation-delay:.2s;}
-    #studyHub[data-view="progress"].enter .bp-num:nth-child(2){animation-delay:.05s;}
-    #studyHub[data-view="progress"].enter .bp-num:nth-child(3){animation-delay:.1s;}
-    #studyHub[data-view="progress"].enter .bp-num:nth-child(4){animation-delay:.15s;}
-    #studyHub[data-view="progress"].enter .bp-hours-bar i{transform-origin:0 50%;animation:bpGrowX .8s cubic-bezier(.2,.7,.2,1) .15s both;}
-    #studyHub[data-view="progress"].enter .bp-spark polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:bpDraw 1s ease-out .1s both;}
-    #studyHub[data-view="progress"].enter .bp-spark circle{animation:bpRise .4s ease .9s both;}
+    #studyHub[data-view="progress"].enter .bp-snap-cell{animation:bpFade .35s ease both;}
   }
   .bp-next{margin-top:8px;padding:8px 12px;border:1px solid var(--hair-strong);border-radius:12px;background:var(--surface2);}
   .bp-next:empty{display:none;}
@@ -31584,7 +31572,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.752';
+const BUILD_ID = '2026-10-24.753';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
