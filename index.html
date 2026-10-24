@@ -2787,6 +2787,17 @@
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-left{grid-column:1;grid-row:1;position:static;max-height:none;overflow:visible;}
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > #qChoices{grid-column:2;grid-row:1 / span 30;}
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > :not(#qChoices){grid-column:1;}
+    /* A client scenario or case study keeps the facts on the left, full height; the question, how sure, the choices and then the explanation stack on the right, so neither column sits empty. */
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-left{display:contents;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-domain{grid-column:1;grid-row:1;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-scenario{grid-column:1;grid-row:2 / span 40;margin:0;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-text{grid-column:2;grid-row:1 / span 2;margin:0 0 4px;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .ask-chips,
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .confidence-row,
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .confidence-mismatch,
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .calc-cue{grid-column:2;grid-row:auto;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-right > #qChoices{grid-column:2;grid-row:auto;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-right > :not(#qChoices){grid-column:2;}
     body.quiz-active .q-text{margin-bottom:14px;}
     body.quiz-active .confidence-row{margin:0;padding-bottom:0;border-bottom:0;}
     body.quiz-active .quiz-top{margin-bottom:12px;}
@@ -28415,7 +28426,8 @@ function quizFit(){
     const card = qv.querySelector('.q-card'); const top = qv.querySelector('.quiz-top'); if(!card || !top) return;
     const host = document.getElementById('quizFullscreenHost'); const cs = getComputedStyle(host);
     const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    const avail = h - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 100;
+    const qa = qv.querySelector('.quiz-actions'); const reserve = qa ? Math.min(100, Math.max(56, Math.round(qa.getBoundingClientRect().height / (parseFloat(qv.style.zoom) || 1)) + 14)) : 100;
+    const avail = h - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - reserve;
     const raw = () => { const a = top.getBoundingClientRect().top, b = card.getBoundingClientRect().bottom; return b - a; };
     const nat = raw(); if(!nat) return;
     // Some browsers (older Safari) report rects at the unzoomed size even when CSS zoom is applied; detect that and scale the reading ourselves.
@@ -28447,10 +28459,12 @@ function quizFit(){
   ['coachLine','tutorNoteCard','scoreRow'].forEach(id => { const e = document.getElementById(id); if(e) new MutationObserver(re).observe(e, { childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class','style'] }); });
 })();
 (function(){
-  let t = 0; const go = () => { clearTimeout(t); t = setTimeout(quizFit, 70); };
+  // quizFit writes zoom and margin on the quiz itself, so its own writes must never wake it again (that made the screen pulse).
+  let t = 0; const obs = [];
+  const go = () => { clearTimeout(t); t = setTimeout(() => { quizFit(); obs.forEach(o => { try{ o.takeRecords(); }catch(e){} }); }, 70); };
   const qv = document.getElementById('quizView');
-  if(qv) new MutationObserver(go).observe(qv, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style','hidden'] });
-  new MutationObserver(go).observe(document.body, { attributes:true, attributeFilter:['class'] });
+  if(qv){ const o1 = new MutationObserver(go); o1.observe(qv, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style','hidden'] }); obs.push(o1); }
+  { const o2 = new MutationObserver(go); o2.observe(document.body, { attributes:true, attributeFilter:['class'] }); obs.push(o2); }
   window.addEventListener('resize', go);
 })();
 (function(){ const b0 = osFit; window.osFit = osFit = function(tab, extra){
@@ -30804,7 +30818,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.613';
+const BUILD_ID = '2026-10-23.614';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
