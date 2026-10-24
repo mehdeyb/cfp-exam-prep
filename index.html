@@ -9286,7 +9286,7 @@ function renderReadinessExtras(stats){
   const estEl = document.getElementById('readinessEst');
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
-      estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '');
+      estEl.textContent = `≈ ${stats.expectedAccuracy}% exam accuracy` + (stats.triedTotal < 40 ? ' · early' : '');
       estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions. Readiness counts only what you know beyond guessing (25% on four-choice questions), so ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
       estEl.style.display = 'block';
     } else { estEl.style.display = 'none'; }
@@ -31246,7 +31246,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.691';
+const BUILD_ID = '2026-10-24.692';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
