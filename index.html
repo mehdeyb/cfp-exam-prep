@@ -1172,6 +1172,8 @@
   .bp-value-pace.warn{color:var(--gold);}
   .bp-value-empty{font-size:14px;opacity:.85;margin:0;line-height:1.45;}
   .bp-chip-right{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .bp-chip-mv{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;}
+  .bp-trend-up{color:#2e7d4f;} .bp-trend-down{color:#b3412e;} .bp-trend-flat{opacity:.7;font-weight:400;}
   .bp-chip-rebuilding{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);letter-spacing:.02em;}
   .source-note{margin-top:12px;font-size:11.5px;color:var(--muted-dim);line-height:1.5;}
   .source-note summary{cursor:pointer;list-style:none;}
@@ -8870,6 +8872,14 @@ function renderProgressValue(){
   el.innerHTML = html;
   el.style.display = html ? '' : 'none';
 }
+// How one topic's readiness has moved over your last sessions. Null until there are two snapshots under the current model.
+function topicTrend(key){
+  try{
+    const snaps = (DATA.sessions || []).filter(s => s.domReady && s.readinessVer === READINESS_VERSION && typeof s.domReady[key] === 'number').slice(-6).map(s => s.domReady[key]);
+    if(snaps.length < 2) return null;
+    return { d: snaps[snaps.length - 1] - snaps[0], n: snaps.length };
+  }catch(e){ return null; }
+}
 // Live numbers for the Progress page, all from saved sessions and the current question stats.
 function progressNumbersHtml(){
   try{
@@ -8979,6 +8989,7 @@ function renderBlueprint(){
       metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage: ' + STAGES[stg2 - 1].name + ' (from your recent answers, capped by the % shown)">' + STAGES[stg2 - 1].name + '</span>');
     }
     if(s.total) metaBits.push(`<span class="bp-chip-right" title="Share of your answers right in this topic">${accuracy}% right</span>`);
+    { const tt = topicTrend(d.key); if(tt){ const arrow = tt.d >= 3 ? `<span class="bp-trend-up">▲ ${tt.d}</span>` : tt.d <= -3 ? `<span class="bp-trend-down">▼ ${-tt.d}</span>` : `<span class="bp-trend-flat">steady</span>`; metaBits.push(`<span class="bp-chip-mv" title="Readiness change over your last ${tt.n} sessions">${arrow}</span>`); } }
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
     if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
@@ -26979,7 +26990,7 @@ function finishSession(){
     const qs = (idxs.length ? idxs.map(i => session.queue[i]) : []).filter(q => q && q.q);
     if(qs.length) sessDiff = Math.round(10 * qs.reduce((a,q)=>a+questionDifficulty(q),0) / qs.length) / 10;
   }catch(e){ sessDiff = null; }
-  const rec = {date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, diff:sessDiff, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, minutes: Math.round(creditedMin)};
+  const rec = {date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, diff:sessDiff, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, domReady: (function(){ try{ const o = {}; computeStats().parts.forEach(p => { o[p.key] = p.weight ? Math.round(100 * p.earned / p.weight) : 0; }); return o; }catch(e){ return null; } })(), minutes: Math.round(creditedMin)};
   if(examLike()){ try{ const pi = paceSectionInfo() || { total: MOCK_MINUTES*60 }; rec.spare = session.timedOut ? 0 : Math.max(0, Math.round(session.timerSeconds || 0)); rec.clock = pi.total; if(session.timedOut) rec.timedOut = true; }catch(e){} }
   DATA.sessions.push(rec);
   if(DATA.sessions.length > 300) DATA.sessions = DATA.sessions.slice(-300);
@@ -31417,7 +31428,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.738';
+const BUILD_ID = '2026-10-24.739';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
