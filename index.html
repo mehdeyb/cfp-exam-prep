@@ -1161,6 +1161,9 @@
   .bp-value-act{font-size:13px;opacity:.85;margin-top:3px;line-height:1.35;}
   .bp-value-pace{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.4;}
   .bp-value-trend{font-size:13px;margin:8px 0 0;line-height:1.4;}
+  .bp-trendrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;}
+  .bp-trendrow .bp-value-trend{margin:0;flex:1 1 auto;min-width:0;}
+  .bp-spark{flex:0 0 auto;overflow:visible;}
   .bp-next{margin-top:10px;padding:10px 14px;border:1px solid var(--hair-strong);border-radius:12px;background:var(--surface2);}
   .bp-next:empty{display:none;}
   .bp-next-name{font-weight:600;font-size:14px;margin-bottom:2px;}
@@ -1178,7 +1181,7 @@
   .bp-mix{display:flex;flex-wrap:wrap;gap:6px;}
   .bp-mix-chip{font-size:12.5px;border:1px solid var(--hair-strong);border-radius:12px;padding:3px 9px;}
   .bp-mix-chip b{font-family:'IBM Plex Mono',monospace;}
-  .bp-hours{margin-top:10px;}
+  .bp-hours{margin-top:6px;}
   .bp-hours-top{display:flex;justify-content:space-between;align-items:baseline;}
   .bp-hours-v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
   .bp-hours-of{font-size:13px;font-weight:400;opacity:.75;}
@@ -8893,11 +8896,17 @@ function renderProgressValue(){
       let pace = ''; try{ const pc = computePace(st); if(pc && pc.remaining > 0){ const ps = paceSummary(st); if(ps && ps.text) pace = `<p class="bp-value-pace ${ps.cls || ''}">${escapeHtml(ps.text)}</p>`; } }catch(e){}
       let trend = '';
       try{
-        const rs = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0 && typeof s.readinessAtEnd === 'number' && s.readinessVer === READINESS_VERSION).slice(-6).map(s => Math.round(s.readinessAtEnd));
+        const rs = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0 && typeof s.readinessAtEnd === 'number' && s.readinessVer === READINESS_VERSION).slice(-8).map(s => Math.round(s.readinessAtEnd));
         if(rs.length >= 3){
           const d = rs[rs.length - 1] - rs[0];
           const words = d >= 3 ? `up ${d} points` : d <= -3 ? `down ${-d} points` : 'holding steady';
-          trend = `<p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>`;
+          // Readiness after each of your last sessions, drawn as a small line. The scale keeps at least 10 points of height so small moves are not exaggerated.
+          const W = 176, H = 40, lo0 = Math.min(...rs) - 2, hi0 = Math.max(...rs) + 2, lo = hi0 - lo0 < 10 ? hi0 - 10 : lo0, hi = hi0;
+          const xy = rs.map((v, i) => [rs.length === 1 ? W : (i / (rs.length - 1)) * W, H - 3 - ((v - lo) / (hi - lo)) * (H - 6)]);
+          const pts = xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+          const last = xy[xy.length - 1];
+          const spark = `<svg class="bp-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Readiness over your last ${rs.length} sessions: from ${rs[0]} to ${rs[rs.length - 1]}"><polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="var(--gold)"/></svg>`;
+          trend = `<div class="bp-trendrow"><p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>${spark}</div>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
       }catch(e){}
       try{
@@ -31521,7 +31530,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.745';
+const BUILD_ID = '2026-10-24.746';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
