@@ -1161,6 +1161,14 @@
   .bp-value-act{font-size:12px;color:var(--muted);margin-top:2px;}
   .bp-value-pace{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.4;}
   .bp-value-trend{font-size:13px;color:var(--ink);margin:10px 0 0;line-height:1.4;}
+  .bp-num-head{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;}
+  .bp-num-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .bp-num{border:1px solid var(--line, rgba(0,0,0,.08));border-radius:10px;padding:8px 10px;}
+  .bp-num-k{font-size:11px;color:var(--muted);}
+  .bp-num-v{font-size:20px;font-family:'IBM Plex Mono',monospace;color:var(--ink);line-height:1.2;}
+  .bp-num-s{font-size:11.5px;color:var(--muted);}
+  .bp-num-up{color:#2e7d4f;} .bp-num-down{color:#b3412e;}
+  .bp-num-last{font-size:12px;color:var(--muted);margin:8px 0 0;}
   .bp-value-pace.warn{color:var(--gold);}
   .bp-value-empty{font-size:12.5px;color:var(--muted);margin:0;line-height:1.4;}
   .bp-chip-right{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
@@ -8856,11 +8864,40 @@ function renderProgressValue(){
           trend = `<p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
       }catch(e){}
-      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${pace}`;
+      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${progressNumbersHtml()}${pace}`;
     }
   }catch(e){ html = ''; }
   el.innerHTML = html;
   el.style.display = html ? '' : 'none';
+}
+// Live numbers for the Progress page, all from saved sessions and the current question stats.
+function progressNumbersHtml(){
+  try{
+    const DAY = 86400000, now = Date.now();
+    const sess = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0)
+      .map(s => ({ t: new Date(s.date).getTime(), n: sessionQuestionCount(s), c: s.correct || 0, m: s.minutes || 0 }))
+      .filter(s => isFinite(s.t));
+    if(!sess.length) return '';
+    const inWin = (from, to) => sess.filter(s => s.t >= now - to * DAY && s.t < now - from * DAY);
+    const thisWk = inWin(0, 7), prevWk = inWin(7, 14);
+    const sum = (a, k) => a.reduce((x, s) => x + s[k], 0);
+    const asked = sum(thisWk, 'n'), right = sum(thisWk, 'c'), mins = Math.round(sum(thisWk, 'm'));
+    const pAsked = sum(prevWk, 'n'), pRight = sum(prevWk, 'c');
+    const acc = asked ? Math.round(100 * right / asked) : null, pAcc = pAsked ? Math.round(100 * pRight / pAsked) : null;
+    const last = Math.max(...sess.map(s => s.t));
+    const daysAgo = Math.floor((now - last) / DAY);
+    const lastTxt = daysAgo <= 0 ? 'today' : daysAgo === 1 ? 'yesterday' : daysAgo + ' days ago';
+    const due = allQuestions().filter(q => { if(isGenQ(q)) return false; const st = getSpacedStat(DATA.questionStats, q.id); return st.seen > 0 && isDue(st); }).length;
+    const accTxt = acc === null ? '—' : acc + '%';
+    const vs = (acc !== null && pAcc !== null) ? (acc - pAcc >= 3 ? `<span class="bp-num-up">▲ ${acc - pAcc} vs last week</span>` : acc - pAcc <= -3 ? `<span class="bp-num-down">▼ ${pAcc - acc} vs last week</span>` : `<span>same as last week</span>`) : (pAsked ? '' : '<span>first week of data</span>');
+    const cell = (k, v, sub) => `<div class="bp-num"><div class="bp-num-k">${k}</div><div class="bp-num-v">${v}</div><div class="bp-num-s">${sub}</div></div>`;
+    return `<div class="bp-num-head">This week</div><div class="bp-num-grid">`
+      + cell('Questions', asked, asked ? sess.filter(s => s.t >= now - 7 * DAY).length + ' sessions' : 'none yet')
+      + cell('Right', accTxt, asked ? vs : '')
+      + cell('Minutes', mins || '—', asked ? 'studied' : '')
+      + cell('Due now', due, due ? 'ready to review' : 'nothing due')
+      + `</div><p class="bp-num-last">Last session ${lastTxt}.</p>`;
+  }catch(e){ return ''; }
 }
 function renderBlueprint(){
   try{ renderProgressValue(); }catch(e){}
@@ -31380,7 +31417,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.736';
+const BUILD_ID = '2026-10-24.737';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
