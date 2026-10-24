@@ -4788,6 +4788,8 @@ function showTab(name, opts){
   const curEl = document.querySelector('.tab-panel.active');
   const curName = curEl ? curEl.id.replace(/^tab-/, '') : null;
   const same = curName === name;
+  // Leaving the tutor ends its audio: a lesson pauses where it stood (Resume picks it up), a spoken reply stops.
+  if(!same && curName === 'tutor'){ try{ if(naturalSpeechState.active){ if(podcastPlayingKey){ if(!naturalSpeechState.paused){ pauseSpeechSequence(); try{ setPodcastPlayButtonState('Resume'); }catch(e){} } } else stopSpeechSequence(); } }catch(e){} }
   if(same && opts.fromBar){
     try{ window.scrollTo({ top: 0, left: 0, behavior: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }catch(e){ window.scrollTo(0, 0); }
   }
@@ -30946,7 +30948,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.642';
+const BUILD_ID = '2026-10-24.643';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
