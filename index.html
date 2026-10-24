@@ -1971,7 +1971,7 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:1 1 0;min-width:0;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .stat-strip{flex:0 0 auto;width:auto;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{min-width:0;overflow-wrap:anywhere;white-space:normal;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{white-space:nowrap;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-meta{grid-column:2 / -1;grid-row:1;margin:0;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-band{grid-column:2;grid-row:2;}
@@ -9289,7 +9289,7 @@ function renderReadinessExtras(stats){
   const estEl = document.getElementById('readinessEst');
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
-      estEl.textContent = `≈ ${stats.expectedAccuracy}% exam accuracy` + (stats.triedTotal < 40 ? ' · early' : '');
+      estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '');
       estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions. Readiness counts only what you know beyond guessing (25% on four-choice questions), so ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
       estEl.style.display = 'block';
     } else { estEl.style.display = 'none'; }
@@ -31255,7 +31255,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.694';
+const BUILD_ID = '2026-10-24.695';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
