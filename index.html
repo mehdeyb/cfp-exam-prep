@@ -10573,6 +10573,15 @@ function buildStudyPlanCore(minutes){
         why:'Each idea you missed comes back as a new question on the same topic, so you show you understand it rather than remember it. Mistakes you made confidently are the ones most worth correcting.',
         run: () => { showTab('study'); startMissedReview(); } };
     },
+    stuck: () => {
+      // Questions you keep missing the same way are a step of today's plan, not a separate box: the tutor's "re-test these" is a plan step like any other.
+      let sp = null; try{ sp = stuckPoints(); }catch(e){}
+      if(!sp || !sp.open.length) return null;
+      const n = Math.min(sp.open.length, 6);
+      return { id:'stuck', title:`Re-test ${n} stuck question${n === 1 ? '' : 's'}`, minutes: Math.max(5, Math.ceil(n * 1.5)), need:n, have:0, unit:'questions',
+        why:'These are questions you keep missing the same way, even after the idea was explained. Re-testing them shows whether the fix stuck.',
+        run: () => { showTab('study'); retestStuckPoints(); } };
+    },
     calc: () => {
       // Each day pairs the calculator (time value, cash flows) with formula practice, and leads with whichever has waited longer
       // or is going worse. The first pick is pinned so doing it does not flip the order.
@@ -10842,9 +10851,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','teach'],
-    build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
-    sharpen:    ['cards','missed','weak','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
+    build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
+    sharpen:    ['cards','missed','stuck','weak','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','keys','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
@@ -12159,41 +12168,8 @@ function askTutorAboutStuck(){
   try{ sendTutorMessage('Walk me through the questions I keep getting wrong the same way. Start with the one that matters most for my exam.'); }catch(e){}
 }
 function renderPatternCallout(){
-  // It is a to-do for today (re-test, walk through), so it lives on the Today plan. The plan redraws itself, which used to remove this box, so it is recreated here when missing.
-  let el = document.getElementById('patternCallout');
-  try{
-    const tp = document.getElementById('todayPlanCard');
-    if(!el && tp){ el = document.createElement('div'); el.className = 'pattern-callout'; el.id = 'patternCallout'; el.style.display = 'none'; }
-    if(el && tp && el.parentElement !== tp){ tp.insertBefore(el, tp.firstElementChild ? tp.firstElementChild.nextSibling : null); }
-  }catch(e){}
-  if(!el) return;
-  const sp = stuckPoints();
-  if(sp.open.length > 0){
-    const d = DOMAINS.find(x => x.key === sp.topKey);
-    const where = (d && sp.open.length > 1 && sp.topN >= 2) ? ` Most are in ${escapeHtml(d.name)} (${sp.topN}).` : '';
-    el.innerHTML = `<b>Stuck points:</b> ${sp.open.length} question${sp.open.length === 1 ? '' : 's'} you keep getting wrong the same way${sp.fixed ? `, with ${sp.fixed} already fixed` : ''}. A repeated wrong choice usually means one specific misconception, so fixing it directly beats more volume.${where}<span class="pc-actions"><button type="button" class="pc-btn" onclick="retestStuckPoints()">Re-test ${Math.min(15, sp.open.length)}</button><button type="button" class="pc-btn ghost" onclick="askTutorAboutStuck()">Walk me through them</button></span>`;
-    el.style.display = 'block';
-    return;
-  }
-  const mp = missProfile();
-  if(mp.total >= 8){
-    const top = Object.keys(mp.counts).filter(k => k !== 'gap').sort((a,b) => mp.counts[b]-mp.counts[a])[0];
-    if(top && mp.counts[top] / mp.total >= 0.35){
-      el.innerHTML = `<b>Your miss pattern:</b> ${Math.round(mp.counts[top]/mp.total*100)}% of your recent misses were "${MISS_TYPES[top].label.toLowerCase()}". ${MISS_TYPES[top].tip}`;
-      el.style.display = 'block';
-      return;
-    }
-  }
-  const fw = fmtWeakest();
-  if(fw){ el.innerHTML = `<b>Format check:</b> you get ${Math.round(fw.acc * 100)}% of ${fw.label} questions right, against ${Math.round(fw.all * 100)}% overall. The exam uses this wording, so it is worth drilling.`; el.style.display = 'block'; return; }
-  const tvmCats = DATA.tvmMistakeCategories || {};
-  const tvmTopCat = Object.keys(TVM_MISTAKE_LABELS).sort((a,b) => (tvmCats[b]||0) - (tvmCats[a]||0))[0];
-  if(tvmTopCat && (tvmCats[tvmTopCat]||0) >= 3){
-    el.innerHTML = `<b>Worth a look:</b> in the TVM walkthrough, your most common setup mistake has been ${TVM_MISTAKE_LABELS[tvmTopCat]} — that's come up ${tvmCats[tvmTopCat]} times.`;
-    el.style.display = 'block';
-    return;
-  }
-  el.style.display = 'none';
+  // The stuck-points box is gone: repeated mistakes are now a step in today's plan ("Re-test N stuck questions").
+  const el = document.getElementById('patternCallout'); if(el){ el.style.display = 'none'; el.innerHTML = ''; }
 }
 
 function renderDifficultyIndicator(){
@@ -31294,7 +31270,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.707';
+const BUILD_ID = '2026-10-24.708';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
