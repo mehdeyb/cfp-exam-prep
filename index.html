@@ -1306,6 +1306,13 @@
   .plan-chip .pc-t{overflow:hidden;text-overflow:ellipsis;max-width:34vw;}
   .plan-chip .pc-bar{display:inline-block;width:56px;height:4px;border-radius:2px;background:var(--hair);overflow:hidden;flex:0 0 auto;margin-left:8px;}
   .plan-chip .pc-bar i{display:block;height:100%;background:currentColor;border-radius:2px;transition:width .4s ease;}
+  /* Phone: the plan step gets its own full-width line under the question counter, so the two never sit on top of each other. */
+  @media (max-width:640px){
+    body.quiz-active .quiz-top{flex-wrap:wrap;}
+    body.quiz-active .quiz-top > .quiz-progress-wrap{flex:1 1 100%;min-width:0;}
+    body.quiz-active .plan-chip{white-space:normal;flex:1 1 100%;max-width:100%;}
+    body.quiz-active .plan-chip .pc-t{max-width:none;}
+  }
   .plan-result{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border-left:3px solid var(--gold);font-size:13px;line-height:1.5;color:var(--paper);}
   .plan-result.done{border-left-color:var(--correct);}
   .plan-result .pr-why{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
@@ -31724,7 +31731,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.765';
+const BUILD_ID = '2026-10-24.766';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
