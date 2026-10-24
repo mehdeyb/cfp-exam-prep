@@ -3541,6 +3541,8 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  #tutorCard.tt-noaudio .podcast-player-panel{display:none !important;}
+  #tutorCard.tt-noaudio #podcastPlayer .pp-cap, #tutorCard.tt-noaudio #podcastPlayer .podcast-status{display:none;}
   #tutorCard.tt-board .tutor-input-row{padding:4px 0 2px;margin-bottom:0;}
   #tutorCard.tt-board:has(> .api-key-nudge:not([style*="none"])) > .card-head > *{top:62px;right:14px;}
   #tutorCard.tt-board > .card-head > *{top:12px;right:14px;}
@@ -28620,6 +28622,12 @@ function ttFit(){
     const fit = Math.max(420, Math.round(h - top - bottomBar - 6)); c.style.minHeight = fit + 'px'; c.style.height = fit + 'px';
   }catch(e){}
 }
+// No standalone play bar: the controls exist only while a lesson is actually running or paused. Otherwise the tutor starts it from its own prompt.
+setInterval(() => { try{
+  const c = document.getElementById('tutorCard'); if(!c) return;
+  const idle = !(naturalSpeechState && naturalSpeechState.active);
+  if(c.classList.contains('tt-noaudio') !== idle){ c.classList.toggle('tt-noaudio', idle); setTimeout(ttFit, 30); }
+}catch(e){} }, 500);
 window.addEventListener('resize', () => setTimeout(ttFit, 60));
 window.addEventListener('orientationchange', () => setTimeout(ttFit, 300));
 function tutorClearActions(){ const h = document.getElementById('ttActions'); if(h){ h.innerHTML = ''; h.classList.remove('on'); h.dataset.src = ''; h.dataset.k = ''; } }
@@ -30894,7 +30902,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.633';
+const BUILD_ID = '2026-10-24.634';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
