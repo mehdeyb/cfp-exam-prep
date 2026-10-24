@@ -28838,8 +28838,11 @@ function quizFit(){
   }catch(e){}
 }
 (function(){
-  let t2 = 0; const re = () => { clearTimeout(t2); t2 = setTimeout(osFitStudy, 60); };
-  ['coachLine','tutorNoteCard','scoreRow'].forEach(id => { const e = document.getElementById(id); if(e) new MutationObserver(re).observe(e, { childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class','style'] }); });
+  // osFitStudy writes styles inside these same elements. Its own writes must not wake it again, or each pass re-triggers the next (a loop that froze the answer step).
+  let t2 = 0; const obs2 = [];
+  const run = () => { try{ osFitStudy(); }catch(e){} obs2.forEach(o => { try{ o.takeRecords(); }catch(e){} }); };
+  const re = () => { clearTimeout(t2); t2 = setTimeout(run, 60); };
+  ['coachLine','tutorNoteCard','scoreRow'].forEach(id => { const e = document.getElementById(id); if(e){ const o = new MutationObserver(re); o.observe(e, { childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class','style'] }); obs2.push(o); } });
 })();
 (function(){
   // quizFit writes zoom and margin on the quiz itself, so its own writes must never wake it again (that made the screen pulse).
@@ -28859,7 +28862,7 @@ function quizFit(){
     if(over > 1) osFit(tab, (extra || 0) + over + 2);
   }catch(e){}
 }; })();
-(function(){ const base = osFitStudy; window.osFitStudy = osFitStudy = function(extra){
+(function(){ const base = osFitStudy; let _osRetrying = false; window.osFitStudy = osFitStudy = function(extra){
   // While the page is still hidden and filling in, fitting it over and over is wasted work; one fit runs just before it is revealed.
   if(document.documentElement.classList.contains('booting') && !window._bootFitOk) return;
   base(extra);
@@ -28902,7 +28905,8 @@ function quizFit(){
     const h = vpHeight();
     const over = Math.ceil(document.documentElement.scrollHeight - Math.max(h, document.documentElement.clientHeight));
     // The overflow is a few pixels at most. Carrying it forward on every pass (it reached 130px on an iPad) shrank Today far more than needed, which left the gap.
-    if(over > 1 && (extra || 0) < 20) osFitStudy(Math.min(20, over + 2));
+    // One retry at most. Re-entering this wrapper on its own overflow check nested up to ten passes deep, each re-running the whole fit (the answer-step freeze).
+    if(over > 1 && (extra || 0) < 20 && !_osRetrying){ _osRetrying = true; try{ osFitStudy(Math.min(20, over + 2)); } finally { _osRetrying = false; } }
   }catch(e){}
 }; })();
 window.addEventListener('resize', () => setTimeout(() => { osFit('reference'); osFit('examday'); osFitStudy(); }, 80));
@@ -31297,7 +31301,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.725';
+const BUILD_ID = '2026-10-24.727';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
