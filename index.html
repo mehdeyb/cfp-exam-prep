@@ -1588,6 +1588,9 @@
   .speak-btn svg{width:14px;height:14px;}
   .speak-btn.speaking{opacity:1;color:var(--gold);border-color:var(--gold);}
   .speak-btn.preparing-speech{opacity:1;color:var(--muted);animation:variantLoadingPulse 1.6s ease-in-out infinite;}
+  .quiz-feedback.good{background:var(--correct-tint);color:var(--correct);animation:fbIn .32s var(--ease-out) both;}
+  .quiz-feedback.bad{animation:fbIn .32s var(--ease-out) both;}
+  @keyframes fbIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
   .quiz-feedback.good{background:var(--correct-tint);color:var(--correct);}
   .quiz-feedback.bad{background:var(--incorrect-tint);color:var(--incorrect);}
   .science-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
@@ -26165,6 +26168,7 @@ function quizRevealFeedback(fb){
     if(want - d < topEdge) d = want - topEdge;
     if(d > 1 || d < -1){
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window._rvAt = Date.now();
       host.scrollTo({ top: Math.max(0, host.scrollTop + d), behavior: reduce ? 'auto' : 'smooth' });
     }
   }catch(e){}
@@ -26337,10 +26341,7 @@ function selectAnswerCore(i){
   const missType = isCorrect ? null : logMiss(q, wasPreviouslyMissed);
   const mixPair = isCorrect ? null : recordMixup(q, i);
   if(isCorrect) easeMixupOnCorrect(q);
-  persist();
-  renderBlueprint();
-  refreshHeaderStats();
-  updateLiveReadiness();
+  // Saving and the stat panels are heavy; they run after the answer and its explanation have painted, so the reveal never waits on them.
 
   const fb = document.getElementById('qFeedback');
   const letters = ['A','B','C','D'];
@@ -26357,8 +26358,16 @@ function selectAnswerCore(i){
   fb.className = 'quiz-feedback ' + (isCorrect ? 'good' : 'bad');
   fb.style.display = 'flex';
   quizRevealFeedback(fb);
-  // The per-choice explanations finish opening just after this, which moves the feedback; settle once more.
-  [180, 420, 800].forEach(ms => setTimeout(() => quizRevealFeedback(fb), ms));
+  // The explanations open and the feedback moves as they do. Follow that movement one frame at a time, with one settled scroll, instead of several jumps.
+  try{
+    const qc = document.getElementById('qChoices'); let pend = 0;
+    // While a smooth scroll is already gliding to the right place, do not re-aim it on every frame (that is what made it bounce).
+    const follow = () => { if(pend || Date.now() - (window._rvAt || 0) < 450) return; pend = requestAnimationFrame(() => { pend = 0; quizRevealFeedback(fb); }); };
+    if(window.ResizeObserver && qc){ const ro = new ResizeObserver(follow); ro.observe(qc); ro.observe(fb); setTimeout(() => { ro.disconnect(); if(pend) cancelAnimationFrame(pend); quizRevealFeedback(fb); }, 900); }
+    else { setTimeout(() => quizRevealFeedback(fb), 420); }
+  }catch(e){}
+  // Now the heavy bookkeeping: saving and the stat panels, after the reveal is on screen.
+  setTimeout(() => { try{ persist(); renderBlueprint(); refreshHeaderStats(); updateLiveReadiness(); }catch(e){} }, 0);
 
   const simplifyRow = document.getElementById('simplifyRow');
   const simplifiedBox = document.getElementById('simplifiedExplanation');
@@ -31246,7 +31255,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.692';
+const BUILD_ID = '2026-10-24.694';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
