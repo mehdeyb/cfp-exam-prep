@@ -8883,10 +8883,9 @@ function renderBlueprint(){
     const metaBits = [];
     metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
-    // The stage is read off the percentage on this row (the same readiness the bar shows): Exam-ready 75%+ (the strong band),
-    // Apply 60%+, Build 50%+, otherwise Foundation. The word and the number always say the same thing.
+    // The stage is read off the share you got right in this topic (the % on the row): Exam-ready 75%+, Apply 60%+, Build 50%+, otherwise Foundation.
     if(s.total){
-      const stg2 = mastery >= 75 ? 4 : mastery >= 60 ? 3 : mastery >= 50 ? 2 : 1;
+      const stg2 = accuracy >= 75 ? 4 : accuracy >= 60 ? 3 : accuracy >= 50 ? 2 : 1;
       metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage: ' + STAGES[stg2 - 1].name + ' (from your recent answers, capped by the % shown)">' + STAGES[stg2 - 1].name + '</span>');
     }
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
@@ -8897,7 +8896,7 @@ function renderBlueprint(){
     chip.setAttribute('role', 'button');
     chip.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery${inFoundation ? ', currently rebuilding fundamentals' : ''}${dueCount ? `, ${dueCount} due for review` : ''}`);
     chip.onclick = () => blueprintDrill(d.key);
-    chip.innerHTML = `<div class="bp-chip-main"><span class="bp-chip-name"><b class="bp-chip-code">${d.code}</b> ${d.name}</span>${metaBits.length ? `<div class="bp-chip-meta-row">${metaBits.join('')}</div>` : ''}</div><span class="bp-chip-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
+    chip.innerHTML = `<div class="bp-chip-main"><span class="bp-chip-name"><b class="bp-chip-code">${d.code}</b> ${d.name}</span>${metaBits.length ? `<div class="bp-chip-meta-row">${metaBits.join('')}</div>` : ''}</div><span class="bp-chip-pct ${s.total ? (accuracy>=75?'strong':accuracy>=50?'mid':'weak') : 'none'}" title="Share of your answers right in this topic">${s.total ? accuracy+'%' : '—'}</span>`;
     legend.appendChild(chip);
   });
 
@@ -31287,7 +31286,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.718';
+const BUILD_ID = '2026-10-24.719';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
