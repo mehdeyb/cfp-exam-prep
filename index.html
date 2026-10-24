@@ -1169,6 +1169,23 @@
   .bp-num-s{font-size:13px;opacity:.8;}
   .bp-num-up{color:#2e7d4f;} .bp-num-down{color:#b3412e;}
   .bp-num-last{font-size:13.5px;opacity:.85;margin:10px 0 0;}
+  .bp-hours{margin-top:14px;}
+  .bp-hours-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .bp-hours-v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
+  .bp-hours-of{font-size:13px;font-weight:400;opacity:.75;}
+  .bp-hours-bar{height:8px;border-radius:4px;background:var(--surface3);overflow:hidden;margin:6px 0 4px;}
+  .bp-hours-bar i{display:block;height:100%;background:var(--gold);}
+  .bp-tw{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
+  .bp-tw-row{font-size:12.5px;}
+  .bp-tw-top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;}
+  .bp-tw-code{font-family:'IBM Plex Mono',monospace;font-weight:600;min-width:34px;}
+  .bp-tw-nums{opacity:.85;}
+  .bp-tw-over{color:#b3412e;margin-left:auto;font-size:12px;}
+  .bp-tw-under{color:#8A6412;margin-left:auto;font-size:12px;}
+  .bp-tw-on{color:#2e7d4f;margin-left:auto;font-size:12px;}
+  .bp-tw-bar{position:relative;height:6px;border-radius:3px;background:var(--surface3);margin-top:3px;}
+  .bp-tw-bar i{display:block;height:100%;border-radius:3px;background:var(--gold);}
+  .bp-tw-bar b{position:absolute;top:-3px;width:2px;height:12px;background:#1c1c1c;}
   .bp-value-pace.warn{color:var(--gold);}
   .bp-value-empty{font-size:14px;opacity:.85;margin:0;line-height:1.45;}
   .bp-chip-right{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
@@ -8866,7 +8883,7 @@ function renderProgressValue(){
           trend = `<p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
       }catch(e){}
-      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${progressNumbersHtml()}${pace}`;
+      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
     }
   }catch(e){ html = ''; }
   el.innerHTML = html;
@@ -8880,6 +8897,26 @@ function topicTrend(key){
     return { d: snaps[snaps.length - 1] - snaps[0], n: snaps.length };
   }catch(e){ return null; }
 }
+// Study hours against the recommended 250-hour minimum, and time spent per topic against each topic's exam weight.
+// Time per topic is estimated from questions answered in each topic times your average minutes per question.
+function studyTimeHtml(){
+  try{
+    const hours = (DATA.totalStudyMinutes || 0) / 60;
+    const hpct = Math.min(100, Math.round(100 * hours / 250));
+    const hoursRow = `<div class="bp-hours"><div class="bp-hours-top"><span class="bp-num-k">Study hours</span><span class="bp-hours-v">${hours < 10 ? hours.toFixed(1) : Math.round(hours)} <span class="bp-hours-of">of 250</span></span></div><div class="bp-hours-bar"><i style="width:${hpct}%"></i></div><div class="bp-num-s">The CFP Board's recommended minimum is 250 hours.</div></div>`;
+    const dstats = DOMAINS.map(d => ({ d, n: (DATA.domainStats[d.key] || {}).total || 0 }));
+    const sumN = dstats.reduce((a, x) => a + x.n, 0);
+    if(sumN < 20) return hoursRow + `<p class="bp-num-last">Time per topic appears after 20 questions.</p>`;
+    const rows = dstats.map(x => {
+      const timeShare = 100 * x.n / sumN, wShare = x.d.weight;
+      const gap = timeShare - wShare;
+      const status = gap > 4 ? '<span class="bp-tw-over">more than its weight</span>' : gap < -4 ? '<span class="bp-tw-under">less than its weight</span>' : '<span class="bp-tw-on">on target</span>';
+      return `<div class="bp-tw-row"><div class="bp-tw-top"><span class="bp-tw-code">${x.d.code}</span><span class="bp-tw-nums">${Math.round(timeShare)}% of time · ${wShare}% of exam</span>${status}</div><div class="bp-tw-bar"><i style="width:${Math.min(100, timeShare * 2.5)}%"></i><b style="left:${Math.min(100, wShare * 2.5)}%"></b></div></div>`;
+    }).join('');
+    return hoursRow + `<div class="bp-num-head">Time vs. exam weight</div><div class="bp-tw">${rows}</div><div class="bp-num-s">Estimated from questions per topic. The dark tick marks each topic's share of the exam.</div>`;
+  }catch(e){ return ''; }
+}
+
 // Live numbers for the Progress page, all from saved sessions and the current question stats.
 function progressNumbersHtml(){
   try{
@@ -31428,7 +31465,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.739';
+const BUILD_ID = '2026-10-24.740';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
