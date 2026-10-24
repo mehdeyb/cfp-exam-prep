@@ -27388,17 +27388,25 @@ function runSyllabusCoverageCheck(){
 }
 
 
+// Items the app wrote on purpose for this person (a reworded retry of a missed question, a case, a card the tutor made in a lesson) repeat an idea by design. They are never counted as duplicates and never removed.
+function isTailored(x){ return !!(x && (x.variantOf || x.caseGen || x.isVariant || x.tutorMade || x.reworded)); }
+function defSimilar(a, b){
+  const wa = new Set(normalizeForDedup(a).split(' ').filter(w => w.length > 2)), wb = new Set(normalizeForDedup(b).split(' ').filter(w => w.length > 2));
+  if(!wa.size || !wb.size) return normalizeForDedup(a) === normalizeForDedup(b);
+  let n = 0; wa.forEach(w => { if(wb.has(w)) n++; });
+  return n / (wa.size + wb.size - n) >= 0.7;
+}
 // Only the AI-written items can be cleaned: a repeat of something already in the bank (or of an earlier AI item) and any AI question whose choices are lopsided.
 function integrityCleanPlan(){
   const gq = (DATA && DATA.generatedBank) || [], gf = (DATA && DATA.generatedFlashcards) || [];
   const isRoman = q => (q.choices || []).filter(c => /^(I|II|III|IV|V)(,| and |\s+only$)/.test(c) || /^(I|II|III|IV|V) only$/.test(c) || /^(All|None) of the above/i.test(c)).length >= 3;
   const seenQ = new Set(QUESTIONS.map(q => normalizeForDedup(q.q)));
-  const dropQ = new Set();
-  gq.forEach((q, i) => { const n = normalizeForDedup(q && q.q); if(!q || !Array.isArray(q.choices) || seenQ.has(n) || (q.choices.length === 4 && !isRoman(q) && !passesDistractorQualityCheck(q))) dropQ.add(i); else seenQ.add(n); });
-  const seenF = new Set(FLASHCARDS.map(f => normalizeForDedup(f.term)));
-  const dropF = new Set();
-  gf.forEach((f, i) => { const n = normalizeForDedup(f && f.term); if(!f || seenF.has(n)) dropF.add(i); else seenF.add(n); });
-  return { dropQ, dropF };
+  const dropQ = new Set(); let keptQ = 0;
+  gq.forEach((q, i) => { if(!q || !Array.isArray(q.choices)){ dropQ.add(i); return; } const n = normalizeForDedup(q.q); const bad = seenQ.has(n) || (q.choices.length === 4 && !isRoman(q) && !passesDistractorQualityCheck(q)); if(bad && isTailored(q)){ keptQ++; return; } if(bad) dropQ.add(i); else seenQ.add(n); });
+  const seenF = new Map(); FLASHCARDS.forEach(f => { const n = normalizeForDedup(f.term); (seenF.get(n) || seenF.set(n, []).get(n)).push(f.def); });
+  const dropF = new Set(); let keptF = 0;
+  gf.forEach((f, i) => { if(!f){ dropF.add(i); return; } const n = normalizeForDedup(f.term); const prior = seenF.get(n) || []; const same = prior.some(d => defSimilar(d, f.def)); if(same && isTailored(f)){ keptF++; return; } if(same){ dropF.add(i); return; } (seenF.get(n) || seenF.set(n, []).get(n)).push(f.def); if(prior.length) keptF++; });
+  return { dropQ, dropF, keptQ, keptF };
 }
 async function cleanGeneratedContent(){
   const plan = integrityCleanPlan();
@@ -27425,7 +27433,7 @@ function runContentIntegrityCheck(){
   if(dupeQIds) issues.push(`${dupeQIds} duplicate question ID${dupeQIds===1?'':'s'}`);
 
   const qTextCounts = {};
-  allQs.forEach(q => { const n = normalizeForDedup(q.q); qTextCounts[n] = (qTextCounts[n]||0)+1; });
+  allQs.forEach(q => { if(isTailored(q)) return; const n = normalizeForDedup(q.q); qTextCounts[n] = (qTextCounts[n]||0)+1; });
   const dupeQText = Object.keys(qTextCounts).filter(t=>qTextCounts[t]>1).length;
   if(dupeQText) issues.push(`${dupeQText} question${dupeQText===1?'':'s'} that appear${dupeQText===1?'s':''} to be near-duplicates of another question`);
 
@@ -27450,9 +27458,11 @@ function runContentIntegrityCheck(){
   const dupeFcIds = Object.keys(fcIdCounts).filter(id=>fcIdCounts[id]>1).length;
   if(dupeFcIds) issues.push(`${dupeFcIds} duplicate flashcard ID${dupeFcIds===1?'':'s'}`);
 
-  const fcTermCounts = {};
-  allFcs.forEach(f => { const n = normalizeForDedup(f.term); fcTermCounts[n] = (fcTermCounts[n]||0)+1; });
-  const dupeFcTerms = Object.keys(fcTermCounts).filter(t=>fcTermCounts[t]>1).length;
+  // A card that shares a term with another but explains it differently is a second angle, not a repeat; only near-identical definitions count.
+  const fcByTerm = {};
+  allFcs.forEach(f => { const n = normalizeForDedup(f.term); (fcByTerm[n] = fcByTerm[n] || []).push(f); });
+  let variantFc = 0;
+  const dupeFcTerms = Object.keys(fcByTerm).filter(t => { const a = fcByTerm[t]; if(a.length < 2) return false; let dup = false; for(let i = 1; i < a.length && !dup; i++){ for(let j = 0; j < i; j++){ if(defSimilar(a[i].def, a[j].def) && !(isTailored(a[i]) || isTailored(a[j]))){ dup = true; break; } } } if(!dup) variantFc++; return dup; }).length;
   if(dupeFcTerms) issues.push(`${dupeFcTerms} flashcard${dupeFcTerms===1?'':'s'} that appear${dupeFcTerms===1?'s':''} to be near-duplicates of another card`);
 
   const dupeTvmIds = (() => {
@@ -27484,6 +27494,14 @@ function runContentIntegrityCheck(){
   } else {
     const _pl = integrityCleanPlan(), _nc = _pl.dropQ.size + _pl.dropF.size;
     resultEl.innerHTML = `<div class="integrity-issues">Checked ${allQs.length} questions, ${allFcs.length} flashcards, and ${TVM_PROBLEMS.length} TVM problems, found:<ul>${issues.map(i=>`<li>${i}</li>`).join('')}</ul>${_nc ? `<button type="button" class="btn ghost" style="margin-top:10px;" onclick="cleanGeneratedContent()">Clean up: remove ${_nc} AI-written item${_nc === 1 ? '' : 's'} that cause${_nc === 1 ? 's' : ''} this</button>` : ''}</div>`;
+  }
+  { // Say plainly what was left alone on purpose, so nothing the app wrote for this person looks like a mistake.
+    const tq = allQs.filter(isTailored).length, tf = allFcs.filter(isTailored).length;
+    const bits = [];
+    if(tq) bits.push(tq + ' reworded retr' + (tq === 1 ? 'y' : 'ies') + ' or case question' + (tq === 1 ? '' : 's') + ' the app wrote from what you missed');
+    if(tf) bits.push(tf + ' card' + (tf === 1 ? '' : 's') + ' your tutor made for you');
+    if(variantFc) bits.push(variantFc + ' term' + (variantFc === 1 ? '' : 's') + ' explained a second way on another card');
+    if(bits.length) resultEl.insertAdjacentHTML('beforeend', '<p class="hint" style="margin:8px 0 0;">Left alone on purpose, since they repeat an idea by design: ' + bits.join('; ') + '.</p>');
   }
 }
 
@@ -28579,6 +28597,14 @@ function osFit(tab, extra){
     vis.forEach(c => { let z = parseFloat(c.style.zoom) || 1, g = 0; while(z > 1 && g++ < 8 && c.getBoundingClientRect().bottom > osBottom(h, bb) - 16){ z = Math.max(1, z - 0.08); c.style.zoom = z > 1.01 ? String(Math.round(z * 100) / 100) : ''; } });
   }catch(e){}
 }
+// Some Safari versions report an element's size before CSS zoom is applied, others after it. Measure once which this browser does, so every fit step reads the size you actually see.
+function zoomReports(){
+  if(window._zr !== undefined) return window._zr;
+  try{ const d = document.createElement('div'); d.style.cssText = 'position:absolute;left:-999px;top:0;width:100px;height:100px;zoom:.5;'; document.body.appendChild(d); const hh = d.getBoundingClientRect().height; d.remove(); window._zr = hh < 75; }catch(e){ window._zr = true; }
+  return window._zr;
+}
+function zH(c){ const r = c.getBoundingClientRect().height, z = parseFloat(c.style.zoom) || 1; return (Math.abs(z - 1) < 0.005 || zoomReports()) ? r : r * z; }
+function zRaw(el, z){ const r = el.getBoundingClientRect().height; return (Math.abs(z - 1) < 0.005 || !zoomReports()) ? r : r / z; }
 function osFitStudy(extra){
   try{
     extra = extra || 0;
@@ -28623,11 +28649,11 @@ function osFitStudy(extra){
     }
     c.classList.remove('pt-dt','pt-dfull','pt-dwhy');
     // Still too much: shrink the whole thing a little rather than hide or scroll anything.
-    for(const z of [0.98,0.96,0.94,0.92,0.9,0.88,0.86,0.84,0.82,0.8,0.78,0.76]){ c.style.zoom = String(z); if(c.getBoundingClientRect().height <= avail + 1) return; }
+    for(const z of [0.98,0.96,0.94,0.92,0.9,0.88,0.86,0.84,0.82,0.8,0.78,0.76]){ c.style.zoom = String(z); if(zH(c) <= avail + 1) return; }
     c.style.zoom = '';
     // Still too many for the screen: one-line rows, then a gentle scale-down, before ever resorting to scrolling.
     c.classList.add('pt-tiny'); if(c.scrollHeight <= avail + 2) return;
-    { const nat = c.getBoundingClientRect().height; let z = Math.max(0.7, avail / nat); if(z < 1){ for(let k = 0; k < 6; k++){ c.style.zoom = String(Math.round(z * 100) / 100); if(c.getBoundingClientRect().height <= avail + 1){ for(let u = 0; u < 8; u++){ const zz = Math.round((z + 0.02) * 100) / 100; if(zz > 1) break; c.style.zoom = String(zz); if(c.getBoundingClientRect().height > avail + 1){ c.style.zoom = String(Math.round(z * 100) / 100); break; } z = zz; } return; } z = Math.max(0.7, z - 0.03); } } c.style.zoom = ''; }
+    { const nat = zH(c); let z = Math.max(0.7, avail / nat); if(z < 1){ for(let k = 0; k < 6; k++){ c.style.zoom = String(Math.round(z * 100) / 100); if(zH(c) <= avail + 1){ for(let u = 0; u < 8; u++){ const zz = Math.round((z + 0.02) * 100) / 100; if(zz > 1) break; c.style.zoom = String(zz); if(zH(c) > avail + 1){ c.style.zoom = String(Math.round(z * 100) / 100); break; } z = zz; } return; } z = Math.max(0.7, z - 0.03); } } c.style.zoom = ''; }
     const steps = all.filter(r => r.classList.contains('pt-step'));
     const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pt-fitmore'; b.textContent = txt; b.onclick = fn; return b; };
     if(false && rowsHost && steps.length > 2 && !window._ptAll){
@@ -28665,7 +28691,7 @@ function osGrow(c, avail, maxZ){
     let z = Math.min(maxZ || 1.3, avail / h0); if(z < 1.04) return;
     for(let k = 0; k < 6; k++){
       c.style.zoom = String(Math.round(z * 100) / 100);
-      if(c.getBoundingClientRect().height <= avail + 1) return;
+      if(zH(c) <= avail + 1) return;
       z = 1 + (z - 1) * 0.7; if(z < 1.03){ c.style.zoom = ''; return; }
     }
     c.style.zoom = '';
@@ -28758,7 +28784,7 @@ function quizFit(){
           const ptr = c0.querySelector('.pt-rows'); const colN = Math.max(1, parseInt(ptr && getComputedStyle(ptr).columnCount, 10) || 1);
           const perCol = Math.max(1, Math.ceil(rows.length / colN));
           let add = Math.min(window.innerWidth <= 640 ? 14 : 26, Math.floor(spare / z / perCol));
-          const base0 = rows.map(r => Math.round(r.getBoundingClientRect().height / z));
+          const base0 = rows.map(r => Math.round(zRaw(r, z)));
           for(let k = 0; k < 4 && add >= 1; k++){
             rows.forEach((r, i) => { r.style.minHeight = (base0[i] + add) + 'px'; });
             if(osBottom(h0, bb) - 4 >= c0.getBoundingClientRect().bottom) break;
@@ -28772,7 +28798,7 @@ function quizFit(){
         let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
         const spare = osBottom(h0, bb) - 14 - lastB;
         const z = parseFloat(c0.style.zoom) || 1;
-        if(spare > 6) c0.style.minHeight = Math.floor((c0.getBoundingClientRect().height + spare) / z) + 'px';
+        if(spare > 6) c0.style.minHeight = Math.floor((zRaw(c0, z) + spare / z) ) + 'px';
       }
     }
     const panel = document.getElementById('tab-study'); if(!panel || !panel.classList.contains('active') || (extra || 0) > 60) return;
@@ -31171,7 +31197,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.683';
+const BUILD_ID = '2026-10-24.685';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
