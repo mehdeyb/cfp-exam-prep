@@ -7505,8 +7505,8 @@ async function loadData(){
   try{
     const _ap = document.querySelector('.tab-panel.active'); if(_ap){ _ap.classList.add('tab-enter'); setTimeout(() => _ap.classList.remove('tab-enter'), 600); }
     const endBoot = () => { const h = document.documentElement; if(!h.classList.contains('booting')) return; h.classList.add('booted'); h.classList.remove('booting'); setTimeout(() => h.classList.remove('booted'), 700); };
-    requestAnimationFrame(() => requestAnimationFrame(endBoot));
-    setTimeout(endBoot, 2000);
+    window.__endBoot = endBoot;
+    setTimeout(endBoot, 2500);
   }catch(_){}
   // The Reference page is the heaviest to build, so the opening screen does not wait for it unless it is the one showing.
   if(DATA.lastTab === 'reference' || DATA.lastTab === 'tutor'){ renderReference(); window._refRenderedOnce = true; }
@@ -7516,7 +7516,7 @@ async function loadData(){
     if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
   }, 1200);
   // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
-  { await runDeferredInit(); showTab('study'); }
+  { await runDeferredInit(); showTab('study'); try{ if(typeof osFitStudy === 'function') osFitStudy(); }catch(e){} try{ const t = DATA.lastTab; if(t === 'tutor') ttFit(); }catch(e){} requestAnimationFrame(() => requestAnimationFrame(() => { try{ window.__endBoot && window.__endBoot(); }catch(e){} })); }
   window._dataReady = true;
   try{ if(kokoroWanted()) setTimeout(() => { if(KOKORO.state === 'idle') kokoroLoad(); }, 4000); }catch(e){}
   if(loadFailed){
@@ -30934,7 +30934,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.639';
+const BUILD_ID = '2026-10-24.640';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
