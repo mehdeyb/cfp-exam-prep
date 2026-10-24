@@ -4825,7 +4825,11 @@ function showTab(name, opts){
     // Keep your place in the deck when you hop between tabs; only re-plan it when something that changes the plan has happened
     // (a quiz answer, a card rating, a new day) or the deck has gone stale.
     { const sig = fcPlanSignature();
-      if(!fcQueue.length || window._fcPlanSig !== sig || (Date.now() - (window._fcBuiltAt || 0)) > 20*60000){ rebuildFlashcardQueue(); } }
+      if(!fcQueue.length || window._fcPlanSig !== sig || (Date.now() - (window._fcBuiltAt || 0)) > 20*60000){
+        // Only the flashcard tab needs the deck now; for any other tab it is rebuilt a moment later, off the tap, so the switch itself stays instant.
+        if(name === 'flashcards') rebuildFlashcardQueue();
+        else if(!window._fcRebuildPending){ window._fcRebuildPending = true; setTimeout(() => { window._fcRebuildPending = false; try{ if(!document.querySelector('#tab-flashcards.active')) rebuildFlashcardQueue(); }catch(e){} }, 600); }
+      } }
     renderExamDayCallout();
     updateTutorContextNote();
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
@@ -30982,7 +30986,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.646';
+const BUILD_ID = '2026-10-24.647';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
