@@ -10763,6 +10763,20 @@ function buildStudyPlanCore(minutes){
     let cum = 0; const half = minutes >= 300 ? used / 2 : Math.min(105, used / 2);
     for(let i = 0; i < steps.length - 1; i++){ cum += steps[i].minutes; if(cum >= half){ breakAfter = steps[i].id; break; } }
   }
+  // A saved, half-finished session and the plan step for the same kind of work are one piece of work: the plan step takes over the resume, so the same answers never show up as progress twice.
+  try{
+    const ri = steps.findIndex(x => x.id === 'resume'), sv = DATA.inProgressSession;
+    if(ri >= 0 && sv && !sv.treeDrill){
+      const idOf = { adaptive:'adaptive', review:'missed', mock:'checkpoint', case:'case' }[sv.mode];
+      let tgt = idOf ? steps.find(x => x.id === idOf) : null;
+      if(!tgt && sv.mode === 'drill') tgt = steps.find(x => x.topic && sv.drillTopic && x.topic === sv.drillTopic) || steps.find(x => x.domPool && x.id === 'weak');
+      if(tgt && !tgt.done){
+        const rs = steps[ri]; tgt.run = rs.run; tgt.resuming = true;
+        used -= (rs.minutes || 0);
+        steps.splice(ri, 1);
+      }
+    }
+  }catch(e){}
   // The misses are reviewed once a day: when the review-missed step is in the plan, the separate "walk through your misses" steps would cover the same questions again, so they step aside.
   if(steps.some(x => x.id === 'missed')){
     for(let i = steps.length - 1; i >= 0; i--){ if(steps[i].id === 'tutor' || steps[i].id === 'tutor2'){ if(!(steps[i].done || (steps[i].have || 0) > 0)){ used -= steps[i].minutes || 0; steps.splice(i, 1); } } }
@@ -30767,7 +30781,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.607';
+const BUILD_ID = '2026-10-23.608';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
