@@ -1923,6 +1923,12 @@
   .os-fit{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-bottom:0 !important;}
   #heroIntro{display:none !important;}
   body.os-one{padding-bottom:0 !important;}
+  /* Phone: the tab bar is a low, compact row that hugs its buttons instead of a full-width strip, so the screen above it is the content's. */
+  @media (max-width:640px){
+    body.os-one .tabbar{left:0;right:0;width:auto;justify-content:center;gap:2px;padding:2px 8px calc(2px + var(--sab, env(safe-area-inset-bottom,0px)) * 0.5);}
+    body.os-one .tab-btn{flex:0 1 auto;min-width:0;flex-direction:row;gap:5px;padding:7px 12px;font-size:12px;letter-spacing:0;border-radius:999px;}
+    body.os-one .tab-btn svg{width:16px;height:16px;}
+  }
   /* Today: the readiness is a slim strip, so the plan gets the screen. Wide screens put the strip and the prompts in a side column and give the plan the rest. */
   body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:0;align-items:center;text-align:left;}
   body.os-one #tab-study .score-ring-wrap{grid-row:1 / span 4;}
@@ -30783,7 +30789,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.609';
+const BUILD_ID = '2026-10-23.610';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
