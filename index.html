@@ -9487,7 +9487,7 @@ function computeNextStepRaw(stats){
       cta: nxtP ? 'Next part' : 'See your summary', meta: nxtP ? `part ${pr.n + 1} of ${tot}` : 'session complete', launchesSession:false, run: () => conductorOpenMenu() };
     else step = { kicker:'Your session', title: cs.current ? 'Back to your session' : 'Continue your session',
       why: cs.current ? `You are on part ${pr.n} of ${tot}: ${cs.current.title}. Tap when you are done and I will check in.` : `${pr.done} of ${tot} parts are done. The next one is chosen from how those went.`,
-      cta:'Continue', meta: cs.current ? `part ${pr.n} of ${tot}` : `${pr.done} of ${tot} done`, launchesSession:false, run: () => conductorOpenMenu() };
+      cta:'Continue', meta: cs.current ? `part ${pr.n} of ${tot}` : `${pr.done} of ${tot} parts done`, launchesSession:false, run: () => conductorOpenMenu() };
   }
 
   if(!step && stats.totalAnswered === 0 && !(DATA.flashcardRatingCount > 0)){
@@ -9874,7 +9874,7 @@ function ppHtml(curId){
   if(!marks) n = idx >= 0 ? idx + 1 : doneN;
   const left = steps.reduce((a, x) => a + (x.done ? 0 : (x.minutes || 0) * (1 - (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0))), 0);
   const leftTxt = left >= 5 ? (left >= 90 ? 'about ' + paceHrs(Math.round(left / 15) * 15) + ' left' : 'about ' + Math.round(left / 5) * 5 + ' min left') : 'nearly done';
-  const lab = idx >= 0 || marks ? `Part ${n} of ${total}` : `${doneN} of ${total} done`;
+  const lab = idx >= 0 || marks ? `Part ${n} of ${total}` : `${doneN} of ${total} steps done`;
   const cur = idx >= 0 ? steps[idx] : null;
   return `<div class="pp-segs" aria-hidden="true">${segs}</div><div class="pp-txt"><b>${lab}</b>${cur ? `<span class="pp-t">${escapeHtml(String(cur.title).replace(/^(Drill|New ground|Keep fresh): /, '').slice(0, 40))}</span>` : ''}<span class="pp-l">${leftTxt}</span></div>`;
 }
@@ -9894,7 +9894,7 @@ function ppOpenSheet(curId){
       const here = x.id === curId;
       return `<button type="button" class="pps-row ${state}" ${here ? 'aria-current="step"' : ''} onclick="ppGo('${x.id}')"><span class="pps-n">${x.done ? '\u2713' : i + 1}</span><span class="pps-b"><span class="pps-t">${escapeHtml(x.title)}</span><span class="pps-m">${here ? 'You are here \u00b7 ' : ''}${escapeHtml(pr ? pr + ' \u00b7 ' : '')}about ${x.minutes} min</span></span></button>` + (plan.breakAfter === x.id ? `<div class="pps-brk">${plan.minutes >= 300 ? 15 : 10} minute break</div>` : '');
     }).join('');
-    o.innerHTML = `<div class="pps-panel"><div class="pps-head"><div><div class="pps-k">Today\u2019s parts</div><div class="pps-h">${doneN} of ${steps.length} done \u00b7 ${left >= 5 ? 'about ' + (left >= 90 ? paceHrs(Math.round(left / 15) * 15) : Math.round(left / 5) * 5 + ' min') + ' left' : 'nearly done'}</div></div><button type="button" class="pps-x" aria-label="Close" onclick="ppCloseSheet()">\u2715</button></div><div class="pps-list">${rows}</div>${inRun ? '<p class="pps-note">Picking another part ends this run. Your answers so far are saved.</p>' : ''}</div>`;
+    o.innerHTML = `<div class="pps-panel"><div class="pps-head"><div><div class="pps-k">Today\u2019s steps</div><div class="pps-h">${doneN} of ${steps.length} steps done \u00b7 ${left >= 5 ? 'about ' + (left >= 90 ? paceHrs(Math.round(left / 15) * 15) : Math.round(left / 5) * 5 + ' min') + ' left' : 'nearly done'}</div></div><button type="button" class="pps-x" aria-label="Close" onclick="ppCloseSheet()">\u2715</button></div><div class="pps-list">${rows}</div>${inRun ? '<p class="pps-note">Picking another part ends this run. Your answers so far are saved.</p>' : ''}</div>`;
     o.classList.add('on'); document.body.classList.add('pps-open');
     const cur = o.querySelector('.pps-row.now'); if(cur) setTimeout(() => { try{ cur.scrollIntoView({ block:'center' }); }catch(e){} }, 30);
     window._ppKey = e => { if(e.key === 'Escape') ppCloseSheet(); }; document.addEventListener('keydown', window._ppKey);
@@ -14625,10 +14625,10 @@ function ttPlanStripRefresh(){
       let line, go = '';
       if(own && !own.done) line = `<b>Step ${plan.steps.indexOf(own) + 1} of ${total} in today's plan</b>`;
       else if(own && own.done) line = `<b>\u2713 This lesson is done in today's plan.</b>`;
-      else line = adv ? `<b>\u2713 ${escapeHtml(adv.titles.length === 1 ? adv.titles[0] : adv.titles.length + ' steps')} done.</b>` : `<b>Today's plan</b> \u00b7 ${done} of ${total} done`;
+      else line = adv ? `<b>\u2713 ${escapeHtml(adv.titles.length === 1 ? adv.titles[0] : adv.titles.length + ' steps')} done.</b>` : `<b>Today's plan</b> \u00b7 ${done} of ${total} steps done`;
       if(nxt && nxt !== own) go = `<div class="tps-next"><span>Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><button type="button" class="pt-go" onclick="runPlanStep('${nxt.id}')">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'}</button></div>`;
       else if(!nxt) go = `<div class="tps-next"><span>That is everything on today's plan.</span></div>`;
-      const lead = own ? (own.done ? '\u2713 Done' : `Step ${plan.steps.indexOf(own) + 1} of ${total}`) : `${done} of ${total} done`;
+      const lead = own ? (own.done ? '\u2713 Done' : `Step ${plan.steps.indexOf(own) + 1} of ${total}`) : `${done} of ${total} steps done`;
       html = nxt && nxt !== own
         ? `<button type="button" class="tps-line" onclick="runPlanStep('${nxt.id}')"><span class="tps-lead">${lead}</span><span class="tps-nx">Next: ${escapeHtml(nxt.title)} \u00b7 ${nxt.minutes} min</span><span class="tps-go">${(nxt.have || 0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u203a</span></button>`
         : `<div class="tps-line"><span class="tps-lead">${lead}</span><span class="tps-nx">${nxt ? 'Today\'s plan' : 'Plan done for today'}</span></div>`;
@@ -28347,7 +28347,7 @@ function buildTutorSystemPrompt(){
     if(pl && pl.steps && pl.steps.length){
       const done = pl.steps.filter(x => x.done).length, nxt = pl.steps.find(x => !x.done);
       const cs = conductorState();
-      timeContext += ` TODAY'S PLAN (the same one shown on the Today tab${pl.focus ? ', ' + pl.focus.label.toLowerCase() + ': ' + pl.focus.why : ''}): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} parts done. ` +
+      timeContext += ` TODAY'S PLAN (the same one shown on the Today tab${pl.focus ? ', ' + pl.focus.label.toLowerCase() + ': ' + pl.focus.why : ''}): ${pl.minutes} minutes chosen, ${done} of ${pl.steps.length} steps done. ` +
         pl.steps.map(x => `[${x.id}] ${x.title}${x.done ? ' (done)' : (x.need > 0 && (x.have || 0) > 0 ? ` (${x.have}/${x.need})` : '')}`).join('; ') + '.' +
         (nxt ? ` Next part: [${nxt.id}] ${nxt.title}. Point them to it, or start it with start_plan_step, rather than inventing a different task.` : ' Every part is done: acknowledge it and suggest only light review or rest.') +
         (cs ? ' A guided session is running right now, so keep replies short and let it lead.' : '') +
@@ -31288,7 +31288,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.709';
+const BUILD_ID = '2026-10-24.710';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
