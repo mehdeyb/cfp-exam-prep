@@ -1161,6 +1161,7 @@
   .bp-value-act{font-size:13px;opacity:.85;margin-top:3px;line-height:1.35;}
   .bp-value-pace{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.4;}
   .bp-value-trend{font-size:13px;margin:8px 0 0;line-height:1.4;}
+  .bp-since{font-size:12.5px;margin:6px 0 0;line-height:1.35;opacity:.9;}
   .bp-trendrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;}
   .bp-trendrow .bp-value-trend{margin:0;flex:1 1 auto;min-width:0;}
   .bp-spark{flex:0 0 auto;overflow:visible;}
@@ -8960,7 +8961,8 @@ function renderProgressValue(){
             + `</div>`;
         }
       }catch(e){}
-      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
+      let since = ''; try{ const la = DATA.lastAdjust; if(la && la.lines && la.lines.length) since = `<p class="bp-since"><b>Since your last session:</b> ${escapeHtml(la.lines.join(' · '))}</p>`; }catch(e){}
+      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${since}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
     }
   }catch(e){ html = ''; }
   el.innerHTML = html;
@@ -27167,6 +27169,20 @@ function finishSession(){
   }catch(e){ sessDiff = null; }
   const rec = {date:new Date().toISOString(), mode:session.mode, correct:session.correct, total:session.queue.length, diff:sessDiff, answered:(session.answerLog || []).length, readinessAtEnd: computeStats().readiness, readinessVer: READINESS_VERSION, domReady: (function(){ try{ const o = {}; computeStats().parts.forEach(p => { o[p.key] = p.weight ? Math.round(100 * p.earned / p.weight) : 0; }); return o; }catch(e){ return null; } })(), minutes: Math.round(creditedMin)};
   if(examLike()){ try{ const pi = paceSectionInfo() || { total: MOCK_MINUTES*60 }; rec.spare = session.timedOut ? 0 : Math.max(0, Math.round(session.timerSeconds || 0)); rec.clock = pi.total; if(session.timedOut) rec.timedOut = true; }catch(e){} }
+  // What changed since the last session, in plain words: shown on Progress and available to the tutor.
+  try{
+    const prev = (DATA.sessions || []).filter(x => x.readinessVer === READINESS_VERSION && typeof x.readinessAtEnd === 'number').slice(-1)[0];
+    const lines = [];
+    if(prev){
+      const dr = rec.readinessAtEnd - prev.readinessAtEnd;
+      if(Math.abs(dr) >= 1) lines.push('Readiness ' + (dr > 0 ? 'up ' : 'down ') + Math.abs(Math.round(dr)) + ' to ' + Math.round(rec.readinessAtEnd));
+      const moves = DOMAINS.map(d => ({ d, m: (rec.domReady || {})[d.key] - ((prev.domReady || {})[d.key]) })).filter(x => isFinite(x.m) && Math.abs(x.m) >= 3).sort((a, b) => Math.abs(b.m) - Math.abs(a.m));
+      if(moves[0]) lines.push(moves[0].d.code + ' ' + (moves[0].m > 0 ? 'up ' : 'down ') + Math.abs(Math.round(moves[0].m)));
+    }
+    const acc = rec.total ? Math.round(100 * (rec.correct || 0) / rec.total) : null;
+    if(acc !== null) lines.push('Session ' + acc + '% right');
+    DATA.lastAdjust = { at: Date.now(), lines: lines.slice(0, 3) };
+  }catch(e){}
   DATA.sessions.push(rec);
   if(DATA.sessions.length > 300) DATA.sessions = DATA.sessions.slice(-300);
   persist();
@@ -31605,7 +31621,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.755';
+const BUILD_ID = '2026-10-24.756';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
