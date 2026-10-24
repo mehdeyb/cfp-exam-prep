@@ -12312,7 +12312,7 @@ async function ebAICoach(){
   const st = ebState; if(!st) return;
   const box = document.getElementById('ebAI'); if(!box) return;
   if(typeof genBackoffActive === 'function' && genBackoffActive()){ box.remove(); return; }
-  const prompt = `You are a CFP® exam tutor checking how a student explained an idea in their own words. Judge meaning, not wording. Be exact and brief.
+  const prompt = `You are a CFP® exam tutor checking how a student explained an idea in their own words. Judge meaning, not wording. The student needs to know this well enough to answer exam questions, not to teach it: call it "nailed" once the exam-relevant core is there, and list under "missing" only ideas an exam question could hinge on. Be exact and brief.
 Topic: "${st.title}"
 Reference (treat as correct): ${String(st.full || st.points.join(' ')).slice(0, 900)}
 Key ideas to look for: ${st.points.map((x, i) => (i + 1) + '. ' + x).join(' ')}
@@ -17726,7 +17726,7 @@ async function requestFlashcardMnemonic(){
 Term: ${card.term}
 Definition: ${card.def}
 
-The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Don't just restate the definition in different words. If a lookalike term is easy to confuse with this one on the exam, make the trick separate the two.`;
+The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Anchor it to the one feature or number the exam asks about for this term, not trivia. Don't just restate the definition in different words. If a lookalike term is easy to confuse with this one on the exam, make the trick separate the two.`;
 
   try{
     const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 320 }))
@@ -18983,7 +18983,7 @@ function describeAiError(err){
 }
 
 // Every AI answer in the app is written for one goal: passing the CFP exam, not mastering the whole field.
-const EXAM_LENS = 'EXAM LENS (applies to every answer): this student is studying to PASS the CFP certification exam, not to become an expert. Teach what the exam tests and how it tests it: the rule in plain words, the numbers, limits, phase-outs and formulas worth memorizing, the usual traps and look-alike answer choices, and how to tell the right answer from a tempting wrong one. Keep depth to what is needed to answer exam questions. Leave out nuance, history and rare edge cases the exam is unlikely to test, or label them in a few words as "not worth studying for the exam". Where it helps, finish with the one thing to remember for the exam. Stay brief. This shapes explanations and teaching only: when asked for JSON or another fixed format, follow that format exactly.';
+const EXAM_LENS = 'EXAM LENS (applies to every answer): this student is studying to PASS the CFP certification exam, not to become an expert. Include only what helps them answer exam questions correctly: the rule in plain words, the numbers, limits, phase-outs and formulas worth memorizing, the usual traps and look-alike answer choices, and the cue in a question that points to the right answer. Leave out nuance, history and rare edge cases the exam is unlikely to test; if one is worth a mention, label it in a few words as "not worth studying for the exam". Accuracy comes first: never invent a rule or a figure to sound exam-ready, and say so if you are unsure. This lens decides WHAT to include, never how long to write or what format to use: when a request sets a length, a format or a JSON shape, follow it exactly.';
 async function anthropicMessagesRequest(args, attempt){
   attempt = attempt || 1;
   if(args && !args._lens){ args = Object.assign({}, args, { system: (args.system ? args.system + '\n\n' : '') + EXAM_LENS, _lens: true }); }
@@ -26540,7 +26540,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences, under 70 words, always finishing the last sentence. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
+They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation of just what they need to get this type of question right on the exam: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences, under 70 words, always finishing the last sentence. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
 
   try{
     let reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 }))
@@ -30837,7 +30837,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.620';
+const BUILD_ID = '2026-10-24.621';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
