@@ -1147,6 +1147,7 @@
   .bp-chip-focus{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--surface);background:var(--gold);padding:1px 6px;border-radius:8px;}
   .bp-code-cell.focus{color:var(--gold);font-weight:600;}
   .bp-chip-due{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);background:var(--gold-tint);padding:1px 6px;border-radius:8px;}
+  .bp-chip-right{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
   .bp-chip-rebuilding{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);letter-spacing:.02em;}
   .source-note{margin-top:12px;font-size:11.5px;color:var(--muted-dim);line-height:1.5;}
   .source-note summary{cursor:pointer;list-style:none;}
@@ -2122,7 +2123,8 @@
   @media (prefers-reduced-motion: reduce){ .pt-meter i, .pt-meter.live::after, .pt-step.partial .pt-prog::before{animation:none !important;} }
   /* The Today / Your progress switch keeps its own height; it must not stretch into a tall bar when the card is taller than it. */
   body.os-one #studyHub > .hub-seg{align-items:center !important;}
-  body.os-one #studyHub > .hub-seg button{align-self:center !important;height:auto !important;max-height:56px;}
+  body.os-one #studyHub > .hub-seg button{align-self:center !important;flex:1 1 0 !important;height:44px !important;min-height:44px !important;max-height:44px !important;}
+  body.os-one #studyHub > .hub-seg{height:auto !important;max-height:none !important;flex:0 0 auto !important;}
   /* Your progress: the two columns share one height, and the trend chart takes the room that is left, so the right side is not an empty block under a short chart. */
   body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-cols{align-items:stretch;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colR{display:flex;flex-direction:column;}
@@ -31287,7 +31289,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.721';
+const BUILD_ID = '2026-10-24.723';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
