@@ -10324,6 +10324,16 @@ function ctSortNext(){ const r = _ctRun; r.fb = null; r.i++; ctRenderRun(); }
 function ctStepNext(){ _ctRun.i++; if(_ctRun.i >= ctList().find(x => x.id === _ctRun.id).steps.length && !_ctRun.done){ _ctRun.done = true; ctUsed(ctList().find(x => x.id === _ctRun.id), null); } ctRenderRun(); }
 function ctTreePick(i){ const r = _ctRun, t = ctList().find(x => x.id === r.id), node = t.nodes[r.path[r.path.length - 1]], o = node.options[i]; if(!o) return; r.answers.push(o.label); r.path.push(o.next); ctRenderRun(); }
 function ctTreeBack(){ const r = _ctRun; if(r.path.length > 1){ r.path.pop(); r.answers.pop(); r.done = false; } ctRenderRun(); }
+// Runs an activity the tutor added to today's plan, through the same tools the tutor already uses.
+async function tutorRunAdded(a){
+  let name, inp;
+  if(a.action === 'quiz'){ name = 'start_quiz_session'; inp = a.domain ? { mode:'drill', domain:a.domain, count:10 } : { mode:'adaptive', count:10 }; }
+  else if(a.action === 'flashcards'){ name = 'start_flashcards'; inp = { focus: a.domain ? 'domain' : 'due', domain: a.domain, count: 15 }; }
+  else if(a.action === 'formula'){ name = 'open_formula_drill'; inp = a.formula ? { formula: a.formula } : {}; }
+  else if(a.action === 'calculator'){ name = 'open_tvm_calculator'; inp = a.mode ? { mode: a.mode } : {}; }
+  else { name = 'open_decision_tool'; inp = { tool: a.tool }; }
+  try{ await executeTutorTool(name, inp); }catch(e){}
+}
 async function ctRoutineGo(i){
   const r = _ctRun; if(!r) return; const t = ctList().find(x => x.id === r.id), s = t.routine[i]; if(!s) return;
   if(!DATA.customToolRoutine) DATA.customToolRoutine = {};
@@ -10347,10 +10357,13 @@ function ctTutorBlock(){
 function tutorShapePlan(inp){
   inp = inp || {};
   if(inp.clear){ DATA.planOverride = null; persist(); try{ renderTodayPlan(); }catch(e){} return "Cleared. Today's plan is back to automatic."; }
-  const o = { day: localDayKey(), at: Date.now(), focus: (inp.focus && PLAN_FOCI[inp.focus]) ? inp.focus : null, reason: String(inp.reason || '').replace(/\s+/g, ' ').trim().slice(0, 160), pins: [], refresh: [] }, miss = [];
+  const ACTS = { quiz:1, flashcards:1, formula:1, calculator:1, tool:1 };
+  const cleanTxt = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const adds = (Array.isArray(inp.add_steps) ? inp.add_steps : []).slice(0, 3).map((s, i) => ({ id: 'tut' + i, action: ACTS[s && s.action] ? s.action : null, title: cleanTxt(s && s.title, 70), why: cleanTxt(s && s.why, 160), domain: (s && DOMAINS.some(d => d.key === s.domain)) ? s.domain : null, formula: (s && s.formula) || null, mode: (s && s.mode) || null, tool: (s && s.tool) || null, minutes: Math.max(5, Math.min(40, Math.round(+(s && s.minutes) || 10))) })).filter(a => a.action && a.title);
+  const o = { day: localDayKey(), at: Date.now(), focus: (inp.focus && PLAN_FOCI[inp.focus]) ? inp.focus : null, reason: cleanTxt(inp.reason, 160), pins: [], refresh: [], adds: adds.length ? adds : ((planOverrideToday() || {}).adds || []) }, miss = [];
   const add = (arr, out) => (Array.isArray(arr) ? arr : []).slice(0, 3).forEach(t => { const m = tutorFlagMatch(t); if(m && !out.some(x => x.key === m.key && x.idx === m.idx)) out.push({ key: m.key, idx: m.idx, name: m.name }); else if(!m) miss.push(t); });
   add(inp.pin_topics, o.pins); add(inp.refresh_topics, o.refresh);
-  if(!o.focus && !o.pins.length && !o.refresh.length) return 'Error: give a focus (repair, breadth, apply or recall), pin_topics, or refresh_topics' + (miss.length ? ' (none of "' + miss.join('", "') + '" matched an official topic)' : '') + '.';
+  if(!o.focus && !o.pins.length && !o.refresh.length && !adds.length) return 'Error: give a focus (repair, breadth, apply or recall), pin_topics, refresh_topics, or add_steps' + (miss.length ? ' (none of "' + miss.join('", "') + '" matched an official topic)' : '') + '.';
   DATA.planOverride = o;
   { const L = planDayLog(); delete L.targets.freshKey; delete L.targets.focus; }
   persist();
@@ -10965,6 +10978,11 @@ function buildStudyPlanCore(minutes){
       else if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
       else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }
       const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have){ sn.have = st.have; try{ persist(); }catch(e){} }
+    }); }
+  // Activities the tutor added for today go in right after the first part, so they are seen and not buried at the bottom.
+  { const ovA = planOverrideToday();
+    if(ovA && Array.isArray(ovA.adds)) ovA.adds.forEach((a, k) => {
+      steps.splice(Math.min(steps.length, 1 + k), 0, { id: a.id, title: a.title, why: a.why, minutes: a.minutes, manual: true, tutorAdded: true, done: !!L.manual[a.id], run: () => { showTab('study'); tutorRunAdded(a); } });
     }); }
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 5){
@@ -29730,8 +29748,8 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'shape_today_plan',
-    description: "Reshape TODAY's plan to match what you found. 'focus' sets the day's emphasis (repair = fix weak and missed, breadth = cover unseen topics, apply = case studies and tools, recall = key figures and formulas). 'pin_topics' (up to 3) puts specific weak topics first as repair drills. 'refresh_topics' (up to 3) adds a short spaced check on topics that are solid but fading, so strengths stay fresh while weaknesses get the time. 'reason' is shown to the student on the plan, so write it plainly to them in under 140 characters. Use after diagnose_learner or after you see them struggle; keep a balance, so do not pin more than you can repair today. {clear:true} returns the plan to automatic. It never removes required steps; it changes order and targets.",
-    input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
+    description: "Reshape TODAY's plan to match what you found. You can also ADD up to 3 activities to it with add_steps, which is how you put a specific quiz, drill or tool into the student's day. 'focus' sets the day's emphasis (repair = fix weak and missed, breadth = cover unseen topics, apply = case studies and tools, recall = key figures and formulas). 'pin_topics' (up to 3) puts specific weak topics first as repair drills. 'refresh_topics' (up to 3) adds a short spaced check on topics that are solid but fading, so strengths stay fresh while weaknesses get the time. 'reason' is shown to the student on the plan, so write it plainly to them in under 140 characters. Use after diagnose_learner or after you see them struggle; keep a balance, so do not pin more than you can repair today. {clear:true} returns the plan to automatic. It never removes required steps; it changes order and targets.",
+    input_schema: { type: 'object', properties: { focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, add_steps: { type: 'array', maxItems: 3, description: "Up to 3 activities to ADD to today's plan, shown right after the first part so they are seen. Add one when a specific activity would help this student today and the plan lacks it (a quiz on a domain, a formula drill, calculator practice, flashcards, or a decision tool). Each 'why' must name what you saw in their results.", items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, title: { type: 'string', description: 'Short name for the step, under 70 characters.' }, why: { type: 'string', description: 'One line: the specific reason, tied to their results.' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string' }, tool: { type: 'string' }, minutes: { type: 'integer' } }, required: ['action','title','why'] } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
   },
   {
     name: 'build_custom_tool',
@@ -31270,7 +31288,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.708';
+const BUILD_ID = '2026-10-24.709';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
