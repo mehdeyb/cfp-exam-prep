@@ -2105,6 +2105,17 @@
   #blueprintCard.bp-t3 .bp-focus, #blueprintCard.bp-t3 #diagnosisCard{display:none !important;}
   /* Your progress shows one main breakdown (the domain list) and one chart (the trend). Secondary charts and repeats are hidden here. */
   body.os-one #studyHub[data-view="progress"] #progressDiffRow, body.os-one #studyHub[data-view="progress"] #bpBar, body.os-one #studyHub[data-view="progress"] #bpCodeRow, body.os-one #studyHub[data-view="progress"] #progressReadout, body.os-one #studyHub[data-view="progress"] #progressLabels, body.os-one #studyHub[data-view="progress"] #focusPills, body.os-one #studyHub[data-view="progress"] .difficulty-indicator, body.os-one #studyHub[data-view="progress"] .progress-guide{display:none !important;}
+  /* Each part shows its own progress: a thin meter that fills in, a small count, and a soft pulse on the part in progress. */
+  .pt-meter{position:relative;display:block;width:100%;flex:0 0 100%;height:4px;border-radius:2px;background:var(--hair);margin:6px 0 0;overflow:hidden;}
+  .pt-prog{flex:0 0 100%;}
+  .pt-meter i{position:absolute;inset:0;background:var(--gold);border-radius:2px;transform-origin:left center;animation:ptMeterIn .8s var(--ease-out) both;}
+  .pt-step.done .pt-meter i{background:var(--correct);}
+  .pt-meter.live::after{content:"";position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--paper) 35%,transparent),transparent);animation:ptMeterShine 1.8s ease-in-out infinite;}
+  @keyframes ptMeterIn{from{transform:scaleX(0);}}
+  @keyframes ptMeterShine{from{transform:translateX(-120%);}to{transform:translateX(420%);}}
+  .pt-prog{font:500 11px 'IBM Plex Mono',monospace;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
+  .pt-step.partial .pt-prog::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:middle;animation:pulse 1.4s ease-in-out infinite;}
+  @media (prefers-reduced-motion: reduce){ .pt-meter i, .pt-meter.live::after, .pt-step.partial .pt-prog::before{animation:none !important;} }
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -11436,7 +11447,7 @@ function _renderTodayPlanInner(){
     const rowGo = (isNext && !st.manual && !st.done) ? ` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -31265,7 +31276,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.702';
+const BUILD_ID = '2026-10-24.704';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
