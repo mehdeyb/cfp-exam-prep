@@ -1921,6 +1921,14 @@
   }
   .os-seg button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--hair);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .os-seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-examday.active > .card:has(> #edTiming){column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:36px;align-items:start;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming > *{grid-column:1;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming > .pace-marks{grid-column:2;grid-row:1 / span 4;margin:0;align-self:stretch;grid-template-rows:repeat(2,1fr);}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming > .pace-marks > div{display:flex;flex-direction:column;justify-content:center;font-size:1.25em;}
+  .ed-fit .ed-item{font-size:var(--edfs,13px);break-inside:avoid;} .ed-fit .ed-item b{font-size:calc(var(--edfs,13px) * .88);}
+  @media (max-width:640px){ body.os-one .os-seg{gap:3px;margin-right:84px;flex-wrap:wrap;overflow:visible;} body.os-one .os-seg button{padding:0 7px;font-size:12px;} body.os-one .ed-fit > .card-head .note{display:none;} body.os-one .ed-fit .ed-item{padding:6px 0;} }
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-examday.active > .card:not(.os-hide){column-span:all;}
   .os-hide{display:none !important;}
   .os-fit:not(.os-end){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent);}
   .os-fit{padding-bottom:22px;}
@@ -4335,6 +4343,11 @@
         <div class="ed-item"><b>Tax law tested</b>Exams in the July 2026, October 2026 and March 2027 windows test 2026 tax law, so use the 2026 figures in this app. The October 2026 window runs October 29 to November 5.</div>
         <div class="ed-item"><b>Appointment length</b>The appointment is 7 hours, including 6 hours of testing, plus a 2-minute nondisclosure agreement, a 5-minute tutorial and a 5-minute survey. Clear your calculator's memory before each section; the proctor will not do it for you.</div>
         <div class="ed-item"><b>Pass rate</b>Recent administrations have run roughly 62–68%, averaging around 65% over the last several years; first-time takers pass at a noticeably higher rate than repeaters.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>After you start</h2><div class="note">source: cfp.net</div></div>
+      <div class="ed-grid">
         <div class="ed-item"><b>Finishing</b>If time is left after your last answer, you can review only the final subsection (2b). Submitting early is final. After a short survey your preliminary result shows on screen, and Prometric emails a copy. To skip the 40-minute break, choose "Resume Test".</div>
         <div class="ed-item"><b>Check-in details</b>The name on your ID must match your registration; a common nickname (Catherine for Cathy) is acceptable. Your calculator is inspected, and any notes or formulas on it must be covered with solid-color tape. Noise-cancelling headphones are available on request, and soft ear plugs without wires are allowed.</div>
         <div class="ed-item"><b>Official practice exam</b>Your registration includes one CFP Board Practice Exam: 170 questions, with retired real questions, and results by domain. Take it as a rehearsal under timed conditions, and use the by-domain result to point your last days of study.</div>
@@ -28417,7 +28430,10 @@ const OS_TABS = {
   examday: [
     { label:'Pacing', test: c => /^Pacing/i.test(osHead(c)) },
     { label:'Playbook',      h: /^Case-study playbook/i },
-    { label:'Format & rules',h: /^(Exam format|Calculator policy|What to bring)/i },
+    { label:'Format',h: /^Exam format/i },
+    { label:'Test day',h: /^After you start/i },
+    { label:'Calculator',h: /^Calculator policy/i },
+    { label:'Bring',h: /^What to bring/i },
     { label:'Checklist',     test: c => c.id === 'edChecklistCard' }
   ]
 };
@@ -28441,6 +28457,20 @@ function osApply(tab){
 }
 // The floor of the usable area: the top of the tab bar when it is pinned to the bottom, measured live so no window or inset quirk can leave a gap.
 function osBottom(h, bb){ try{ const bar = document.getElementById('appTabbar'); if(bar && getComputedStyle(bar).position === 'fixed'){ const t = bar.getBoundingClientRect().top; if(t > 100 && t <= h + 1) return t; } }catch(e){} return h - bb; }
+// Cards made of short tips (the playbook, format and rules): the most columns and the biggest text that still show every tip without scrolling.
+function osFitEdGrid(c, g, cap){
+  try{
+    c.classList.add('ed-fit'); g.style.display = 'block'; g.style.columnGap = '26px'; g.style.columnCount = '1';
+    const maxN = Math.max(1, Math.min(4, Math.floor((c.clientWidth || window.innerWidth) / ((c.clientWidth || window.innerWidth) < 460 ? 170 : 250))));
+    const fits = () => c.scrollHeight <= cap + 1;
+    let done = false;
+    for(let fs = 18; fs >= 11 && !done; fs--){
+      c.style.setProperty('--edfs', fs + 'px');
+      for(let n = 1; n <= maxN; n++){ g.style.columnCount = String(n); if(fits()){ done = true; break; } }
+    }
+    if(!done){ c.style.setProperty('--edfs', '11px'); g.style.columnCount = String(maxN); }
+  }catch(e){}
+}
 function osFit(tab, extra){
   try{
     extra = extra || 0;
@@ -28454,6 +28484,7 @@ function osFit(tab, extra){
     const sbs = vis.length > 1 && vis[1].getBoundingClientRect().top < vis[0].getBoundingClientRect().bottom - 4;
     const avail = Math.max(260, Math.round(osBottom(h, bb) - top - 16 - extra - (sbs ? 0 : (vis.length - 1) * 12)));
     const per = sbs ? avail : Math.floor(avail / vis.length);
+    vis.forEach(c => { const g = c.querySelector('.ed-grid'); if(g) osFitEdGrid(c, g, (vis.length === 1 ? avail : Math.floor((avail - (vis.length - 1) * 12) / vis.length)) - 4); });
     const nat = vis.map(c => c.scrollHeight);
     const tallest = nat.indexOf(Math.max.apply(null, nat));
     vis.forEach((c, i) => {
@@ -30986,7 +31017,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.647';
+const BUILD_ID = '2026-10-24.656';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -31481,7 +31512,7 @@ requestDurableStorage();
   }
   const byTitle = (tab, titles) => Array.from(document.querySelectorAll('#' + tab + ' > .card')).filter(c => { const h = c.querySelector(':scope > .card-head h2'); return h && titles.indexOf(h.textContent.trim()) >= 0; });
   Array.from(document.querySelectorAll('#tab-tools > .card')).slice(1).forEach(ccMake);
-  byTitle('tab-examday', ['Exam format', 'Calculator policy', 'What to bring']).forEach(ccMake);
+  byTitle('tab-examday', ['Exam format', 'After you start', 'Calculator policy', 'What to bring']).forEach(ccMake);
   window.ccSet = ccSet;
 })();
 
