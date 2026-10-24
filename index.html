@@ -11279,6 +11279,8 @@ function conductorRefreshPill(){
     const act0 = document.querySelector('.tab-panel.active'), nc = document.getElementById('nextStepCard'), ld = document.querySelector('.pt-lead');
     if(act0 && act0.id === 'tab-study' && currentNextStep && currentNextStep.kicker === 'Your session' && ((nc && nc.style.display !== 'none' && nc.offsetParent !== null) || (ld && ld.offsetParent !== null))){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; }
   }
+  // The Tutor screen ends in a text box and has its own "Continue your session" prompt, so the pill never sits over it.
+  { const at = document.querySelector('.tab-panel.active'); if(at && at.id === 'tab-tutor'){ pill.style.display = 'none'; document.body.classList.remove('cd-pill-on'); return; } }
   if(c.current && !finished){
     const own = { cards:'flashcards', keys:'reference', teach:'tutor' }[c.current.id];
     const act = document.querySelector('.tab-panel.active');
@@ -31201,7 +31203,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.686';
+const BUILD_ID = '2026-10-24.687';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
