@@ -8883,8 +8883,13 @@ function renderBlueprint(){
     const metaBits = [];
     metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
-    // The stage is what the recent results support right now, so it always agrees with the percentage beside it.
-    if(s.total){ const stg2 = stageTarget(d.key); metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage from your recent answers in this domain">' + STAGES[stg2 - 1].name + '</span>'); }
+    // The stage follows your recent answers, but never runs ahead of the percentage on this row: Exam-ready needs 75%+ (the strong band),
+    // Apply 60%+, Build 50%+. So the word and the number always agree.
+    if(s.total){
+      const byPct = mastery >= 75 ? 4 : mastery >= 60 ? 3 : mastery >= 50 ? 2 : 1;
+      const stg2 = Math.min(stageTarget(d.key), byPct);
+      metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage: ' + STAGES[stg2 - 1].name + ' (from your recent answers, capped by the % shown)">' + STAGES[stg2 - 1].name + '</span>');
+    }
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
     if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
@@ -31283,7 +31288,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.716';
+const BUILD_ID = '2026-10-24.717';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
