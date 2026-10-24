@@ -11426,6 +11426,8 @@ function conductorProgress(c, asId){
     }
     let grew = false;
     (c.ran || []).concat(curId ? [curId] : []).forEach(id => { if(id && parts.indexOf(id) < 0){ parts.push(id); grew = true; } });
+    // A step the plan already counts as done (finished outside this sitting) is part of the day too, so the count matches the plan's.
+    plan.steps.forEach(st => { if(st.done && parts.indexOf(st.id) < 0){ parts.push(st.id); grew = true; } });
     if(grew || !Array.isArray(c.parts)) c.parts = parts.slice();
     const byId = {}; plan.steps.forEach(st => { byId[st.id] = st; });
     const isDone = id => id !== curId && (logged.has(id) || !byId[id] || byId[id].done);
@@ -31731,7 +31733,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.766';
+const BUILD_ID = '2026-10-24.767';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
