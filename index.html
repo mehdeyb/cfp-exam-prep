@@ -18982,8 +18982,11 @@ function describeAiError(err){
   return 'try again in a moment.';
 }
 
+// Every AI answer in the app is written for one goal: passing the CFP exam, not mastering the whole field.
+const EXAM_LENS = 'EXAM LENS (applies to every answer): this student is studying to PASS the CFP certification exam, not to become an expert. Teach what the exam tests and how it tests it: the rule in plain words, the numbers, limits, phase-outs and formulas worth memorizing, the usual traps and look-alike answer choices, and how to tell the right answer from a tempting wrong one. Keep depth to what is needed to answer exam questions. Leave out nuance, history and rare edge cases the exam is unlikely to test, or label them in a few words as "not worth studying for the exam". Where it helps, finish with the one thing to remember for the exam. Stay brief. This shapes explanations and teaching only: when asked for JSON or another fixed format, follow that format exactly.';
 async function anthropicMessagesRequest(args, attempt){
   attempt = attempt || 1;
+  if(args && !args._lens){ args = Object.assign({}, args, { system: (args.system ? args.system + '\n\n' : '') + EXAM_LENS, _lens: true }); }
   try{
     const out = await anthropicMessagesRequestOnce(args);
     // Anticipatory guard: a reply naming another calculator's keys is
@@ -30834,7 +30837,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.619';
+const BUILD_ID = '2026-10-24.620';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
