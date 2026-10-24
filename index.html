@@ -8883,8 +8883,6 @@ function renderBlueprint(){
     const metaBits = [];
     metaBits.push('<span class="bp-chip-wt">' + d.weight + '% of exam</span>');
     if(d.key === focusKey) metaBits.push('<span class="bp-chip-focus">Focus</span>');
-    const stg = s.total ? domainStageOf(d.key) : 0;
-    if(stg >= 3) metaBits.push('<span class="bp-chip-stage s' + stg + '">' + STAGES[stg - 1].name + '</span>'); // the early stage is the same on every row, so only the later ones say anything
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
     if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
@@ -19872,7 +19870,7 @@ function openDomainPicker(){
     row.setAttribute('role', 'button');
     row.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery`);
     row.onclick = () => startDrill(d.key);
-    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics${s.total ? ' · ' + STAGES[domainStageOf(d.key) - 1].name : ''}</div><div class="dp-row-meta dp-row-plan">${plan.size} questions · ${plan.fresh} unseen${plan.missed ? ' · ' + plan.missed + ' to revisit' : ''}</div>${plan.weak ? '<button type="button" class="dp-weak" data-i="' + plan.weak.idx + '">Weak spot: ' + plan.weak.name + '</button>' : ''}</div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
+    row.innerHTML = `<div><div class="dp-row-name">${d.name}</div><div class="dp-row-meta">${d.code} · ${d.weight}% of exam · ${(SUBTOPICS[d.key]||[]).length} subtopics</div><div class="dp-row-meta dp-row-plan">${plan.size} questions · ${plan.fresh} unseen${plan.missed ? ' · ' + plan.missed + ' to revisit' : ''}</div>${plan.weak ? '<button type="button" class="dp-weak" data-i="' + plan.weak.idx + '">Weak spot: ' + plan.weak.name + '</button>' : ''}</div><span class="dp-row-pct ${pctClass}">${s.total ? mastery+'%' : '—'}</span>`;
     const wb = row.querySelector('.dp-weak');
     if(wb) wb.onclick = ev => { ev.stopPropagation(); document.body.classList.remove('domain-picker-active'); startSubtopicDrill(d.key, +wb.dataset.i); };
     list.appendChild(row);
@@ -31283,7 +31281,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.713';
+const BUILD_ID = '2026-10-24.714';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
