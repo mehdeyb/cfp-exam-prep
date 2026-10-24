@@ -2511,6 +2511,8 @@
   body.focus-mode .tutor-guide .tg-next{display:none;}
   body.focus-mode.tvm-active #tvmHost{display:none !important;}
   body.focus-mode .tab-panel.active{padding-top:max(10px,env(safe-area-inset-top,0px));}
+  .ct-val{display:inline-block;margin-left:6px;font-size:11.5px;padding:1px 8px;border-radius:10px;border:1px solid var(--hair-strong);}
+  .ct-val.good{color:#2e7d4f;} .ct-val.weak{color:#b3412e;} .ct-val.mid{color:#8A6412;} .ct-val.stale,.ct-val.new{opacity:.75;}
   .ct-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--hair);}
   .ct-row:first-child{border-top:0;}
   .ct-l{flex:1;min-width:0;}
@@ -10520,13 +10522,31 @@ function ctOpen(id, o){
   return true;
 }
 function ctClose(){ _ctRun = null; try{ focusActive() && focusExit({}); }catch(e){} ctRenderRun(); ctRenderList(); }
-function ctUsed(t, pct){ t.uses = (t.uses || 0) + 1; t.lastAt = Date.now(); if(pct != null) t.best = Math.max(t.best == null ? 0 : t.best, pct); persist(); try{ if(planDayLog().targets.myToolId === t.id) planMarkManualDone('mytool'); }catch(e){} }
+function ctUsed(t, pct){ t.uses = (t.uses || 0) + 1; t.lastAt = Date.now(); if(pct != null) t.best = Math.max(t.best == null ? 0 : t.best, pct); t.hist = (Array.isArray(t.hist) ? t.hist : []).concat([{ at: Date.now(), pct: pct == null ? null : pct }]).slice(-10); persist(); try{ if(planDayLog().targets.myToolId === t.id) planMarkManualDone('mytool'); }catch(e){} }
+// How useful a built tool has been: judged from its own recorded results, not from how it looks.
+// helping = latest score is strong and not falling; weak = latest is low or falling; mixed = in between;
+// used = used, but its results are not scored (steps and trees record completion only); stale = unused for 30 days.
+function ctValue(t){
+  const h = (Array.isArray(t.hist) ? t.hist : []).filter(x => x && x.pct != null);
+  const uses = t.uses || 0;
+  const days = Math.floor((Date.now() - (t.lastAt || t.t || Date.now())) / 86400000);
+  const last = h.length ? h[h.length - 1].pct : null, first = h.length ? h[0].pct : null;
+  const delta = h.length >= 2 ? last - first : null;
+  let verdict, label, cls;
+  if(!uses){ verdict = 'new'; label = 'Not tried yet'; cls = 'new'; }
+  else if(days >= 30){ verdict = 'stale'; label = 'Unused ' + days + ' days'; cls = 'stale'; }
+  else if(last != null && h.length >= 2 && last >= 75 && delta >= 0){ verdict = 'helping'; label = 'Helping: ' + last + '% on latest use'; cls = 'good'; }
+  else if(last != null && h.length >= 2 && (last < 50 || delta <= -10)){ verdict = 'weak'; label = 'Not helping yet: ' + last + '% latest'; cls = 'weak'; }
+  else if(last != null){ verdict = 'mixed'; label = 'Mixed: ' + last + '% latest'; cls = 'mid'; }
+  else { verdict = 'used'; label = 'Used ' + uses + 'x, completed'; cls = 'mid'; }
+  return { verdict, label, cls, uses, days, first, last, delta };
+}
 function ctRenderList(){
   const host = document.getElementById('ctList'), card = document.getElementById('customToolsCard'); if(!host || !card) return;
   const list = ctList();
   card.style.display = (list.length || _ctRun) ? '' : 'none';
   if(list.length && card.classList.contains('cc-card') && !card._ctOpened){ card._ctOpened = true; card.classList.add('cc-open'); }
-  host.innerHTML = list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''}</div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
+  host.innerHTML = list.slice().reverse().map(t => `<div class="ct-row"><div class="ct-l"><div class="ct-t">${escapeHtml(t.title)}</div><div class="ct-s">${CT_KINDS[t.kind]} · ${escapeHtml(t.why)}${t.uses ? ' · used ' + t.uses + 'x' : ''}${t.best != null ? ' · best ' + t.best + '%' : ''} <span class="ct-val ${ctValue(t).cls}">${escapeHtml(ctValue(t).label)}</span></div></div><button type="button" class="ct-go" onclick="ctOpen('${t.id}')">Open</button><button type="button" class="ct-x" aria-label="Remove ${escapeHtml(t.title)}" onclick="ctConfirmDelete('${t.id}')">×</button></div>`).join('');
 }
 function ctForget(id){ DATA.customTools = ctList().filter(x => x.id !== id); if(!Array.isArray(DATA.customToolsGone)) DATA.customToolsGone = []; if(!DATA.customToolsGone.includes(id)) DATA.customToolsGone.push(id); DATA.customToolsGone = DATA.customToolsGone.slice(-60); persist(); ctRenderList(); }
 function ctConfirmDelete(id){ const t = ctList().find(x => x.id === id); if(t && confirm('Remove "' + t.title + '"?')) ctForget(id); }
@@ -10603,7 +10623,7 @@ async function ctRoutineGo(i){
 function ctTutorBlock(){
   const list = ctList(); if(!list.length) return '';
   const staleDays = x => Math.floor((Date.now() - (x.lastAt || x.t || Date.now())) / (24 * 3600000));
-  return ' TOOLS YOU HAVE BUILT FOR THEM (open_custom_tool): ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', for: ' + x.why + '; used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + (staleDays(x) >= 30 ? '; NOT USED IN ' + staleDays(x) + ' DAYS, retire it with open_custom_tool delete or replace it' : '') + ')').join('; ') + '.';
+  return ' TOOLS YOU HAVE BUILT FOR THEM (open_custom_tool; judge each by its value, keep the helping ones, rebuild a weak one with the same title and a sharper why, retire stale ones with delete): ' + list.map(x => '"' + x.title + '" (' + CT_KINDS[x.kind] + ', for: ' + x.why + '; used ' + (x.uses || 0) + 'x' + (x.best != null ? ', best ' + x.best + '%' : '') + (staleDays(x) >= 30 ? '; NOT USED IN ' + staleDays(x) + ' DAYS' : '') + '; value: ' + ctValue(x).label + ')').join('; ') + '.';
 }
 function tutorShapePlan(inp){
   inp = inp || {};
@@ -31585,7 +31605,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.754';
+const BUILD_ID = '2026-10-24.755';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
