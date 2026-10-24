@@ -25479,9 +25479,36 @@ function applyQuizLayout(){
   }catch(e){}
 }
 window.addEventListener('resize', () => { try{ applyQuizLayout(); }catch(e){} });
+// In the exam-wording drill, name the format and the word that changes the question, so the answer is read against the right rule.
+function stmtCueHtml(q){
+  if(!q || !session || !session.stmtDrill) return '';
+  if(q.neg){
+    const m = (q.q || '').match(/\b(EXCEPT|NOT|LEAST|MOST|BEST|FIRST|LAST)\b/);
+    return '<b>EXCEPT / NOT format.</b> Three choices are true and one does not fit' + (m ? ' (this one says <b>' + m[1] + '</b>)' : '') + '. Pick the one that does <i>not</i> fit.';
+  }
+  return '<b>Statements format.</b> Judge each numbered statement on its own, then pick the option that lists exactly the true ones.';
+}
+function renderStmtRecap(){
+  const old = document.getElementById('stmtRecap'); if(old) old.remove();
+  if(!session || !session.stmtDrill) return;
+  const by = { stmt:{ n:0, ok:0 }, neg:{ n:0, ok:0 } };
+  (session.answerLog || []).forEach(a => { const q = session.queue[a.index]; if(!q) return; const k = q.ordered ? 'stmt' : (q.neg ? 'neg' : null); if(!k) return; by[k].n++; if(a.correct) by[k].ok++; });
+  if(!by.stmt.n && !by.neg.n) return;
+  const pc = b => b.n ? Math.round(100 * b.ok / b.n) + '%' : 'none';
+  const row = (lbl, b) => '<div class="da-row"><div class="da-txt"><b>' + lbl + '</b></div><div class="da-txt">' + b.ok + '/' + b.n + ' right (' + pc(b) + ')</div></div>';
+  let verdict = '';
+  if(by.stmt.n && by.neg.n){
+    const d = by.stmt.ok / by.stmt.n - by.neg.ok / by.neg.n;
+    verdict = Math.abs(d) < 0.15 ? 'Both formats landed about even this round.' : (d > 0 ? 'EXCEPT questions cost you more. The next drill leans toward them.' : 'Statement questions cost you more. The next drill leans toward them.');
+  }
+  const el = document.createElement('div'); el.id = 'stmtRecap'; el.className = 'da-result';
+  el.innerHTML = '<div class="da-h">Exam-wording by format</div>' + row('Statements', by.stmt) + row('EXCEPT / NOT', by.neg) + (verdict ? '<div class="da-txt" style="margin-top:6px">' + verdict + '</div>' : '');
+  const anchor = document.getElementById('planResultLine');
+  if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
+}
 function renderCalcCue(q){
   const el = document.getElementById('calcCue'); if(!el) return;
-  const html = calcCueHtml(q);
+  const html = (session && session.stmtDrill) ? stmtCueHtml(q) : calcCueHtml(q);
   if(html){ el.innerHTML = html; el.style.display = 'block'; } else { el.style.display = 'none'; el.innerHTML = ''; }
   placeCalcCue();
   try{ if(typeof scheduleQuizFit === 'function') scheduleQuizFit(); }catch(e){}
@@ -27326,6 +27353,7 @@ function finishSession(){
     }
   }catch(e){}
   renderPlanResult();
+  try{ renderStmtRecap(); }catch(e){}
 
   const sectionBox = document.getElementById('sectionBreakdown');
   if(session.mode==='fullexam' && session.sectionBreakIndex){
@@ -31680,7 +31708,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.760';
+const BUILD_ID = '2026-10-24.761';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
