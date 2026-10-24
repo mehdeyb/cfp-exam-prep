@@ -2103,6 +2103,8 @@
   #blueprintCard.bp-t1 .week-recap, #blueprintCard.bp-t1 #edTutor, #blueprintCard.bp-t1 .progress-hint, #blueprintCard.bp-t1 #edPacing{display:none !important;}
   #blueprintCard.bp-t2 .progress-diff-row, #blueprintCard.bp-t2 #progressLabels, #blueprintCard.bp-t2 #progressReadout, #blueprintCard.bp-t2 #edStandingText{display:none !important;}
   #blueprintCard.bp-t3 .bp-focus, #blueprintCard.bp-t3 #diagnosisCard{display:none !important;}
+  /* Your progress shows one main breakdown (the domain list) and one chart (the trend). Secondary charts and repeats are hidden here. */
+  body.os-one #studyHub[data-view="progress"] #progressDiffRow, body.os-one #studyHub[data-view="progress"] #bpBar, body.os-one #studyHub[data-view="progress"] #bpCodeRow, body.os-one #studyHub[data-view="progress"] #progressReadout, body.os-one #studyHub[data-view="progress"] #progressLabels, body.os-one #studyHub[data-view="progress"] #focusPills, body.os-one #studyHub[data-view="progress"] .difficulty-indicator, body.os-one #studyHub[data-view="progress"] .progress-guide{display:none !important;}
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -11392,7 +11394,7 @@ function planAdvanceReveal(){
 }
 function ptToggleAll(){ window._ptAll = !window._ptAll; renderTodayPlan(); }
 function renderTodayPlan(){
-  try{ return _renderTodayPlanInner.apply(this, arguments); } finally { try{ setTimeout(osFitStudy, 30); }catch(e){} }
+  try{ return _renderTodayPlanInner.apply(this, arguments); } finally { try{ renderPatternCallout(); }catch(e){} try{ setTimeout(osFitStudy, 30); }catch(e){} }
 }
 function _renderTodayPlanInner(){
   try{ ppRefresh(); }catch(e){}
@@ -12128,7 +12130,13 @@ function askTutorAboutStuck(){
   try{ sendTutorMessage('Walk me through the questions I keep getting wrong the same way. Start with the one that matters most for my exam.'); }catch(e){}
 }
 function renderPatternCallout(){
-  const el = document.getElementById('patternCallout');
+  // It is a to-do for today (re-test, walk through), so it lives on the Today plan. The plan redraws itself, which used to remove this box, so it is recreated here when missing.
+  let el = document.getElementById('patternCallout');
+  try{
+    const tp = document.getElementById('todayPlanCard');
+    if(!el && tp){ el = document.createElement('div'); el.className = 'pattern-callout'; el.id = 'patternCallout'; el.style.display = 'none'; }
+    if(el && tp && el.parentElement !== tp){ tp.insertBefore(el, tp.firstElementChild ? tp.firstElementChild.nextSibling : null); }
+  }catch(e){}
   if(!el) return;
   const sp = stuckPoints();
   if(sp.open.length > 0){
@@ -31257,7 +31265,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.697';
+const BUILD_ID = '2026-10-24.702';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
