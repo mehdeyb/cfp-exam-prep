@@ -12217,7 +12217,8 @@ function stuckPoints(){
     if(!byId[id] || !Object.values(picks).some(n => n >= 2)) return;
     all.push(id);
     const st = (DATA.questionStats || {})[id];
-    if(!st || (st.box || 0) <= 1) open.push(byId[id]);
+    // A stuck point is closed by one correct re-test (the box moves from 0 to 1); otherwise the plan step can never finish.
+    if(!st || (st.box || 0) < 1) open.push(byId[id]);
   });
   const dom = {}; open.forEach(q => { dom[q.domain] = (dom[q.domain] || 0) + 1; });
   const topKey = Object.keys(dom).sort((a, b) => dom[b] - dom[a])[0] || null;
@@ -31368,7 +31369,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.734';
+const BUILD_ID = '2026-10-24.735';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
