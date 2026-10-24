@@ -18879,6 +18879,13 @@ function weightedDrawWithoutReplacement(sourcePool, count){
   return out;
 }
 
+// The difficulty advice from recent results: 'up' when accuracy is high, 'down' when it is low, null when steady or too little history.
+function difficultyTilt(){
+  const recent = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0).slice(-20);
+  if(recent.length < 3) return null;
+  const acc = recent.reduce((a, s) => a + (s.total ? (s.correct || 0) / s.total : 0), 0) / recent.length;
+  return acc >= 0.85 ? 'up' : acc < 0.5 ? 'down' : null;
+}
 function pickAdaptiveQueue(n){
   const allRaw = allQuestions();
   const reasons = {}; // questionId -> short reason code, surfaced to the student as "why this now"
@@ -18903,7 +18910,11 @@ function pickAdaptiveQueue(n){
   // you only see something again once it's actually due.
   const eligible = [];
   const resting = [];
-  all.forEach(q=>{
+  // Difficulty follows recent results when there are enough questions at that level to fill the session.
+  const tilt = difficultyTilt();
+  const tiltPool = tilt ? all.filter(q => tilt === 'up' ? questionDifficulty(q) >= 2 : questionDifficulty(q) <= 2) : all;
+  const basePool = tiltPool.length >= 12 ? tiltPool : all;
+  basePool.forEach(q=>{
     const stat = getSpacedStat(DATA.questionStats, q.id);
     (isDue(stat) ? eligible : resting).push(q);
   });
@@ -31652,7 +31663,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.758';
+const BUILD_ID = '2026-10-24.759';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
