@@ -18705,7 +18705,8 @@ function pickAdaptiveQueue(n){
         picks[idx] = pri; usedIds.add(pri.id); reasons[pri.id] = label; have++;
       }
     };
-    need(q => !!q.scenario, 'applied', n >= 12 ? 2 : 1);
+    // About a third of a full session is applied, case-style material (the exam is mostly vignettes). The bank has ~12% such items, so this is a target the pool can meet.
+    need(q => !!q.scenario, 'applied', n >= 12 ? Math.max(2, Math.round(n * 0.33)) : 1);
     need(q => !!q.calcSteps && !q.tvmGen, 'calcItem', 1);
   }
   // Foundation mode, when active for a question's domain, is the more
@@ -31255,7 +31256,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.695';
+const BUILD_ID = '2026-10-24.696';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
