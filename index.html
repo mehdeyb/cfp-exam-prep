@@ -3541,6 +3541,7 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  #tutorCard .pstage > .pst-now, #tutorCard .pstage > .pst-bar{flex:none;}
   .bp-chip-wt{display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
   @media (max-width:640px){
     body.os-one #studyHub[data-view="progress"] .bp-chip-wt{display:inline;}
@@ -18923,6 +18924,20 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
       if((tries || 0) < GEMINI_MODELS.length - 1) return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length });
     }
     if(response.status === 404 || (response.status === 400 && /model/i.test(detail))){
+      if(!window._geminiDiscovered){ // every name in the list is retired or unavailable to this key: ask Google which models this key can use, and try the newest fast one
+        window._geminiDiscovered = true;
+        try{
+          const lr = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': geminiKey } });
+          if(lr.ok){
+            const lj = await lr.json();
+            const names = (lj.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /flash/i.test(m.name) && !/lite|image|tts|live|audio|exp|thinking|robotics|computer/i.test(m.name)).map(m => m.name.replace(/^models\//, ''));
+            const ver = n => (/(\d+(?:\.\d+)?)/.exec(n) || [0, 0])[1] * 1;
+            names.sort((a, b) => ver(b) - ver(a));
+            const fresh = names.filter(n => !GEMINI_MODELS.includes(n) || n === names[0]);
+            if(fresh.length){ GEMINI_MODELS.unshift(fresh[0]); geminiModelIdx = 0; return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs }); }
+          }
+        }catch(e){}
+      }
       const sug = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1]; // Google names the current model when one is retired
       if(sug && !GEMINI_MODELS.includes(sug)) GEMINI_MODELS.splice(Math.min(geminiModelIdx + 1, GEMINI_MODELS.length), 0, sug);
       if(geminiModelIdx < GEMINI_MODELS.length - 1){ geminiModelIdx++; return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs }); }
@@ -30257,7 +30272,7 @@ async function sendTutorMessage(presetText){
     const msg = (e && e.message) ? e.message : 'Unknown error';
     typingBubble.classList.remove('typing');
     typingBubble.classList.add('tutor-bubble-err');
-    typingBubble.textContent = "Couldn't get a response: " + msg + " — " + describeAiError(e);
+    typingBubble.textContent = /no longer available|update your code|models\/gemini/i.test(msg) ? "The AI model this app asked for was retired by Google. The app is switching to a current one; send that again in a moment." : "Couldn't get a response: " + msg + " — " + describeAiError(e);
     status.textContent = 'Tutor hit a snag — see above.';
     status.classList.add('err');
     try{ if(!tutorLocalGuide(text)) tutorOfflineAnswer(text, true); }catch(_){} // the app still helps from what it holds while the AI is unreachable
@@ -30948,7 +30963,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.643';
+const BUILD_ID = '2026-10-24.644';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
