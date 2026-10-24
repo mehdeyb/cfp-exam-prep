@@ -19300,6 +19300,7 @@ ${ONE_ASK_RULE}
 Design the three wrong choices as plausible misconceptions (not throwaway options). For EVERY choice — the correct one and all three wrong ones — write a short one-sentence rationale explaining specifically why that choice is right or wrong. Begin the rationale for the correct choice with "Correct — " and the rationale for each wrong choice with "Wrong — ". This lets a student see why each wrong answer fails, not just which answer is correct.
 Return ONLY a raw JSON array, no markdown code fences, no commentary, in exactly this shape:
 [{"q":"question text","choices":["A text","B text","C text","D text"],"correct":0,"rationale":["why choice A is right/wrong","why choice B is right/wrong","why choice C is right/wrong","why choice D is right/wrong"],"calcSteps":["step one","step two"],"calcType":"tvm"}]
+If the key depends on arithmetic on figures given in the question (a solvency test, a shortfall, a sum or difference, a percentage), you MUST include "calcSteps" showing that arithmetic ending on the keyed figure. A question with figures in the stem whose key is not supported by worked steps will be rejected.
 "calcSteps" and "calcType" are optional and should only appear together, only on genuinely computational questions -- omit both keys entirely otherwise, rather than including them empty.
 "correct" is the zero-based index into "choices". "rationale" must have exactly 4 entries in the same order as "choices", each under 20 words. Output nothing except the JSON array.`;
 }
@@ -19440,7 +19441,7 @@ function rationaleAgreesWithKey(q){
 function generatedItemIsSound(q){
   try{
     if(!q || typeof q.q !== 'string') return false;
-    if(/^A client recently settled an unsecured personal credit line/.test(q.q.trim())) return false;
+    if(/unsecured personal credit line/i.test(q.q) && /110,000/.test(q.q) && /125,000/.test(q.q)) return false; // the reported insolvency item, whatever its wording
     if(Array.isArray(q.calcSteps) && q.calcSteps.length && Array.isArray(q.choices) && q.choices.length === 4){
       const numOf = s => { const m = String(s).match(/-?\d[\d,]*\.?\d*/g); return m ? parseFloat(m[m.length - 1].replace(/,/g, '')) : NaN; };
       const want = numOf(q.calcSteps[q.calcSteps.length - 1]);
@@ -31361,7 +31362,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.731';
+const BUILD_ID = '2026-10-24.732';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
