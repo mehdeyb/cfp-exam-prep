@@ -10763,6 +10763,10 @@ function buildStudyPlanCore(minutes){
     let cum = 0; const half = minutes >= 300 ? used / 2 : Math.min(105, used / 2);
     for(let i = 0; i < steps.length - 1; i++){ cum += steps[i].minutes; if(cum >= half){ breakAfter = steps[i].id; break; } }
   }
+  // The misses are reviewed once a day: when the review-missed step is in the plan, the separate "walk through your misses" steps would cover the same questions again, so they step aside.
+  if(steps.some(x => x.id === 'missed')){
+    for(let i = steps.length - 1; i >= 0; i--){ if(steps[i].id === 'tutor' || steps[i].id === 'tutor2'){ if(!(steps[i].done || (steps[i].have || 0) > 0)){ used -= steps[i].minutes || 0; steps.splice(i, 1); } } }
+  }
   // One activity can only count toward one step. Flashcards seen today, formula problems and the like are shared out in plan order,
   // so a finished review of 25 cards does not also tick off "learn 15 new cards" a few rows down.
   { let attributed = 0; Object.keys(L.drill).forEach(k => { attributed += L.drill[k] || 0; });
@@ -30763,7 +30767,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.606';
+const BUILD_ID = '2026-10-23.607';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
