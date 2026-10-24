@@ -7400,7 +7400,7 @@ function sanitizeLoadedData(d){
   d.tutorCreations = (Array.isArray(d.tutorCreations) ? d.tutorCreations : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.title === 'string' && typeof x.t === 'number' && typeof x.kind === 'string').slice(-40);
   d.customTools = (Array.isArray(d.customTools) ? d.customTools : []).filter(x => isObj(x) && typeof x.id === 'string' && typeof x.title === 'string' && typeof x.kind === 'string' && ['sorter','steps','tree','routine'].includes(x.kind)).slice(-12);
   d.tutorTopics = (Array.isArray(d.tutorTopics) ? d.tutorTopics : []).filter(x => isObj(x) && typeof x.q === 'string' && typeof x.t === 'number').slice(-12);
-  Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && !rationaleAgreesWithKey(v)){ qHealKey(v); if(!rationaleAgreesWithKey(v)) delete d.readyNew[k]; } });
+  Object.keys(isObj(d.readyNew) ? d.readyNew : {}).forEach(k => { const v = d.readyNew[k] && d.readyNew[k].variant; if(v && (!rationaleAgreesWithKey(v) || !generatedItemIsSound(v))){ qHealKey(v); if(!rationaleAgreesWithKey(v) || !generatedItemIsSound(v)) delete d.readyNew[k]; } });
   d.generatedBank = d.generatedBank.filter(isObj).filter(q => { if(!rationaleAgreesWithKey(q)) qHealKey(q); return rationaleAgreesWithKey(q) && generatedItemIsSound(q); }); // drops any saved item whose key contradicts its own explanation
   d.generatedFlashcards = d.generatedFlashcards.filter(isObj);
   d.tutorFlags = (Array.isArray(d.tutorFlags) ? d.tutorFlags : []).filter(x => isObj(x) && typeof x.at === 'number').slice(-12);
@@ -19529,6 +19529,7 @@ function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
       // just without calcSteps/calcType attached, rather than saving a wrong walkthrough.
     }
     if(forceDifficulty) q.difficulty = forceDifficulty;
+    if(!generatedItemIsSound(q)) return; // every AI-written item (case sets, bank, tutor) passes the same arithmetic check
     out.push(q);
   });
   return out;
@@ -31367,7 +31368,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.733';
+const BUILD_ID = '2026-10-24.734';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
