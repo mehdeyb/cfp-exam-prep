@@ -28417,6 +28417,18 @@ function osFitStudy(extra){
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
     const avail = Math.max(240, Math.round(osBottom(h, bb) - top - (window.innerWidth <= 640 ? 6 : 8) - notes - extra));
+    // Spare room goes to the main thing first: the next step and the plan rows grow. The side extras (time chips, pace line) come
+    // back only if the plan is already as large as it comfortably gets and room is still left over.
+    const filler = [...c.querySelectorAll('.pt-pace, .pt-today, .pt-sub, .pt-mins')];
+    filler.forEach(x => { x.classList.add('os-shed'); x.style.display = 'none'; });
+    if(c.scrollHeight <= avail + 2){
+      osGrow(c, avail, 1.5);
+      if((parseFloat(c.style.zoom) || 1) >= 1.45 || !c.style.zoom){
+        for(const x of filler){ x.classList.remove('os-shed'); x.style.display = ''; if(c.getBoundingClientRect().height > avail + 1){ x.classList.add('os-shed'); x.style.display = 'none'; } }
+      }
+      return;
+    }
+    filler.forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     c.classList.add('pt-rich'); if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.3); return; } c.classList.remove('pt-rich');
     // Spare room is used, not hidden: only when it runs out do the least useful extras step aside, one at a time, then whole steps.
@@ -30877,7 +30889,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.627';
+const BUILD_ID = '2026-10-24.628';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
