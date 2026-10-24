@@ -28490,6 +28490,8 @@ function osApply(tab){
   osFit(tab);
 }
 // The floor of the usable area: the top of the tab bar when it is pinned to the bottom, measured live so no window or inset quirk can leave a gap.
+// The screen's real usable height. iPad Safari can report a shorter visual viewport than the page actually has (until the next resize), which left a blank band under the content; the tallest of the three readings is the true one.
+function vpHeight(){ return Math.max(window.visualViewport ? window.visualViewport.height : 0, window.innerHeight || 0, document.documentElement.clientHeight || 0); }
 function osBottom(h, bb){ try{ const bar = document.getElementById('appTabbar'); if(bar && getComputedStyle(bar).position === 'fixed'){ const t = bar.getBoundingClientRect().top; if(t > 100 && t <= h + 1) return t; } }catch(e){} return h - bb; }
 // Cards made of short tips (the playbook, format and rules): the most columns and the biggest text that still show every tip without scrolling.
 function osFitEdGrid(c, g, cap){
@@ -28512,7 +28514,7 @@ function osFit(tab, extra){
     const vis = [...panel.children].filter(c => c.tagName === 'DIV' && !c.classList.contains('os-seg') && !c.classList.contains('os-hide') && getComputedStyle(c).display !== 'none');
     if(!vis.length) return;
     const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const h = vpHeight();
     let used = 0; vis.forEach(c => { c.style.maxHeight = ''; c.classList.remove('os-fit'); });
     const first = vis[0]; const top = first.getBoundingClientRect().top + (window.scrollY || 0);
     const sbs = vis.length > 1 && vis[1].getBoundingClientRect().top < vis[0].getBoundingClientRect().bottom - 4;
@@ -28548,7 +28550,7 @@ function osFitStudy(extra){
     const all = rowsHost ? [...rowsHost.children] : [];
     all.forEach(r => { r.style.display = ''; });
     const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const h = vpHeight();
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     let notes = 0; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none'){ const cs = getComputedStyle(e); notes += e.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0); } });
     const avail = Math.max(240, Math.round(osBottom(h, bb) - top - (window.innerWidth <= 640 ? 6 : 8) - notes - extra));
@@ -28603,6 +28605,17 @@ function osFitStudy(extra){
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
 }
+// Safety net for the fit above: if Today is squeezed into a compact style yet a band of screen is still empty beneath it (a stale size reading), measure again.
+setInterval(() => {
+  try{
+    const p = document.getElementById('tab-study'); if(!p || !p.classList.contains('active') || document.hidden || document.body.classList.contains('quiz-active')) return;
+    const c = document.getElementById('studyCols'); if(!c) return;
+    const squeezed = c.classList.contains('pt-dense') || c.classList.contains('pt-tiny') || c.classList.contains('os-fit') || (parseFloat(c.style.zoom) || 1) < 0.99;
+    if(!squeezed) return;
+    const gap = vpHeight() - c.getBoundingClientRect().bottom;
+    if(gap > 140 && Date.now() - (window._osWatchAt || 0) > 2500){ window._osWatchAt = Date.now(); osFitStudy(); }
+  }catch(e){}
+}, 1200);
 // Spare room is used: whatever fits with room left over is scaled up to fill it (type, spacing and buttons together), never beyond a comfortable size.
 function osGrow(c, avail, maxZ){
   try{
@@ -28631,7 +28644,7 @@ function quizFit(){
     if(!document.body.classList.contains('quiz-active') || document.body.classList.contains('exam-sim-mode') || getComputedStyle(qv).display === 'none') return;
     const card = qv.querySelector('.q-card'); const top = qv.querySelector('.quiz-top'); if(!card || !top) return;
     const host = document.getElementById('quizFullscreenHost'); const cs = getComputedStyle(host);
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const h = vpHeight();
     const qa = qv.querySelector('.quiz-actions'); const reserve = qa ? Math.min(100, Math.max(56, Math.round(qa.getBoundingClientRect().height / (parseFloat(qv.style.zoom) || 1)) + 14)) : 100;
     const avail = h - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - reserve;
     const raw = () => { const a = top.getBoundingClientRect().top, b = card.getBoundingClientRect().bottom; return b - a; };
@@ -28677,7 +28690,7 @@ function quizFit(){
   b0(tab, extra);
   try{
     const panel = document.getElementById('tab-' + tab); if(!panel || !panel.classList.contains('active') || (extra || 0) > 60) return;
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const h = vpHeight();
     const over = Math.ceil(document.documentElement.scrollHeight - Math.max(h, document.documentElement.clientHeight));
     if(over > 1) osFit(tab, (extra || 0) + over + 2);
   }catch(e){}
@@ -28697,7 +28710,7 @@ function quizFit(){
         const rows = [...c0.querySelectorAll('.pt-rows > .pt-step')].filter(r => r.offsetParent);
         if(rows.length){
           const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
-          const h0 = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+          const h0 = vpHeight();
           let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
           const spare = osBottom(h0, bb) - 8 - lastB;
           const z = parseFloat(c0.style.zoom) || 1;
@@ -28714,7 +28727,7 @@ function quizFit(){
       }
       if(!c0.classList.contains('os-fit')){
         const bar = document.getElementById('appTabbar'); let bb = 0; if(bar && getComputedStyle(bar).position === 'fixed') bb = bar.getBoundingClientRect().height;
-        const h0 = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+        const h0 = vpHeight();
         let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
         const spare = osBottom(h0, bb) - 14 - lastB;
         const z = parseFloat(c0.style.zoom) || 1;
@@ -28722,7 +28735,7 @@ function quizFit(){
       }
     }
     const panel = document.getElementById('tab-study'); if(!panel || !panel.classList.contains('active') || (extra || 0) > 60) return;
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    const h = vpHeight();
     const over = Math.ceil(document.documentElement.scrollHeight - Math.max(h, document.documentElement.clientHeight));
     if(over > 1) osFitStudy((extra || 0) + over + 2);
   }catch(e){}
@@ -31117,7 +31130,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.678';
+const BUILD_ID = '2026-10-24.679';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
