@@ -8925,13 +8925,13 @@ function studyTimeHtml(){
 function modeMixHtml(){
   try{
     const DAY = 86400000, cut = Date.now() - 7 * DAY, c = {};
-    const sessName = { drill:'drill', review:'review', adaptive:'adaptive', case:'case study', mock:'mock exam', fullexam:'full exam' };
-    (DATA.sessions || []).forEach(s => { if(new Date(s.date).getTime() >= cut && sessionQuestionCount(s) > 0){ const k = sessName[s.mode] || 'other'; c[k] = c[k] || { n: 0, unit: 'session' }; c[k].n++; } });
-    const actName = { flashcards:['flashcards','card'], formula:['formula drills','drill'], calc:['calculator','question'] };
-    (DATA.activity || []).forEach(a => { if(a.t >= cut && actName[a.k]){ const [k, u] = actName[a.k]; c[k] = c[k] || { n: 0, unit: u }; c[k].n += a.n; } });
+    const sessName = { drill:['drill','drills'], review:['review','reviews'], adaptive:['adaptive session','adaptive sessions'], case:['case study','case studies'], mock:['mock exam','mock exams'], fullexam:['full exam','full exams'] };
+    (DATA.sessions || []).forEach(s => { if(new Date(s.date).getTime() >= cut && sessionQuestionCount(s) > 0){ const k = s.mode in sessName ? s.mode : 'other'; c[k] = c[k] || { n: 0, names: sessName[k] || ['other', 'other'] }; c[k].n++; } });
+    const actName = { flashcards:['flashcard','flashcards'], formula:['formula drill','formula drills'], calc:['calculator question','calculator questions'] };
+    (DATA.activity || []).forEach(a => { if(a.t >= cut && actName[a.k]){ c[a.k] = c[a.k] || { n: 0, names: actName[a.k] }; c[a.k].n += a.n; } });
     const keys = Object.keys(c);
     if(!keys.length) return '';
-    return `<div class="bp-mix-head">By mode, last 7 days</div><div class="bp-mix">${keys.map(k => `<span class="bp-mix-chip"><b>${c[k].n}</b> ${k}${c[k].n === 1 ? '' : 's'}</span>`).join('')}</div>`;
+    return `<div class="bp-mix-head">By mode, last 7 days</div><div class="bp-mix">${keys.map(k => `<span class="bp-mix-chip"><b>${c[k].n}</b> ${c[k].names[c[k].n === 1 ? 0 : 1]}</span>`).join('')}</div>`;
   }catch(e){ return ''; }
 }
 // Live numbers for the Progress page, all from saved sessions and the current question stats.
@@ -31496,7 +31496,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.741';
+const BUILD_ID = '2026-10-24.742';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
