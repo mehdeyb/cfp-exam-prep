@@ -69,8 +69,8 @@
   html[data-boot-theme="light"], html[data-boot-theme="light"] body{background-color:#F6F4EE;}
   html.booting *, html.booting *::before, html.booting *::after{transition:none !important;}
   /* While the app is still filling in, the page shows only its title; the content fades in together once it is real, so nothing appears half built. */
-  html.booting .tab-panel{opacity:0;}
-  html.booted .tab-panel.active{animation:bootFade .45s cubic-bezier(.22,1,.36,1);}
+  html.booting .tab-panel, html.booting .tab-panel.active, html.booting .tab-panel > *{opacity:0;animation:none !important;}
+  html.booted .tab-panel.active{animation:softIn .45s cubic-bezier(.22,1,.36,1);}
   @media (prefers-reduced-motion:reduce){html.booted .tab-panel.active{animation:none;}}
   html[data-boot-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:scale(.5) rotate(90deg);}
   html[data-boot-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:scale(1) rotate(0deg);}
@@ -4852,7 +4852,9 @@ function showTab(name, opts){
         else if(!window._fcRebuildPending){ window._fcRebuildPending = true; setTimeout(() => { window._fcRebuildPending = false; try{ if(!document.querySelector('#tab-flashcards.active')) rebuildFlashcardQueue(); }catch(e){} }, 600); }
       } }
     renderExamDayCallout();
-    updateTutorContextNote();
+    // The tutor's welcome note is only seen on the Tutor tab, so every other tab hands it to idle time instead of making the tap wait.
+    if(name === 'tutor') updateTutorContextNote();
+    else { clearTimeout(window._tcnTimer); window._tcnTimer = setTimeout(() => { try{ updateTutorContextNote(); }catch(e){} }, 250); }
     if(name === 'reference'){ renderCalcKeysCard(); podcastAutoDefault(); }
     if(name === 'tutor'){ try{ podcastAutoDefault(); ttLiveRefresh(); ttVoiceSync(); }catch(e){} try{ ttIdleBoard(); }catch(e){} }
     if(name === 'tutor'){ ttFit(); setTimeout(ttFit, 120); setTimeout(ttFit, 700); }
@@ -7551,7 +7553,7 @@ async function loadData(){
     if(window.requestIdleCallback) requestIdleCallback(go, {timeout: 4000}); else go();
   }, 1200);
   // Everything not on the opening screen waits until the first paint is out, so the page appears first and fills in quietly.
-  { await runDeferredInit(); showTab('study'); try{ if(typeof osFitStudy === 'function') osFitStudy(); }catch(e){} try{ const t = DATA.lastTab; if(t === 'tutor') ttFit(); }catch(e){} requestAnimationFrame(() => requestAnimationFrame(() => { try{ window.__endBoot && window.__endBoot(); }catch(e){} })); }
+  { await runDeferredInit(); window._bootFitOk = true; showTab('study'); try{ if(typeof osFitStudy === 'function') osFitStudy(); }catch(e){} try{ const t = DATA.lastTab; if(t === 'tutor') ttFit(); }catch(e){} requestAnimationFrame(() => requestAnimationFrame(() => { try{ window.__endBoot && window.__endBoot(); }catch(e){} })); }
   window._dataReady = true;
   try{ if(kokoroWanted()) setTimeout(() => { if(KOKORO.state === 'idle') kokoroLoad(); }, 4000); }catch(e){}
   if(loadFailed){
@@ -14968,15 +14970,20 @@ function filterGlossary(){
     if(!query) return true;
     return f.term.toLowerCase().includes(query) || f.def.toLowerCase().includes(query);
   });
-  matches = matches.slice().sort((a,b) => a.term.localeCompare(b.term));
+  if(!window._glColl) window._glColl = new Intl.Collator();
+  matches = matches.slice().sort((a,b) => window._glColl.compare(a.term, b.term));
 
   if(countNote) countNote.textContent = query || domainFilter || focusOnly ? `${matches.length} of ${all.length} terms` : `search all ${all.length} terms`;
 
+  const _gk = [query, domainFilter, focusOnly, focusKeys.join(), all.length, matches.length, matches.length ? matches[0].id : '', matches.length ? matches[matches.length - 1].id : ''].join('|');
+  if(list._gk === _gk && list.firstChild && !list._forceRebuild) return;
+  list._gk = _gk;
   if(!matches.length){
     list.innerHTML = '<div class="glossary-empty">No terms match — try a different search or domain.</div>';
   } else {
     list.innerHTML = '';
-    matches.forEach(f => {
+    const _rt = list._rt = (list._rt || 0) + 1;
+    const renderOne = f => {
       const domainMeta = DOMAINS.find(d => d.key === f.domain);
       const item = document.createElement('div');
       item.className = 'glossary-item';
@@ -15035,7 +15042,20 @@ function filterGlossary(){
       item.onclick = () => toggleGlossaryExample(item, f);
       item.onkeydown = (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleGlossaryExample(item, f); } };
       list.appendChild(item);
-    });
+    };
+    // The first screenful is built at once; the rest follows in small idle slices so opening Learn never waits on 1,500 terms.
+    const FIRST = 60;
+    matches.slice(0, FIRST).forEach(renderOne);
+    if(matches.length > FIRST){
+      let gi = FIRST;
+      const slice = () => {
+        if(list._rt !== _rt) return;
+        const end = Math.min(gi + 120, matches.length);
+        for(; gi < end; gi++) renderOne(matches[gi]);
+        if(gi < matches.length) (window.requestIdleCallback ? requestIdleCallback(slice, { timeout: 500 }) : setTimeout(slice, 30));
+      };
+      (window.requestIdleCallback ? requestIdleCallback(slice, { timeout: 500 }) : setTimeout(slice, 30));
+    }
   }
 
   if(container && !reduceMotion && heightBefore !== null){
@@ -28659,6 +28679,8 @@ function quizFit(){
   }catch(e){}
 }; })();
 (function(){ const base = osFitStudy; window.osFitStudy = osFitStudy = function(extra){
+  // While the page is still hidden and filling in, fitting it over and over is wasted work; one fit runs just before it is revealed.
+  if(document.documentElement.classList.contains('booting') && !window._bootFitOk) return;
   base(extra);
   try{
     // The plan card reaches down to the slim bars: any room left over makes the card taller instead of leaving a gap.
@@ -31091,7 +31113,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.670';
+const BUILD_ID = '2026-10-24.674';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
