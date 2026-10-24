@@ -12724,8 +12724,14 @@ function ttSpeakable(t){
 }
 function ttSpeakReply(reply, btn){
   if(!hasSpeechSupport()) return;
-  if(naturalSpeechState.active && podcastPlayingKey) return; // a lesson is playing: never talk over it
+  if(naturalSpeechState.active && podcastPlayingKey && !naturalSpeechState.paused) return; // a lesson is playing: never talk over it
   const t = ttSpeakable(reply); if(!t) return;
+  // Asked mid-lesson: the lesson is paused where it stood, the answer is spoken, and one tap picks the lesson up again.
+  if(naturalSpeechState.active && podcastPlayingKey && naturalSpeechState.paused){
+    try{ stopSpeechSequence(); podcastPlayingKey = null; }catch(e){}
+    window._ttAskedMidLesson = false;
+    try{ setTimeout(() => { tutorAddNext(null, [{ label:'Resume my lesson', run: () => ttStartLesson() }, 'Ask another question']); }, 50); }catch(e){}
+  }
   try{ speakTextNow(t, btn || null); }catch(e){}
 }
 function ttAddListen(bubble, reply){
@@ -30165,7 +30171,7 @@ async function sendTutorMessage(presetText){
   if(!text || tutorBusy) return;
   window._ttOpenUsed = true; try{ tutorClearActions(); ttPreBoard(text); }catch(e){}
   input.blur();
-  try{ if(ttVoiceOn()){ speechAudioPrime(); if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); } }catch(e){}
+  try{ if(ttVoiceOn()){ speechAudioPrime(); if(naturalSpeechState.active && podcastPlayingKey){ if(!naturalSpeechState.paused){ try{ togglePodcastPlayback(); }catch(e){} } window._ttAskedMidLesson = true; } else stopSpeechSequence(); } }catch(e){}
   if(!aiFeaturesAvailable){
     renderTutorMessage('user', text);
     input.value = '';
@@ -30940,7 +30946,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.641';
+const BUILD_ID = '2026-10-24.642';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
