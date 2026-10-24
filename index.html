@@ -8888,6 +8888,7 @@ function renderBlueprint(){
       const stg2 = mastery >= 75 ? 4 : mastery >= 60 ? 3 : mastery >= 50 ? 2 : 1;
       metaBits.push('<span class="bp-chip-stage s' + stg2 + '" title="Stage: ' + STAGES[stg2 - 1].name + ' (from your recent answers, capped by the % shown)">' + STAGES[stg2 - 1].name + '</span>');
     }
+    if(s.total) metaBits.push(`<span class="bp-chip-right" title="Share of your answers right in this topic">${accuracy}% right</span>`);
     if(dueCount > 0) metaBits.push(`<span class="bp-chip-due">${dueCount} due</span>`);
     if(dx.length) metaBits.push(dxNew > 0 ? `<span class="bp-chip-cov new">${dxNew} of ${dx.length} topics new</span>` : '');
     const chip = document.createElement('div');
@@ -31286,7 +31287,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.720';
+const BUILD_ID = '2026-10-24.721';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
