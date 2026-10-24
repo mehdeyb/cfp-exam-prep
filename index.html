@@ -1164,6 +1164,32 @@
   .bp-trendrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;}
   .bp-trendrow .bp-value-trend{margin:0;flex:1 1 auto;min-width:0;}
   .bp-spark{flex:0 0 auto;overflow:visible;}
+  /* Subtle motion on Progress only, and only when the device allows it. */
+  @media (prefers-reduced-motion: no-preference){
+    @keyframes bpGrowY{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+    @keyframes bpGrowX{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+    @keyframes bpRise{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+    @keyframes bpDraw{from{stroke-dashoffset:1;}to{stroke-dashoffset:0;}}
+    #studyHub[data-view="progress"] .bp-fill{transform-origin:50% 100%;animation:bpGrowY .7s cubic-bezier(.2,.7,.2,1) both;}
+    #studyHub[data-view="progress"] .bp-value-row,
+    #studyHub[data-view="progress"] .bp-snap-cell,
+    #studyHub[data-view="progress"] .bp-num,
+    #studyHub[data-view="progress"] .bp-mix-chip,
+    #studyHub[data-view="progress"] .bp-chip-time,
+    #studyHub[data-view="progress"] .bp-chip-mv{animation:bpRise .45s ease both;}
+    #studyHub[data-view="progress"] .bp-value-row:nth-child(2){animation-delay:.05s;}
+    #studyHub[data-view="progress"] .bp-value-row:nth-child(3){animation-delay:.1s;}
+    #studyHub[data-view="progress"] .bp-snap-cell:nth-child(2){animation-delay:.05s;}
+    #studyHub[data-view="progress"] .bp-snap-cell:nth-child(3){animation-delay:.1s;}
+    #studyHub[data-view="progress"] .bp-snap-cell:nth-child(4){animation-delay:.15s;}
+    #studyHub[data-view="progress"] .bp-snap-cell:nth-child(5){animation-delay:.2s;}
+    #studyHub[data-view="progress"] .bp-num:nth-child(2){animation-delay:.05s;}
+    #studyHub[data-view="progress"] .bp-num:nth-child(3){animation-delay:.1s;}
+    #studyHub[data-view="progress"] .bp-num:nth-child(4){animation-delay:.15s;}
+    #studyHub[data-view="progress"] .bp-hours-bar i{transform-origin:0 50%;animation:bpGrowX .8s cubic-bezier(.2,.7,.2,1) .15s both;}
+    #studyHub[data-view="progress"] .bp-spark polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:bpDraw 1s ease-out .1s both;}
+    #studyHub[data-view="progress"] .bp-spark circle{animation:bpRise .4s ease .9s both;}
+  }
   .bp-next{margin-top:8px;padding:8px 12px;border:1px solid var(--hair-strong);border-radius:12px;background:var(--surface2);}
   .bp-next:empty{display:none;}
   .bp-next-name{font-weight:600;font-size:14px;margin-bottom:2px;}
@@ -8918,7 +8944,7 @@ function renderProgressValue(){
           const xy = rs.map((v, i) => [rs.length === 1 ? W : (i / (rs.length - 1)) * W, H - 3 - ((v - lo) / (hi - lo)) * (H - 6)]);
           const pts = xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
           const last = xy[xy.length - 1];
-          const spark = `<svg class="bp-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Readiness over your last ${rs.length} sessions: from ${rs[0]} to ${rs[rs.length - 1]}"><polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="var(--gold)"/></svg>`;
+          const spark = `<svg class="bp-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Readiness over your last ${rs.length} sessions: from ${rs[0]} to ${rs[rs.length - 1]}"><polyline pathLength="1" points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="var(--gold)"/></svg>`;
           trend = `<div class="bp-trendrow"><p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>${spark}</div>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
       }catch(e){}
@@ -31557,7 +31583,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.750';
+const BUILD_ID = '2026-10-24.751';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
