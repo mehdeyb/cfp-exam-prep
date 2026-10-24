@@ -3531,6 +3531,19 @@
     #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-player-secondary-row{grid-column:1 / -1;grid-row:2;justify-content:flex-end;}
     #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-status{grid-row:3;}
   }
+
+  /* Tutor board: the title bar folds away (the tab already says Tutor) and the board takes every spare pixel. */
+  #tutorCard.tt-board > .card-head{position:relative;height:0;min-height:0;margin:0;padding:0;overflow:visible;border:0;}
+  #tutorCard.tt-board > .card-head h2{display:none;}
+  #tutorCard.tt-board > .card-head > *{position:absolute;top:2px;right:6px;z-index:8;margin:0;}
+  #tutorCard.tt-board #lessonsCard #podcastPlayer:not([style*="display: none"]){flex:1 1 auto;display:flex;flex-direction:column;min-height:0;}
+  #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage:not([style*="display: none"]){flex:1 1 auto;display:flex;flex-direction:column;min-height:0;}
+  #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
+  #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
+  #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  #tutorCard.tt-board .tutor-input-row{padding:4px 0 2px;margin-bottom:0;}
+  #tutorCard.tt-board:has(> .api-key-nudge:not([style*="none"])) > .card-head > *{top:62px;right:14px;}
+  #tutorCard.tt-board > .card-head > *{top:12px;right:14px;}
 </style>
 </head>
 <body>
@@ -30859,7 +30872,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.624';
+const BUILD_ID = '2026-10-24.626';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
