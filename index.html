@@ -28664,6 +28664,13 @@ function showFitInfo(){
     const L = ['build ' + (typeof BUILD_ID !== 'undefined' ? BUILD_ID : '?'), 'innerH ' + window.innerHeight + '  innerW ' + window.innerWidth, 'visualVP ' + (vv ? Math.round(vv.height) : '-') + '  clientH ' + d.clientHeight + '  scrollH ' + d.scrollHeight,
       'screen ' + screen.width + 'x' + screen.height + '  dpr ' + window.devicePixelRatio, 'standalone ' + (window.navigator.standalone ? 'yes' : 'no'), 'body minH ' + bs.minHeight + '  pad ' + bs.paddingTop + '/' + bs.paddingBottom,
       'study rect top ' + (r ? Math.round(r.top) : '-') + ' bottom ' + (r ? Math.round(r.bottom) : '-') + ' h ' + (r ? Math.round(r.height) : '-'), 'zoom ' + (c && c.style.zoom || '1') + '  zoomReports ' + zoomReports(), 'classes ' + (c ? c.className : ''), 'fit ' + JSON.stringify(window._osDbg || {})];
+    try{
+      const log = window._perf || [], now = performance.now();
+      const recent = log.filter(x => now - x.at < 60000);
+      const by = {}; recent.forEach(x => { const k = by[x.n] || (by[x.n] = { n:0, ms:0, max:0 }); k.n++; k.ms += x.ms; k.max = Math.max(k.max, x.ms); });
+      const rows = Object.keys(by).sort((u, v) => by[v].ms - by[u].ms).map(k => k + ': ' + by[k].n + ' runs, ' + Math.round(by[k].ms) + ' ms total, slowest ' + by[k].max + ' ms');
+      L.push('--- last 60 seconds ---', rows.length ? rows.join('\n') : 'no timed runs yet (answer a question, then open this again)');
+    }catch(e){}
     el.textContent = L.join('\n');
   }catch(e){}
 }
@@ -31290,7 +31297,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.724';
+const BUILD_ID = '2026-10-24.725';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -31954,6 +31961,17 @@ requestDurableStorage();
   const a0 = fcApplyAdaptation; window.fcApplyAdaptation = fcApplyAdaptation = function(card){ const r = a0.apply(this, arguments); fcAttachNumbers(card); return r; };
   const c0 = fcApplyChoose; window.fcApplyChoose = fcApplyChoose = function(i){ const r = c0.apply(this, arguments); try{ const card = fcQueue[fcIndex]; if(card && fcView.applied) fcAttachNumbers(card); }catch(e){} return r; };
 })();
+/* Timing log for the answer step: how often each layout/save routine runs and how long it takes. Shown under Settings -> Show screen measurements. */
+(function(){
+  window._perf = [];
+  const wrap = name => {
+    const f = window[name]; if(typeof f !== 'function' || f._timed) return;
+    const g = function(){ const t0 = performance.now(); try{ return f.apply(this, arguments); } finally { window._perf.push({ n:name, ms:Math.round(performance.now() - t0), at:Math.round(t0) }); if(window._perf.length > 300) window._perf.splice(0, 100); } };
+    g._timed = true; window[name] = g;
+  };
+  ['quizFit','osFitStudy','osFit','renderBlueprint','renderAll','refreshHeaderStats','updateLiveReadiness','persist','quizRevealFeedback','renderTodayPlan','selectAnswerCore'].forEach(wrap);
+})();
+
 </script>
 <div id="keyTermModalHost" class="key-term-modal-host" onclick="if(event.target===this) closeKeyTermModal();">
   <div class="key-term-modal-card" role="dialog" aria-modal="true" aria-labelledby="keyTermModalTerm">
