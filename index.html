@@ -1233,6 +1233,7 @@
   .pt-adv-next{margin-top:2px;font-size:13px;color:var(--muted);}
   .pt-adv-go{display:block;width:100%;margin-top:10px;min-height:44px;}
   .pt-step.next{background:color-mix(in srgb,var(--accent,#3b82f6) 8%,transparent);border-radius:12px;}
+  .pt-step.next[role=button]{cursor:pointer;}
   .plan-result .pr-go{display:block;width:100%;margin-top:8px;min-height:44px;text-align:center;}
   .fc-plan-next{background:none;border:0;color:var(--gold);font:inherit;text-decoration:underline;padding:6px 4px;min-height:32px;cursor:pointer;}
   .plan-result .pr-next{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
@@ -11411,8 +11412,9 @@ function _renderTodayPlanInner(){
     const pr = progTxt(st);
     const btn = st.done ? '' : (st.manual
       ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button><button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button></span>`
-      : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`);
-    return `<div class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
+      : (isNext ? '' : `<button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">${partial ? 'Continue' : 'Start'}</button>`));
+    const rowGo = (isNext && !st.manual && !st.done) ? ` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
+    return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${pr ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
@@ -31089,7 +31091,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.669';
+const BUILD_ID = '2026-10-24.670';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
