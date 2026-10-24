@@ -3541,6 +3541,17 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  @media (max-width:640px){
+    body.os-one #studyHub[data-view="progress"] #bpBar, body.os-one #studyHub[data-view="progress"] #bpCodeRow{display:none;}
+    body.os-one #studyHub[data-view="progress"] #bpLegend > *{padding-top:5px;padding-bottom:5px;}
+    body.os-one #studyHub[data-view="progress"] #diagnosisCard{display:none;}
+    body.os-one #studyHub[data-view="progress"] #bpLegend{grid-template-columns:1fr 1fr;}
+    body.os-one #studyHub[data-view="progress"] .bp-chip-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}
+    body.os-one #studyHub[data-view="progress"] .bp-chip-main{min-width:0;}
+    body.os-one #studyHub[data-view="progress"] .progress-plot{height:64px;}
+    body.os-one #studyHub[data-view="progress"] .progress-svg{height:64px;}
+    body.os-one #studyHub[data-view="progress"] .progress-diff-row, body.os-one #studyHub[data-view="progress"] .progress-chart-labels{display:none;}
+  }
   #tutorCard > .card-head{position:relative;height:0;min-height:0;margin:0;padding:0;overflow:visible;border:0;}
   #tutorCard > .card-head h2{display:none;}
   #tutorCard > .card-head > *{position:absolute;top:12px;right:14px;z-index:8;margin:0;}
@@ -30920,7 +30931,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.637';
+const BUILD_ID = '2026-10-24.638';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
