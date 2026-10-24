@@ -13743,6 +13743,8 @@ function hubShow(v, noPersist){
   hub.dataset.view = v;
   hub.querySelectorAll('#hubSeg button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   if(!noPersist) try{ localStorage.setItem('hubView', v); }catch(e){}
+  // The other view has a different height: fit it to the screen again right away, not at the next resize.
+  try{ if(typeof osFitStudy === 'function'){ requestAnimationFrame(() => osFitStudy()); setTimeout(() => osFitStudy(), 220); } }catch(e){}
 }
 function hubRevealEl(el){
   const hub = document.getElementById('studyHub'); if(!hub || !el || !el.closest) return;
@@ -28833,9 +28835,11 @@ function ttGrowBoard(){
     const c = document.getElementById('tutorCard'), b = document.getElementById('pstBody'); if(!c || !b || !c.classList.contains('tt-board')) return;
     const kids = [...b.children]; if(!kids.length) return;
     const setZ = z => kids.forEach(k => { k.style.zoom = z === 1 ? '' : String(z); });
-    setZ(1); const avail = b.clientHeight; if(!avail || b.scrollHeight > avail + 2) return;
+    // A box never reports less than its own height, so what the content really needs is measured from where it ends.
+    const need = z => { const t = b.getBoundingClientRect().top, cs = getComputedStyle(b); let end = 0; kids.forEach(k => { const r = k.getBoundingClientRect(); const bt = r.top - t + (zoomReports() ? r.height : r.height * z); if(bt > end) end = bt; }); return end + (parseFloat(cs.paddingBottom) || 0); };
+    setZ(1); const avail = b.clientHeight; if(!avail || b.scrollHeight > avail + 2 || need(1) > avail + 2) return;
     let lo = 1, hi = 1.9;
-    for(let i = 0; i < 7; i++){ const m = (lo + hi) / 2; setZ(m); if(b.scrollHeight <= avail - 6 && b.scrollWidth <= b.clientWidth + 1) lo = m; else hi = m; }
+    for(let i = 0; i < 7; i++){ const m = (lo + hi) / 2; setZ(m); if(need(m) <= avail - 6 && b.scrollWidth <= b.clientWidth + 1) lo = m; else hi = m; }
     setZ(Math.floor(lo * 100) / 100);
   }catch(e){}
 }
@@ -31197,7 +31201,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.685';
+const BUILD_ID = '2026-10-24.686';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
