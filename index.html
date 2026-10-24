@@ -56,7 +56,7 @@
   html[data-boot-theme="light"]{
     --ink:#F6F4EE;--surface:#FFFFFF;--surface2:#F1EEE5;--surface3:#E7E2D5;
     --hair:rgba(60,50,30,0.12);--hair-strong:rgba(60,50,30,0.22);
-    --gold:#806411;--gold-bright:#A6821C;--gold-soft:rgba(135,106,18,0.12);
+    --gold:#806411;--gold-bright:#A6821C;--gold-soft:rgba(135,106,18,0.12);--on-gold:#fff;
     --teal:#1D6D5B;--paper:#20241E;--muted:#5B6270;--muted-dim:#5B6270;
     --correct:#2F7A4F;--incorrect:#97551B;
     --correct-tint:rgba(47,122,79,0.10);--incorrect-tint:rgba(151,85,27,0.10);--gold-tint:rgba(135,106,18,0.06);
@@ -84,7 +84,7 @@
     --surface3:#213754;
     --hair:rgba(148,168,194,0.20);
     --hair-strong:rgba(148,168,194,0.34);
-    --gold:#C9A227;
+    --gold:#C9A227;--on-gold:#0F1A2C;
     --gold-bright:#E0BD3F;
     --gold-soft:rgba(201,162,39,0.13);
     --calc-body:#3A3D42;
@@ -149,7 +149,7 @@
     --surface3:#E7E2D5;
     --hair:rgba(60,50,30,0.12);
     --hair-strong:rgba(60,50,30,0.22);
-    --gold:#806411;
+    --gold:#806411;--on-gold:#fff;
     --gold-bright:#A6821C;
     --gold-soft:rgba(135,106,18,0.12);
     --teal:#1D6D5B;
@@ -210,7 +210,7 @@
   .pps-row:hover{background:var(--surface2);}
   .pps-row.now{border-color:var(--gold);background:var(--surface2);}
   .pps-n{flex:0 0 26px;height:26px;border-radius:50%;border:1px solid var(--hair-strong,var(--hair));display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
-  .pps-row.done .pps-n{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .pps-row.done .pps-n{background:var(--gold);border-color:var(--gold);color:var(--on-gold);}
   .pps-row.now .pps-n{border-color:var(--gold);color:var(--gold);font-weight:600;}
   .pps-b{display:flex;flex-direction:column;min-width:0;gap:1px;}
   .pps-t{font-size:14px;line-height:1.3;}
@@ -894,6 +894,7 @@
   @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
   @media (max-width:640px){
+    .tab-btn{padding-top:11px;padding-bottom:11px;}
     .tabbar{
       position:fixed;left:0;right:0;bottom:0;z-index:50;margin:0;border-radius:0;
       border:none;border-top:1px solid var(--hair);
@@ -1918,10 +1919,10 @@
   @media (max-width:640px){
     /* The settings and theme buttons float top right, so the pills stop short of them instead of sliding underneath. */
     body.os-one .os-seg{margin-right:96px;}
-    body.os-one #tab-reference #modePanel .mode-grid .mode-card .mode-meta{font-size:10.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    body.os-one #tab-reference #modePanel .mode-grid .mode-card .mode-meta{font-size:11px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   }
   .os-seg button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--hair);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
-  .os-seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .os-seg button.on{background:var(--gold);border-color:var(--gold);color:var(--on-gold);}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-examday.active > .card:has(> #edTiming){column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:36px;align-items:start;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #edTiming > *{grid-column:1;}
@@ -1942,6 +1943,7 @@
   @media (max-width:640px){
     body.os-one .tabbar{left:0;right:0;width:auto;justify-content:center;gap:2px;padding:2px 8px calc(2px + var(--sab, env(safe-area-inset-bottom,0px)) * 0.5);}
     body.os-one .tab-btn{flex:0 1 auto;min-width:0;flex-direction:row;gap:5px;padding:7px 12px;font-size:12px;letter-spacing:0;border-radius:999px;}
+    @media (max-width:640px){ body.os-one .tab-btn{padding-top:10px;padding-bottom:10px;} }
     body.os-one .tab-btn svg{width:16px;height:16px;}
   }
   /* Today: the readiness is a slim strip, so the plan gets the screen. Wide screens put the strip and the prompts in a side column and give the plan the rest. */
@@ -2034,7 +2036,7 @@
   body.os-one #tab-study .score-ring-wrap{grid-row:1 / span 3;width:76px;height:76px;}
   body.os-one #tab-study .score-ring-wrap svg{width:76px;height:76px;}
   body.os-one #tab-study .score-big{font-size:26px;}
-  body.os-one #tab-study .score-ring-sub{font-size:10px;}
+  body.os-one #tab-study .score-ring-sub{font-size:11px;}
   body.os-one #tab-study .score-ring-block > *:not(.score-ring-wrap){grid-column:2;margin:0;}
   body.os-one #tab-study .stat-strip{margin-left:auto;flex:0 1 auto;}
   @media (min-width:600px){
@@ -2095,9 +2097,9 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:3;column-gap:24px;}
   @media (max-width:900px){ html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:2;} }
-  .pt-nextlabel{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
+  .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
-  .pt-step.next .pt-go{background:var(--gold);color:#fff;border-color:var(--gold);}
+  .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-reference.active{column-width:auto;column-count:1;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one .os-seg{column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-reference #modePanel .mode-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
@@ -2113,7 +2115,7 @@
   .today-ask{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 14px;padding:2px 0;}
   .today-ask::-webkit-scrollbar{display:none;}
   .today-ask button{flex:0 0 auto;min-height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
-  .today-ask button:active{background:var(--gold);color:#fff;}
+  .today-ask button:active{background:var(--gold);color:var(--on-gold);}
   body.os-one .footer-row{display:none;}
   body.os-one #todayPlanCard .card-head{margin-bottom:8px;}
   html[data-lay="compact"] body.os-one #nextStepCard .ns-why, html[data-lay="compact"] body.os-one #nextStepCard .ns-alt, html[data-lay="compact"] body.os-one #nextStepCard .ns-tag{display:none;}
@@ -2144,7 +2146,7 @@
   .tutor-next{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px;}
   .tutor-nextbtn{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;min-height:34px;border-radius:19px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;text-align:left;}
   .tutor-nextbtn:active{background:var(--gold-tint);}
-  .tutor-nextbtn.picked{background:var(--gold);color:#fff;}
+  .tutor-nextbtn.picked{background:var(--gold);color:var(--on-gold);}
   .tutor-nextbtn:disabled:not(.picked){opacity:.4;}
   #tutorCard:not(.has-convo) #tutorChips{display:none !important;}
   .tutor-offer .tutor-show{margin-left:0;}
@@ -2233,7 +2235,7 @@
   .cd-parts li::before{content:counter(cd);flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-size:11.5px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .cd-parts small{display:block;color:var(--muted);font-size:12px;margin-top:2px;}
   .cd-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-  .cd-actions .btn:first-child{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;}
+  .cd-actions .btn:first-child{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:600;}
   :root[data-theme="dark"] .cd-actions .btn:first-child{color:#1a1608;}
   .cd-actions .cd-link{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 6px;font-family:inherit;}
   .cd-pill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:140;display:none;max-width:calc(100vw - 32px);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:10px 16px;min-height:44px;border-radius:22px;border:1px solid var(--gold);background:var(--surface);color:var(--gold);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28);}
@@ -3198,6 +3200,7 @@
     html.vh-compact body.quiz-active #qChoices .choice{padding-top:10px;padding-bottom:10px;}
     html.vh-compact body.quiz-active .q-text{margin-bottom:10px;}
     body.quiz-active .confidence-row{flex-wrap:nowrap;margin:0 0 12px;padding-bottom:10px;gap:8px;}
+    @media (max-width:430px){ body.quiz-active #confidenceRow .confidence-pill{padding:8px 8px;font-size:11px;} body.quiz-active #confidenceRow .confidence-pills{gap:5px;} body.quiz-active #confidenceRow .confidence-label{font-size:11.5px;white-space:normal;max-width:70px;line-height:1.2;} }
     body.quiz-active .confidence-label{font-size:11.5px;white-space:nowrap;}
     body.quiz-active .confidence-pills{flex-wrap:nowrap;gap:5px;}
     body.quiz-active .confidence-pill{padding:10px 11px;min-height:38px;font-size:11.5px;}
@@ -3517,7 +3520,7 @@
   body.screen-active #screenHost{display:flex;position:fixed;inset:0;z-index:210;background-color:var(--ink);background-image:radial-gradient(ellipse 800px 500px at 10% -10%, var(--bg-glow-1), transparent 60%),radial-gradient(ellipse 800px 500px at 100% 0%, var(--bg-glow-2), transparent 60%);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));animation:quizIn .32s var(--ease);}
   .scr-inner{width:100%;max-width:760px;margin:auto;display:flex;flex-direction:column;min-height:min(100%,640px);}
   .scr-body{flex:1;padding:8px 2px;min-height:300px;} .scr-body .pst-title{font-size:30px;} .scr-body .pst-text{font-size:17px;} .scr-body .pst-big{font-size:64px;} .scr-body .pst-formula{font-size:22px;}
-  .scr-foot{display:flex;align-items:center;gap:10px;padding:12px 0 4px;} .scr-foot #scrPlay{flex:1;background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600;} :root[data-theme="dark"] .scr-foot #scrPlay{color:#1a1608;} #podcastStage .pst-idb{display:none;} .scr-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .scr-foot{display:flex;align-items:center;gap:10px;padding:12px 0 4px;} .scr-foot #scrPlay{flex:1;background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:600;} :root[data-theme="dark"] .scr-foot #scrPlay{color:#1a1608;} #podcastStage .pst-idb{display:none;} .scr-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
   @media (max-width:520px){ .pst-cols{grid-template-columns:1fr;} .pst-title{font-size:21px;} }
 
   /* Type floor: body-level text never below 12px, small caps labels never below 11px. */
@@ -18979,6 +18982,17 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   }
   if(!response.ok){
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
+    // When Google says a model is retired it also names the one to use ("use models/gemini-3.5-flash-lite"): go straight there, once, instead of working down the list.
+    if([400, 403, 404].includes(response.status) && /no longer available|update your code|use models\//i.test(detail)){
+      const named = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1];
+      window._geminiNamed = window._geminiNamed || {};
+      if(named && !window._geminiNamed[named]){
+        window._geminiNamed[named] = true;
+        if(!GEMINI_MODELS.includes(named)) GEMINI_MODELS.unshift(named); else { GEMINI_MODELS.splice(GEMINI_MODELS.indexOf(named), 1); GEMINI_MODELS.unshift(named); }
+        geminiModelIdx = 0;
+        return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, modelIdx: 0 });
+      }
+    }
     // A busy or rate-limited model: try the next model in the list before giving up, since each has its own capacity.
     if([429, 500, 503, 504].includes(response.status) && (tries || 0) < GEMINI_MODELS.length - 1){ return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: (tries || 0) + 1, modelIdx: ((modelIdx != null ? modelIdx : geminiModelIdx) + 1) % GEMINI_MODELS.length }); }
     // A refusal that names the model or permission (not the key) can be specific to one model: try the next one before giving up.
@@ -19101,6 +19115,7 @@ function describeAiError(err){
   const status = err && err.status;
   if(err && err.provider === 'gemini'){
     if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
+    if(/no longer available|update your code/i.test(err.message || '')) return 'Google retired the AI model the app was using. The app switches to the current one on its own, so try again in a moment.';
     if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
     const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
     if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)) return status === 429 ? 'Gemini is rate-limiting this key — wait a bit and try again.' : "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
@@ -31130,7 +31145,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.679';
+const BUILD_ID = '2026-10-24.682';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
