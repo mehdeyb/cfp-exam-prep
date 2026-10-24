@@ -4581,6 +4581,7 @@
         <div class="settings-section">
           <h3>App version</h3>
           <p class="hint" style="margin-top:0;" id="appVersionLine"></p>
+          <p class="hint" style="margin-top:4px;"><button class="linklike" type="button" onclick="showFitInfo()" style="text-decoration:underline;">Show screen measurements</button><span id="fitInfo" style="display:block;white-space:pre-wrap;font:11px/1.4 'IBM Plex Mono',monospace;margin-top:6px;"></span></p>
           <div class="api-key-row"><button class="btn" id="appUpdateBtn" onclick="settingsCheckUpdate(false)">Check for update</button></div>
           <div class="tutor-status" id="appUpdateStatus" role="status"></div>
           <p class="hint" style="margin-top:8px;"><button class="linklike" onclick="settingsCheckUpdate(true)" style="text-decoration:underline;">Still on an old version? Reset the app's saved files</button> Your progress and settings are not touched.</p>
@@ -28612,6 +28613,17 @@ function zoomReports(){
 }
 function zH(c){ const r = c.getBoundingClientRect().height, z = parseFloat(c.style.zoom) || 1; return (Math.abs(z - 1) < 0.005 || zoomReports()) ? r : r * z; }
 function zRaw(el, z){ const r = el.getBoundingClientRect().height; return (Math.abs(z - 1) < 0.005 || !zoomReports()) ? r : r / z; }
+function showFitInfo(){
+  try{
+    const el = document.getElementById('fitInfo'); if(!el) return;
+    const c = document.getElementById('studyCols'), d = document.documentElement, vv = window.visualViewport;
+    const r = c ? c.getBoundingClientRect() : null, bs = getComputedStyle(document.body);
+    const L = ['build ' + (typeof BUILD_ID !== 'undefined' ? BUILD_ID : '?'), 'innerH ' + window.innerHeight + '  innerW ' + window.innerWidth, 'visualVP ' + (vv ? Math.round(vv.height) : '-') + '  clientH ' + d.clientHeight + '  scrollH ' + d.scrollHeight,
+      'screen ' + screen.width + 'x' + screen.height + '  dpr ' + window.devicePixelRatio, 'standalone ' + (window.navigator.standalone ? 'yes' : 'no'), 'body minH ' + bs.minHeight + '  pad ' + bs.paddingTop + '/' + bs.paddingBottom,
+      'study rect top ' + (r ? Math.round(r.top) : '-') + ' bottom ' + (r ? Math.round(r.bottom) : '-') + ' h ' + (r ? Math.round(r.height) : '-'), 'zoom ' + (c && c.style.zoom || '1') + '  zoomReports ' + zoomReports(), 'classes ' + (c ? c.className : ''), 'fit ' + JSON.stringify(window._osDbg || {})];
+    el.textContent = L.join('\n');
+  }catch(e){}
+}
 function osFitStudy(extra){
   try{
     extra = extra || 0;
@@ -28630,6 +28642,7 @@ function osFitStudy(extra){
     const avail = Math.max(240, Math.round(osBottom(h, bb) - top - (window.innerWidth <= 640 ? 6 : 8) - notes - extra));
     // Spare room goes to the main thing first: the next step and the plan rows grow. The side extras (time chips, pace line) come
     // back only if the plan is already as large as it comfortably gets and room is still left over.
+    window._osDbg = { avail: avail, top: Math.round(top), h: h, bb: bb, extra: extra, notes: Math.round(notes) };
     const filler = [...c.querySelectorAll('.pt-pace, .pt-today, .pt-sub, .pt-mins')];
     filler.forEach(x => { x.classList.add('os-shed'); x.style.display = 'none'; });
     if(c.scrollHeight <= avail + 2){
@@ -31233,7 +31246,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.690';
+const BUILD_ID = '2026-10-24.691';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
