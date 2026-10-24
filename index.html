@@ -1914,6 +1914,11 @@
   /* One screen per tab: a tab shows one section at a time, picked from a short row, and the section fits the screen (only a very long list scrolls inside its own frame). */
   .os-seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 10px;padding:2px 0;-webkit-overflow-scrolling:touch;}
   .os-seg::-webkit-scrollbar{display:none;}
+  @media (max-width:640px){
+    /* The settings and theme buttons float top right, so the pills stop short of them instead of sliding underneath. */
+    body.os-one .os-seg{margin-right:96px;}
+    body.os-one #tab-reference #modePanel .mode-grid .mode-card .mode-meta{font-size:10.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  }
   .os-seg button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--hair);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .os-seg button.on{background:var(--gold);border-color:var(--gold);color:#fff;}
   .os-hide{display:none !important;}
@@ -30818,7 +30823,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-23.615';
+const BUILD_ID = '2026-10-24.616';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
