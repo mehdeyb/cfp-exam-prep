@@ -1161,6 +1161,11 @@
   .bp-value-act{font-size:13px;opacity:.85;margin-top:3px;line-height:1.35;}
   .bp-value-pace{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.4;}
   .bp-value-trend{font-size:13px;margin:8px 0 0;line-height:1.4;}
+  .bp-next{margin-top:10px;padding:10px 14px;border:1px solid var(--hair-strong);border-radius:12px;background:var(--surface2);}
+  .bp-next:empty{display:none;}
+  .bp-next-name{font-weight:600;font-size:14px;margin-bottom:2px;}
+  .bp-next-text{font-size:12.5px;opacity:.85;margin:0 0 8px;line-height:1.4;}
+  .bp-next-go{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:var(--gold);color:#fff;cursor:pointer;}
   .bp-num-head{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:10px 0 6px;}
   .bp-num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
   .bp-num{border:1px solid var(--hair-strong);border-radius:10px;padding:7px 9px;min-width:0;}
@@ -2121,7 +2126,9 @@
   body.os-one #tab-study #coachLine{order:20;margin:8px 0 0;padding:6px 12px;font-size:12px;line-height:1.35;}
   body.os-one #tab-study #tutorNoteCard{order:21;margin:6px 0 0;padding:3px 10px 3px 12px;border-radius:10px;font-size:12px;line-height:1.3;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard{margin-bottom:0 !important;padding-bottom:10px;}
-  body.os-one #studyHub[data-view="progress"] .bp-cols{margin-bottom:6px;}
+  body.os-one #studyHub[data-view="progress"] .bp-cols{margin-bottom:0;}
+  body.os-one #tab-study:has(#studyHub[data-view="progress"]) #tutorNoteCard{margin-top:-16px;}
+  body.os-one #studyHub[data-view="progress"]{margin-bottom:0;padding-bottom:0;}
   body.os-one #tab-study #tutorNoteCard:not([style*="none"]){display:flex !important;align-items:center;gap:10px;}
   body.os-one #tab-study #tutorNoteCard .tn-kicker{margin:0;flex:none;font-size:10.5px;letter-spacing:.05em;white-space:nowrap;}
   body.os-one #tab-study #tutorNoteCard .tn-text{flex:1 1 auto;min-width:0;font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
@@ -3785,6 +3792,7 @@
       <div class="bp-code-row" id="bpCodeRow"></div>
       <div class="bp-plan" id="bpPlan" style="display:none !important;" hidden></div>
       <div class="bp-legend" id="bpLegend"></div>
+      <div class="bp-next" id="bpNext"></div>
       </div>
       <div class="bp-colR">
       <div class="bp-value" id="bpValue"></div>
@@ -8873,6 +8881,7 @@ function renderProgressValue(){
     const st = computeStats();
     if(!st.totalAnswered){
       html = '<div class="bp-value-head">Where the points are</div><p class="bp-value-empty">Answer a few questions and this shows which topics cost you the most points, and what to do about each.</p>';
+      { const nx = document.getElementById('bpNext'); if(nx) nx.innerHTML = '<div class="bp-value-head">Next move</div><p class="bp-next-text">Answer a few questions and your next step appears here.</p>'; }
     } else {
       const rows = st.parts.filter(p => p.lost >= 1).sort((a, b) => b.lost - a.lost).slice(0, 3);
       const list = rows.map(p => {
@@ -8890,6 +8899,16 @@ function renderProgressValue(){
           const words = d >= 3 ? `up ${d} points` : d <= -3 ? `down ${-d} points` : 'holding steady';
           trend = `<p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
+      }catch(e){}
+      try{
+        const nx = document.getElementById('bpNext');
+        const top = st.parts.filter(p => p.lost >= 1).sort((a, b) => b.lost - a.lost)[0];
+        if(nx && top){
+          const lever = top.lever === 'start' ? 'Start with new questions on this topic.'
+            : top.lever === 'coverage' ? 'Cover the subtopics you have not tried yet.'
+            : 'Review the questions you keep missing here.';
+          nx.innerHTML = `<div class="bp-value-head">Next move</div><div class="bp-next-name">${escapeHtml(top.name)}</div><p class="bp-next-text">${Math.round(top.lost)} of ${top.weight} points open. ${lever}</p><button type="button" class="bp-next-go" onclick="blueprintDrill('${top.key}')">Drill this topic</button>`;
+        } else if(nx) nx.innerHTML = '';
       }catch(e){}
       html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
     }
@@ -31502,7 +31521,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.744';
+const BUILD_ID = '2026-10-24.745';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
