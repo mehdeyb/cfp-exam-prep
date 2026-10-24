@@ -3512,6 +3512,25 @@
   /* Type floor: body-level text never below 12px, small caps labels never below 11px. */
   .note,.pt-min,.pt-time,.ns-meta,.pt-today-l,.pt-days,.mode-when,.mode-meta,.fnote,.syl-meta,.syl-drill,.sd-count,.chip,.ck-k,.score-est,.score-trend,.credit,.pt-num,.pf-row small,.ed-rd-gap{font-size:12px;}
   .score-ring-sub,.score-big+.score-ring-sub,.score-row .label,.stat-strip .lbl,.pod-hero-kicker,.pf-h,.tp-label,.ti-tag,.glossary-domain-tag,.ck-walks-l,.focus-badge,.tn-kicker{font-size:11.5px;}
+
+  /* Tutor lesson player: one slim row (buttons, scrubber with time, speed) so the board gets the room. */
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto;gap:0 12px;align-items:center;padding:5px 12px 4px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-player-controls{grid-column:1;grid-row:1;gap:4px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .pp-prog{grid-column:2;grid-row:1;margin:0;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-player-secondary-row{grid-column:3;grid-row:1;margin:0;display:flex;gap:6px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-status{grid-column:1 / -1;grid-row:2;margin:0;min-height:0;font-size:11px;line-height:1.3;text-align:left;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-icon-btn-play{width:38px;height:38px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-icon-btn-play svg{width:16px;height:16px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-icon-btn-skip{width:30px;height:30px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-icon-btn-skip svg{width:14px;height:14px;}
+  #tutorCard #lessonsCard #podcastPlayer .pp-prog input[type=range]{height:16px;}
+  #tutorCard #lessonsCard #podcastPlayer .pp-time{font-size:10.5px;margin-top:-3px;}
+  #tutorCard #lessonsCard #podcastPlayer .podcast-speed-select{min-height:28px;padding:3px 22px 3px 8px;font-size:12px;width:auto;}
+  @media (max-width:520px){
+    #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel{grid-template-columns:auto minmax(0,1fr);}
+    #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-player-secondary-row{grid-column:1 / -1;grid-row:2;justify-content:flex-end;}
+    #tutorCard #lessonsCard #podcastPlayer .podcast-player-panel > .podcast-status{grid-row:3;}
+  }
 </style>
 </head>
 <body>
@@ -30840,7 +30859,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.623';
+const BUILD_ID = '2026-10-24.624';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
