@@ -3541,6 +3541,9 @@
   #tutorCard.tt-board #lessonsCard #podcastPlayer > .pstage > .pst-body{flex:1 1 auto;}
   #tutorCard.tt-board{padding-top:10px;padding-bottom:10px;}
   #tutorCard.tt-board #tutorStatus:empty{display:none;}
+  #tutorCard > .card-head{position:relative;height:0;min-height:0;margin:0;padding:0;overflow:visible;border:0;}
+  #tutorCard > .card-head h2{display:none;}
+  #tutorCard > .card-head > *{position:absolute;top:12px;right:14px;z-index:8;margin:0;}
   #tutorCard.tt-noaudio .podcast-player-panel{display:none !important;}
   #tutorCard.tt-noaudio #podcastPlayer .pp-cap, #tutorCard.tt-noaudio #podcastPlayer .podcast-status{display:none;}
   #tutorCard.tt-board .tutor-input-row{padding:4px 0 2px;margin-bottom:0;}
@@ -28615,6 +28618,7 @@ function ttFit(){
   try{
     const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
     if(!c || !p || !p.classList.contains('active')) return;
+    try{ const sg0 = document.getElementById('podcastStage'); if(sg0 && getComputedStyle(sg0).display !== 'none') c.classList.add('tt-board'); }catch(e){}
     c.style.minHeight = '0'; c.style.height = '';
     const top = c.getBoundingClientRect().top + (window.scrollY || 0);
     const bar = document.getElementById('appTabbar'); let bottomBar = 0;
@@ -30903,7 +30907,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.635';
+const BUILD_ID = '2026-10-24.636';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
