@@ -28614,6 +28614,18 @@ function renderTodayAsk(){
     items.slice(0, 4).forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.textContent = x.l; b.onclick = x.f; host.appendChild(b); });
   }catch(e){}
 }
+// The board's content grows to fill the board: whatever is on it is scaled up until it nearly fills the stage, so no screen ends up small in a big empty frame.
+function ttGrowBoard(){
+  try{
+    const c = document.getElementById('tutorCard'), b = document.getElementById('pstBody'); if(!c || !b || !c.classList.contains('tt-board')) return;
+    const kids = [...b.children]; if(!kids.length) return;
+    const setZ = z => kids.forEach(k => { k.style.zoom = z === 1 ? '' : String(z); });
+    setZ(1); const avail = b.clientHeight; if(!avail || b.scrollHeight > avail + 2) return;
+    let lo = 1, hi = 1.9;
+    for(let i = 0; i < 7; i++){ const m = (lo + hi) / 2; setZ(m); if(b.scrollHeight <= avail - 6 && b.scrollWidth <= b.clientWidth + 1) lo = m; else hi = m; }
+    setZ(Math.floor(lo * 100) / 100);
+  }catch(e){}
+}
 function ttFit(){
   try{
     const c = document.getElementById('tutorCard'); const p = document.getElementById('tab-tutor');
@@ -28631,6 +28643,7 @@ function ttFit(){
 setInterval(() => { try{
   const c = document.getElementById('tutorCard'); if(!c) return;
   const idle = !(naturalSpeechState && naturalSpeechState.active);
+  try{ const bb = document.getElementById('pstBody'); const sig = bb ? bb.textContent.length + ':' + bb.children.length + ':' + bb.clientHeight + ':' + bb.clientWidth : ''; if(sig !== window._ttGrowSig){ window._ttGrowSig = sig; ttGrowBoard(); } }catch(e){}
   if(c.classList.contains('tt-noaudio') !== idle){ c.classList.toggle('tt-noaudio', idle); setTimeout(ttFit, 30); }
 }catch(e){} }, 500);
 window.addEventListener('resize', () => setTimeout(ttFit, 60));
@@ -30907,7 +30920,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.636';
+const BUILD_ID = '2026-10-24.637';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
