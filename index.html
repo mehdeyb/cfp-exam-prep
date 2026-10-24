@@ -28693,6 +28693,16 @@ function osFitStudy(extra){
       if(!hub || hub.dataset.view !== 'progress' || !panel || !panel.classList.contains('active') || document.body.classList.contains('quiz-active')) return;
       let k = 0;
       while(over() && k < 3){ k++; card.classList.add('bp-t' + k); base(extra); }
+      // Last resort that does not depend on how this browser reports zoomed sizes: shrink until the page itself stops scrolling.
+      if(over()){
+        const c = document.getElementById('studyCols'); if(c){
+          const hadFit = c.classList.contains('os-fit'); c.style.maxHeight = ''; c.classList.remove('os-fit');
+          let z = parseFloat(c.style.zoom) || 1, g = 0;
+          const docOver = () => (document.documentElement.scrollHeight - vpHeight()) > 4;
+          while(docOver() && z > 0.6 && g++ < 20){ z = Math.round((z - 0.03) * 100) / 100; c.style.zoom = String(z); }
+          if(docOver()){ base(extra); }
+        }
+      }
     }catch(e){} finally { busy = false; }
   };
 })();
@@ -31223,7 +31233,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.689';
+const BUILD_ID = '2026-10-24.690';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
