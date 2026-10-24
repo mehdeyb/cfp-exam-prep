@@ -11783,14 +11783,10 @@ function updatePlanChip(){
   const runLen = (session.queue || []).length;
   if(!done && runLen && r.need <= runLen){ el.style.display = 'none'; return; }
   el.className = 'plan-chip' + (done ? ' done' : '');
-  let nx = null;
-  if(done){ try{ nx = planNextAfter(r.id); }catch(e){} }
-  el.textContent = done ? 'Plan step done ✓' + (nx ? ' · Next →' : '') : `Today ${have} of ${r.need}`;
-  if(done && nx){
-    el.setAttribute('role','button'); el.tabIndex = 0; el.style.cursor = 'pointer';
-    el.onclick = () => { if(confirm('Plan step done. Move on to \u201c' + nx.title + '\u201d now?\n\nThis ends the current run; your answers so far are saved.')) planGoNext(nx.id); };
-  } else { el.setAttribute('role','status'); el.removeAttribute('tabindex'); el.style.cursor = ''; el.onclick = null; }
-  el.title = done ? `${r.title}: finished. ${nx ? 'Tap to move on to ' + nx.title + '.' : 'More questions are extra practice.'}` : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
+  // Once the step is done, this run is extra practice: say so, and do not offer a button that would end the run.
+  el.textContent = done ? 'Plan step done ✓ · extra practice' : `Today ${have} of ${r.need}`;
+  el.setAttribute('role','status'); el.removeAttribute('tabindex'); el.style.cursor = ''; el.onclick = null;
+  el.title = done ? `${r.title}: done today. These questions are extra practice; the next plan step is on the Today tab when you finish.` : `${r.title}: ${have} of ${r.need} ${r.unit} done today`;
   el.style.display = 'inline-block';
 }
 // Move from one plan step to the next: the tutor names the step, says why it comes next, and one tap starts it.
@@ -25004,7 +25000,7 @@ function sessionBriefHtml(){
       if(r && r.need > 0){
         const n = session.queue.length, have = Math.min(r.need, r.base);
         let line;
-        if(have >= r.need) line = `<b>${escapeHtml(r.title)}</b> is already done today. These ${n} are extra practice.`;
+        if(have >= r.need) line = `<b>${escapeHtml(r.title)}</b> is done for today. These ${n} are extra practice.`;
         else if(have > 0) line = `<b>${escapeHtml(r.title)}:</b> ${have} of ${r.need} ${r.unit} done today. ${n >= r.need - have ? `${r.need - have} more finish${r.need - have === 1 ? 'es' : ''} it.` : `This run adds ${n}.`}`;
         else line = `<b>${escapeHtml(r.title)}:</b> ${r.need} ${r.unit} on today's plan, starting now.`;
         return `<span class="tb-label">Your tutor's plan</span>${line}`;
@@ -31288,7 +31284,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.710';
+const BUILD_ID = '2026-10-24.711';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
