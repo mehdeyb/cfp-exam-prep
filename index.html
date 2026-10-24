@@ -9044,6 +9044,13 @@ function renderProgressChart(){
     trendEl.innerHTML = `<span class="flat">Holding steady around ${Math.round(recentAvg)}% — consistent, not yet trending either way.</span>`;
   }
 
+  // A line through two or three sessions is mostly noise: a single rough session makes it look like a crash or a leap. The chart waits for five sessions; until then the sentence above is the whole trend.
+  if(points.length < 5){
+    const sv = document.getElementById('progressChart'); if(sv) sv.innerHTML = '';
+    ['progressScrub','progressLabels','progressDiffRow','progressReadout'].forEach(id => { const e = document.getElementById(id); if(e) e.style.display = 'none'; });
+    return;
+  }
+  ['progressScrub','progressLabels'].forEach(id => { const e = document.getElementById(id); if(e && e.style.display === 'none') e.style.display = ''; });
   // Build the SVG line chart. viewBox is 340x120; x spans the points
   // evenly, y maps 0-100% onto the vertical space with a little padding.
   const W = 340, H = 120, padY = 10;
@@ -31287,7 +31294,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.706';
+const BUILD_ID = '2026-10-24.707';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
