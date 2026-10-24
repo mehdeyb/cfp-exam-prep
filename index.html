@@ -2515,6 +2515,13 @@
   .focus-bar .fb-t{font-size:14px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .focus-bar .fb-n{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3;}
   body.focus-mode .focus-target .ref-scroll,body.focus-mode .focus-target.ref-scroll{max-height:none;overflow:visible;}
+  /* A decision tool in focus mode takes the whole screen: no column split, the card spans the width, answers sit side by side. */
+  html body.focus-mode #tab-tools.active{display:block !important;column-count:1 !important;column-width:auto !important;}
+  html body.focus-mode #tab-tools .focus-target{width:100%;max-width:none;margin-inline:0;}
+  html body.focus-mode #tab-tools .focus-target .dt-widget{padding:22px 26px;}
+  html body.focus-mode #tab-tools .focus-target .dt-question{font-size:19px;margin-bottom:16px;}
+  html body.focus-mode #tab-tools .focus-target .dt-options{flex-direction:row;flex-wrap:wrap;gap:10px;}
+  html body.focus-mode #tab-tools .focus-target .dt-option{flex:1 1 220px;min-height:64px;display:flex;align-items:center;}
   .focus-bar button{flex:none;min-height:40px;padding:0 14px;border-radius:11px;border:1px solid var(--hair);background:none;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .focus-bar button.fb-done{background:var(--gold);border-color:var(--gold);color:#1b1608;}
   .focus-bar button.fb-next{border-color:var(--gold);color:var(--gold);}
@@ -31530,7 +31537,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.746';
+const BUILD_ID = '2026-10-24.747';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
