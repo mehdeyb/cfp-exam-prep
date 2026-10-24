@@ -19442,11 +19442,16 @@ function generatedItemIsSound(q){
   try{
     if(!q || typeof q.q !== 'string') return false;
     if(/unsecured personal credit line/i.test(q.q) && /110,000/.test(q.q) && /125,000/.test(q.q)) return false; // the reported insolvency item, whatever its wording
-    if(Array.isArray(q.calcSteps) && q.calcSteps.length && Array.isArray(q.choices) && q.choices.length === 4){
+    if(Array.isArray(q.choices) && q.choices.length === 4){
       const numOf = s => { const m = String(s).match(/-?\d[\d,]*\.?\d*/g); return m ? parseFloat(m[m.length - 1].replace(/,/g, '')) : NaN; };
-      const want = numOf(q.calcSteps[q.calcSteps.length - 1]);
-      const key = numOf(q.choices[q.correct]);
-      if(isFinite(want) && isFinite(key) && Math.abs(key - want) > Math.max(1, Math.abs(want) * 0.005)) return false;
+      const dollarChoices = q.choices.some(c => /\$\s?\d/.test(String(c)));
+      // Any item whose choices are dollar figures must show the arithmetic, and that arithmetic must land on the keyed choice.
+      if(dollarChoices && !(Array.isArray(q.calcSteps) && q.calcSteps.length)) return false;
+      if(Array.isArray(q.calcSteps) && q.calcSteps.length){
+        const want = numOf(q.calcSteps[q.calcSteps.length - 1]);
+        const key = numOf(q.choices[q.correct]);
+        if(isFinite(want) && isFinite(key) && Math.abs(key - want) > Math.max(1, Math.abs(want) * 0.005)) return false;
+      }
     }
   }catch(e){}
   return true;
@@ -31362,7 +31367,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.732';
+const BUILD_ID = '2026-10-24.733';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
