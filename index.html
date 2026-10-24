@@ -5185,7 +5185,7 @@ const FLASHCARDS = [
 
 {id:'f90',domain:'retirement',term:'Cliff Vesting',def:"0% vested until a specific service milestone, then 100% vested all at once."},
 {id:'f91',domain:'retirement',term:'72(t) Payments',def:"Substantially equal periodic payments allowing pre-59½ withdrawals without the 10% penalty."},
-{id:'f93',domain:'retirement',term:'Net Unrealized Appreciation (NUA)',def:"Favorable capital gains treatment for appreciated employer stock distributed from a qualified plan."},
+{id:'f93',domain:'retirement',term:'Net Unrealized Appreciation (NUA)',def:"Employer stock taken in a lump-sum distribution from a qualified plan: only the cost basis is ordinary income now. The gain (NUA) is taxed at long-term capital gains rates when the shares are sold, with no 10% early-withdrawal penalty on the NUA. The lump sum must be the whole balance within one tax year after a triggering event."},
 {id:'f94',domain:'retirement',term:'Sequence of Returns Risk',def:"The risk that the order of investment returns, especially early in retirement, affects how long a portfolio lasts."},
 
 {id:'f95',domain:'estate',term:'Credit Shelter Trust',def:"Uses the first spouse’s estate tax exemption fully while still providing for the surviving spouse."},
@@ -5443,7 +5443,7 @@ const FLASHCARDS = [
 {id:'f347',domain:'invest',term:"12b-1 Fee",def:"An annual fee paid from fund assets to cover distribution and marketing, including broker compensation."},
 {id:'f348',domain:'invest',term:"Sales Load",def:"A commission charged when buying (front-end) or selling (back-end) mutual fund shares."},
 {id:'f349',domain:'invest',term:"Index Fund",def:"A fund that tracks a market index, offering broad diversification at low cost."},
-{id:'f350',domain:'invest',term:"Target-Date Fund",def:"A fund that shifts from stocks toward bonds as a target retirement date approaches."},
+{id:'f350',domain:'invest',term:"Target-Date Fund",def:"A fund that automatically shifts from stocks toward bonds along a glide path as the target retirement year approaches."},
 {id:'f351',domain:'invest',term:"Money Market Fund",def:"A mutual fund that invests in short-term, high-quality debt and aims to keep a stable share value, without a bank guarantee."},
 {id:'f352',domain:'invest',term:"Protective Put",def:"Buying a put option on a stock already owned to limit downside risk."},
 {id:'f353',domain:'invest',term:"Collar",def:"Buying a put and selling a call on a stock owned, limiting both downside and upside while reducing the cost of protection."},
@@ -6005,7 +6005,6 @@ const FLASHCARDS = [
 {id:'f969',domain:'retirement',term:"4% Rule Funding Calculation",def:"Required portfolio equals the first-year income need divided by the initial withdrawal rate. $60,000 at 4% needs $1,500,000."},
 {id:'f970',domain:'retirement',term:"Annuity Present Value for Retirement Income",def:"The needed fund equals the present value of the withdrawals over the period at the real return. $50,000 a year for 25 years at a 4% real return needs about $781,000."},
 {id:'f971',domain:'retirement',term:"Taxation of Social Security: Provisional Income",def:"Provisional income is AGI plus tax-exempt interest plus half of the Social Security benefit. A retiree with $30,000 AGI, $2,000 tax-exempt interest and $24,000 of benefits has $44,000."},
-{id:'f973',domain:'retirement',term:"Target Date Fund",def:"Automatically shifts its allocation to become more conservative as the target retirement year approaches, along a glide path."},
 {id:'f974',domain:'retirement',term:"Medicare Part B Late Enrollment Penalty",def:"Missing the initial enrollment period without a special enrollment period usually adds a permanent premium surcharge, 10% for each full 12-month period delayed."},
 {id:'f975',domain:'retirement',term:"Medicaid Spend-Down",def:"Legally reducing countable assets, such as paying for care or making allowed purchases, to qualify for Medicaid long-term care benefits. Improper transfers trigger a five-year look-back penalty."},
 {id:'f977',domain:'retirement',term:"Hardship Distribution",def:"A 401(k) hardship distribution for an immediate financial need is generally taxable and may be subject to the 10% penalty if under 59½ with no exception. It is not a loan and cannot be repaid."},
@@ -6572,7 +6571,6 @@ const FLASHCARDS = [
 {id:'f1573',domain:'estate',term:"Section 2503(c) Trust",def:"A minor's trust that qualifies gifts for the annual exclusion if the assets and income may be used for the minor before 21 and any remainder passes to the minor at 21, or to the estate if the minor dies sooner."},
 {id:'f1574',domain:'risk',term:"Own-Occupation Disability Definition",def:"Pays benefits if the insured cannot perform the duties of their own occupation, even if they could work in another one. It is the most favorable definition, and the most expensive."},
 {id:'f1575',domain:'risk',term:"Guaranteed Insurability Rider",def:"Lets the insured buy additional life insurance at specified future dates or events, such as marriage or birth of a child, without evidence of insurability."},
-{id:'f1576',domain:'retirement',term:"Net Unrealized Appreciation (NUA)",def:"Employer stock taken in a lump-sum distribution from a qualified plan: only the cost basis is ordinary income now. The gain (NUA) is taxed at long-term capital gains rates when the shares are sold, with no 10% early-withdrawal penalty on the NUA. The lump sum must be the whole balance within one tax year after a triggering event."},
 {id:'f1577',domain:'general',term:"Chapter 7 vs. Chapter 13 Bankruptcy",def:"Chapter 7 liquidates non-exempt assets and discharges most unsecured debt; it stays on the credit report about 10 years. Chapter 13 sets a three- to five-year repayment plan from income and lets the debtor keep assets; it stays about 7 years."},
 {id:'f1578',domain:'invest',term:"Put-Call Parity",def:"For European options on the same stock, strike, and expiration: call price minus put price equals stock price minus the present value of the strike (C - P = S - PV(K)). A gap from parity signals an arbitrage."},
 ];
@@ -28555,7 +28553,7 @@ function quizFit(){
     if(c0){
       c0.style.minHeight = '';
       c0.querySelectorAll('.pt-rows > .pt-step').forEach(r => { r.style.minHeight = ''; });
-      if(!c0.classList.contains('os-fit') && window.innerWidth <= 640){
+      if(!c0.classList.contains('os-fit')){
         // Phone: leftover height goes to the rows themselves, so they sit roomier instead of leaving a gap under the plan.
         const rows = [...c0.querySelectorAll('.pt-rows > .pt-step')].filter(r => r.offsetParent);
         if(rows.length){
@@ -28564,8 +28562,15 @@ function quizFit(){
           let lastB = c0.getBoundingClientRect().bottom; ['coachLine','tutorNoteCard'].forEach(id => { const e = document.getElementById(id); if(e && e.offsetParent && getComputedStyle(e).display !== 'none') lastB = Math.max(lastB, e.getBoundingClientRect().bottom + parseFloat(getComputedStyle(e).marginBottom || 0)); });
           const spare = osBottom(h0, bb) - 8 - lastB;
           const z = parseFloat(c0.style.zoom) || 1;
-          const add = Math.min(14, Math.floor(spare / z / rows.length));
-          if(add >= 1) rows.forEach(r => { r.style.minHeight = Math.round(r.getBoundingClientRect().height / z + add) + 'px'; });
+          const ptr = c0.querySelector('.pt-rows'); const colN = Math.max(1, parseInt(ptr && getComputedStyle(ptr).columnCount, 10) || 1);
+          const perCol = Math.max(1, Math.ceil(rows.length / colN));
+          let add = Math.min(window.innerWidth <= 640 ? 14 : 26, Math.floor(spare / z / perCol));
+          const base0 = rows.map(r => Math.round(r.getBoundingClientRect().height / z));
+          for(let k = 0; k < 4 && add >= 1; k++){
+            rows.forEach((r, i) => { r.style.minHeight = (base0[i] + add) + 'px'; });
+            if(osBottom(h0, bb) - 4 >= c0.getBoundingClientRect().bottom) break;
+            add = Math.floor(add / 2); if(add < 1) rows.forEach(r => { r.style.minHeight = ''; });
+          }
         }
       }
       if(!c0.classList.contains('os-fit')){
@@ -30889,7 +30894,7 @@ async function requestDurableStorage(){
   }, { passive: false });
   document.addEventListener('gesturestart', e => { if(e.target && e.target.closest && e.target.closest('.tvm-device, #tvmHost')) e.preventDefault(); }, { passive: false });
 })();
-const BUILD_ID = '2026-10-24.628';
+const BUILD_ID = '2026-10-24.630';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
