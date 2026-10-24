@@ -27858,7 +27858,7 @@ function renderDiagnosisCard(){
   let findings = []; try{ findings = diagnosisFindings(); }catch(e){}
   const lead = findings.find(f => f.kind !== 'good');
   summaryEl.innerHTML = lead
-    ? `<b>Top priority:</b> ${escapeHtml(lead.title)}. <span class="diag-more">${findings.filter(f => f.kind !== 'good').length} finding${findings.filter(f => f.kind !== 'good').length === 1 ? '' : 's'} in all, ranked.</span>`
+    ? `<b>Top priority:</b> ${escapeHtml(lead.title)}.`
     : `${totalHours.toFixed(1)} hours logged so far — tap to see a full breakdown by domain, difficulty, and question type.`;
 
   const hoursPct = Math.min(100, Math.round(totalHours/300*100));
@@ -31281,7 +31281,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.714';
+const BUILD_ID = '2026-10-24.715';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
