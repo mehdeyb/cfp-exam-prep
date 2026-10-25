@@ -8489,11 +8489,26 @@ async function persist(){
 // The combined lists are asked for many thousands of times while the app starts, so they are built once and reused
 // until the generated part changes (a new array, a different length, or a different first or last item).
 let _aqMemo = null;
+// Generated text sometimes arrives with HTML entities (&#39;, &amp;) that would show on screen as typed. Decode them to plain characters.
+const GEN_ENTITY_RE = /&(#\d+|#x[0-9a-f]+|amp|quot|lt|gt|apos|nbsp);/i;
+function decodeGenEntities(v){
+  if(typeof v === 'string') return GEN_ENTITY_RE.test(v) ? v.replace(/&(#x[0-9a-f]+|#\d+|amp|quot|lt|gt|apos|nbsp);/gi, (m, e) => {
+    const k = e.toLowerCase();
+    if(k === 'amp') return '&'; if(k === 'quot') return '"'; if(k === 'lt') return '<'; if(k === 'gt') return '>'; if(k === 'apos') return "'"; if(k === 'nbsp') return ' ';
+    const n = k[1] === 'x' ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10);
+    return (n > 0 && n < 0x110000) ? String.fromCodePoint(n) : m;
+  }) : v;
+  if(Array.isArray(v)) return v.map(decodeGenEntities);
+  if(v && typeof v === 'object'){ const o = {}; Object.keys(v).forEach(k => { o[k] = decodeGenEntities(v[k]); }); return o; }
+  return v;
+}
 function allQuestions(){
   const g = DATA.generatedBank, m = _aqMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
   // The same question can arrive twice (the bank plus a generated copy); keep the first of each stem and answer.
   const seen = new Set(), out = [];
+  // Saved generated items: decode any entities once, in place, so older items show clean text too.
+  (g || []).forEach((q, i) => { if(q && GEN_ENTITY_RE.test(JSON.stringify(q))){ const d = decodeGenEntities(q); Object.keys(d).forEach(k => { q[k] = d[k]; }); } });
   QUESTIONS.concat(g || []).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
@@ -20042,7 +20057,8 @@ function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
   const arr = parseJsonArrayResilient(cleaned);
   if(!arr.length) return [];
   const out = [];
-  arr.forEach((item,idx)=>{
+  arr.forEach((rawItem,idx)=>{
+    const item = decodeGenEntities(rawItem);
     if(!(item && typeof item.q==='string' && item.q.trim().length>=10
        && Array.isArray(item.choices) && item.choices.length===4
        && item.choices.every(c=>typeof c==='string' && c.trim().length>0)
@@ -32079,7 +32095,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.804';
+const BUILD_ID = '2026-10-25.805';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
