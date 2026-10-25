@@ -2177,6 +2177,8 @@
   /* One slim top line: tabs and the two icons share it; the brand line and its row are gone. */
   body.os-one .eyebrow{display:none;}
   body.os-one #appHeader{position:absolute;top:8px;right:max(14px,env(safe-area-inset-right,0px));margin:0;z-index:60;}
+  /* Phone: the Tutor starts below the floating settings and theme buttons instead of under them. */
+  @media (max-width:640px){ body.os-one #tab-tutor{padding-top:60px;} }
   body.os-one .header-btn-row{gap:6px;}
   body.os-one .settings-toggle, body.os-one .theme-toggle{width:38px;height:38px;}
   @media (min-width:641px){
@@ -31799,7 +31801,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.774';
+const BUILD_ID = '2026-10-24.775';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
