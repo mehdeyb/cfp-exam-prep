@@ -1789,7 +1789,9 @@
   .pt-step.done .pt-num{background:var(--correct);border-color:var(--correct);color:var(--ink);}
   .pt-body{flex:1;min-width:0;}
   .pt-title{font-size:14px;font-weight:600;color:var(--paper);line-height:1.35;}
-  .pt-step.done .pt-title{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px;}
+  .pt-step.done .pt-title{color:var(--muted);}
+  .pt-step.done .pt-meter{display:none;}
+  .pt-donehead{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 2px;padding-top:10px;border-top:1px solid var(--hair);}
   .pt-why{font-size:12px;color:var(--muted);line-height:1.5;margin-top:3px;}
   .pt-time{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted-dim);margin-top:3px;}
   .da-result{margin:12px 0;display:flex;flex-direction:column;gap:8px;}
@@ -11833,8 +11835,8 @@ function _renderTodayPlanInner(){
   const mins = chips.arr.map(m => `<button type="button" class="pt-min${plan.minutes === m && !planTodayOverride() ? ' on' : ''}${m === chips.sug ? ' sug' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m && !planTodayOverride()}"${m === chips.sug ? ' title="Suggested for your exam date"' : ''}>${planMinuteLabel(m)}</button>`).join('');
   const advice = studyPaceAdvice();
   const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
-  const unitTxt = st => st.unit === 'cards' ? 'cards' : st.unit === 'problems' ? 'problems' : st.unit === 'scenarios' ? 'scenarios' : st.unit === 'ideas' ? 'ideas' : 'questions';
-  const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : ((st.have || 0) > 0 ? `${st.have} of ${st.need} ${unitTxt(st)} done` : '')) : '';
+  const unitTxt = st => st.unit || 'questions';
+  const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : `${st.have || 0} of ${st.need} ${unitTxt(st)} done`) : '';
   const stepRows = plan.steps.map((st, i) => {
     const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
     const isNext = !st.done && plan.steps.findIndex(x => !x.done) === i;
@@ -11852,12 +11854,16 @@ function _renderTodayPlanInner(){
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
+  // What is left comes first, in plan order; what is finished sits below under one heading, so the next step is always at the top.
+  const pendN = plan.steps.filter(x => !x.done).length;
+  const orderedRows = plan.steps.map((x, i) => i).sort((a, b) => (plan.steps[a].done - plan.steps[b].done) || (a - b)).map(i => stepRows[i]);
+  if(doneN && pendN) orderedRows.splice(pendN, 0, `<div class="pt-donehead">Done today · ${doneN}</div>`);
   let rows;
-  if(stepRows.length > 11 && !window._ptAll && !document.body.classList.contains('os-one')){
-    const fi = Math.max(0, plan.steps.findIndex(x => !x.done)), st0 = Math.max(0, fi - 2), en0 = Math.min(stepRows.length, st0 + 9);
-    rows = (st0 > 0 ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${st0} earlier step${st0 === 1 ? '' : 's'} (show all ${stepRows.length})</button>` : '') + stepRows.slice(st0, en0).join('')
-      + (en0 < stepRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${stepRows.length - en0} more step${stepRows.length - en0 === 1 ? '' : 's'} later today${plan.breakAfter ? ', with a break' : ''} · show all</button>` : '');
-  } else rows = stepRows.join('') + ((stepRows.length > 11 && !document.body.classList.contains('os-one')) ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
+  if(orderedRows.length > 11 && !window._ptAll && !document.body.classList.contains('os-one')){
+    const en0 = Math.min(orderedRows.length, 9);
+    rows = orderedRows.slice(0, en0).join('')
+      + (en0 < orderedRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${orderedRows.length - en0} more step${orderedRows.length - en0 === 1 ? '' : 's'} · show all</button>` : '');
+  } else rows = orderedRows.join('') + ((orderedRows.length > 11 && !document.body.classList.contains('os-one')) ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
     ${planAdvanceHtml(plan)}
@@ -31791,7 +31797,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.771';
+const BUILD_ID = '2026-10-24.773';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
