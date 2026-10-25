@@ -11198,14 +11198,14 @@ function buildStudyPlanCore(minutes){
       return { id:'weak2', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Your next weakest topic (${accTxt(t)}). With the time you have today, it is worth a second repair.`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     adaptive2: () => { if(answered === 0) return null;
-      return { id:'adaptive2', title:`Second adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
+      return { id:'adaptive2', title:`Second mixed round (${ADAPTIVE_LENGTH} questions, weighted to your weak areas)`, minutes:22,
         why:'A second mixed round later in the day, after a break, helps more than one long push. Spacing the practice makes it stick.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
     weak3: () => { const t = wkAt(2); if(!t) return null;
       return { id:'weak3', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Third on your list of weak topics (${accTxt(t)}).`,
         run: () => { showTab('study'); startSubtopicDrill(t.key, t.idx); } }; },
     // Long days (3.5 to 4 hours) get a third and fourth block of the same kind of work, never just longer versions of the same thing.
     adaptive3: () => { if(answered === 0) return null;
-      return { id:'adaptive3', title:`Third adaptive session (${ADAPTIVE_LENGTH} mixed questions)`, minutes:22,
+      return { id:'adaptive3', title:`Third mixed round (${ADAPTIVE_LENGTH} questions, weighted to your weak areas)`, minutes:22,
         why:'A six-hour day ends with a late mixed round on purpose. The real exam asks for your best thinking in its last hour, and practicing that while tired is the training.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - 2 * ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
     checkpoint2: () => {
       if(answered < 100 || !steps.some(x => x.id === 'checkpoint')) return null;
@@ -32104,7 +32104,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.807';
+const BUILD_ID = '2026-10-25.808';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
