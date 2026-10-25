@@ -19878,6 +19878,16 @@ function generatedItemIsSound(q){
       if(Array.isArray(q.calcSteps) && q.calcSteps.length){
         // Scratch work that talks itself through the answer ("wait, let me check", "Ah, if...") is not a worked solution; reject it so the key is never checked against a self-correction.
         if(q.calcSteps.some(st => /\b(wait|let me|let's|let us|ah,|hmm|actually,|recalculat|check the math|oops)\b/i.test(String(st)))) return false;
+        // Every figure the worked steps use must come from the question itself (or be a result the steps compute with '='). A figure that appears from nowhere is an invented input, which is how a wrong key gets written.
+        {
+          const nums = s => (String(s).replace(/(\d),(\d)/g, '$1$2').match(/\d+(?:\.\d+)?/g) || []).map(Number);
+          const known = new Set(nums([q.q, q.scenario || '', ...q.choices].join(' ')));
+          for(const st of q.calcSteps){
+            const txt = String(st);
+            txt.replace(/=\s*([\d,.]+)/g, (m, g) => { nums(g).forEach(n => known.add(n)); return m; }); // a result this step or an earlier one computed is a legitimate input later
+            for(const n of nums(txt)){ if(n <= 12 || known.has(n)) continue; return false; }
+          }
+        }
         const want = numOf(q.calcSteps[q.calcSteps.length - 1]);
         const key = numOf(q.choices[q.correct]);
         if(isFinite(want) && isFinite(key) && Math.abs(key - want) > Math.max(1, Math.abs(want) * 0.005)) return false;
@@ -20034,6 +20044,17 @@ function dedupeGenerated(freshItems, existingItems, textOf){
   return kept;
 }
 
+// Blind check: a separate solve of the question, shown without its key or explanations. An item is kept only when the solver lands on the keyed letter,
+// so a wrong key can't reach the bank even when its own arithmetic looks consistent. If the check can't run, the item is not kept.
+async function blindSolveOk(q){
+  try{
+    if(!q || !Array.isArray(q.choices) || q.choices.length !== 4) return false;
+    const lines = q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join('\n');
+    const raw = await anthropicMessagesRequest({ messages: [{ role: 'user', content: 'Solve this CFP exam multiple-choice question. Use only the figures given and work it out carefully before choosing. Reply with ONLY the letter of the correct choice.\n\n' + (q.scenario ? 'Client scenario: ' + q.scenario + '\n\n' : '') + q.q + '\n' + lines }], maxTokens: 400 });
+    const m = String(raw || '').trim().match(/^\W*([ABCD])\b/i);
+    return !!m && 'ABCD'.indexOf(m[1].toUpperCase()) === q.correct;
+  }catch(e){ return false; }
+}
 async function attemptGeneration(keys, hardMode){
   const questionCalls = keys.map(k=>{
     const meta = DOMAINS.find(d=>d.key===k);
@@ -20054,6 +20075,7 @@ async function attemptGeneration(keys, hardMode){
   let fresh = [];
   questionResults.forEach((raw,i)=>{ fresh = fresh.concat(safeParseQuestions(raw, keys[i], hardMode ? 3 : null)); });
   const rawQCount = fresh.length;
+  { const checks = await Promise.all(fresh.map(q => blindSolveOk(q))); fresh = fresh.filter((q, i) => checks[i]); }
   fresh = dedupeGenerated(fresh, allQuestions(), q => q.q);
   fresh = dropSameFactGenerated(fresh);
   const droppedQ = rawQCount - fresh.length;
@@ -25065,6 +25087,7 @@ Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "c
   }
   if(!made) return 'Not written: the question that came back did not pass the quality checks after three tries. Offer a bank question instead.';
   if(!generatedItemIsSound(made)) return 'Not written: the answer key did not match the worked figures. Offer a bank question instead.';
+  if(!(await blindSolveOk(made))) return 'Not written: a separate solve of the question did not reach the keyed answer. Offer a bank question instead.';
   if(allQuestions().some(b => factSimilarity(b, made) >= 0.8)) return 'Not written: the question that came back was nearly identical to one already in the bank. Offer a bank question instead.';
   made.id = 'tq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   made.tutorMade = true; made.ideaNote = idea;
@@ -31882,7 +31905,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.781';
+const BUILD_ID = '2026-10-25.783';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
