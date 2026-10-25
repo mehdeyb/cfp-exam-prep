@@ -11119,10 +11119,15 @@ function buildStudyPlanCore(minutes){
     listen: () => {
       if(answered < 20 || !weakDom) return null;
       let b = null; try{ b = podcastBriefing(); }catch(e){}
-      const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.kind === 'topic' ? f.label : f.label).join(' and ') : weakDom.name;
-      let rs = false; try{ const pm0 = planMinutes(), pk = 'personalized-' + (pm0 >= 210 ? 'deep' : pm0 <= 100 ? 'short' : 'standard'); rs = podcastSavedPos(pk) > 1 && !!(DATA.podcastEpisodes || {})[pk]; }catch(e){}
-      return { id:'listen', title: rs ? `Lesson: pick up your tutor's briefing` : `Lesson: your tutor's briefing`, minutes:10,
-        why: rs ? `You stopped partway through today's lesson on ${top}. It resumes where you left off, with its slides.` : `A spoken lesson with slides, written for you today: ${top}. Low effort, and it revisits your weak spots away from the questions.`,
+      const first = b && b.focus.length ? b.focus[0].label : weakDom.name;
+      const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.label).join(' and ') : weakDom.name;
+      // Same length rule the lesson picker uses, so the plan's time and the lesson that opens match.
+      const pm0 = planMinutes(), len = pm0 >= 210 ? 'deep' : pm0 <= 100 ? 'short' : 'standard';
+      const LEN = { short:{ label:'about 2 minutes', min:4 }, standard:{ label:'about 4 minutes', min:6 }, deep:{ label:'about 7 minutes', min:9 } }[len];
+      let rs = false; try{ const pk = 'personalized-' + len; rs = podcastSavedPos(pk) > 1 && !!(DATA.podcastEpisodes || {})[pk]; }catch(e){}
+      return { id:'listen', title: rs ? `Resume lesson: ${first}` : `Lesson: ${first}`, minutes: LEN.min,
+        why: rs ? `Paused partway through the lesson on ${top}. It picks up at the same spot, with its slides.`
+                : `A spoken lesson with slides on ${top} (${LEN.label}), built from today's plan, your recent answers and your tutor's notes. It explains the ideas behind the questions you are missing.`,
         manual:true, run: () => podcastOpenTutorPick() };
     },
     case: () => {
@@ -32074,7 +32079,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.803';
+const BUILD_ID = '2026-10-25.804';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
