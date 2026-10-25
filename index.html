@@ -2402,7 +2402,7 @@
   .fc-undo{display:none;position:absolute;left:0;top:0;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--gold);background:none;border:0;padding:6px 4px;min-height:32px;cursor:pointer;}
   body:not(.flashcard-fullscreen) .fc-undo{left:auto;right:0;}
   .fc-undo.show{display:inline-flex;align-items:center;gap:5px;animation:softIn .2s var(--ease-out);}
-  .fc-swipehint{display:none;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.04em;color:var(--muted);}
+  .fc-swipehint{white-space:nowrap;display:none;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.04em;color:var(--muted);}
   @media (hover:none){ .fc-card.flipped-state .fc-swipehint{display:block;} }
   .fc-card.fc-dragging{transition:none !important;}
   .fc-card.fc-drag-know{border-color:var(--correct);box-shadow:0 0 0 2px var(--correct-tint);}
@@ -18174,7 +18174,9 @@ function flipFlashcardContent(){
   }
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = fcFlipped ? 'Explain it back' : 'Explain it first'; }
   const mnemonicRow = document.getElementById('fcMnemonicRow');
-  if(mnemonicRow) mnemonicRow.style.display = (fcFlipped && aiFeaturesAvailable) ? 'flex' : 'none';
+  // The explain button works without AI (it falls back to the card's own data), so the row shows whenever a card is flipped; only the AI memory trick needs AI.
+  if(mnemonicRow) mnemonicRow.style.display = fcFlipped ? 'flex' : 'none';
+  { const mt = document.getElementById('fcMnemonicBtn'); if(mt) mt.style.display = aiFeaturesAvailable ? '' : 'none'; }
   if(!fcFlipped){
     const mnemonicBox = document.getElementById('fcMnemonicBox');
     if(mnemonicBox) mnemonicBox.style.display = 'none';
@@ -31797,7 +31799,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.773';
+const BUILD_ID = '2026-10-24.774';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
