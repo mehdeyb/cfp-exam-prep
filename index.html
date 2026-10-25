@@ -31904,6 +31904,20 @@ function renderTutorChips(){
   host.style.display = shown.length ? '' : 'none';
 }
 
+// The tutor's opening line: a specific read of where you stand and the one next move, built from the same numbers the plan uses.
+function tutorCoachOpening(stats){
+  const days = getDaysUntilExam();
+  const when = days === null || days < 0 ? '' : days === 0 ? 'Exam day is today. ' : days + (days === 1 ? ' day' : ' days') + ' to go. ';
+  let ns = null; try{ ns = computeNextStep(stats); }catch(e){}
+  const firstLine = t => String(t || '').split(/(?<=\.)\s/)[0].replace(/[.\s]+$/, '');
+  const next = ns && ns.title ? 'Next move: ' + firstLine(ns.title) + (ns.why ? ' \u2014 ' + firstLine(ns.why).replace(/^./, c => c.toLowerCase()) : '') + '.' : '';
+  if(!stats.totalAnswered){
+    return "I'm your CFP study tutor. " + when + "Answer a few practice questions and I'll show you exactly where to focus." + (next ? ' ' + next : '');
+  }
+  let weak = '';
+  try{ const w = weakestDrillTarget(stats); if(w && w.name) weak = 'Your weakest area is ' + w.name + (w.acc !== null ? ' at ' + w.acc + '%' : '') + '. '; }catch(e){}
+  return when + 'Readiness is ' + stats.readiness + '/100. ' + weak + (next || 'Where do you want to start?');
+}
 function updateTutorContextNote(){
   try{ renderTutorChips(); }catch(e){}
   const stats = computeStats();
@@ -31918,7 +31932,7 @@ function updateTutorContextNote(){
     if(bubble){
       const existingShow = bubble.querySelector('.tutor-show'); if(existingShow) existingShow.remove(); const ex2 = bubble.querySelector('.tutor-offer'); if(ex2) ex2.remove();
       // The board above already shows where you stand; the tutor just asks where to go.
-      bubble.textContent = stats.totalAnswered ? 'Where do you want to start?' : "Hi, I'm your CFP study tutor. Where do you want to start? Answer a few practice questions and I'll see your progress too.";
+      bubble.textContent = tutorCoachOpening(stats);
       try{ const rt0 = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null; if(rt0) bubble.textContent += ' Last time: \u201c' + (rt0.q.length > 60 ? rt0.q.slice(0, 57) + '\u2026' : rt0.q) + '\u201d.'; }catch(e){}
       if(stats.totalAnswered){
         const rt = aiMode !== 'none' ? tutorRecentTopics(5).slice(-1)[0] : null;
@@ -32104,7 +32118,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.822';
+const BUILD_ID = '2026-10-25.823';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
