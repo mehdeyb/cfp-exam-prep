@@ -2005,6 +2005,13 @@
   #tutorCard #ttVoiceBtn.off{opacity:.45;}
   #tutorCard #ttVoiceBtn svg{width:18px;height:18px;}
   #tutorCard .pst-dots{display:none !important;}
+  /* The plan board shows every step in the flow (it used to scroll inside a short box and hide the last steps), with no empty now-playing line over it. */
+  #tutorCard.tt-board #podcastStage{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;}
+  #tutorCard.tt-board #pstBody{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;padding-bottom:6px !important;}
+  #tutorCard.tt-board #podcastStage .pst-bar{position:static !important;margin-top:8px !important;}
+  #tutorCard.tt-board #pstNow:empty{display:none !important;}
+  #tutorCard.tt-board #podcastPlayer{overflow:visible !important;flex:none !important;}
+  #tutorCard.tt-board #pstBody{flex:none !important;}
   /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
   #tutorCard{min-height:calc(var(--vh-real, 100vh) - var(--tab-h, 64px) - 96px);}
   #tutorCard #lessonsCard #podcastPlayer{flex:1 1 auto;display:flex;flex-direction:column;}
@@ -32097,7 +32104,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.821';
+const BUILD_ID = '2026-10-25.822';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
