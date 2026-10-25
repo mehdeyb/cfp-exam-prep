@@ -19424,10 +19424,10 @@ async function anthropicCoreOnce({system, messages, maxTokens, tools, grown}){
 
 // Gemini does the work whenever Claude is unavailable, so it should run on the best fast model this key can use, not the first name that happens to answer.
 // Once a day: ask Google which models the key can use and put the newest full-size flash model (not lite, preview or experimental) in front.
-async function geminiPickBest(){
+async function geminiPickBest(force){
   try{
     if(!geminiKey) return;
-    const last = +localStorage.getItem('cfp-gemini-scan') || 0; if(Date.now() - last < 20 * 3600 * 1000) return;
+    const last = +localStorage.getItem('cfp-gemini-scan') || 0; if(!force && Date.now() - last < 20 * 3600 * 1000) return;
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': geminiKey } });
     if(!r.ok) return;
     localStorage.setItem('cfp-gemini-scan', String(Date.now()));
@@ -19530,6 +19530,12 @@ async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, ti
   }
   if(!response.ok){
     let detail = ''; try{ const j = await response.json(); detail = (j && j.error && j.error.message) || ''; }catch(e){}
+    // The model list in the app can go stale. When a model is retired and Google names no replacement, rescan the models Google offers once, then retry.
+    if([400, 403, 404].includes(response.status) && /no longer available|retired|deprecated|not found|update your code/i.test(detail) && !window._geminiRescanned){
+      window._geminiRescanned = true;
+      try{ await geminiPickBest(true); }catch(e){}
+      return geminiRequestOnce({ system, messages, maxTokens, tools, timeoutMs, tries: 0, modelIdx: 0 });
+    }
     // When Google says a model is retired it also names the one to use ("use models/gemini-3.5-flash-lite"): go straight there, once, instead of working down the list.
     if([400, 403, 404].includes(response.status) && /no longer available|update your code|use models\//i.test(detail)){
       const named = (/use models\/([A-Za-z0-9.\-]+)/.exec(detail) || [])[1];
@@ -31981,7 +31987,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.791';
+const BUILD_ID = '2026-10-25.792';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
