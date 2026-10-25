@@ -6973,7 +6973,7 @@ async function checkAIAvailability(){
   if(hasArtifactStorage()){ try{ geminiKey = await loadGeminiKey(); }catch(e){} }
   renderApiKeyUI();
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
-  setTimeout(() => { try{ reverifyBankOnce(); }catch(e){} }, 6000);
+  // The saved-bank re-check no longer runs on load: its burst of requests competed with tutor and explain calls. It can be run on demand.
   if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
   if(aiMode === 'direct' && geminiKey) setTimeout(() => { testGeminiConnection().catch(() => {}); }, 4000);
 }
@@ -20108,7 +20108,7 @@ async function attemptGeneration(keys, hardMode){
   let fresh = [];
   questionResults.forEach((raw,i)=>{ fresh = fresh.concat(safeParseQuestions(raw, keys[i], hardMode ? 3 : null)); });
   const rawQCount = fresh.length;
-  { const checks = await Promise.all(fresh.map(q => blindSolveOk(q))); fresh = fresh.filter((q, i) => checks[i]); fresh.forEach(q => { q.blindVerified = true; }); }
+  { const checks = []; for(const q of fresh){ checks.push(await blindSolveOk(q)); } fresh = fresh.filter((q, i) => checks[i]); fresh.forEach(q => { q.blindVerified = true; }); }  // one at a time, so the check never floods the connection
   fresh = dedupeGenerated(fresh, allQuestions(), q => q.q);
   fresh = dropSameFactGenerated(fresh);
   const droppedQ = rawQCount - fresh.length;
@@ -31981,7 +31981,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.790';
+const BUILD_ID = '2026-10-25.791';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
