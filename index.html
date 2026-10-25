@@ -8452,9 +8452,29 @@ function scheduleSurfaceSync(){
     refreshCoachSurfaces();
   }catch(e){} }, 700);
 }
-async function persist(){
+// Saves are batched: a burst of changes (an answer, its plan update, the flashcard stats) becomes one write a moment later.
+// The change itself invalidates the caches right away, so nothing reads stale data; only the write waits. Pending writes are flushed when the app is hidden or closed.
+let _persistTimer = null, _persistWaiters = [];
+function persist(){
   _dataVer++;
   try{ _expMemo = null; _dgMemo = null; scheduleSurfaceSync(); }catch(_){} // any change makes the shared models (exposure, diagnosis) stale, and visible surfaces catch up shortly
+  return new Promise(resolve => {
+    _persistWaiters.push(resolve);
+    if(_persistTimer) return;
+    _persistTimer = setTimeout(() => { _persistTimer = null; const ws = _persistWaiters; _persistWaiters = []; persistWrite().then(ok => ws.forEach(r => r(ok)), () => ws.forEach(r => r(false))); }, 250);
+  });
+}
+function persistFlush(){
+  if(!_persistTimer) return;
+  clearTimeout(_persistTimer); _persistTimer = null;
+  // A synchronous copy first, so the save survives the page going away before the async write finishes.
+  try{ if(typeof DATA !== 'undefined' && DATA) localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){}
+  const ws = _persistWaiters; _persistWaiters = [];
+  persistWrite().then(ok => ws.forEach(r => r(ok)), () => ws.forEach(r => r(false)));
+}
+window.addEventListener('pagehide', persistFlush);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') persistFlush(); });
+async function persistWrite(){
   // With sync on, stamp the data whenever it actually changed, so two devices can tell whose edit is newer.
   if(typeof SYNC !== 'undefined' && SYNC.on && !SYNC.applying && DATA){
     const probe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
@@ -32121,7 +32141,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.810';
+const BUILD_ID = '2026-10-25.811';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
