@@ -2011,6 +2011,12 @@
   #tutorCard.tt-board #pstBody{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;padding-bottom:6px !important;}
   #tutorCard.tt-board #podcastStage .pst-bar{position:static !important;margin-top:8px !important;}
   #tutorCard.tt-board #pstNow:empty{display:none !important;}
+  /* Practice on the board: each choice is a whole row you can tap, styled like the rest of the choices. */
+  #pstBody .pst-pick{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:baseline;width:100%;cursor:pointer;color:inherit;font:inherit;}
+  #pstBody .pst-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:8px;}
+  #pstBody .pst-c:has(.pst-pick):hover{border-color:var(--gold);}
+  #tutorCard.tt-board.tt-qboard #pstBody{max-height:min(42vh, 380px) !important;overflow-y:auto !important;}
+  #tutorCard.tt-qboard #tutorChips, #tutorCard.tt-qboard #ttActions{display:none !important;}
   #tutorCard.tt-board #podcastPlayer{overflow:visible !important;flex:none !important;}
   #tutorCard.tt-board #pstBody{flex:none !important;}
   /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
@@ -13822,7 +13828,7 @@ function tutorModeOptions(){
   const o = [];
   try{
     const st = computeStats();
-    o.push({ label:'Practice questions', run: () => { showTab('study'); startAdaptive(); } });
+    o.push({ label:'Practice questions', run: () => { ttStartBoardQuestions(); } });
     if(st.weakestMeta) o.push({ label:'Drill ' + tutorShort(st.weakestMeta.name, 18), run: () => { showTab('study'); startDrill(st.weakestMeta.key); } });
     const nm = (DATA.missed || []).length; if(nm) o.push({ label:'Redo my ' + nm + ' missed', run: () => { showTab('study'); startMissedReview(); } });
     o.push({ label:'Flashcards', run: () => { try{ executeTutorTool('start_flashcards', {}); }catch(e){ showTab('study'); } } });
@@ -13846,6 +13852,8 @@ function tutorLessonOffer(){
   if(window._ttSession) opts.push({ label: 'Go over my session', run: () => { const x = window._ttSession; sendTutorMessage('I just finished a ' + (x.mode || 'practice') + ' session: ' + x.correct + ' of ' + (typeof x.answered === 'number' ? x.answered : x.total) + ' right. Look at what I got wrong, tell me the one pattern behind it and what to do next. Show the key idea on the board.'); } });
   if(window._ttMissShown) opts.push({ label: 'Why did I miss this?', run: () => sendTutorMessage('Walk me through the question on the board. Why is my pick wrong and what is the right way to think about it? Show the key idea on the board.') });
   if(!inProg && nextOpt) opts.push(nextOpt);
+  // Practice runs right here on the board, so the Tutor is where you study, not just where you are sent.
+  if(!inProg) opts.push({ label: 'Practice questions', run: () => ttStartBoardQuestions() });
   if(t && hb && t.textContent.trim()){
     const lab = hb.textContent.replace(/[\u25b6\s]+/g, ' ').trim();
     opts.push({ label: /resume/i.test(lab) ? 'Resume my lesson' : 'Teach me today\u2019s lesson', run: () => ttStartLesson() });
@@ -14220,16 +14228,35 @@ function stageQuestionHtml(q){
 }
 // ---- The question you are working in the quiz, mirrored on the Tutor board. Read-only: you answer in the quiz; the board shows the same question. ----
 function stageLiveHtml(q){
-  const L = 'ABCD';
-  const rows = q.choices.map((c, k) => `<li class="pst-c"><b>${L[k]}</b><span>${stageEsc(c)}</span></li>`).join('');
-  return `<div class="pst-kicker">Live question · answer it in your quiz</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul><div class="pst-acts"><button type="button" class="btn ghost" onclick="ttAskLiveQuestion()">Ask the tutor about this</button></div>`;
+  const L = 'ABCD', onBoard = !!window._boardRun;
+  const rows = q.choices.map((c, k) => onBoard
+    ? `<li class="pst-c"><button type="button" class="pst-pick" onclick="ttBoardAnswer(${k})"><b>${L[k]}</b><span>${stageEsc(c)}</span></button></li>`
+    : `<li class="pst-c"><b>${L[k]}</b><span>${stageEsc(c)}</span></li>`).join('');
+  const acts = onBoard
+    ? `<button type="button" class="btn ghost" onclick="ttBoardEnd()">End here</button>`
+    : `<button type="button" class="btn ghost" onclick="ttAskLiveQuestion()">Ask the tutor about this</button>`;
+  return `<div class="pst-kicker">${onBoard ? 'Practice question' : 'Live question · answer it in your quiz'}</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul><div class="pst-acts">${acts}</div>`;
 }
+// Practice on the Tutor board: the same session, scoring and saving as the quiz, with the question and answer shown here.
+function ttStartBoardQuestions(){
+  { const rv = document.getElementById('resultsView'); const live = session && session.queue && (!rv || rv.style.display !== 'block') && session.index < session.queue.length; if(live){ ttEnsureStage(); return; } } // a session is already running on the board
+  window._boardRun = true;
+  tutorLengthOverride = 5;
+  try{ ttEnsureStage(); startAdaptive(); }catch(e){ window._boardRun = false; }
+}
+function ttBoardAnswer(k){ try{ if(session && !session.locked) selectAnswer(k); }catch(e){} }
+function ttBoardNext(){ try{ nextQuestion(); }catch(e){} }
+function ttBoardEnd(){ try{ if(session) finishSession(); }catch(e){} }
 // Keeps the board on the question in front of you: the question while you answer it, then the answer and its reason once you have chosen.
 function ttMirrorLiveQuestion(answered){
   try{
-    if(!session || !session.queue || !document.body.classList.contains('quiz-active')) return;
+    { const cd = document.getElementById('tutorCard'); if(cd) cd.classList.toggle('tt-qboard', !!window._boardRun); }
+    if(!session || !session.queue || !(document.body.classList.contains('quiz-active') || window._boardRun)) return;
     { const rv = document.getElementById('resultsView'); if(rv && rv.style.display === 'block') return; } // the session is over: the board shows its summary
     const q = session.queue[session.index]; if(!q || !q.id || !allQuestions().some(x => x.id === q.id)) return;
+    // The answered view is only for a question that has been answered; a late reveal callback must not repaint the next one.
+    const la = session.answerLog && session.answerLog[session.answerLog.length - 1];
+    if(answered && !(la && la.index === session.index)) return;
     if(answered){
       const sl = { kind:'question', qid:q.id, src:'tutor', at:0, idle:true, title:'Live question', live:true };
       if(!stageInlineVisible() && document.getElementById('tab-tutor') && document.getElementById('tab-tutor').classList.contains('active')) ttEnsureStage();
@@ -14462,7 +14489,7 @@ function stageSlideNode(sl){
   if(sl.kind === 'question'){
     const q = allQuestions().find(x => x.id === sl.qid);
     if(!q) return null;
-    d.innerHTML = sl.live ? stageQuestionHtml(q).replace('A question you missed', 'This question, answered') : stageQuestionHtml(q);
+    d.innerHTML = sl.live ? stageQuestionHtml(q).replace('A question you missed', 'This question, answered') + (window._boardRun && session && session.queue && session.queue[session.index] && session.queue[session.index].id === q.id ? `<div class="pst-acts"><button type="button" class="btn" onclick="ttBoardNext()">${session.index < session.queue.length - 1 ? 'Next question' : 'See my result'}</button></div>` : '') : stageQuestionHtml(q);
   } else if(sl.kind === 'live'){
     const q = allQuestions().find(x => x.id === sl.qid);
     if(!q) return null;
@@ -25370,7 +25397,9 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   // no matter which tab the user actually triggered it from. The quiz's
   // own fixed, full-screen positioning covers whatever else is on screen
   // regardless, so other tab panels can still lose their active class.
-  try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
+  if(window._boardRun){ document.getElementById('resultsView').style.display = 'none'; document.getElementById('quizView').style.display = 'none'; }
+  else {
+    try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-study').classList.add('active');
   document.getElementById('modePanel').style.display = 'none';
@@ -25379,6 +25408,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   document.getElementById('resultsView').style.display = 'none';
   document.getElementById('quizView').style.display = 'block';
   enterFullScreenQuiz();
+  }
 
   if(timerSeconds){
     document.getElementById('quizTimer').style.display = 'inline-block';
@@ -27638,6 +27668,8 @@ function startSection2(){
 }
 
 function finishSession(){
+  window._boardRun = false;
+  { const cd = document.getElementById('tutorCard'); if(cd) cd.classList.remove('tt-qboard'); }
   if(session.timerHandle) clearInterval(session.timerHandle);
   paceRecord();
   clearInProgressSession();
@@ -32192,7 +32224,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.827';
+const BUILD_ID = '2026-10-25.828';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
