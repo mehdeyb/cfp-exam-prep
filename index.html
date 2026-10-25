@@ -4774,6 +4774,12 @@
             <button class="linklike" onclick="handleClearGeminiKey()">Replace key</button></div>
           </div>
           <div class="hint" id="geminiHelp" style="display:none;margin-top:10px;"></div>
+          <div class="app-audit-box" style="margin-top:14px;">
+            <div class="akc-name">App audit</div>
+            <p class="hint" style="margin:4px 0 8px;">Gemini reviews the app's design and content from a written description (no personal progress or answers are sent) and suggests the most valuable improvements.</p>
+            <button class="btn ghost" id="appAuditBtn" onclick="runAppAudit()">Run app audit with Gemini</button>
+            <div class="hint" id="appAuditOut" style="margin-top:10px;white-space:pre-wrap;font-size:12.5px;line-height:1.5;"></div>
+          </div>
           <div class="hint" id="aiBuildLine" style="margin-top:2px;font-size:11.5px;"></div>
         </div>
 
@@ -19489,6 +19495,25 @@ function toGeminiContents(messages){
 let _geminiHostOrder = null, _geminiDiag = [];
 function geminiUrl(host, model){ return host === 'vertex' ? 'https://aiplatform.googleapis.com/v1/publishers/google/models/' + model + ':generateContent' : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'; }
 let geminiSysFolded = false;
+
+// App audit: Gemini reviews a written description of the app (structure, features, known open issues). No progress, answers or
+// personal details are included, and nothing runs unless the student presses the button.
+const APP_AUDIT_BRIEF = `The Blueprint is a single-file web app for studying for the CFP (Certified Financial Planner) exam. It is used mainly on an iPhone and an older iPad in landscape.
+Tabs: Today (readiness score, today's plan with steps, a study-session button, progress), Tutor (an AI chat tutor that can take actions in the app and show short lessons on a board), Learn (question bank drills, flashcards with an "Explain it with an example" button and a "retell in your own words" check, decision-tree tools, a calculator walkthrough for the HP 10bII+, a case-study mode, the exam-wording drill, a study guide, custom tools), and Exam Day (checklist and logistics).
+Known issues the builder is working on: layout on iPad landscape and portrait for the readiness row; phone tab-bar placement; the Tutor header overlapping the AI banner on phones; some flashcard text that reads oddly out of context; AI replies vary in quality.
+Please review the app as a demanding CFP candidate and a product reviewer would. Give: (1) the five most valuable improvements, ranked, each with the reason and the smallest change that would deliver it; (2) any likely usability problems on a phone or iPad (touch targets, layout, confusing wording); (2) gaps in exam content or study method; (3) anything that would make the AI features more reliable or more useful. Be specific and practical, under 450 words, with no preamble.`;
+async function runAppAudit(){
+  const out = document.getElementById('appAuditOut'), btn = document.getElementById('appAuditBtn');
+  if(!out || !btn) return;
+  if(!geminiKey){ out.textContent = 'Connect a Gemini key first, then run the audit.'; return; }
+  btn.disabled = true; out.textContent = 'Gemini is reviewing the app…';
+  try{
+    const reply = await geminiRequestOnce({ system: 'You are a product and UX reviewer for a study app.', messages: [{ role: 'user', content: APP_AUDIT_BRIEF + '\n\nBuild: ' + BUILD_ID }], maxTokens: 1400, timeoutMs: 60000 });
+    out.textContent = String(reply || 'No reply came back. Try again.');
+  }catch(e){
+    out.textContent = "The audit could not run: " + (describeAiError(e) || 'try again in a moment') + '.';
+  }finally{ btn.disabled = false; }
+}
 async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg }){
   deg = deg || 0;
   if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
@@ -31987,7 +32012,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.793';
+const BUILD_ID = '2026-10-25.794';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
