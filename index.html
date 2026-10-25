@@ -3739,6 +3739,11 @@
   #tutorCard > .card-head h2{display:none;}
   #tutorCard > .card-head > *{position:absolute;top:12px;right:14px;z-index:8;margin:0;}
   #tutorCard.tt-noaudio .podcast-player-panel{display:none !important;}
+  /* Idle with a written lesson: the one Play control shows, so the stage's "press play" points at a real button. */
+  #tutorCard.tt-noaudio.tt-ready .podcast-player-panel{display:block !important;padding:8px 12px;}
+  #tutorCard.tt-noaudio.tt-ready .podcast-player-panel > :not(.podcast-player-controls){display:none !important;}
+  #tutorCard.tt-noaudio.tt-ready .podcast-player-controls > :not(#podcastPlayPauseBtn){display:none !important;}
+  #tutorCard.tt-noaudio.tt-ready #podcastPlayPauseBtn{display:inline-flex !important;}
   #tutorCard.tt-noaudio #podcastPlayer .pp-cap, #tutorCard.tt-noaudio #podcastPlayer .podcast-status{display:none;}
   #tutorCard.tt-board .tutor-input-row{padding:4px 0 2px;margin-bottom:0;}
   #tutorCard.tt-board:has(> .api-key-nudge:not([style*="none"])) > .card-head > *{top:62px;right:14px;}
@@ -13363,6 +13368,8 @@ function initPodcastDomainOptions(){
 }
 
 let podcastCustomId = null; // the tutor-written lesson the Lessons card is showing, when its type is 'custom'
+// True when the lesson the student picked is already written, so pressing play has something to play.
+function podcastLessonReady(){ try{ return !!(DATA.podcastEpisodes && DATA.podcastEpisodes[podcastCacheKey()]); }catch(e){ return false; } }
 function podcastCacheKey(){
   const domainSelect = document.getElementById('podcastDomainSelect');
   const typeSelect = document.getElementById('podcastTypeSelect');
@@ -14454,7 +14461,7 @@ function stageSlideNode(sl){
     const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){} return nx ? `<button type="button" class="btn ghost" onclick="stageCloseFull();planGoNext('${nx.id}')">Next: ${stageEsc(stageClip(nx.title, 34))} →</button>` : ''; })()}${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
   } else if(sl.kind === 'intro'){
-    d.innerHTML = `<div class="pst-idb"><div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div></div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : '<div class="pst-text pst-dim">Press play. Terms, formulas and quick checks show up here as your tutor goes.</div>'}`;
+    d.innerHTML = `<div class="pst-idb"><div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div></div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : (podcastLessonReady() ? '<div class="pst-text pst-dim">Press play to start this lesson. Terms, formulas and quick checks show up here as your tutor goes.</div>' : '<div class="pst-text pst-dim">This lesson is not written yet. <button type="button" class="btn" onclick="generatePodcastEpisode(true)">Write this lesson</button> then press play.</div>')}`;
   } else if(sl.kind === 'term'){
     d.innerHTML = `<div class="pst-kicker">Key term</div><div class="pst-title">${E(sl.term)}</div><div class="pst-text">${E(sl.def)}</div>${stageTermExtras(sl)}${allFlashcards().some(c => c.term === sl.term) ? `<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageGo('card',${stageEsc(JSON.stringify(sl.term)).replace(/'/g, '&#39;')})">Quiz me on this card</button></div>` : ''}`;
   } else if(sl.kind === 'formula'){
@@ -29772,6 +29779,7 @@ setInterval(() => { try{
   const idle = !(naturalSpeechState && naturalSpeechState.active);
   try{ const bb = document.getElementById('pstBody'); const sig = bb ? bb.textContent.length + ':' + bb.children.length + ':' + bb.clientHeight + ':' + bb.clientWidth : ''; if(sig !== window._ttGrowSig){ window._ttGrowSig = sig; ttGrowBoard(); } }catch(e){}
   if(c.classList.contains('tt-noaudio') !== idle){ c.classList.toggle('tt-noaudio', idle); setTimeout(ttFit, 30); }
+  c.classList.toggle('tt-ready', idle && podcastLessonReady()); // idle but written: show a single Play control
 }catch(e){} }, 500);
 window.addEventListener('resize', () => setTimeout(ttFit, 60));
 window.addEventListener('orientationchange', () => setTimeout(ttFit, 300));
@@ -32113,7 +32121,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.809';
+const BUILD_ID = '2026-10-25.810';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
