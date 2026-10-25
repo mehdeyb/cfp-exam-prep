@@ -18285,13 +18285,41 @@ const fcExplainCache = {};
 // "Explain it with an example" follows one fixed teaching order every time, so each reply does the same job:
 // the idea in one sentence, one client example built from the definition's own figures, the exam trap this student actually falls into, and a quick check.
 // It is written from this student's history (their wrong picks and recorded mix-ups), and it is refreshed when that history changes.
+// The context the explanation is written from: the student's history on this card, how they just did on it, a common wrong answer
+// when there is no history yet, and the quiz question on screen if it is about the same idea.
+function fcCommonDistractor(card){
+  const count = {};
+  try{ fcRelatedQuestions(card).forEach(q => (q.choices || []).forEach((c, i) => { if(i !== q.correct){ const k = String(c).trim(); if(k) count[k] = (count[k] || 0) + 1; } })); }catch(e){}
+  const best = Object.keys(count).sort((a, b) => count[b] - count[a])[0];
+  return best ? best.slice(0, 140) : null;
+}
+function fcExplainContext(card){
+  let ctx = { picks:[], mix:null };
+  try{ ctx = fcMissContext(card); }catch(e){}
+  const jr = (window._fcJustRated || {})[card.id];
+  const rel = [];
+  try{ fcRelatedQuestions(card).forEach(q => rel.push(q.id)); }catch(e){}
+  let quiz = null;
+  try{
+    if(session && session.queue && session.queue.length){
+      const cq = session.queue[session.index];
+      if(cq && rel.indexOf(cq.id) >= 0){
+        const last = (session.answerLog || []).filter(a => a.index === session.index).slice(-1)[0];
+        quiz = { stem: String(cq.q).slice(0, 170), answered: !!last, right: last ? !!last.correct : null };
+      }
+    }
+  }catch(e){}
+  return { picks: ctx.picks, mix: ctx.mix, justRated: jr ? { knew: jr.knew } : null, distractor: ctx.picks.length ? null : fcCommonDistractor(card), quiz };
+}
 function fcExplainSignature(card, ctx){
-  return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card)].join('::');
+  return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card), ctx.justRated ? (ctx.justRated.knew ? 'k' : 'm') : '', ctx.distractor || '', ctx.quiz ? (ctx.quiz.stem + ctx.quiz.right) : ''].join('::');
 }
 function fcExplainLocal(card, ctx){
   const parts = ['The idea: ' + card.def];
   if(ctx.mix) parts.push('Where it trips you: you have mixed this up with ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '. Ask which of the two the question is about before choosing.');
   else if(ctx.picks.length) parts.push('Where it trips you: you chose "' + ctx.picks[0].wrong + '" on a related question. The right answer was "' + ctx.picks[0].right + '".');
+  else if(ctx.distractor) parts.push('Where it trips you: a wrong answer that often shows up on this idea is "' + ctx.distractor + '". Check whether it describes this idea before choosing it.');
+  if(ctx.quiz && ctx.quiz.answered) parts.push('On the quiz question open now, ' + (ctx.quiz.right ? 'you got it right, so this card is a good way to lock it in.' : 'you missed it, so read this card before going back to it.'));
   parts.push('Turn on the AI features in Settings to get a worked client example and a check question for this card.');
   return parts.join('\n\n');
 }
@@ -18309,8 +18337,7 @@ async function requestFlashcardExplain(){
     const t = document.createElement('span'); t.style.whiteSpace = 'pre-line'; t.textContent = text; box.appendChild(t);
     box.style.display = 'block';
   }
-  let ctx = { picks:[], mix:null };
-  try{ ctx = fcMissContext(card); }catch(e){}
+  const ctx = fcExplainContext(card);
   const sig = fcExplainSignature(card, ctx);
   const cached = fcExplainCache[card.id];
   if(cached && cached.sig === sig){ paint(cached.text, 'Worked example'); return; }
@@ -18325,11 +18352,14 @@ async function requestFlashcardExplain(){
   lines.push('Teach this CFP exam flashcard in exactly this order, plain text, no markdown, under 120 words:\n' +
     '1) The idea: one plain sentence.\n' +
     '2) Client example: one short, concrete client situation. Use figures only from the definition; if you add any, label them as illustrative.\n' +
-    '3) The exam trap: how the exam disguises this and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first.\n' +
+    '3) The exam trap: how the exam disguises this and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first; otherwise use the common wrong answer given.\n' +
     '4) Check: one quick question the student can answer in their head, then the answer on the next line.');
   lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
   if(ctx.picks.length) lines.push('Their own wrong picks on related questions:\n' + ctx.picks.map(p => '- "' + p.stem + '" They chose "' + p.wrong + '" (correct: "' + p.right + '")' + (p.n > 1 ? ' ' + p.n + ' times' : '')).join('\n'));
   if(ctx.mix) lines.push('They have mixed this up with: ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '.');
+  if(ctx.distractor) lines.push('A wrong answer that often appears on this idea in practice questions: "' + ctx.distractor + '".');
+  if(ctx.justRated) lines.push(ctx.justRated.knew ? 'Just now they said they knew this card. Confirm the idea briefly, then push on the trap.' : 'Just now they said they did not know this card. Start with the idea in the plainest words.');
+  if(ctx.quiz) lines.push('The quiz question they have open is about the same idea: "' + ctx.quiz.stem + '"' + (ctx.quiz.answered ? (ctx.quiz.right ? ' They got it right.' : ' They got it wrong.') : '') + ' Connect the example to that question.');
   const lp = fcLapseN(card); if(lp) lines.push('They have missed this card ' + lp + ' time' + (lp === 1 ? '' : 's') + '.');
   try{ const st = computeStats(); if(st && st.weakestMeta && st.weakestMeta.name) lines.push('Their weakest area right now is ' + st.weakestMeta.name + '.'); }catch(e){}
   lines.push('Do not invent rules or figures beyond the definition unless you are certain; if unsure, stay general.');
@@ -18463,6 +18493,7 @@ function rateFlashcard(knowsIt){
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
   try{ fcNoteLapse(card, knowsIt); }catch(e){}
+  window._fcJustRated = window._fcJustRated || {}; window._fcJustRated[card.id] = { knew: !!knowsIt, at: Date.now() };
   if(knowsIt && fcView.hintUsed && fcView.mode === 'foundation'){
     // Recalled with the hint: real progress, but not the same as an unaided recall, so hold the box where it was.
     const keep = Math.max(prevStat.box, 1), ns = DATA.flashcardStats[card.id];
@@ -31760,7 +31791,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.770';
+const BUILD_ID = '2026-10-24.771';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
