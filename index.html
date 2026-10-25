@@ -27177,6 +27177,8 @@ function selectAnswerCore(i){
   }
 
   document.getElementById('nextBtn').disabled = false;
+  // Fit the revealed answer in the same task as the reveal, so the first frame the student sees is already the right size.
+  try{ if(typeof quizFit === 'function') quizFit(); }catch(e){}
 
   maybeAutoExpand();
   maybeGenerateHarderContent();
@@ -29683,8 +29685,9 @@ function quizFit(){
 })();
 (function(){
   // quizFit writes zoom and margin on the quiz itself, so its own writes must never wake it again (that made the screen pulse).
+  // Runs before the next paint (not 70 ms later), so a revealed rationale is fitted at once instead of showing at full size first.
   let t = 0; const obs = [];
-  const go = () => { clearTimeout(t); t = setTimeout(() => { quizFit(); obs.forEach(o => { try{ o.takeRecords(); }catch(e){} }); }, 70); };
+  const go = () => { if(t) return; t = requestAnimationFrame(() => { t = 0; quizFit(); obs.forEach(o => { try{ o.takeRecords(); }catch(e){} }); }); };
   const qv = document.getElementById('quizView');
   if(qv){ const o1 = new MutationObserver(go); o1.observe(qv, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style','hidden'] }); obs.push(o1); }
   { const o2 = new MutationObserver(go); o2.observe(document.body, { attributes:true, attributeFilter:['class'] }); obs.push(o2); }
@@ -32141,7 +32144,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.814';
+const BUILD_ID = '2026-10-25.816';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
