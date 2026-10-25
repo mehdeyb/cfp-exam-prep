@@ -19876,6 +19876,8 @@ function generatedItemIsSound(q){
       // Any item whose choices are dollar figures must show the arithmetic, and that arithmetic must land on the keyed choice.
       if(dollarChoices && !(Array.isArray(q.calcSteps) && q.calcSteps.length)) return false;
       if(Array.isArray(q.calcSteps) && q.calcSteps.length){
+        // Scratch work that talks itself through the answer ("wait, let me check", "Ah, if...") is not a worked solution; reject it so the key is never checked against a self-correction.
+        if(q.calcSteps.some(st => /\b(wait|let me|let's|let us|ah,|hmm|actually,|recalculat|check the math|oops)\b/i.test(String(st)))) return false;
         const want = numOf(q.calcSteps[q.calcSteps.length - 1]);
         const key = numOf(q.choices[q.correct]);
         if(isFinite(want) && isFinite(key) && Math.abs(key - want) > Math.max(1, Math.abs(want) * 0.005)) return false;
@@ -25050,7 +25052,7 @@ ${stagePromptLine(domain) ? stagePromptLine(domain) + '\n' : ''}The idea it must
 Shape: ${WRITE_ANGLE_TEXT[angle]}.${miscon ? '\nThe mistake to build a believable wrong choice from: ' + miscon + '.' : ''}
 It must be a real, different question, not a reworded copy: new situation, new details, different names. The correct answer must rest on current U.S. rules (use 2026 figures only if you are certain of them; otherwise avoid dollar limits).
 ${ONE_ASK_RULE}
-Four answer choices of similar length, exactly one correct, and no choice that uses an absolute word such as always, never, only or must. Begin the rationale for the correct choice with "Correct — " and each wrong choice's rationale with "Wrong — ", explaining specifically why that choice fails.
+Four answer choices of similar length, exactly one correct, and no choice that uses an absolute word such as always, never, only or must. Use only the figures stated in the question, and do the arithmetic once, silently: every field you return must read as finished, clean text, never as thinking aloud (no "wait", "let me check", "ah" or corrections). Begin the rationale for the correct choice with "Correct — " and each wrong choice's rationale with "Wrong — ", explaining specifically why that choice fails.
 Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "choices":["...","...","...","..."], "correct":0, "rationale":["...","...","...","..."]${cur && cur.scenario ? ', "scenario":"..."' : ''}}]. "correct" is the index (0 to 3) of the right choice.`;
   let made = null, feedback = '', lastRaw = '';
   for(let attempt = 0; attempt < 3 && !made; attempt++){
@@ -31880,7 +31882,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.780';
+const BUILD_ID = '2026-10-25.781';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
