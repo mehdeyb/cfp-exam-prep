@@ -28769,6 +28769,32 @@ ${TUTOR_EVERGREEN_FIGURES.map(x => '  - ' + x).join('\n')}
 }
 
 const EXAM_PASS_FOCUS = ' EXAM FOCUS: everything you teach exists so this student passes the CFP exam on Nov 5. Teach it the way it is tested: say what the exam is really asking, the rule or number to remember, the trap wrong answers use, and how to spot the right choice fast. Skip trivia the exam would not ask. End each idea by tying it to how a question on it looks, and use only current rules and figures.';
+// What the student is looking at right now in the flashcard deck or a practice question, so the tutor can answer about exactly that item.
+function tutorItemText(){
+  try{
+    const parts = [];
+    const fcEl = document.getElementById('fcCard');
+    if(fcEl && fcEl.offsetParent !== null && typeof fcQueue !== 'undefined' && fcQueue.length){
+      const c = fcQueue[Math.min(fcIndex, fcQueue.length - 1)];
+      if(c){
+        const flipped = typeof fcFlipped !== 'undefined' && fcFlipped;
+        parts.push('a flashcard on screen: "' + stageClip(String(c.term || ''), 80) + '"' + (flipped ? ', already flipped to show its definition: "' + stageClip(String(c.def || ''), 260) + '"' : ', not flipped yet (do not give the definition unless they ask)'));
+      }
+    }
+    if(session && session.queue && session.queue[session.index]){
+      const q = session.queue[session.index];
+      const opts = (q.choices || []).map((t, i) => 'ABCD'[i] + ') ' + t).join(' ');
+      if(session.locked){
+        const e = (session.answerLog || []).find(x => x.index === session.index);
+        const pick = e ? (e.correct ? ' They got it right.' : ' They got it wrong.') : '';
+        parts.push('a practice question they have just answered: "' + stageClip(q.q || '', 260) + '" Options: ' + stageClip(opts, 400) + '. Correct answer: ' + 'ABCD'[q.correct] + '.' + pick + ' Explain it when they ask; the answer is now fair to discuss.');
+      } else {
+        parts.push('a practice question they are working now, not yet answered: "' + stageClip(q.q || '', 260) + '" Options: ' + stageClip(opts, 400) + '. Do not reveal the correct answer or hint at it; help them reason to it.');
+      }
+    }
+    return parts.length ? '\nON THE SCREEN RIGHT NOW (the exact item they are on; answer about this one when they say "this", "why" or "explain"): ' + parts.join(' ') : '';
+  }catch(e){ return ''; }
+}
 function buildTutorSystemPrompt(){
   const stats = computeStats();
   const weakName = stats.weakestMeta.name;
@@ -29019,6 +29045,7 @@ Guidelines:
 ${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice(0, 4); return f.length ? '\nThe Today tab shows the student this ranked diagnosis, so refer to it rather than contradicting it: ' + f.map((x, i) => (i + 1) + '. ' + x.title + (x.line ? ' (' + x.line + ')' : '')).join(' ') + '\n' : ''; }catch(e){ return ''; } })()}
 ${tutorFiguresText()}
 ${(() => { try{ return tutorScreenText(); }catch(e){ return ''; } })()}
+${tutorItemText()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -31801,7 +31828,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.776';
+const BUILD_ID = '2026-10-25.777';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
