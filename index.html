@@ -9764,12 +9764,15 @@ function renderReadinessExtras(stats){
     if(stats.calibration.penalty >= 0.5) lines.push(`Overconfidence is costing ${stats.calibration.penalty.toFixed(1)} (see below).`);
     if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
   }catch(e){}
+  const wt = weakestDrillTarget(stats);
+  const weakBtn = (wt && stats.totalAnswered >= 10 && wt.acc !== null && wt.acc < 80) ? `<div class="rb-est rb-move"><b>Weakest area</b><span>${escapeHtml(wt.name)} is at about ${wt.acc}% expected, the lowest of your domains.</span><button type="button" class="btn" onclick="startWeakestDrill()">Drill ${escapeHtml(wt.name)}</button></div>` : '';
   panel.innerHTML = `
     <div class="rb-head">
       <h3>Where your ${stats.readiness} comes from</h3>
       <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
     ${moveBlock}
+    ${weakBtn}
     ${estimateBlock}
     ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
@@ -10715,9 +10718,19 @@ function ctSortNext(){ const r = _ctRun; r.fb = null; r.i++; ctRenderRun(); }
 function ctStepNext(){ _ctRun.i++; if(_ctRun.i >= ctList().find(x => x.id === _ctRun.id).steps.length && !_ctRun.done){ _ctRun.done = true; ctUsed(ctList().find(x => x.id === _ctRun.id), null); } ctRenderRun(); }
 function ctTreePick(i){ const r = _ctRun, t = ctList().find(x => x.id === r.id), node = t.nodes[r.path[r.path.length - 1]], o = node.options[i]; if(!o) return; r.answers.push(o.label); r.path.push(o.next); ctRenderRun(); }
 function ctTreeBack(){ const r = _ctRun; if(r.path.length > 1){ r.path.pop(); r.answers.pop(); r.done = false; } ctRenderRun(); }
+// The domain the student is weakest in, for the weakest-area drill (plan step, readiness panel, tutor).
+function weakestDrillTarget(stats){
+  try{
+    const s = stats || computeStats(); const m = s.weakestMeta; if(!m) return null;
+    const p = (s.parts || []).find(x => x.key === m.key);
+    return { key: m.key, name: m.name, attempted: p ? (p.attempted || 0) : 0, acc: (p && p.attempted) ? Math.round(p.expectedAccuracy * 100) : null };
+  }catch(e){ return null; }
+}
+function startWeakestDrill(){ const w = weakestDrillTarget(); if(!w) return; showTab('study'); startDrill(w.key); }
 // Runs an activity the tutor added to today's plan, through the same tools the tutor already uses.
 async function tutorRunAdded(a){
   let name, inp;
+  if(a.action === 'weakest'){ startWeakestDrill(); return; }
   if(a.action === 'quiz'){ name = 'start_quiz_session'; inp = a.domain ? { mode:'drill', domain:a.domain, count:10 } : { mode:'adaptive', count:10 }; }
   else if(a.action === 'flashcards'){ name = 'start_flashcards'; inp = { focus: a.domain ? 'domain' : 'due', domain: a.domain, count: 15 }; }
   else if(a.action === 'formula'){ name = 'open_formula_drill'; inp = a.formula ? { formula: a.formula } : {}; }
@@ -10773,7 +10786,7 @@ function ctTutorBlock(){
 function tutorShapePlan(inp){
   inp = inp || {};
   if(inp.clear){ DATA.planOverride = null; persist(); try{ renderTodayPlan(); }catch(e){} return "Cleared. Today's plan is back to automatic."; }
-  const ACTS = { quiz:1, flashcards:1, formula:1, calculator:1, tool:1 };
+  const ACTS = { quiz:1, flashcards:1, formula:1, calculator:1, tool:1, weakest:1 };
   const cleanTxt = (v, n) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const adds = (Array.isArray(inp.add_steps) ? inp.add_steps : []).slice(0, 3).map((s, i) => ({ id: 'tut' + i, action: ACTS[s && s.action] ? s.action : null, title: cleanTxt(s && s.title, 70), why: cleanTxt(s && s.why, 160), domain: (s && DOMAINS.some(d => d.key === s.domain)) ? s.domain : null, formula: (s && s.formula) || null, mode: (s && s.mode) || null, tool: (s && s.tool) || null, minutes: Math.max(5, Math.min(40, Math.round(+(s && s.minutes) || 10))) })).filter(a => a.action && a.title);
   const o = { day: localDayKey(), at: Date.now(), focus: (inp.focus && PLAN_FOCI[inp.focus]) ? inp.focus : null, reason: cleanTxt(inp.reason, 160), pins: [], refresh: [], adds: adds.length ? adds : ((planOverrideToday() || {}).adds || []) }, miss = [];
@@ -10981,6 +10994,13 @@ function buildStudyPlanCore(minutes){
       return { id:'gap2', topic:t.key, title:`New ground: ${t.name}`, minutes:12, need, have: Math.min(need, (L.drill[t.key] || 0)), unit:'questions',
         why:`Next on the list of topics not yet covered well. With today's time there is room to widen the net a bit more.`,
         run: () => { showTab('study'); startSubtopicDrill(t.dom, t.idx); } };
+    },
+    wkdrill: () => {
+      const w = weakestDrillTarget(stats);
+      if(!w || answered < 10 || !w.attempted || (w.acc !== null && w.acc >= 80)) return null;
+      return { id:'wkdrill', title:`Drill your weakest area: ${w.name}`, minutes:12, manual:true,
+        why:`${w.name} is your lowest-scoring domain (about ${w.acc}% expected). Ten focused questions there move readiness more than another pass through the areas you already know.`,
+        run: () => startWeakestDrill() };
     },
     weak: () => {
       if(wk) return { id:'weak', topic:wk.key + '-' + wk.idx, title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
@@ -11296,9 +11316,9 @@ function buildStudyPlanCore(minutes){
       manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
   };
   const order = {
-    foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
-    build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
-    sharpen:    ['cards','missed','stuck','weak','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
+    foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
+    build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
+    sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
     taper:      ['cards','missed','calc','figures','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
@@ -30511,7 +30531,7 @@ const TUTOR_TOOLS = [
   {
     name: 'shape_today_plan',
     description: "Reshape TODAY's plan to match what you found. You can also ADD up to 3 activities to it with add_steps, which is how you put a specific quiz, drill or tool into the student's day. 'focus' sets the day's emphasis (repair = fix weak and missed, breadth = cover unseen topics, apply = case studies and tools, recall = key figures and formulas). 'pin_topics' (up to 3) puts specific weak topics first as repair drills. 'refresh_topics' (up to 3) adds a short spaced check on topics that are solid but fading, so strengths stay fresh while weaknesses get the time. 'reason' is shown to the student on the plan, so write it plainly to them in under 140 characters. Use after diagnose_learner or after you see them struggle; keep a balance, so do not pin more than you can repair today. {clear:true} returns the plan to automatic. It never removes required steps; it changes order and targets.",
-    input_schema: { type: 'object', properties: { drop_steps: { type: 'array', items: { type: 'string' }, description: "Titles (or ids) of unfinished steps in today's plan to take out because they do not fit this student today. Finished steps are kept." }, move_to_top: { type: 'string', description: "Title (or id) of one unfinished step in today's plan to move to the top." }, focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, add_steps: { type: 'array', maxItems: 3, description: "Up to 3 activities to ADD to today's plan, shown right after the first part so they are seen. Add one when a specific activity would help this student today and the plan lacks it (a quiz on a domain, a formula drill, calculator practice, flashcards, or a decision tool). Each 'why' must name what you saw in their results.", items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, title: { type: 'string', description: 'Short name for the step, under 70 characters.' }, why: { type: 'string', description: 'One line: the specific reason, tied to their results.' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string' }, tool: { type: 'string' }, minutes: { type: 'integer' } }, required: ['action','title','why'] } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
+    input_schema: { type: 'object', properties: { drop_steps: { type: 'array', items: { type: 'string' }, description: "Titles (or ids) of unfinished steps in today's plan to take out because they do not fit this student today. Finished steps are kept." }, move_to_top: { type: 'string', description: "Title (or id) of one unfinished step in today's plan to move to the top." }, focus: { type: 'string', enum: ['repair','breadth','apply','recall'] }, pin_topics: { type: 'array', items: { type: 'string' } }, refresh_topics: { type: 'array', items: { type: 'string' } }, add_steps: { type: 'array', maxItems: 3, description: "Up to 3 activities to ADD to today's plan, shown right after the first part so they are seen. Add one when a specific activity would help this student today and the plan lacks it (weakest = a drill on their lowest-scoring domain, which updates as they improve; a quiz on a domain, a formula drill, calculator practice, flashcards, or a decision tool). Each 'why' must name what you saw in their results.", items: { type: 'object', properties: { action: { type: 'string', enum: ['weakest','quiz','flashcards','formula','calculator','tool'] }, title: { type: 'string', description: 'Short name for the step, under 70 characters.' }, why: { type: 'string', description: 'One line: the specific reason, tied to their results.' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string' }, tool: { type: 'string' }, minutes: { type: 'integer' } }, required: ['action','title','why'] } }, reason: { type: 'string' }, clear: { type: 'boolean' } } },
   },
   {
     name: 'build_custom_tool',
@@ -32052,7 +32072,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.798';
+const BUILD_ID = '2026-10-25.799';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
