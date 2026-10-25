@@ -10996,9 +10996,11 @@ function buildStudyPlanCore(minutes){
       const w = weakestDrillTarget(stats);
       if(!w || answered < 10 || !w.attempted || (w.acc !== null && w.acc >= 80)) return null;
       if(wk && wk.key === w.key) return null; // the weak-topic drill already works this domain today
-      return { id:'wkdrill', title:`Drill your weakest area: ${w.name}`, minutes:12, manual:true,
-
-        why:`${w.name} is your lowest-scoring domain (about ${w.acc}% expected). Ten focused questions there move readiness more than another pass through the areas you already know.`,
+      const NEED = 10, have = Math.min(NEED, (L.dom || {})[w.key] || 0);
+      let sub = null; try{ sub = drillWeakTopic(w.key); }catch(e){}
+      const subTxt = sub ? ` Weakest topic there: ${sub.name} (about ${Math.round(sub.acc * 100)}%).` : '';
+      return { id:'wkdrill', title:`Weakest area: ${w.name}`, minutes:12, need:NEED, have, unit:'questions',
+        why:`Your expected accuracy here is about ${w.acc}%, your lowest domain. Lifting it toward 80% moves your readiness most.${subTxt} Any question you answer in this domain today counts toward the ten.`,
         run: () => startWeakestDrill() };
     },
     weak: () => {
@@ -26988,6 +26990,7 @@ function selectAnswerCore(i){
   try{ fmtRecord(q, isCorrect); }catch(e){}
   try{ updatePlanChip(); }catch(e){}
   DATA.recentAccuracyLog.push({correct: isCorrect, difficulty: questionDifficulty(q)});
+  try{ const DL = planDayLog(); DL.dom = DL.dom || {}; DL.dom[q.domain] = (DL.dom[q.domain] || 0) + 1; }catch(e){}
   if(DATA.recentAccuracyLog.length > 20) DATA.recentAccuracyLog.shift();
 
   // Only in the modes where the confidence row was actually shown — an
@@ -32071,7 +32074,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.802';
+const BUILD_ID = '2026-10-25.803';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
