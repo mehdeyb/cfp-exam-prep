@@ -1968,7 +1968,8 @@
   #tutorCard #ttPlanStrip{order:1;}
   /* One screen on a phone: a one-row header, a one-line connection note, a compact plan strip and lesson pick, then the conversation and the pinned message box. */
   #tutorCard #tutorContextNote{display:none;}
-  #tutorCard > #tutorSnapshot{display:none;}
+  #tutorCard > #tutorSnapshot{display:flex !important;}
+  @media (max-width:640px){ #tutorCard > #tutorSnapshot{display:none !important;} }
   #tutorCard #podHeroKicker, #tutorCard #podHeroSub, #tutorCard .tt-ask > p.hint, #tutorCard .chip-more{display:none !important;}
   /* A loaded lesson: header and connection note stay first, then the stage and a one-row transport, then the plan line and the conversation. */
   #tutorCard > .card-head{order:-10;} #tutorCard > .api-key-nudge{order:-9;}
@@ -4569,6 +4570,10 @@
       <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="margin-right:10px;min-height:34px;padding:4px 12px;font-size:12.5px;">Voice on</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
       <div class="tutor-snapshot" id="tutorSnapshot">
+        <div class="stat">
+          <div class="num" id="tutorSnapToday">—</div>
+          <div class="lbl">today's plan</div>
+        </div>
         <div class="stat">
           <div class="num" id="tutorSnapReadiness">—</div>
           <div class="lbl">readiness</div>
@@ -31954,6 +31959,19 @@ function updateTutorContextNote(){
   if(snapWeakest) snapWeakest.textContent = stats.totalAnswered ? stats.weakestMeta.code : '—';
   const snapAnswered = document.getElementById('tutorSnapAnswered');
   if(snapAnswered) snapAnswered.textContent = stats.totalAnswered;
+  // Today's plan is the tutor's plan for the day, so this reads the same steps the board lists.
+  const snapToday = document.getElementById('tutorSnapToday');
+  if(snapToday){
+    try{
+      const pl = buildStudyPlan();
+      if(pl && pl.steps && pl.steps.length && pl.phase.key !== 'after'){
+        const done = pl.steps.filter(x => x.done).length, total = pl.steps.length;
+        const left = pl.steps.filter(x => !x.done).reduce((a, x) => a + (x.minutes || 0), 0);
+        snapToday.textContent = done + '/' + total;
+        if(snapToday.nextElementSibling) snapToday.nextElementSibling.textContent = done === total ? 'today\u2019s plan done' : left + ' min left today';
+      } else { snapToday.textContent = '—'; }
+    }catch(e){ snapToday.textContent = '—'; }
+  }
 
   const el = document.getElementById('tutorContextNote');
   if(!el) return;
@@ -32120,7 +32138,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.824';
+const BUILD_ID = '2026-10-25.825';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
