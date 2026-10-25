@@ -11329,12 +11329,19 @@ function buildStudyPlanCore(minutes){
         why:'One miss at a time: say why the wrong answer looked right, see the fix, then try a similar question. Understanding the pull of the wrong answer fixes the reasoning, not just the answer.',
         manual:true, run: () => { mwOpen(5); } };
     },
-    logistics: () => ({ id:'logistics', title:'Check your exam-day plan', minutes:5,
-      why:'Knowing the route, timing, ID and calculator rules removes avoidable stress. Do it once, calmly, before the day.',
-      manual:true, run: () => { showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }),
-    keys: () => ({ id:'keys', title:'Skim the key numbers', minutes:10,
-      why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.',
-      manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } })
+    logistics: () => {
+      let when = ''; try{ if(DATA.examDate){ const p = String(DATA.examDate).split('-').map(Number); when = new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); } }catch(e){}
+      const days = getDaysUntilExam();
+      return { id:'logistics', title: when ? `Check your exam-day plan: ${when}` : 'Check your exam-day plan', minutes:5,
+      why: (days !== null && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} to go. ` : '') + 'Knowing the route, timing, ID and calculator rules removes avoidable stress. Do it once, calmly, before the day.',
+      manual:true, run: () => { showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }; },
+    keys: () => {
+      const wkD = (() => { try{ return weakestDrillTarget(stats); }catch(e){ return null; } })();
+      const kn = wkD ? (KEY_NUMBERS || []).filter(k => k.domain === wkD.key) : [];
+      const focusTxt = (wkD && kn.length) ? ` Start with the ${kn.length} for ${wkD.name}, your weakest area.` : '';
+      return { id:'keys', title: (wkD && kn.length) ? `Skim the key numbers: ${wkD.name}` : 'Skim the key numbers', minutes:10,
+      why:'Figures such as limits and thresholds are easy to blur together. A calm skim the day before beats new material.' + focusTxt,
+      manual:true, run: () => { showTab('reference'); const t = document.getElementById('keyNumbersTable'); if(t) focusEnter({ tab:'reference', el:t, title:'Key numbers', stepId:'keys' }); } }; }
   };
   const order = {
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
@@ -32097,7 +32104,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.806';
+const BUILD_ID = '2026-10-25.807';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
