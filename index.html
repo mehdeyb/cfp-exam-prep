@@ -17163,6 +17163,8 @@ function fcTermForms(card){
     if(!x) return;
     const n = fcNorm(x).trim();
     if(!n) return;
+    // A bare year or number in brackets (e.g. "(2026)") is not a term: matching on it pulled in unrelated questions that mention the year.
+    if(/^[\d\s.,$%-]+$/.test(n)) return;
     const single = n.indexOf(' ') < 0;
     if(acro(x)){ forms.push({ n, weight:1 }); return; }
     if(single && n.length < 6) return;
@@ -31733,7 +31735,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-24.768';
+const BUILD_ID = '2026-10-24.769';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
