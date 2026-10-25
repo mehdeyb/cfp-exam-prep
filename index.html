@@ -11455,6 +11455,8 @@ function buildStudyPlanCore(minutes){
   // Activities the tutor added for today go in right after the first part, so they are seen and not buried at the bottom.
   { const ovA = planOverrideToday();
     if(ovA && Array.isArray(ovA.adds)) ovA.adds.forEach((a, k) => {
+      // A tutor's "weakest" pick is the plan's own weakest-area step, moved up and marked, not a second copy of it.
+      if(a.action === 'weakest'){ const j = steps.findIndex(x => x.id === 'wkdrill'); if(j >= 0){ const [mv] = steps.splice(j, 1); mv.tutorAdded = true; mv.why = a.why || mv.why; steps.splice(Math.min(steps.length, 1 + k), 0, mv); return; } }
       steps.splice(Math.min(steps.length, 1 + k), 0, { id: a.id, title: a.title, why: a.why, minutes: a.minutes, manual: true, tutorAdded: true, done: !!L.manual[a.id], run: () => { showTab('study'); tutorRunAdded(a); } });
     }); }
   // The tutor's changes to today: steps it dropped (unfinished ones only) and the step it moved to the top.
@@ -32095,7 +32097,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.805';
+const BUILD_ID = '2026-10-25.806';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
