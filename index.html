@@ -9764,15 +9764,12 @@ function renderReadinessExtras(stats){
     if(stats.calibration.penalty >= 0.5) lines.push(`Overconfidence is costing ${stats.calibration.penalty.toFixed(1)} (see below).`);
     if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
   }catch(e){}
-  const wt = weakestDrillTarget(stats);
-  const weakBtn = (wt && stats.totalAnswered >= 10 && wt.acc !== null && wt.acc < 80) ? `<div class="rb-est rb-move"><b>Weakest area</b><span>${escapeHtml(wt.name)} is at about ${wt.acc}% expected, the lowest of your domains.</span><button type="button" class="btn" onclick="startWeakestDrill()">Drill ${escapeHtml(wt.name)}</button></div>` : '';
   panel.innerHTML = `
     <div class="rb-head">
       <h3>Where your ${stats.readiness} comes from</h3>
       <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
     </div>
     ${moveBlock}
-    ${weakBtn}
     ${estimateBlock}
     ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
@@ -10998,6 +10995,7 @@ function buildStudyPlanCore(minutes){
     wkdrill: () => {
       const w = weakestDrillTarget(stats);
       if(!w || answered < 10 || !w.attempted || (w.acc !== null && w.acc >= 80)) return null;
+      if(wk && wk.key === w.key) return null; // the weak-topic drill already works this domain today
       return { id:'wkdrill', title:`Drill your weakest area: ${w.name}`, minutes:12, manual:true,
         why:`${w.name} is your lowest-scoring domain (about ${w.acc}% expected). Ten focused questions there move readiness more than another pass through the areas you already know.`,
         run: () => startWeakestDrill() };
@@ -32072,7 +32070,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.799';
+const BUILD_ID = '2026-10-25.800';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
