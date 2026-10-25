@@ -26040,12 +26040,21 @@ function renderAskChips(q){
   let m;
   if(/\b(EXCEPT|NOT|LEAST)\b|\b(?:is|are|was|does|do|would|will|can|should)\s+not\b/.test(stem)) add('Reverse question.', 'Find the choice that is false or does not fit.');
   else if((m = stem.match(/\b(most|best|primary|first|key|main|major|significant|greatest)\b/i))) add('“' + m[1] + '”.', 'Several choices may be true. Pick the one that fits this client best.');
-  if((m = stem.match(/\b(if|suppose|assuming|assume|instead)\b/i))) add('“' + m[1] + '”.', 'The question adds or changes a fact. Use the new fact, not the original one.');
+  if((m = stem.match(/\b(if|suppose|assuming|assume|instead)\b\s*([^,.;?]{2,60})/i))){
+    const fact = (m[2] || '').replace(/\s+/g, ' ').trim();
+    add(fact ? '“' + m[1] + ' ' + fact + '.”' : '“' + m[1] + '”.', 'This changes a fact in the case. Use it in place of the case’s original, and let it override anything the case says otherwise.');
+  }
   if((m = stem.match(/\b(immediate|immediately|currently|now|this year|at death|during (?:his|her|their) lifetime|in retirement)\b/i))) add('Timing: ' + m[1] + '.', 'Answer for that moment, not for a later one.');
-  if(/\b(approximately|how much|what rate|what withdrawal|closest|calculate)\b/i.test(stem) || (q.choices || []).filter(c => /^[\s$]*[\d.,]+\s*%?\s*$|^about\b/i.test(c)).length >= 3) add('Calculation.', 'Pull the numbers from the case, then work it step by step.');
+  if(/\b(approximately|how much|what rate|what withdrawal|closest|calculate)\b/i.test(stem) || (q.choices || []).filter(c => /^[\s$]*[\d.,]+\s*%?\s*$|^about\b/i.test(c)).length >= 3){
+    const want = ((stem.match(/\b(how much|how many|what (?:rate|withdrawal|amount|is the)|approximately)\b[^?]*/i) || [])[0] || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    add('Calculation' + (want ? ': ' + want : '.') , 'Pull the numbers from the case, work it step by step, and check the answer is in the unit asked for.');
+  }
   const sc = String(q.scenario || '').toLowerCase();
   const names = (stem.match(/\b[A-Z][a-z]{2,}\b/g) || []).filter((n, i, a) => a.indexOf(n) === i && sc.includes(n.toLowerCase()) && !/^(Which|Given|What|How|Under|Because|Robert's|Social|Roth|Medicaid|Medicare)$/.test(n)).slice(0, 2);
-  if(names.length) add('Focus: ' + names.join(' and ') + '.', 'The question is about this person. Check their facts, not their spouse’s.');
+  if(names.length){
+    const hasSpouse = /\b(spouse|husband|wife|partner)\b/i.test(sc);
+    add('Focus: ' + names.join(' and ') + '.', hasSpouse ? 'The question is about this person. Check their facts, not their spouse’s.' : 'The question is about this person. Use their facts only.');
+  }
   if(!chips.length){ el.style.display = 'none'; return; }
   el.innerHTML = '<span class="ask-label">How to read this question</span>' + chips.slice(0, 3).join('');
   el.style.display = 'flex';
@@ -32104,7 +32113,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.808';
+const BUILD_ID = '2026-10-25.809';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
