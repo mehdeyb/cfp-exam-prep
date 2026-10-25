@@ -1455,6 +1455,16 @@
   .simplified-explanation .simplify-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:6px;}
   .simplified-explanation .simplify-err{color:var(--incorrect);}
   .simplify-speak-row{display:flex;justify-content:flex-end;margin-top:8px;}
+  .simple-body{display:flex;flex-direction:column;gap:10px;}
+  .simple-idea{font-size:15px;font-weight:600;line-height:1.4;color:var(--paper);}
+  .simple-sec{display:flex;flex-direction:column;gap:2px;padding-left:10px;border-left:2px solid var(--teal);}
+  .simple-sec-title{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);}
+  .simple-sec-text{font-size:13px;line-height:1.5;color:var(--paper);}
+  .simple-analogy{border-left-color:var(--gold);}
+  .simple-analogy .simple-sec-title{color:var(--gold);}
+  .simple-spot{border-left-color:var(--teal);}
+  .simple-trap{border-left-color:var(--incorrect);}
+  .simple-trap .simple-sec-title{color:var(--incorrect);}
   .simplify-speak-row .speak-btn{margin-left:0;}
   .confidence-pill.active{background:var(--gold-tint);border-color:var(--gold);color:var(--gold);font-weight:600;}
   .chip:hover{border-color:var(--gold);}
@@ -27255,6 +27265,20 @@ document.addEventListener('keydown', e => {
      !(window.matchMedia && matchMedia('(pointer:coarse)').matches)){ e.preventDefault(); sendQuestionChat(); }
 });
 
+// The model returns a small JSON object (idea, why, analogy, spot, trap). Anything that isn't that shape falls back to plain text.
+function parseSimpleExplanation(raw){
+  try{
+    const m = String(raw || '').match(/\{[\s\S]*\}/); if(!m) return null;
+    const o = JSON.parse(m[0]);
+    const pick = k => String(o[k] || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+    const out = { idea: pick('idea'), why: pick('why'), analogy: pick('analogy'), spot: pick('spot'), trap: pick('trap') };
+    return out.idea && out.why ? out : null;
+  }catch(e){ return null; }
+}
+function simpleExplanationSpeech(reply){
+  if(typeof reply === 'string') return reply;
+  return [reply.idea, reply.why, reply.analogy, reply.spot ? 'To spot it next time: ' + reply.spot : '', reply.trap ? 'Watch out: ' + reply.trap : ''].filter(Boolean).join(' ');
+}
 function renderSimplifiedExplanation(box, reply, fromCache){
   box.className = 'simplified-explanation';
   box.innerHTML = '';
@@ -27262,9 +27286,36 @@ function renderSimplifiedExplanation(box, reply, fromCache){
   label.className = 'simplify-label';
   label.textContent = fromCache ? 'Simple version — from last time' : 'Simple version';
   box.appendChild(label);
-  const textBlock = document.createElement('div');
-  textBlock.appendChild(document.createTextNode(reply));
-  box.appendChild(textBlock);
+  const body = document.createElement('div');
+  body.className = 'simple-body';
+  const addSection = (title, text, cls) => {
+    if(!text) return;
+    const sec = document.createElement('div');
+    sec.className = 'simple-sec' + (cls ? ' ' + cls : '');
+    const h = document.createElement('span');
+    h.className = 'simple-sec-title';
+    h.textContent = title;
+    const p = document.createElement('div');
+    p.className = 'simple-sec-text';
+    p.textContent = text;
+    sec.appendChild(h); sec.appendChild(p);
+    body.appendChild(sec);
+  };
+  if(typeof reply === 'string'){
+    const p = document.createElement('div');
+    p.textContent = reply;
+    body.appendChild(p);
+  } else {
+    const idea = document.createElement('div');
+    idea.className = 'simple-idea';
+    idea.textContent = reply.idea;
+    body.appendChild(idea);
+    addSection('Why', reply.why);
+    addSection('Think of it like', reply.analogy, 'simple-analogy');
+    addSection('Spot it next time', reply.spot, 'simple-spot');
+    addSection('The trap', reply.trap, 'simple-trap');
+  }
+  box.appendChild(body);
   if(hasSpeechSupport()){
     const speakRow = document.createElement('div');
     speakRow.className = 'simplify-speak-row';
@@ -27276,7 +27327,7 @@ function renderSimplifiedExplanation(box, reply, fromCache){
     function stillOnSameQuestion(){
       return questionIdForThisExplanation && session && session.queue[session.index] && session.queue[session.index].id === questionIdForThisExplanation;
     }
-    speakBtn.onclick = () => speakText(reply, speakBtn, questionIdForThisExplanation ? 'simp-' + questionIdForThisExplanation : undefined, stillOnSameQuestion);
+    speakBtn.onclick = () => speakText(simpleExplanationSpeech(reply), speakBtn, questionIdForThisExplanation ? 'simp-' + questionIdForThisExplanation : undefined, stillOnSameQuestion);
     speakRow.appendChild(speakBtn);
     box.appendChild(speakRow);
   }
@@ -27334,12 +27385,14 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Give a genuinely SIMPLER explanation of just what they need to get this type of question right on the exam: plain everyday language, no jargon left unexplained, and a concrete analogy only if one truly helps. 3-4 short sentences, under 70 words, always finishing the last sentence. ${!wasCorrect ? "Specifically address why the answer they picked seems reasonable but isn't — that's the most useful part." : "Focus on the core intuition for why this is right, not just restating the rule."} Don't repeat the question or list the choices back — just give the plain-language explanation itself, starting directly with the explanation.`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section the most common way people get this type of question wrong."}\nReturn ONLY a JSON object, no other text, with these string fields, each short: {"idea": "the rule or core idea in one plain sentence", "why": "two short sentences on why the correct answer is right, using the question's own facts", "analogy": "one everyday comparison, or an empty string if none truly helps", "spot": "the clue in a question like this that signals this idea, in one sentence", "trap": "the specific mistake to avoid, in one sentence"}. Keep the whole object under 110 words. Use only the facts in the question; do not invent figures.`;
 
   try{
-    let reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 }))
+    const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
+    let reply = parseSimpleExplanation(rawSimple)
+      || trimToSentence(rawSimple)
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
-    const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(reply);
+    const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(typeof reply === 'string' ? reply : [reply.idea, reply.why, reply.analogy, reply.spot, reply.trap].join(' '));
     if(hitCalcConventionGuard){
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
     } else if(!q.isVariant){
@@ -31927,7 +31980,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.784';
+const BUILD_ID = '2026-10-25.785';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
