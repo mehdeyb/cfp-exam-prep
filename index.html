@@ -32141,7 +32141,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.812';
+const BUILD_ID = '2026-10-25.813';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -32662,15 +32662,18 @@ requestDurableStorage();
       const eff = gap > 4 ? Math.max(0, insetB - gap) : insetB;
       const key = [inner, w, insetB, gap].join('|');
       if(key === last) return; last = key;
-      root.style.setProperty('--sab', eff + 'px');
-      root.style.setProperty('--vh-real', inner + 'px');
-      root.classList.toggle('vh-compact', portrait && inner < 720);
-      root.classList.toggle('vh-roomy', portrait && inner >= 860);
-      root.classList.toggle('vp-gap', gap > 4);
+      // Only write what changed: a page-wide style update every poll is wasted work on an iPad.
+      const setVar = (n, v) => { if(root.style.getPropertyValue(n) !== v) root.style.setProperty(n, v); };
+      const setCls = (c, on) => { if(root.classList.contains(c) !== !!on) root.classList.toggle(c, !!on); };
+      setVar('--sab', eff + 'px');
+      setVar('--vh-real', inner + 'px');
+      setCls('vh-compact', portrait && inner < 720);
+      setCls('vh-roomy', portrait && inner >= 860);
+      setCls('vp-gap', gap > 4);
       window._screenProfile = { inner, w, insetB, eff, gap, scr, standalone };
       window._profileNoteText = ' · bottom inset ' + insetB + ' → ' + eff + (gap > 4 ? ' (window ' + gap + ' short of screen)' : '');
       const note = document.getElementById('buildNote');
-      if(note){ const base = note.textContent.split(' · bottom inset')[0]; note.textContent = base + window._profileNoteText; }
+      if(note){ const base = note.textContent.split(' · bottom inset')[0]; const nt = base + window._profileNoteText; if(note.textContent !== nt) note.textContent = nt; }
       if(document.body.classList.contains('quiz-active') && !(window.session && session.locked) && typeof scheduleQuizFit === 'function') scheduleQuizFit();
     }catch(e){}
   }
@@ -32679,7 +32682,7 @@ requestDurableStorage();
   document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(measure, 120); });
   if(window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
   document.addEventListener('DOMContentLoaded', measure);
-  setInterval(measure, 1000);
+  setInterval(() => { if(!document.hidden) measure(); }, 4000); // the events above catch most changes; this poll is only a safety net
   setTimeout(measure, 100);
 })();
 
