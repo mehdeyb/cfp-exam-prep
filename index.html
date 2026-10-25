@@ -14228,6 +14228,7 @@ function stageLiveHtml(q){
 function ttMirrorLiveQuestion(answered){
   try{
     if(!session || !session.queue || !document.body.classList.contains('quiz-active')) return;
+    { const rv = document.getElementById('resultsView'); if(rv && rv.style.display === 'block') return; } // the session is over: the board shows its summary
     const q = session.queue[session.index]; if(!q || !q.id || !allQuestions().some(x => x.id === q.id)) return;
     if(answered){
       const sl = { kind:'question', qid:q.id, src:'tutor', at:0, idle:true, title:'Live question', live:true };
@@ -14843,20 +14844,32 @@ function ttIdleBoard0(){
   if(typeof tutorMessages !== 'undefined' && tutorMessages.length) return;
   const lc = document.getElementById('lessonsCard'); if(lc && lc.classList.contains('has-lesson')) return;
   try{
-    const ms = DATA.missed || [], lastId = ms[ms.length - 1], qs = lastId && (DATA.questionStats || {})[lastId];
-    if(qs && Date.now() - (qs.lastSeenAt || 0) < 40 * 60000 && allQuestions().some(x => x.id === lastId)){
-      if(!stageInlineVisible()) ttEnsureStage();
-      stageShow({ kind:'question', qid:lastId, src:'tutor', at:0, idle:true }, 'tutor'); window._ttMissShown = lastId; return;
-    }
-  }catch(e){}
-  try{
     const ss = DATA.sessions || [], ls = ss[ss.length - 1];
     if(ls && Date.now() - new Date(ls.date).getTime() < 30 * 60000 && ls.total){
       const names = { adaptive:'Adaptive session', drill:'Domain drill', mock:'Practice exam', fullexam:'Full exam', case:'Case study', review:'Missed questions' };
       const n = typeof ls.answered === 'number' ? ls.answered : ls.total;
-      const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Just finished', text: (names[ls.mode] || 'Session') + ': ' + ls.correct + ' of ' + n + ' right (' + Math.round(100 * ls.correct / Math.max(1, n)) + '%).' };
+      const pct = Math.round(100 * ls.correct / Math.max(1, n));
+      // A checklist of what the session changed and what comes next, from the same numbers Progress and the plan use.
+      try{
+        const st2 = computeStats(), w2 = weakestDrillTarget(st2), ns2 = computeNextStep(st2);
+        const why1 = ns2 && ns2.why ? String(ns2.why).split(/(?<=\.)\s/)[0].replace(/[.\s]+$/, '') : '';
+        const steps = [{ title: ls.correct + ' of ' + n + ' right (' + pct + '%)', detail: names[ls.mode] || 'Session' }]
+          .concat(((DATA.lastAdjust && DATA.lastAdjust.lines) || []).filter(t => !/^Session /.test(t)).slice(0, 2).map(t => ({ title: t, detail: '' })))
+          .concat(w2 && w2.name ? [{ title: 'Weakest: ' + w2.name, detail: w2.acc !== null ? w2.acc + '% right so far' : 'Not practised yet' }] : [])
+          .concat((() => { let nx = null; try{ nx = buildStudyPlan().steps.find(x => !x.done) || null; }catch(e){} return nx && nx.title ? [{ title: 'Next: ' + nx.title, detail: nx.minutes ? nx.minutes + ' min' : '' }] : (ns2 && ns2.title ? [{ title: 'Next: ' + ns2.title, detail: why1 }] : []); })());
+        const r = stageSlideFromTool({ kind:'steps', title:'Session done', steps: steps.map(x => ({ title: stageClip(x.title, 80), detail: stageClip(x.detail || '', 110) })) });
+        if(!r.error){ r.slide.idle = true; r.slide.src = 'tutor'; if(!stageInlineVisible()) ttEnsureStage(); stageShow(r.slide, 'tutor'); window._ttSession = ls; return; }
+      }catch(e){}
+      const sl = { kind:'idea', src:'tutor', at:0, idle:true, title:'Just finished', text: (names[ls.mode] || 'Session') + ': ' + ls.correct + ' of ' + n + ' right (' + pct + '%).' };
       try{ const w = computeStats().weakestMeta, ns1 = computeNextStep(computeStats()); sl.text += (w ? ' Weakest: ' + w.name + '.' : '') + (ns1 && ns1.title ? ' Next: ' + ns1.title + '.' : ''); }catch(e){}
       if(!stageInlineVisible()) ttEnsureStage(); stageShow(sl, 'tutor'); window._ttSession = ls; return;
+    }
+  }catch(e){}
+  try{
+    const ms = DATA.missed || [], lastId = ms[ms.length - 1], qs = lastId && (DATA.questionStats || {})[lastId];
+    if(qs && Date.now() - (qs.lastSeenAt || 0) < 40 * 60000 && allQuestions().some(x => x.id === lastId)){
+      if(!stageInlineVisible()) ttEnsureStage();
+      stageShow({ kind:'question', qid:lastId, src:'tutor', at:0, idle:true }, 'tutor'); window._ttMissShown = lastId; return;
     }
   }catch(e){}
   const st = computeStats(), days = getDaysUntilExam(); const bits = [];
@@ -27661,6 +27674,8 @@ function finishSession(){
   DATA.sessions.push(rec);
   if(DATA.sessions.length > 300) DATA.sessions = DATA.sessions.slice(-300);
   persist();
+  // The Tutor board takes the session as its summary, and the Tutor is ready to go over it.
+  try{ ttIdleBoard(); }catch(e){}
   // Auto-backup (a silent file download after every so many questions)
   // was removed at the user's explicit request -- it was firing an
   // unwanted download after sessions with no way to turn it off. The
@@ -32177,7 +32192,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.826';
+const BUILD_ID = '2026-10-25.827';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
