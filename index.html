@@ -585,7 +585,6 @@
   .choice-skel:nth-child(2){animation-delay:.12s;} .choice-skel:nth-child(3){animation-delay:.24s;} .choice-skel:nth-child(4){animation-delay:.36s;}
   @keyframes skelPulse{0%,100%{opacity:.45;}50%{opacity:1;}}
   @media (prefers-reduced-motion:reduce){.choice-skel{animation:none;}}
-  html.vp-test body.settings-active #settingsHost{bottom:auto;height:var(--full-h);}
   /* Never switch the page to overflow:hidden: with nothing left to scroll, iOS shrinks the installed app's window by the top inset (812 of 874 on a Pro). The page stays scrollable by a hair underneath; touches are blocked in script instead. */
   html.scroll-locked, html.scroll-locked body{overscroll-behavior:none;}
   html.scroll-locked body{min-height:calc(100vh + 2px);}
@@ -3244,14 +3243,6 @@
   /* Some phones report a layout height shorter than the real screen (leaving a blank band under fixed elements).
      When the page detects that, the quiz sizes itself to the full screen height instead. */
   @media (orientation:portrait) and (max-width:640px){
-    html.vp-short body.quiz-active #quizFullscreenHost{bottom:auto;height:var(--full-h);}
-    html.vp-test body.quiz-active #quizFullscreenHost{bottom:auto;height:var(--full-h);}
-    html.vp-short body.quiz-active #quizView .quiz-actions{position:sticky;left:auto;right:auto;bottom:0;padding:8px 0 max(8px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 12px));}
-    html.vp-test body.quiz-active #quizView .quiz-actions{position:sticky;left:auto;right:auto;bottom:0;padding:8px 0 max(8px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 12px));}
-    html.vp-short body.quiz-active #quizView{padding-bottom:0;}
-    html.vp-test body.quiz-active #quizView{padding-bottom:0;}
-    html.vp-short #moreChoicesCue{bottom:calc(72px + max(8px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 12px)));}
-    html.vp-test #moreChoicesCue{bottom:calc(72px + max(8px, calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 12px)));}
   }
   /* Folded cards: the 44px tap-target header made the title sit low; trim the card's top padding to balance it.
      Flashcards "how the ordering works" toggle: drop the heading margin that left a ~50px hole below it. */
@@ -4875,20 +4866,6 @@
         <div class="settings-section">
           <h3>About this version</h3>
           <p class="hint" style="margin-top:0;" id="buildNote">Build</p>
-          <p class="hint" id="vpHistory" style="margin-top:6px;"></p>
-          <details class="win-exp" style="margin-top:10px;">
-            <summary class="hint" style="cursor:pointer;">Window size tests (for the blank band under the app)</summary>
-            <p class="hint">Each button changes how the page asks iOS for its window, then re-measures. Tap one, wait a second, and read the result. If the layout number reaches the screen number, that one works.</p>
-            <div class="backup-actions" style="flex-wrap:wrap;">
-              <button class="btn ghost" onclick="winExp('meta')">Re-apply viewport</button>
-              <button class="btn ghost" onclick="winExp('fixed')">Lock zoom</button>
-              <button class="btn ghost" onclick="winExp('height')">Ask for device height</button>
-              <button class="btn ghost" onclick="winExp('nudge')">Nudge scroll</button>
-              <button class="btn ghost" onclick="winExp('plain')">Drop full-screen mode</button>
-              <button class="btn ghost" onclick="winExp('stretch')">Stretch pages to full height</button>
-            </div>
-            <p class="hint" id="winExpOut" style="margin-top:8px;"></p>
-          </details>
         </div>
 
         <div class="settings-section" id="syncSection">
@@ -6964,7 +6941,7 @@ async function reverifyBankOnce(){
   finally { _reverifyRunning = false; }
 }
 async function checkAIAvailability(){
-  try{window._vpMark&&window._vpMark('ai-check')}catch(_){}
+  
   if(hasArtifactStorage()){
     aiMode = 'artifact';
     aiFeaturesAvailable = true;
@@ -7302,41 +7279,6 @@ try{
   if(mq.addEventListener) mq.addEventListener('change', onSystemChange); else if(mq.addListener) mq.addListener(onSystemChange);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) onSystemChange(); });
 }catch(_){}
-
-// Window-size tests: try different ways of asking iOS for a full-height window and report what it gives back.
-function winExp(kind){
-  const out = document.getElementById('winExpOut');
-  const mv = document.querySelector('meta[name="viewport"]');
-  const base = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-  const contents = {
-    meta: base,
-    fixed: base + ', maximum-scale=1, user-scalable=no',
-    height: base + ', height=device-height',
-    plain: 'width=device-width, initial-scale=1.0'
-  };
-  const before = window.innerHeight;
-  try{
-    if(kind === 'stretch'){
-      const on = !document.documentElement.classList.contains('vp-test');
-      const lv = (window._vpInfo && window._vpInfo.lvh) || screen.height;
-      document.documentElement.style.setProperty('--full-h', lv + 'px');
-      document.documentElement.classList.toggle('vp-test', on);
-      if(out) out.textContent = 'stretch ' + (on ? 'on' : 'off') + ': pages sized to ' + lv + 'px. Look at the bottom of this page, then open a quiz.';
-      return;
-    } else if(kind === 'nudge'){
-      window.scrollTo(0,1); setTimeout(()=>window.scrollTo(0,0), 60);
-      window.dispatchEvent(new Event('resize'));
-    } else if(mv){
-      const n = document.createElement('meta'); n.name = 'viewport'; n.content = contents[kind];
-      mv.parentNode.replaceChild(n, mv);
-    }
-  }catch(e){}
-  setTimeout(()=>{
-    try{ window._vpProbe && window._vpProbe(); }catch(e){}
-    const i = window._vpInfo || {};
-    if(out) out.textContent = kind + ': before ' + before + ', now ' + window.innerHeight + ' (visible ' + i.vv + ', lvh ' + i.lvh + ', vh ' + i.vh + ', screen ' + i.scr + ')';
-  }, 700);
-}
 
 function applyTheme(){
   const isLight = effectiveTheme() === 'light';
@@ -7822,7 +7764,7 @@ if(hasSpeechSupport()){
   window.speechSynthesis.getVoices();
   window.speechSynthesis.addEventListener('voiceschanged', () => {
     window.speechSynthesis.getVoices();
-    try{window._vpMark&&window._vpMark('voices')}catch(_){}
+    
     renderVoicePrefOptions();
   });
 }
@@ -20815,7 +20757,7 @@ function startCase(id, o){
 // still untried, and no AI-written case is under half a day old, one is
 // prepared quietly after a session ends.
 function maybeAutoGenerateCase(){
-  try{window._vpMark&&window._vpMark('autogen')}catch(_){}
+  
   try{
     if(!aiFeaturesAvailable || caseGenBusy || isGenerating || genBackoffActive() || session) return;
     if((DATA.answerCounter || 0) < 20) return;
@@ -20944,7 +20886,6 @@ function openSettings(){
   try{ settingsSetup(); let g = 'study'; try{ g = localStorage.getItem('settingsGroup') || 'study'; }catch(e){} settingsShowGroup(g, true); }catch(e){}
   { const _h = document.getElementById('settingsHost'); if(_h) _h.classList.remove('closing'); }
   document.body.classList.add('settings-active');
-  try{ window._vpNote && window._vpNote('settings'); const vh = document.getElementById('vpHistory'); if(vh && window._vpHist) vh.textContent = 'Height history: ' + window._vpHist.join(' → '); }catch(e){}
   lockBodyScroll();
   { const h = document.getElementById('settingsHost'); if(h) h.scrollTop = 0; }
   renderApiKeyUI();
@@ -25392,13 +25333,13 @@ let savedBodyScrollY = 0;
 // It now only hides the page's own overflow and blocks touch-scrolling that isn't inside a scrollable panel.
 function bodyIsLocked(){ return document.documentElement.classList.contains('scroll-locked'); }
 function lockBodyScroll(){
-  try{window._vpMark&&window._vpMark('lock')}catch(_){}
+  
   if(bodyIsLocked()) return; // already locked
   savedBodyScrollY = window.scrollY || window.pageYOffset || 0;
   document.documentElement.classList.add('scroll-locked');
 }
 function unlockBodyScroll(){
-  try{window._vpMark&&window._vpMark('unlock')}catch(_){}
+  
   document.documentElement.classList.remove('scroll-locked');
   window.scrollTo && window.scrollTo(0, savedBodyScrollY);
 }
@@ -29496,6 +29437,7 @@ function zoomReports(){
 function zH(c){ const r = c.getBoundingClientRect().height, z = parseFloat(c.style.zoom) || 1; return (Math.abs(z - 1) < 0.005 || zoomReports()) ? r : r * z; }
 function zRaw(el, z){ const r = el.getBoundingClientRect().height; return (Math.abs(z - 1) < 0.005 || !zoomReports()) ? r : r / z; }
 function showFitInfo(){
+  perfEnable();
   try{
     const el = document.getElementById('fitInfo'); if(!el) return;
     const c = document.getElementById('studyCols'), d = document.documentElement, vv = window.visualViewport;
@@ -32062,7 +32004,7 @@ window.addEventListener('storage', async function(e){
   window.addEventListener('unhandledrejection', e => note(e.reason && e.reason.message || e.reason, 'promise'));
 })();
 async function requestDurableStorage(){
-  try{window._vpMark&&window._vpMark('persist-start')}catch(_){}
+  
   const el = document.getElementById('storageNote');
   try{
     if(!(navigator.storage && navigator.storage.persist)) return;
@@ -32070,7 +32012,7 @@ async function requestDurableStorage(){
     try{ ok = await navigator.storage.persisted(); }catch(e){}
     if(!ok) ok = await navigator.storage.persist();
     window.__storageDurable = !!ok;
-    try{window._vpMark&&window._vpMark('persist-done')}catch(_){}
+    
     if(el){
       el.textContent = ok ? 'This browser has agreed to keep your saved progress.' : 'This browser may clear saved progress if it runs low on space or you stop visiting for a while, so back up now and then.';
       el.style.display = 'block';
@@ -32155,7 +32097,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.819';
+const BUILD_ID = '2026-10-25.820';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -32187,7 +32129,7 @@ try{ document.addEventListener('DOMContentLoaded', () => { const l = document.ge
 async function checkForNewBuild(){
   if(_updChecking || !/^https?:$/.test(location.protocol) || !navigator.onLine) return;
   _updChecking = true;
-  try{window._vpMark&&window._vpMark('upd-check')}catch(_){}
+  
   try{
     // A 60-byte file says which build is live, instead of downloading the whole 3 MB page on every open. It only counts when it is newer than this copy.
     let live = null;
@@ -32212,7 +32154,7 @@ window.addEventListener('load', () => setTimeout(checkForNewBuild, 4000));
 document.addEventListener('visibilitychange', () => { if(!document.hidden) checkForNewBuild(); });
 setInterval(() => { if(window._updPending && !document.body.classList.contains('quiz-active')){ window._updPending = false; checkForNewBuild(); } }, 5000);
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => { try{window._vpMark&&window._vpMark('sw-registered')}catch(_){} }).catch(() => {}); });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(() => {  }).catch(() => {}); });
 }
 document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
@@ -32684,14 +32626,9 @@ requestDurableStorage();
       setCls('vh-compact', portrait && inner < 720);
       setCls('vh-roomy', portrait && inner >= 860);
       setCls('vp-gap', gap > 4);
-      window._screenProfile = { inner, w, insetB, eff, gap, scr, standalone };
-      window._profileNoteText = ' · bottom inset ' + insetB + ' → ' + eff + (gap > 4 ? ' (window ' + gap + ' short of screen)' : '');
-      const note = document.getElementById('buildNote');
-      if(note){ const base = note.textContent.split(' · bottom inset')[0]; const nt = base + window._profileNoteText; if(note.textContent !== nt) note.textContent = nt; }
       if(document.body.classList.contains('quiz-active') && !(window.session && session.locked) && typeof scheduleQuizFit === 'function') scheduleQuizFit();
     }catch(e){}
   }
-  window._profileMeasure = measure;
   ['resize','orientationchange','pageshow','focus'].forEach(ev => window.addEventListener(ev, () => setTimeout(measure, 60)));
   document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(measure, 120); });
   if(window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
@@ -32701,11 +32638,11 @@ requestDurableStorage();
 })();
 
 
-// TEMPORARY diagnostic (remove once the bottom gap is understood): prints window measurements on the quiz screen.
-// Keep the session tag flush on top of the tab bar whatever its real height is.
+// Keeps the session tag flush on top of the tab bar whatever its real height is.
 (function(){
   function sync(){ try{ const t = document.getElementById('appTabbar'); if(t){ const h = Math.round(t.getBoundingClientRect().height); if(h > 30) document.documentElement.style.setProperty('--tab-h', h + 'px'); } }catch(e){} }
-  window.addEventListener('resize', sync); window.addEventListener('load', sync); setInterval(sync, 1500); setTimeout(sync, 200);
+  window.addEventListener('resize', sync); window.addEventListener('load', sync); setTimeout(sync, 200);
+  try{ const t = document.getElementById('appTabbar'); if(t && window.ResizeObserver) new ResizeObserver(sync).observe(t); }catch(e){}
 })();
 // Session tag tucks away while scrolling down, returns when scrolling up or at the top.
 (function(){
@@ -32726,6 +32663,7 @@ requestDurableStorage();
   let cue=null;
   function update(){
     try{
+      if(!document.body.classList.contains('quiz-active')){ if(cue) cue.classList.remove('show'); return; }
       if(!cue){cue=document.createElement('button');cue.id='moreChoicesCue';cue.type='button';cue.textContent='More answers below \u2193';
         cue.addEventListener('click',()=>{const cs=document.querySelectorAll('#qChoices > *');const last=cs[cs.length-1];if(last)last.scrollIntoView({behavior:'smooth',block:'center'});});
         document.body.appendChild(cue);}
@@ -32748,90 +32686,20 @@ requestDurableStorage();
   setInterval(update,400);
 })();
 
-// Measures the real screen height (100lvh) against what the browser reports as the layout height.
-(function(){
-  function probe(){
-    try{
-      const d = document.createElement('div');
-      d.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none;';
-      let full = 0;
-      d.style.height = '100lvh'; document.body.appendChild(d); full = d.offsetHeight;
-      d.style.height = '100vh'; const vh = d.offsetHeight;
-      d.remove();
-      const inner = window.innerHeight;
-      const vv = window.visualViewport ? Math.round(window.visualViewport.height) : 0;
-      const standalone = !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
-      const best = Math.max(full, vh, vv, standalone ? screen.height : 0);
-      const portrait = window.matchMedia && window.matchMedia('(orientation:portrait)').matches;
-      // Anything taller than the page's own viewport is clipped by iOS, so the quiz always uses the real layout height (the bar is never pushed past the edge).
-      const short = false;
-      document.documentElement.classList.remove('vp-short');
-      window._vpInfo = {inner, lvh: full, vh, vv, scr: screen.height, short};
-      // Some iPhones open an installed app with a window shorter than the screen. Re-applying the viewport settings once asks iOS to lay the page out again.
-      if(window._vpFirst === undefined) window._vpFirst = inner;
-      // The old viewport re-apply "kick" is switched off while we find out whether it was what kept the window short.
-      if(false && standalone && portrait && screen.height - inner > 40 && screen.height - inner < 120 && !window._vpKicked){
-        window._vpKicked = true;
-        try{
-          const mv = document.querySelector('meta[name="viewport"]');
-          if(mv){ const c = mv.getAttribute('content'); mv.setAttribute('content', 'width=device-width, initial-scale=1.0'); setTimeout(() => { mv.setAttribute('content', c); setTimeout(probe, 300); }, 120); }
-        }catch(e){}
-      }
-      const note = document.getElementById('buildNote');
-      if(note) note.textContent = 'Build ' + BUILD_ID + ' · layout ' + inner + ' of ' + best + (short ? ' (adjusted)' : '') + ', first ' + window._vpFirst + ', visible ' + vv + ', screen ' + screen.height + ' · ' + (standalone ? 'app' : 'browser') + (window._profileNoteText || '');
-    }catch(e){}
-  }
-  window._vpProbe = probe;
-  // Height history: when does the window change size, and what was happening? Shown in Settings > About this version.
-  window._vpHist = [];
-  const t0 = Date.now();
-  let lastH = null;
-  function note(why, force){
-    const h = window.innerHeight;
-    if(h === lastH && why !== 'start' && !force) return;
-    lastH = h;
-    window._vpHist.push(h + ' ' + why + ' @' + ((Date.now()-t0)/1000).toFixed(1) + 's');
-    if(window._vpHist.length > 24) window._vpHist.shift();
-    const el = document.getElementById('vpHistory');
-    if(el) el.textContent = 'Height history: ' + window._vpHist.join(' → ');
-  }
-  window._vpNote = note;
-  window._vpMark = name => note('·' + name, true);
-  note('start');
-  window.addEventListener('resize', () => note('resize'));
-  if(window.visualViewport) window.visualViewport.addEventListener('resize', () => note('vv-resize'));
-  document.addEventListener('visibilitychange', () => note(document.hidden ? 'hidden' : 'shown'));
-  window.addEventListener('pageshow', () => note('pageshow'));
-  window.addEventListener('focus', () => note('focus'));
-  document.addEventListener('DOMContentLoaded', () => note('dom'));
-  window.addEventListener('load', () => note('load'));
-  for(const ms of [150, 400, 800, 1500, 3000, 6000]) setTimeout(() => note('t+' + ms), ms);
-  ['touchstart','scroll','click'].forEach(ev => {
-    let n = 0;
-    document.addEventListener(ev, () => { if(n++ < 2) note('·first-' + ev, true); }, {capture:true, passive:true});
-  });
-  setInterval(() => note('poll'), 1000);
-  window.addEventListener('resize', probe);
-  if(window.visualViewport) window.visualViewport.addEventListener('resize', probe);
-  window.addEventListener('orientationchange', () => setTimeout(probe, 250));
-  window.addEventListener('pageshow', probe);
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', probe); else probe();
-})();
-
 (function(){
   const a0 = fcApplyAdaptation; window.fcApplyAdaptation = fcApplyAdaptation = function(card){ const r = a0.apply(this, arguments); fcAttachNumbers(card); return r; };
   const c0 = fcApplyChoose; window.fcApplyChoose = fcApplyChoose = function(i){ const r = c0.apply(this, arguments); try{ const card = fcQueue[fcIndex]; if(card && fcView.applied) fcAttachNumbers(card); }catch(e){} return r; };
 })();
 /* Timing log for the answer step: how often each layout/save routine runs and how long it takes. Shown under Settings -> Show screen measurements. */
-(function(){
-  window._perf = [];
+function perfEnable(){
+  if(window._perfOn) return; window._perfOn = true; window._perf = [];
   const wrap = name => {
     const f = window[name]; if(typeof f !== 'function' || f._timed) return;
     const g = function(){ const t0 = performance.now(); try{ return f.apply(this, arguments); } finally { window._perf.push({ n:name, ms:Math.round(performance.now() - t0), at:Math.round(t0) }); if(window._perf.length > 300) window._perf.splice(0, 100); } };
     g._timed = true; window[name] = g;
   };
   ['quizFit','osFitStudy','osFit','renderBlueprint','renderAll','refreshHeaderStats','updateLiveReadiness','persist','quizRevealFeedback','renderTodayPlan','selectAnswerCore'].forEach(wrap);
-})();
+}
 
 </script>
 <div id="keyTermModalHost" class="key-term-modal-host" onclick="if(event.target===this) closeKeyTermModal();">
