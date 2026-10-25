@@ -14218,6 +14218,41 @@ function stageQuestionHtml(q){
   const why = mwFirstSentence((q.rationale || [])[q.correct] || '');
   return `<div class="pst-kicker">A question you missed</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul>${why ? `<div class="pst-why">${stageEsc(why)}</div>` : ''}<div class="pst-acts"><button type="button" class="btn ghost" onclick="stageWalkMiss('${q.id}')">Walk through it</button>${(q.calcSteps || (DATA.calcStepsCache || {})[q.id]) ? `<button type="button" class="btn ghost" onclick="stageShowCalc(allQuestions().find(x=>x.id==='${q.id}'))">Show the keys</button>` : ''}</div>`;
 }
+// ---- The question you are working in the quiz, mirrored on the Tutor board. Read-only: you answer in the quiz; the board shows the same question. ----
+function stageLiveHtml(q){
+  const L = 'ABCD';
+  const rows = q.choices.map((c, k) => `<li class="pst-c"><b>${L[k]}</b><span>${stageEsc(c)}</span></li>`).join('');
+  return `<div class="pst-kicker">Live question · answer it in your quiz</div>${q.scenario ? `<div class="pst-scn">${stageEsc(q.scenario)}</div>` : ''}<div class="pst-q">${qTextHtml(q.q)}</div><ul class="pst-choices">${rows}</ul><div class="pst-acts"><button type="button" class="btn ghost" onclick="ttAskLiveQuestion()">Ask the tutor about this</button></div>`;
+}
+// Keeps the board on the question in front of you: the question while you answer it, then the answer and its reason once you have chosen.
+function ttMirrorLiveQuestion(answered){
+  try{
+    if(!session || !session.queue || !document.body.classList.contains('quiz-active')) return;
+    const q = session.queue[session.index]; if(!q || !q.id || !allQuestions().some(x => x.id === q.id)) return;
+    if(answered){
+      const sl = { kind:'question', qid:q.id, src:'tutor', at:0, idle:true, title:'Live question', live:true };
+      if(!stageInlineVisible() && document.getElementById('tab-tutor') && document.getElementById('tab-tutor').classList.contains('active')) ttEnsureStage();
+      stageShow(sl, 'tutor');
+    } else {
+      const sl = { kind:'live', qid:q.id, src:'tutor', at:0, idle:true, title:'Live question' };
+      stageShow(sl, 'tutor');
+    }
+  }catch(e){}
+}
+// Ask the tutor about the question in front of you. The tutor is told not to give the answer, so the thinking stays yours.
+function ttAskLiveQuestion(){
+  const q = session && session.queue && session.queue[session.index]; if(!q) return;
+  const text = 'I am working this practice question now. Help me think it through, but do not give the answer. Question: ' + q.q + ' Choices: ' + q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join(' ');
+  showTab('tutor');
+  setTimeout(() => { try{ sendTutorMessage(text); }catch(e){} }, 60);
+}
+// Keep the board in step with the quiz: a new question shows up on the board, and the reveal swaps in the answer and reason.
+(function(){
+  const _rq = renderQuestion;
+  renderQuestion = function(){ const r = _rq.apply(this, arguments); ttMirrorLiveQuestion(false); return r; };
+  const _rf = quizRevealFeedback;
+  quizRevealFeedback = function(){ const r = _rf.apply(this, arguments); ttMirrorLiveQuestion(true); return r; };
+})();
 // ---- "your turn": the lesson stops for the student to do something, then goes on ----
 function stageCheckHtml(sl){
   const E = stageEsc;
@@ -14426,7 +14461,11 @@ function stageSlideNode(sl){
   if(sl.kind === 'question'){
     const q = allQuestions().find(x => x.id === sl.qid);
     if(!q) return null;
-    d.innerHTML = stageQuestionHtml(q);
+    d.innerHTML = sl.live ? stageQuestionHtml(q).replace('A question you missed', 'This question, answered') : stageQuestionHtml(q);
+  } else if(sl.kind === 'live'){
+    const q = allQuestions().find(x => x.id === sl.qid);
+    if(!q) return null;
+    d.innerHTML = stageLiveHtml(q);
   } else if(sl.kind === 'check'){
     d.innerHTML = stageCheckHtml(sl); if(!d.innerHTML) return null;
   } else if(sl.kind === 'calc'){
@@ -32138,7 +32177,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.825';
+const BUILD_ID = '2026-10-25.826';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
