@@ -29518,6 +29518,12 @@ function osFitStudy(extra){
     extra = extra || 0;
     const panel = document.getElementById('tab-study'); const c = document.getElementById('studyCols'); if(!panel || !c || !panel.classList.contains('active')) return;
     if(document.body.classList.contains('quiz-active')) return;
+    // Skip when nothing the fit depends on has changed (window size, the text on screen). Its own style writes do not count,
+    // so a fit can no longer set off the next fit: that loop is what made the page keep resizing.
+    const cl = document.getElementById('coachLine'), tn = document.getElementById('tutorNoteCard');
+    const osSig = [innerWidth, innerHeight, extra, c.textContent.length, c.querySelectorAll('.pt-step').length, (cl && cl.textContent.length) || 0, (tn && tn.textContent.length) || 0].join('|');
+    if(osSig === window._osStudySig && !window._osStudyForce) return;
+    window._osStudySig = osSig; window._osStudyForce = false;
     c.style.maxHeight = ''; c.style.minHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense', 'pt-tiny', 'pt-dt', 'pt-dfull', 'pt-dwhy', 'pt-rich');
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
@@ -29616,7 +29622,10 @@ setInterval(() => {
     const squeezed = c.classList.contains('pt-dense') || c.classList.contains('pt-tiny') || c.classList.contains('os-fit') || (parseFloat(c.style.zoom) || 1) < 0.99;
     if(!squeezed) return;
     const gap = vpHeight() - c.getBoundingClientRect().bottom;
-    if(gap > 140 && Date.now() - (window._osWatchAt || 0) > 2500){ window._osWatchAt = Date.now(); osFitStudy(); }
+    // Only refit when something actually changed (the window size, or the amount of content). Refitting on a timer
+    // when nothing changed is what made the page keep resizing: the fit clears its own sizes before measuring.
+    const sig = innerWidth + 'x' + innerHeight + '|' + c.children.length + '|' + c.textContent.length;
+    if(gap > 140 && sig !== window._osWatchSig && Date.now() - (window._osWatchAt || 0) > 2500){ window._osWatchSig = sig; window._osWatchAt = Date.now(); osFitStudy(); }
   }catch(e){}
 }, 1200);
 // Spare room is used: whatever fits with room left over is scaled up to fill it (type, spacing and buttons together), never beyond a comfortable size.
@@ -29705,6 +29714,8 @@ function quizFit(){
 (function(){ const base = osFitStudy; let _osRetrying = false; window.osFitStudy = osFitStudy = function(extra){
   // While the page is still hidden and filling in, fitting it over and over is wasted work; one fit runs just before it is revealed.
   if(document.documentElement.classList.contains('booting') && !window._bootFitOk) return;
+  // Same screen and same content as the last fit: nothing to redo, so none of these writes run again.
+  { const c9 = document.getElementById('studyCols'); const key9 = c9 ? innerWidth + 'x' + innerHeight + '|' + extra + '|' + c9.textContent.length + '|' + c9.querySelectorAll('.pt-step').length : ''; if(key9 && key9 === window._osWrapKey && !window._osStudyForce) return; window._osWrapKey = key9; }
   base(extra);
   try{
     // The plan card reaches down to the slim bars: any room left over makes the card taller instead of leaving a gap.
@@ -32144,7 +32155,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.816';
+const BUILD_ID = '2026-10-25.819';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
