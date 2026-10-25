@@ -6920,6 +6920,25 @@ async function clearApiKeyFromStorage(){
   try{ await storageSet(API_KEY_STORAGE, ''); }catch(e){}
 }
 
+// One-time re-check of questions saved before the blind solve existed. Items the solver contradicts are removed; a network or parse
+// failure leaves an item in place to be checked on a later load. Runs in the background, a few items per load.
+let _reverifyRunning = false;
+async function reverifyBankOnce(){
+  if(_reverifyRunning || !aiFeaturesAvailable || !DATA || !Array.isArray(DATA.generatedBank)) return;
+  const todo = DATA.generatedBank.filter(q => q && !q.blindVerified && !q.blindRejected).slice(0, 30);
+  if(!todo.length) return;
+  _reverifyRunning = true;
+  try{
+    for(const q of todo){
+      const r = await blindSolveResult(q);
+      if(r === 'ok') q.blindVerified = true;
+      else if(r === 'mismatch') q.blindRejected = true;
+    }
+    DATA.generatedBank = DATA.generatedBank.filter(q => !(q && q.blindRejected));
+    persist();
+  }catch(e){ /* try again next load */ }
+  finally { _reverifyRunning = false; }
+}
 async function checkAIAvailability(){
   try{window._vpMark&&window._vpMark('ai-check')}catch(_){}
   if(hasArtifactStorage()){
@@ -6943,6 +6962,7 @@ async function checkAIAvailability(){
   if(hasArtifactStorage()){ try{ geminiKey = await loadGeminiKey(); }catch(e){} }
   renderApiKeyUI();
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
+  setTimeout(() => { try{ reverifyBankOnce(); }catch(e){} }, 6000);
   if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
   if(aiMode === 'direct' && geminiKey) setTimeout(() => { testGeminiConnection().catch(() => {}); }, 4000);
 }
@@ -20046,15 +20066,17 @@ function dedupeGenerated(freshItems, existingItems, textOf){
 
 // Blind check: a separate solve of the question, shown without its key or explanations. An item is kept only when the solver lands on the keyed letter,
 // so a wrong key can't reach the bank even when its own arithmetic looks consistent. If the check can't run, the item is not kept.
-async function blindSolveOk(q){
+async function blindSolveResult(q){
   try{
-    if(!q || !Array.isArray(q.choices) || q.choices.length !== 4) return false;
+    if(!q || !Array.isArray(q.choices) || q.choices.length !== 4) return 'mismatch';
     const lines = q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join('\n');
     const raw = await anthropicMessagesRequest({ messages: [{ role: 'user', content: 'Solve this CFP exam multiple-choice question. Use only the figures given and work it out carefully before choosing. Reply with ONLY the letter of the correct choice.\n\n' + (q.scenario ? 'Client scenario: ' + q.scenario + '\n\n' : '') + q.q + '\n' + lines }], maxTokens: 400 });
     const m = String(raw || '').trim().match(/^\W*([ABCD])\b/i);
-    return !!m && 'ABCD'.indexOf(m[1].toUpperCase()) === q.correct;
-  }catch(e){ return false; }
+    if(!m) return 'error';
+    return 'ABCD'.indexOf(m[1].toUpperCase()) === q.correct ? 'ok' : 'mismatch';
+  }catch(e){ return 'error'; }
 }
+async function blindSolveOk(q){ return (await blindSolveResult(q)) === 'ok'; }
 async function attemptGeneration(keys, hardMode){
   const questionCalls = keys.map(k=>{
     const meta = DOMAINS.find(d=>d.key===k);
@@ -20075,7 +20097,7 @@ async function attemptGeneration(keys, hardMode){
   let fresh = [];
   questionResults.forEach((raw,i)=>{ fresh = fresh.concat(safeParseQuestions(raw, keys[i], hardMode ? 3 : null)); });
   const rawQCount = fresh.length;
-  { const checks = await Promise.all(fresh.map(q => blindSolveOk(q))); fresh = fresh.filter((q, i) => checks[i]); }
+  { const checks = await Promise.all(fresh.map(q => blindSolveOk(q))); fresh = fresh.filter((q, i) => checks[i]); fresh.forEach(q => { q.blindVerified = true; }); }
   fresh = dedupeGenerated(fresh, allQuestions(), q => q.q);
   fresh = dropSameFactGenerated(fresh);
   const droppedQ = rawQCount - fresh.length;
@@ -25090,7 +25112,7 @@ Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "c
   if(!(await blindSolveOk(made))) return 'Not written: a separate solve of the question did not reach the keyed answer. Offer a bank question instead.';
   if(allQuestions().some(b => factSimilarity(b, made) >= 0.8)) return 'Not written: the question that came back was nearly identical to one already in the bank. Offer a bank question instead.';
   made.id = 'tq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  made.tutorMade = true; made.ideaNote = idea;
+  made.tutorMade = true; made.ideaNote = idea; made.blindVerified = true;
   DATA.generatedBank.push(made);
   const mine = DATA.generatedBank.filter(x => x.tutorMade);
   if(mine.length > 60){ const drop = new Set(mine.slice(0, mine.length - 60).map(x => x.id)); DATA.generatedBank = DATA.generatedBank.filter(x => !drop.has(x.id)); }
@@ -31905,7 +31927,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.783';
+const BUILD_ID = '2026-10-25.784';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
