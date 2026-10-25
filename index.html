@@ -31910,9 +31910,11 @@ function tutorCoachOpening(stats){
   const when = days === null || days < 0 ? '' : days === 0 ? 'Exam day is today. ' : days + (days === 1 ? ' day' : ' days') + ' to go. ';
   let ns = null; try{ ns = computeNextStep(stats); }catch(e){}
   const firstLine = t => String(t || '').split(/(?<=\.)\s/)[0].replace(/[.\s]+$/, '');
-  const next = ns && ns.title ? 'Next move: ' + firstLine(ns.title) + (ns.why ? ' \u2014 ' + firstLine(ns.why).replace(/^./, c => c.toLowerCase()) : '') + '.' : '';
+  // The board shows the plan and the first chip starts its first step, so the opening points there instead of repeating it.
+  const nt = ns && ns.title ? firstLine(ns.title) : '';
+  const next = nt ? (/^today/i.test(nt) ? 'Start on the board with ' + nt.charAt(0).toLowerCase() + nt.slice(1) + '.' : 'Start with the first step on the board: ' + nt + '.') : '';
   if(!stats.totalAnswered){
-    return "I'm your CFP study tutor. " + when + "Answer a few practice questions and I'll show you exactly where to focus." + (next ? ' ' + next : '');
+    return "I'm your CFP study tutor. " + when + "Answer a few practice questions and I'll show you exactly where to focus. " + next;
   }
   let weak = '';
   try{ const w = weakestDrillTarget(stats); if(w && w.name) weak = 'Your weakest area is ' + w.name + (w.acc !== null ? ' at ' + w.acc + '%' : '') + '. '; }catch(e){}
@@ -32118,7 +32120,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.823';
+const BUILD_ID = '2026-10-25.824';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
