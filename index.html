@@ -10996,7 +10996,8 @@ function buildStudyPlanCore(minutes){
       const w = weakestDrillTarget(stats);
       if(!w || answered < 10 || !w.attempted || (w.acc !== null && w.acc >= 80)) return null;
       if(wk && wk.key === w.key) return null; // the weak-topic drill already works this domain today
-      return { id:'wkdrill', title:`Drill your weakest area: ${w.name}`, minutes:12, manual:true,
+      return { id:'wkdrill', title:`Drill your weakest area: ${w.name}`, minutes:12, manual:true, forced:true, // forced: a short day still keeps it, since it is the highest-value step
+
         why:`${w.name} is your lowest-scoring domain (about ${w.acc}% expected). Ten focused questions there move readiness more than another pass through the areas you already know.`,
         run: () => startWeakestDrill() };
     },
@@ -32070,7 +32071,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.800';
+const BUILD_ID = '2026-10-25.801';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
