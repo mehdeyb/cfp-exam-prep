@@ -19514,10 +19514,25 @@ function appAuditMaterial(){
     const byDom = {}; qs.forEach(q => { byDom[q.domain] = (byDom[q.domain] || 0) + 1; });
     const absWrong = qs.filter(q => q.choices.some((c, i) => i !== q.correct && /\b(always|never|only|must|cannot)\b/i.test(c))).length;
     const summary = `BANK SUMMARY: ${qs.length} questions (${Object.keys(byDom).map(d => d + ' ' + byDom[d]).join(', ')}); ${fcs.length} flashcards; ${absWrong} questions have an absolute word (always/never/only/must/cannot) in a wrong choice.`;
-    const qLines = pick(qs, 40).map((q, i) => `Q${i + 1} [${q.domain}]${q.scenario ? ' (with scenario)' : ''}: ${q.q}\n  Choices: ${q.choices.map((c, k) => 'ABCD'[k] + ') ' + c).join(' | ')}\n  Keyed answer: ${'ABCD'[q.correct]}`).join('\n');
-    const fLines = pick(fcs, 40).map(c => `- [${c.domain}] ${c.term}: ${c.def}`).join('\n');
-    return summary + '\n\nSAMPLE QUESTIONS (random, answers keyed by the app):\n' + qLines + '\n\nSAMPLE FLASHCARDS:\n' + fLines;
+    const qLines = pick(qs, 40).map(q => `[${q.id}] [${q.domain}]${q.scenario ? ' (with scenario)' : ''} ${q.q}\n  Choices: ${q.choices.map((c, k) => 'ABCD'[k] + ') ' + c).join(' | ')}\n  Keyed answer: ${'ABCD'[q.correct]}`).join('\n');
+    const fLines = pick(fcs, 40).map(c => `[${c.id}] [${c.domain}] ${c.term}: ${c.def}`).join('\n');
+    const facts = (typeof KEY_NUMBERS !== 'undefined' ? KEY_NUMBERS : []).map(k => `- ${k.label}: ${k.value}`).join('\n');
+    return summary + '\n\nREFERENCE FIGURES THE APP USES (treat these as correct unless you are certain they are wrong; if you think one is wrong, say so with the reason):\n' + facts +
+      '\n\nSAMPLE QUESTIONS (random; the id in brackets is what to cite):\n' + qLines + '\n\nSAMPLE FLASHCARDS (cite the id in brackets):\n' + fLines;
   }catch(e){ return 'Material could not be read for this audit.'; }
+}
+// Turns the reviewer's JSON into short lines the student can act on or paste back; anything that isn't JSON is shown as it came.
+function formatAuditReply(reply, content){
+  const raw = String(reply || '').trim();
+  if(!raw) return 'No reply came back. Try again.';
+  let items = null;
+  try{ const m = raw.match(/\[[\s\S]*\]/); items = m ? JSON.parse(m[0]) : null; }catch(e){ items = null; }
+  if(!Array.isArray(items)) return raw;
+  if(!items.length) return 'No problems found in this sample.';
+  return items.map((it, i) => {
+    if(content) return `${i + 1}. [${it.id || '?'}] ${it.kind || 'issue'} (${it.confidence || '?'} confidence): ${it.problem || ''}${it.fix ? '\n   Fix: ' + it.fix : ''}`;
+    return `${i + 1}. ${it.area || 'App'} (${it.effort || '?'} effort, ${it.confidence || '?'} confidence): ${it.problem || ''}${it.fix ? '\n   Fix: ' + it.fix : ''}`;
+  }).join('\n');
 }
 async function runAppAudit(mode){
   const content = mode === 'content';
@@ -19530,11 +19545,11 @@ async function runAppAudit(mode){
     ? 'You are an exam-content reviewer for a CFP study app. Check questions for accuracy, answer-key errors, unclear wording and give-away cues, and flashcards for accuracy and usefulness.'
     : 'You are a product and UX reviewer for a study app.';
   const brief = content
-    ? 'The Blueprint is a CFP exam study app. Review the sampled questions and flashcards below. Report: (1) any question whose keyed answer looks wrong, with the reason; (2) questions that are unclear or have a give-away cue (the correct choice is the only long, absolute or most specific one); (3) flashcards that are inaccurate or unhelpful; (4) the five most valuable content fixes, ranked. Be specific, under 450 words, no preamble. Build: ' + BUILD_ID + '\n\n' + appAuditMaterial()
-    : APP_AUDIT_BRIEF + '\n\nBuild: ' + BUILD_ID;
+    ? 'The Blueprint is a CFP exam study app. Review the sampled questions and flashcards below. Only report a problem you are confident about. Do not guess. Return ONLY a JSON array (no other text) of up to 15 items, each: {"id": the bracketed id, "kind": "wrong_key" | "fact_error" | "unclear" | "giveaway" | "flashcard", "confidence": "high" | "medium", "problem": "one sentence", "fix": "the exact replacement wording or the answer letter"}. Check each keyed answer by working it out from the question itself. Give-away = the keyed answer is the only long, absolute or most specific choice. If nothing is wrong, return []. Build: ' + BUILD_ID + '\n\n' + appAuditMaterial()
+    : APP_AUDIT_BRIEF + '\n\nReturn ONLY a JSON array (no other text) of up to 12 items, each: {"area": the screen or feature, "problem": "one sentence, specific to what the description says", "fix": "the smallest change", "effort": "small" | "medium" | "large", "confidence": "high" | "medium"}. Skip anything already listed as a known issue. Build: ' + BUILD_ID;
   try{
     const reply = await geminiRequestOnce({ system, messages: [{ role: 'user', content: brief }], maxTokens: 2000, timeoutMs: 90000 });
-    out.textContent = String(reply || 'No reply came back. Try again.');
+    out.textContent = formatAuditReply(reply, content);
   }catch(e){
     out.textContent = "The audit could not run: " + (describeAiError(e) || 'try again in a moment') + '.';
   }finally{ btn.disabled = false; }
@@ -32037,7 +32052,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.796';
+const BUILD_ID = '2026-10-25.797';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
