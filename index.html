@@ -28769,6 +28769,14 @@ ${TUTOR_EVERGREEN_FIGURES.map(x => '  - ' + x).join('\n')}
 }
 
 const EXAM_PASS_FOCUS = ' EXAM FOCUS: everything you teach exists so this student passes the CFP exam on Nov 5. Teach it the way it is tested: say what the exam is really asking, the rule or number to remember, the trap wrong answers use, and how to spot the right choice fast. Skip trivia the exam would not ask. End each idea by tying it to how a question on it looks, and use only current rules and figures.';
+// Questions they keep getting wrong the same way (the same wrong answer picked twice or more, not yet re-tested correctly).
+function tutorStuckText(){
+  try{
+    const sp = stuckPoints(); if(!sp.open.length) return '';
+    return '\nQUESTIONS THEY KEEP MISSING (the same wrong answer picked at least twice and not yet got right on a re-test; a sharper lever than a single miss, so name the misconception behind them when it fits): ' +
+      sp.open.slice(0, 4).map((q, i) => (i + 1) + '. "' + stageClip(q.q || '', 140) + '"').join(' ');
+  }catch(e){ return ''; }
+}
 // What the student is looking at right now in the flashcard deck or a practice question, so the tutor can answer about exactly that item.
 function tutorItemText(){
   try{
@@ -28778,7 +28786,8 @@ function tutorItemText(){
       const c = fcQueue[Math.min(fcIndex, fcQueue.length - 1)];
       if(c){
         const flipped = typeof fcFlipped !== 'undefined' && fcFlipped;
-        parts.push('a flashcard on screen: "' + stageClip(String(c.term || ''), 80) + '"' + (flipped ? ', already flipped to show its definition: "' + stageClip(String(c.def || ''), 260) + '"' : ', not flipped yet (do not give the definition unless they ask)'));
+        let ex = ''; try{ const fe = fcExplainCache[c.id]; if(fe && fe.text) ex = ' The worked example they were shown for this card: "' + stageClip(fe.text, 600) + '"'; }catch(e){}
+        parts.push('a flashcard on screen: "' + stageClip(String(c.term || ''), 80) + '"' + (flipped ? ', already flipped to show its definition: "' + stageClip(String(c.def || ''), 260) + '"' : ', not flipped yet (do not give the definition unless they ask)') + ex);
       }
     }
     if(session && session.queue && session.queue[session.index]){
@@ -29046,6 +29055,7 @@ ${(()=>{ try{ const f = diagnosisFindings().filter(x => x.kind !== 'good').slice
 ${tutorFiguresText()}
 ${(() => { try{ return tutorScreenText(); }catch(e){ return ''; } })()}
 ${tutorItemText()}
+${tutorStuckText()}
 - You only know what's stated above about the student's in-app progress. You don't know their name, location, or anything else about them — never claim otherwise.`;
 }
 
@@ -31828,7 +31838,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.777';
+const BUILD_ID = '2026-10-25.778';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
