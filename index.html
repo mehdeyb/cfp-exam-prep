@@ -2017,6 +2017,13 @@
   #pstBody .pst-c:has(.pst-pick):hover{border-color:var(--gold);}
   #tutorCard.tt-board.tt-qboard #pstBody{max-height:min(42vh, 380px) !important;overflow-y:auto !important;}
   #tutorCard.tt-qboard #tutorChips, #tutorCard.tt-qboard #ttActions{display:none !important;}
+  /* Phone: the suggestions are one row you can swipe, and the conversation keeps its full height instead of being cut off under the board. */
+  @media (max-width:640px){
+    #tutorCard #tutorChips, #tutorCard #ttActions, #tutorCard #ttLiveChips{flex:none !important;flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+    #tutorCard #tutorChips::-webkit-scrollbar, #tutorCard #ttActions::-webkit-scrollbar, #tutorCard #ttLiveChips::-webkit-scrollbar{display:none;}
+    #tutorCard #tutorChips > *, #tutorCard #ttActions > *, #tutorCard #ttLiveChips > *{flex:none !important;}
+    #tutorCard #tutorThread{flex:none !important;max-height:none !important;overflow:visible !important;}
+  }
   #tutorCard.tt-board #podcastPlayer{overflow:visible !important;flex:none !important;}
   #tutorCard.tt-board #pstBody{flex:none !important;}
   /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
@@ -32224,7 +32231,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.828';
+const BUILD_ID = '2026-10-25.829';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
