@@ -2072,7 +2072,7 @@
   /* Real-data readiness block on wide screens: two slim rows instead of five. */
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto auto auto auto 1fr;column-gap:14px;row-gap:2px;align-items:baseline;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:0 0 auto;min-width:0;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:1 1 0;min-width:0;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .stat-strip{flex:0 0 auto;width:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{min-width:0;overflow-wrap:anywhere;white-space:normal;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{white-space:nowrap;}
@@ -3156,7 +3156,6 @@
   }
   /* Readiness block: long estimate/trend lines wrap inside their column instead of spilling past it */
   .score-ring-block{max-width:200px;}
-  html[data-lay="regular"] body #tab-study .score-row .score-ring-block{max-width:none;flex:0 0 auto;width:max-content;}  /* the readiness text must not be clipped or overlapped by the countdown card */
   .score-est{max-width:100%;text-wrap:balance;overflow-wrap:anywhere;}
   .score-trend{white-space:normal;max-width:100%;}
   .score-band{max-width:100%;text-wrap:balance;}
@@ -31981,7 +31980,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.787';
+const BUILD_ID = '2026-10-25.785';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
