@@ -2072,7 +2072,7 @@
   /* Real-data readiness block on wide screens: two slim rows instead of five. */
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto auto auto auto 1fr;column-gap:14px;row-gap:2px;align-items:baseline;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:1 1 0;min-width:0;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{flex:0 0 auto;min-width:max-content;grid-template-columns:auto auto minmax(0,1fr) auto auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .stat-strip{flex:0 0 auto;width:auto;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-est{min-width:0;overflow-wrap:anywhere;white-space:normal;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-why{white-space:nowrap;}
@@ -3156,6 +3156,7 @@
   }
   /* Readiness block: long estimate/trend lines wrap inside their column instead of spilling past it */
   .score-ring-block{max-width:200px;}
+  html[data-lay="regular"] body #tab-study .score-row .score-ring-block{max-width:none;flex:0 0 auto;width:max-content;}  /* the readiness text must never be squeezed or overlapped by the countdown card */
   .score-est{max-width:100%;text-wrap:balance;overflow-wrap:anywhere;}
   .score-trend{white-space:normal;max-width:100%;}
   .score-band{max-width:100%;text-wrap:balance;}
@@ -8512,7 +8513,7 @@ let _afMemo = null;
 function allFlashcards(){
   const g = DATA.generatedFlashcards, m = _afMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
-  const out = FLASHCARDS.concat(g);
+  const out = FLASHCARDS.concat(g || []).filter(c => c && c.id);  // a damaged saved card must not break every screen that reads the deck
   _afMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
 }
@@ -17228,7 +17229,7 @@ function fcContext(){
   let backlog = 0;
   cards.forEach(c => { const st = getSpacedStat(DATA.flashcardStats, c.id); if(st.seen > 0 && isDue(st)) backlog++; });
   // How many cards of each domain were rated in the last 36 hours, so a domain you just worked on gives way a little to the others.
-  const recent = {}, cutoff = Date.now() - 36*3600000, byId = new Map(cards.map(c => [c.id, c]));
+  const recent = {}, cutoff = Date.now() - 36*3600000, byId = (() => { const m = new Map(); cards.forEach(c => { if(c && c.id) m.set(c.id, c); }); return m; })();
   Object.keys(DATA.flashcardStats||{}).forEach(id => { const st = DATA.flashcardStats[id], c = byId.get(id); if(c && st && st.lastSeenAt > cutoff) recent[c.domain] = (recent[c.domain]||0) + 1; });
   _fcCtx = { key, gapItems, weak, backlog, recent, cardMemo:{} };
   return _fcCtx;
@@ -31980,7 +31981,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.788';
+const BUILD_ID = '2026-10-25.790';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
