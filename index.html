@@ -23583,7 +23583,11 @@ function loadTvmProblem(){
   document.getElementById('tvmScenario').textContent = tvmCurrent.scenario;
   document.getElementById('tvmLevelBadge').textContent = (tvmCurrent.cf ? CF_LEVEL_NAMES : TVM_LEVEL_NAMES)[tvmCurrent.difficulty];
   tvmApplyModeUI();
-  document.getElementById('tvmFeedback').textContent = '';
+  // Say up front what P/YR this problem needs, so the first rate entry is not a surprise.
+  { let req = 1; try{ req = tvmReqPpy(); }catch(e){}
+    const fbq = document.getElementById('tvmFeedback');
+    fbq.textContent = req !== tvmPpy ? `Before you type: set P/YR to ${req} (type ${req}, then Shift and PMT). This problem is ${tvmPpyWord(req)}.` : '';
+    fbq.className = 'tvm-feedback'; }
   document.getElementById('tvmFeedback').className = 'tvm-feedback';
   document.getElementById('tvmSolution').style.display = 'none';
   document.getElementById('tvmSolution').innerHTML = '';
@@ -24004,7 +24008,15 @@ function tvmCalculateAndShow(){
     }
   }catch(e){}
   const feedback = document.getElementById('tvmFeedback');
-  feedback.textContent = 'Solved. The worked solution is below.';
+  // The calculator solved with the P/YR it has, which is not the one this problem needs: the number is not the answer yet.
+  let reqNow = tvmPpy; try{ reqNow = tvmReqPpy(); }catch(e){}
+  if(reqNow !== tvmPpy){
+    feedback.textContent = `That answer is for P/YR ${tvmPpy}, but this problem is ${tvmPpyWord(reqNow)}. Set P/YR to ${reqNow} (type ${reqNow}, then Shift and PMT), then press the solve key again.`;
+    feedback.className = 'tvm-feedback tvm-feedback-err';
+  } else {
+    feedback.textContent = 'Solved. The worked solution is below.';
+    feedback.className = 'tvm-feedback tvm-feedback-ok';
+  }
   feedback.className = 'tvm-feedback';
 
   if(tvmMultiStageActive && tvmMultiStageIndex < tvmMsStages(tvmMultiStageProblem).length - 1){
@@ -32541,7 +32553,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.845';
+const BUILD_ID = '2026-10-25.846';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
