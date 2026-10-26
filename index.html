@@ -3946,6 +3946,8 @@
   }
   /* Tutor suggestion pills removed: the composer is the only way to ask. */
   #tutorCard #ttActions, #tutorCard #tutorChips, #tutorCard #ttLiveChips, #tutorCard .tt-actions, #tutorCard .tutor-suggest{display:none !important;}
+  .tt-board-btns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;}
+  .tt-board-btn{min-height:38px;}
   /* iPad landscape: tighter lesson controls so the board gets the room. */
   @media (orientation:landscape) and (min-width:900px){
     #screenHost .scr-up{display:none !important;}
@@ -14858,6 +14860,7 @@ function stageDraw(soft){
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   stageHosts().forEach(h => {
     const node = stageSlideNode(sl); if(!node) return;
+    if(sl.buttons && sl.buttons.length) node.appendChild(stageTutorButtons(sl));
     let ghost = null;
     if(!same && !calm){ const old = h.querySelector(':scope > .pst-slide'); if(old && old.children.length){ ghost = old.cloneNode(true); ghost.classList.add('pst-ghost'); ghost.dataset.dir = back ? 'b' : 'f'; } }
     h.innerHTML = ''; h.appendChild(node);
@@ -14876,6 +14879,7 @@ function stageDraw(soft){
   const ct = document.getElementById('scrCount'); if(ct) ct.textContent = stageState.hist.length > 1 ? (stageState.hi + 1) + ' of ' + stageState.hist.length : '';
   stageDots();
   if(!same){ try{ ttFaceNod(); }catch(e){} }
+  try{ stageChips(); }catch(e){}
   try{ studyFitScreen(); }catch(e){}
   try{ stageUpNext(); }catch(e){}
 }
@@ -14888,8 +14892,19 @@ function stageSlideSummary(sl){
   if(sl.kind === 'recap') return 'A recap of: ' + (sl.items || []).map(x => x.t).join('; ');
   return [sl.title, sl.big, sl.text, (sl.steps || []).map(stageCalcStepText).join('; ')].filter(Boolean).join(' - ');
 }
+function stageTutorButtons(sl){
+  const row = document.createElement('div'); row.className = 'tt-board-btns';
+  sl.buttons.forEach((b, i) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'btn ghost tt-board-btn'; x.textContent = b.label; x.onclick = () => stageTutorSay(i); row.appendChild(x); });
+  return row;
+}
+function stageTutorSay(i){
+  const sl = stageState.cur, b = sl && sl.buttons && sl.buttons[i]; if(!b) return;
+  if(typeof tutorBusy !== 'undefined' && tutorBusy) return;
+  try{ sendTutorMessage(b.say || b.label); }catch(e){}
+}
 function stageChips(){
   const el = document.getElementById('scrChips'); if(!el) return;
+  if(stageState.cur && stageState.cur.buttons && stageState.cur.buttons.length){ el.innerHTML = ''; return; }
   const k = stageState.cur && stageState.cur.kind;
   const c = k === 'question' ? ['Why is my pick wrong?', 'Give me a memory trick', 'Quiz me on this idea'] : k === 'calc' ? ['What should the display show?', 'Why this order?', 'What if payments are at the start?'] : k === 'formula' ? ['Work an example', 'When do I use this?', 'Common mistakes'] : ['Explain simply', 'Why does this matter on the exam?', 'Quiz me on this'];
   el.innerHTML = c.map(x => `<button type="button" onclick="stageAsk(this.textContent)">${stageEsc(x)}</button>`).join('');
@@ -15125,6 +15140,7 @@ function stageSlideFromTool(a){
   }
   else if(k === 'idea'){ if(!a.text) return { error:'an idea slide needs text.' }; sl.title = stageClip(a.title, 40); sl.text = stageClip(a.text, 260); }
   else return { error:'kind must be one of term, formula, number, compare, steps, bar, line, pie, table, chart, calc, question, check, idea.' };
+  if(Array.isArray(a.buttons)) sl.buttons = a.buttons.slice(0, 4).map(b => ({ label:stageClip(b && b.label, 40), say:stageClip((b && (b.say || b.label)) || '', 300) })).filter(b => b.label);
   return { slide:sl };
 }
 function stageInlineVisible(){
@@ -31132,7 +31148,8 @@ const TUTOR_TOOLS = [
       columns: { type: 'array', items: { type: 'string' } }, rows: { type: 'array', items: { type: 'array', items: { type: 'string' } } },
       steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string', description: 'For kind calc: the instruction with every key in [square brackets], for example "Orange Shift, then [C ALL]" or "Type 360, press [N]".' }, detail: { type: 'string' } }, required: ['title'] }, description: 'steps/calc: the ordered steps. For calc the student sees the HP 10bII+ keypad with each step\'s keys lit and numbered.' },
       chart: { type: 'object', description: "chart: the same input as show_chart (kind growth, amortization or bond_price plus its numbers)." },
-      note: { type: 'string', description: 'One short line under the visual. Optional.' }
+      note: { type: 'string', description: 'One short line under the visual. Optional.' },
+      buttons: { type: 'array', maxItems: 4, items: { type: 'object', properties: { label: { type: 'string', description: 'Button text, two to four words.' }, say: { type: 'string', description: 'What the student says when they tap it, written as their words, for example "Quiz me on this idea". Defaults to the label.' } }, required: ['label'] }, description: 'Optional tappable buttons under the visual, up to four. Use them only when a click really helps the next step (a quiz, the next idea, a worked example). Tapping sends the say text to you as the student.' }
     }, required: ['kind'] },
   },
   {
@@ -32714,7 +32731,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.925';
+const BUILD_ID = '2026-10-26.926';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
