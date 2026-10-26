@@ -4126,6 +4126,14 @@
     #tutorCard.tt-board .tutor-input-row .tutor-input{flex:1 1 auto !important;width:auto !important;min-width:0 !important;}
     #tutorCard.tt-board .tutor-input-row #tutorSendBtn{flex:none !important;width:auto !important;}
   }
+
+  /* Tutor board: stretch the board down to the pinned question bar, using the real screen height. */
+  @media (min-width:641px){
+    #tutorCard.tt-board #podcastStage{min-height:max(260px, calc(100vh - 300px)) !important;min-height:max(260px, calc(100dvh - 300px)) !important;}
+    #tutorCard.tt-board #pstBody{min-height:max(214px, calc(100vh - 346px)) !important;min-height:max(214px, calc(100dvh - 346px)) !important;}
+    #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #podcastStage{min-height:max(260px, calc(100vh - 360px)) !important;min-height:max(260px, calc(100dvh - 360px)) !important;}
+    #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #pstBody{min-height:max(214px, calc(100vh - 406px)) !important;min-height:max(214px, calc(100dvh - 406px)) !important;}
+  }
 </style>
 </head>
 <body>
@@ -33044,7 +33052,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.974';
+const BUILD_ID = '2026-10-26.975';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
