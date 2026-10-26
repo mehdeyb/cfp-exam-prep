@@ -25643,7 +25643,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   if(session && session.timerHandle) clearInterval(session.timerHandle);
   const statsAtStart = computeStats();
   session = {
-    queue, mode, index:0, correct:0,
+    queue, mode, index:0, correct:0, plannedLen: queue.length,
     domainTally: {}, answerLog: [],
     sectionBreakIndex: (mode==='fullexam') ? FULL_EXAM_SECTION_SIZE : null,
     onSectionBreak: false,
@@ -26755,6 +26755,8 @@ async function autoTake(q, isCorrect){
   }
   if(!made) return;
   session.queue.splice(session.index + 1, 0, made);
+  // A take replaces a planned question at the end rather than extending the step, so the step still ends at its planned count.
+  if(session.plannedLen && session.queue.length > session.plannedLen){ const k = session.queue.length - 1; if(k > session.index + 1) session.queue.splice(k, 1); }
   session.autoTakes++; session.lastAutoIndex = session.index;
   try{ saveInProgressSession(); }catch(e){}
   const row = document.getElementById('takeRow');
@@ -32497,7 +32499,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.839';
+const BUILD_ID = '2026-10-25.840';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
