@@ -4057,6 +4057,11 @@
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #tutorCard .tt-face-cap{background:#1E2A3D;color:#ECE9DF;} }
   #tutorCard.tt-board #tutorThread{display:none !important;}
   #tutorCard.tt-board .tt-face-cap, body.os-one #tutorCard.tt-board .tt-face-cap{display:block !important;}
+
+  #tutorCard #ttFaceCap .tt-cap-w{transition:background .12s ease,color .12s ease;border-radius:4px;}
+  #tutorCard #ttFaceCap .tt-cap-past{opacity:.55;}
+  #tutorCard #ttFaceCap .tt-cap-now{background:#E3B73F;color:#0F1A2C;opacity:1;padding:0 2px;margin:0 -2px;}
+  :root[data-theme="dark"] #tutorCard #ttFaceCap .tt-cap-now{background:#C9A22E;color:#0F1A2C;}
 </style>
 </head>
 <body>
@@ -13622,7 +13627,7 @@ const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, 
 function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
 // Talking means voice is actually coming out: a paused lesson keeps speechSynthesis.speaking true, so pause is checked too.
 // Each spoken word (when the voice reports word boundaries) opens the mouth briefly, so it moves with the words.
-function ttFaceWordHook(u){ try{ u.onboundary = (e) => { if(!e || e.name === 'sentence') return; ttFace.wordAt = Date.now(); }; }catch(e){} return u; }
+function ttFaceWordHook(u){ try{ u.onboundary = (e) => { if(!e || e.name === 'sentence') return; ttFace.wordAt = Date.now(); if(ttCap.active && e.name === 'word'){ ttCap.n++; ttCap.lastEvt = Date.now(); } }; }catch(e){} return u; }
 function ttFaceTalking(){ try{ const s = window.speechSynthesis; return !!(s && s.speaking && !s.paused); }catch(e){ return false; } }
 function ttFaceDraw(){ ['ttFace','scrFace'].forEach(id => { const cv = document.getElementById(id); if(cv && cv.getContext) ttFaceDrawOn(cv); }); }
 function ttFaceDrawOn(cv){
@@ -13699,7 +13704,8 @@ function ttSyncFaceCap(){
   const last = bots.length ? bots[bots.length - 1] : null;
   const txt = last ? (last.textContent || '').replace(/\s+/g, ' ').trim() : '';
   const want = txt || 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
-  if(cap.textContent !== want) cap.textContent = want;
+  if(ttCap.active) return;
+  ttCapRender(want);
 }
 function ttCapInit(){
   const th = document.getElementById('tutorThread'), card = document.getElementById('tutorCard'); if(!th || !card) return;
@@ -13708,6 +13714,40 @@ function ttCapInit(){
   try{ ttSyncFaceCap(); }catch(e){}
 }
 document.addEventListener('DOMContentLoaded', ttCapInit);
+// Reading aloud: the caption shows the words being said, with the current word lit and the ones before it dimmed.
+let ttCap = { src: '', n: -1, active: false, lastEvt: 0, t0: 0, rate: 1, timer: null };
+function ttCapRender(text){
+  const cap = document.getElementById('ttFaceCap'); if(!cap) return;
+  if(cap.dataset.src === text && cap.querySelector('span')) return;
+  cap.dataset.src = text; cap.textContent = '';
+  String(text || '').split(' ').forEach((w, i, arr) => { const sp = document.createElement('span'); sp.className = 'tt-cap-w'; sp.textContent = w; cap.appendChild(sp); if(i < arr.length - 1) cap.appendChild(document.createTextNode(' ')); });
+}
+function ttCapMark(i){
+  const cap = document.getElementById('ttFaceCap'); if(!cap) return;
+  const ws = cap.querySelectorAll('.tt-cap-w'); ws.forEach((sp, k) => { sp.classList.toggle('tt-cap-now', k === i); sp.classList.toggle('tt-cap-past', k < i); });
+  const cur = ws[i]; if(cur && cur.scrollIntoView && cap.scrollHeight > cap.clientHeight) { try{ cur.scrollIntoView({ block: 'nearest' }); }catch(e){} }
+}
+function ttCapBegin(text, rate){
+  ttCapRender(text); ttCap.active = true; ttCap.n = -1; ttCap.lastEvt = 0; ttCap.t0 = Date.now(); ttCap.rate = rate || 1;
+  if(!ttCap.timer) ttCap.timer = setInterval(ttCapTick, 90);
+  ttCapMark(0);
+}
+function ttCapEnd(){
+  ttCap.active = false; if(ttCap.timer){ clearInterval(ttCap.timer); ttCap.timer = null; }
+  const cap = document.getElementById('ttFaceCap'); if(cap) cap.querySelectorAll('.tt-cap-w').forEach(sp => sp.classList.remove('tt-cap-now', 'tt-cap-past'));
+  try{ ttSyncFaceCap(); }catch(e){}
+}
+function ttCapTick(){
+  if(!ttCap.active) return;
+  const now = Date.now(), perWord = 380 / (ttCap.rate || 1);
+  const speaking = (window.speechSynthesis && window.speechSynthesis.speaking) || (naturalSpeechState && naturalSpeechState.active);
+  if(!speaking && now - ttCap.t0 > 700){ ttCapEnd(); return; }
+  // Real word events drive the highlight; if the voice sends none for a moment, keep it moving on the estimated pace.
+  if(!ttCap.lastEvt){ ttCap.n = Math.max(ttCap.n, Math.floor((now - ttCap.t0) / perWord) - 1); }
+  else if(now - ttCap.lastEvt > 900){ const extra = Math.floor((now - ttCap.lastEvt - 900) / perWord); if(extra > 0){ ttCap.n += extra; ttCap.lastEvt += extra * perWord; } }
+  const total = document.querySelectorAll('#ttFaceCap .tt-cap-w').length;
+  if(total) ttCapMark(Math.max(0, Math.min(ttCap.n, total - 1)));
+}
 function ttFaceApply(){
   const row = document.getElementById('ttFaceRow'), btn = document.getElementById('ttFaceBtn');
   const cv = document.getElementById('ttFace'), cap = document.getElementById('ttFaceCap');
@@ -13717,7 +13757,7 @@ function ttFaceApply(){
   if(cv) cv.style.display = vis ? 'block' : 'none';
   const sc = document.getElementById('scrFace'), scVis = DATA.tutorFace !== 'off';
   if(sc) sc.style.display = scVis ? 'block' : 'none';
-  if(cap) cap.textContent = vis ? 'Your tutor. It talks along with what it says and reacts to your answers.' : 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
+  if(cap && !ttCap.active) cap.textContent = vis ? 'Your tutor. It talks along with what it says and reacts to your answers.' : 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
   try{ ttSyncFaceCap(); }catch(e){}
   if(btn){ btn.textContent = vis ? 'Hide face' : 'Show face'; btn.setAttribute('aria-pressed', vis ? 'true' : 'false'); btn.title = vis ? 'Hide the tutor face' : 'Show the tutor face'; }
   if(vis || scVis){ ttFaceStart(); ttFaceDraw(); } else ttFaceStop();
@@ -13742,6 +13782,7 @@ function ttSpeakReply(reply, btn){
     window._ttAskedMidLesson = false;
     try{ setTimeout(() => { tutorAddNext(null, [{ label:'Resume my lesson', run: () => ttStartLesson() }, 'Ask another question']); }, 50); }catch(e){}
   }
+  try{ ttCapBegin(t, 1); }catch(e){}
   try{ speakTextNow(t, btn || null); }catch(e){}
 }
 function ttAddListen(bubble, reply){
@@ -32914,7 +32955,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.959';
+const BUILD_ID = '2026-10-26.960';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
