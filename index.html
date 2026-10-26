@@ -20195,7 +20195,7 @@ function describeAiError(err){
   const status = err && err.status;
   if(err && err.provider === 'gemini'){
     if(err.code === 'NO_API_KEY') return 'no Gemini key is connected.';
-    if(/no longer available|update your code|retired/i.test(err.message || '')) return 'Google has retired the Gemini model this app was using. The app refreshes its list of models and retries once; if this message stays, the app needs an update (check the build in Settings).';
+    if(/no longer available|update your code|retired/i.test(err.message || '')) return 'Google has retired the Gemini model this app was using. The app refreshes its list of models and retries once; if this message stays, the app needs an update (check the build in Settings). Google said: "' + String(err.message || '').replace(/\s+/g, ' ').slice(0, 220) + '"';
     if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
     const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
     if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)) return status === 429 ? 'Gemini is rate-limiting this key — wait a bit and try again.' : "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
@@ -32622,7 +32622,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.875';
+const BUILD_ID = '2026-10-25.876';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
