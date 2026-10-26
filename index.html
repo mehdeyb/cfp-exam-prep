@@ -3536,7 +3536,8 @@
   .pt-actions{display:flex;flex-direction:column;align-items:center;flex:none;}
   /* Post-answer action buttons: one consistent grid so they never stack unevenly */
   .calc-steps-row,.simplify-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-  .calc-steps-row .btn.ghost,.simplify-row .btn.ghost{width:100%;min-height:44px;padding:9px 12px;font-size:13px;line-height:1.25;white-space:normal;text-align:center;justify-content:center;}
+  /* Two equal halves that never push into each other: the 150px floor from the flex rule would overflow a half-width cell. */
+  .calc-steps-row .btn.ghost,.simplify-row .btn.ghost{width:100%;min-width:0 !important;box-sizing:border-box;min-height:44px;padding:9px 12px;font-size:13px;line-height:1.25;white-space:normal;text-align:center;justify-content:center;}
   .calc-steps-row .btn.ghost:only-child,.simplify-row .btn.ghost:only-child{grid-column:1 / -1;}
   .calc-steps-row .btn.ghost[style*="display: none"],.simplify-row .btn.ghost[style*="display: none"]{display:none;}
   .q-card{overflow:visible;}
@@ -16332,9 +16333,18 @@ function escapeHtml(text){
 
 function highlightKeyTermsInText(text){
   if(!text) return '';
-  const escaped = escapeHtml(text);
+  // Match key terms against the plain text, then escape each piece. Matching against escaped HTML let a term
+  // land inside an entity such as &#39; and print it on screen as typed.
+  const raw = decodeGenEntities(String(text));
   const pattern = buildKeyTermPattern();
-  return escaped.replace(pattern, (match) => `<span class="key-term" role="button" tabindex="0" onclick="jumpToGlossaryTerm('${match.replace(/'/g,"\\'")}')">${match}</span>`);
+  let out = '', last = 0;
+  raw.replace(pattern, (match, _g, offset) => {
+    out += escapeHtml(raw.slice(last, offset))
+      + `<span class="key-term" role="button" tabindex="0" onclick="jumpToGlossaryTerm(${escapeHtml(JSON.stringify(match))})">${escapeHtml(match)}</span>`;
+    last = offset + match.length;
+    return match;
+  });
+  return out + escapeHtml(raw.slice(last));
 }
 
 let keyTermModalOwnsScrollLock = false;
@@ -28006,7 +28016,7 @@ function selectAnswerCore(i){
     btn.classList.add('locked');
     if(idx === q.correct){ btn.classList.add('correct'); if(icon) icon.innerHTML = CHECK_SVG; }
     if(idx === i && !isCorrect){ btn.classList.add('incorrect'); if(icon) icon.innerHTML = X_SVG; }
-    const text = (q.rationale && q.rationale[idx]) ? q.rationale[idx] : '';
+    const text = (q.rationale && q.rationale[idx]) ? decodeGenEntities(q.rationale[idx]) : '';
     const priorWrongPicks = (!q.isVariant && DATA.wrongChoiceHistory[q.id] && DATA.wrongChoiceHistory[q.id][idx]) || 0;
     const isRepeatMistake = (idx === i && !isCorrect && priorWrongPicks >= 1);
     note.innerHTML = '';
@@ -28556,7 +28566,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
     } else if(!q.isVariant){
       if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
-      DATA.simplifiedExplanations[q.id] = reply;
+      DATA.simplifiedExplanations[q.id] = decodeGenEntities(reply);
       persist();
     }
     if(!stillOnSameQuestion()) return;
@@ -33237,7 +33247,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9995';
+const BUILD_ID = '2026-10-26.9996';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
