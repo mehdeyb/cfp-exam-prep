@@ -11732,14 +11732,18 @@ function buildStudyPlanCore(minutes){
 
 // The faint reason under each step, cut to five words.
 function planWhyShort(t){
-  // A complete phrase of at most seven words: the reason's first clause, with a dangling end trimmed off.
-  let lead = String(t || '').replace(/\s+/g, ' ').trim().split(/[.;:(]|\s[\u2014-]\s/)[0].split(', ')[0].trim();
-  if(/^(first|second|third|fourth|fifth|sixth|seventh|eighth)\b.*\bweak topics?\b/i.test(lead)) return 'Another weak topic to work on';
-  let w = lead.split(' ').filter(Boolean).slice(0, 7);
-  const dangling = /^(of|the|a|an|to|and|or|on|in|for|with|by|at|from|your|that|this|it|is|are)$/i;
-  while(w.length > 1 && dangling.test(w[w.length - 1])) w.pop();
-  return w.join(' ');
+  // One whole sentence, or the whole first clause, of at most seven words. Anything longer shows nothing rather than a cut-off line.
+  let txt = String(t || '').replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+  if(/^(first|second|third|fourth|fifth|sixth|seventh|eighth)\b.*\bweak topics?\b/i.test(txt)) return 'Another weak topic to work on';
+  const dangling = /^(of|the|a|an|to|and|or|on|in|for|with|by|at|from|your|that|this|it|is|are|as|than|so|but|when|while|if|more)$/i;
+  const fits = c => { const w = c.split(' ').filter(Boolean); return w.length >= 2 && w.length <= 7 && !dangling.test(w[w.length - 1]); };
+  const sentence = txt.split(/(?<=[.!?])\s/)[0].replace(/[.!?]+$/, '').trim();
+  if(fits(sentence)) return sentence;
+  const clause = sentence.split(/\s*[,;:\u2014]\s*/)[0].trim();
+  return fits(clause) && clause !== sentence ? clause : '';
 }
+
+
 
 function planFmtMin(m){ m = Math.max(0, Math.round(m || 0)); return m >= 90 ? (Math.round(m / 6) / 10) + ' hrs' : m + ' min'; }
 // Daily study time lives in Settings now; the Today plan only reports time done, remaining and pace.
@@ -32851,7 +32855,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.952';
+const BUILD_ID = '2026-10-26.954';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
