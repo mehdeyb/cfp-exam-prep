@@ -4080,6 +4080,15 @@
   #screenHost #scrNow.scr-now-head mark{background:#E3B73F;color:#0F1A2C;}
   :root[data-theme="dark"] #screenHost #scrNow.scr-now-head{background:#1E2A3D;color:#ECE9DF;}
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #screenHost #scrNow.scr-now-head{background:#1E2A3D;color:#ECE9DF;} }
+
+  /* Full screen: a proper button on the tutor board, with an expand icon and the same hairline and gold as the rest of the controls. */
+  #tutorCard .pst-full-btn{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 14px 6px 11px;border:1px solid var(--hair);border-radius:999px;background:#ECE9DF;color:#0F1A2C;font:600 12.5px 'IBM Plex Sans',sans-serif;cursor:pointer;transition:background .2s,border-color .2s,transform .12s;}
+  #tutorCard .pst-full-btn:hover{border-color:var(--gold);}
+  :root[data-theme="dark"] #tutorCard .pst-full-btn{background:#1E2A3D;color:#ECE9DF;}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #tutorCard .pst-full-btn{background:#1E2A3D;color:#ECE9DF;} }
+  #tutorCard .pst-full-btn:active{transform:scale(.96);}
+  #tutorCard .pst-full-btn .pst-full-ico{width:15px;height:15px;color:var(--gold);flex:none;}
+  body.os-one #tutorCard .pst-full-btn{min-height:30px;padding:4px 12px 4px 9px;font-size:12px;}
 </style>
 </head>
 <body>
@@ -4942,7 +4951,7 @@
         <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
           <div class="pst-body" id="pstBody"></div>
           <div class="pst-now" id="pstNow" aria-hidden="true"></div>
-          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full" onclick="stageOpenFull()">Full screen</button></div>
+          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full pst-full-btn" onclick="stageOpenFull()" aria-label="Open the lesson full screen" title="Full screen"><svg class="pst-full-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Full screen</span></button></div>
         </div>
         <div class="podcast-player-panel">
           <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
@@ -32984,7 +32993,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.965';
+const BUILD_ID = '2026-10-26.966';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
