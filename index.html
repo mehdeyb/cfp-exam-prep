@@ -13626,6 +13626,12 @@ function ttFaceDrawOn(cv){
   const ey = 3 + gy, lx = 4 + gx, rx = 10 + gx;
   if(ttFace.blinkUntil > now){ put(ink, lx, ey + 1, 2, 1); put(ink, rx, ey + 1, 2, 1); }
   else { put(ink, lx, ey, 2, 2); put(ink, rx, ey, 2, 2); put(hi, lx, ey, 1, 1); put(hi, rx, ey, 1, 1); }
+  // Teacher's glasses: a thin navy frame around each eye with a bridge, so the tutor reads as the one who explains.
+  // When the tutor laughs or gets excited, the glasses slip down the nose by one row, a small running joke.
+  const fy = ey + ((ex === 'happy' || ex === 'excited') ? 1 : 0);
+  put(ink, 3, fy - 1, 4, 1); put(ink, 3, fy + 2, 4, 1); put(ink, 3, fy, 1, 2); put(ink, 6, fy, 1, 2);
+  put(ink, 9, fy - 1, 4, 1); put(ink, 9, fy + 2, 4, 1); put(ink, 9, fy, 1, 2); put(ink, 12, fy, 1, 2);
+  put(ink, 7, fy, 2, 1);
   // Worried brows slope down toward the middle.
   if(ex === 'concerned'){ put(ink, 4, ey - 2, 1, 1); put(ink, 5, ey - 1, 1, 1); put(ink, 10, ey - 1, 1, 1); put(ink, 11, ey - 2, 1, 1); }
   // Sparkle beside the head on happy or excited moments.
@@ -32872,7 +32878,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.956';
+const BUILD_ID = '2026-10-26.957';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
