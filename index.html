@@ -4140,6 +4140,12 @@
   #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle{width:auto;border-radius:999px;padding:0 12px;height:30px;}
   #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle::after{content:'Ask a question';font:600 12px 'IBM Plex Sans',sans-serif;margin-left:6px;}
   #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle svg{transform:rotate(180deg);}
+
+  /* Full screen on the tutor board: just the symbol, tucked in the top-right corner. */
+  #tutorCard.tt-board #podcastStage{position:relative;}
+  #tutorCard.tt-board #podcastStage .pst-bar{position:absolute !important;top:10px;right:10px;margin:0 !important;padding:0 !important;z-index:6;width:auto;}
+  #tutorCard .pst-full-btn{width:34px;height:34px;min-height:34px;padding:0;justify-content:center;gap:0;border-radius:50%;}
+  body.os-one #tutorCard .pst-full-btn{width:30px;height:30px;min-height:30px;padding:0;}
 </style>
 </head>
 <body>
@@ -5002,7 +5008,7 @@
         <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
           <div class="pst-body" id="pstBody"></div>
           <div class="pst-now" id="pstNow" aria-hidden="true"></div>
-          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full pst-full-btn" onclick="stageOpenFull()" aria-label="Open the lesson full screen" title="Full screen"><svg class="pst-full-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Full screen</span></button></div>
+          <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full pst-full-btn" onclick="stageOpenFull()" aria-label="Open the lesson full screen" title="Full screen"><svg class="pst-full-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
         </div>
         <div class="podcast-player-panel">
           <div class="pp-cap" id="podcastCaption" aria-live="off"></div>
@@ -33092,7 +33098,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.981';
+const BUILD_ID = '2026-10-26.982';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
