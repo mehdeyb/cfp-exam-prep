@@ -4120,6 +4120,12 @@
   #tutorCard.tt-board .podcast-player-panel .podcast-player-controls{grid-column:1;grid-row:1;display:flex;align-items:center;gap:6px;margin:0;}
   /* The board has one play/pause control (top right of the lesson). Stop does the same job, so it is hidden here. */
   #tutorCard.tt-board #podcastStopBtn{display:none !important;}
+  /* Compact player on the board: smaller skip buttons, a slimmer scrubber and speed control. */
+  #tutorCard.tt-board .podcast-icon-btn-skip{width:32px;height:32px;}
+  #tutorCard.tt-board .podcast-icon-btn-skip svg{width:14px;height:14px;}
+  #tutorCard.tt-board .podcast-player-controls{gap:4px;}
+  #tutorCard.tt-board .pp-prog input[type=range]{height:22px;}
+  #tutorCard.tt-board .podcast-speed-select{min-height:30px;padding:2px 22px 2px 8px;font-size:12px;}
   #tutorCard.tt-board .podcast-player-panel .podcast-player-secondary-row{grid-column:3;grid-row:1;display:flex;gap:6px;margin:0;}
   #tutorCard.tt-board .podcast-player-panel .podcast-player-secondary-row select{min-height:30px;}
   #tutorCard.tt-board .podcast-player-panel > .podcast-status{grid-column:1 / -1;grid-row:2;font-size:12px;min-height:0;margin:0;}
@@ -33156,7 +33162,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.992';
+const BUILD_ID = '2026-10-26.993';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
