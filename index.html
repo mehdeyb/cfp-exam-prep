@@ -19909,7 +19909,7 @@ async function geminiPickBest(force){
 }
 // ---- Gemini: a second AI provider, used when Claude is unreachable or when only a Gemini key is connected ----
 const GEMINI_KEY_STORAGE = 'cfp-blueprint-gemini-key';
-const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash'];
+const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
 try{ const _gm = localStorage.getItem('cfp-gemini-model'); if(_gm){ const i = GEMINI_MODELS.indexOf(_gm); if(i > 0) GEMINI_MODELS.splice(i, 1); if(i !== 0) GEMINI_MODELS.unshift(_gm); } }catch(e){}
 let geminiKey = null, geminiModelIdx = 0, geminiThinkingRejected = false, _claudeDownUntil = 0, _aiLastProvider = null;
 async function loadGeminiKey(){
@@ -32622,7 +32622,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.877';
+const BUILD_ID = '2026-10-25.878';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
