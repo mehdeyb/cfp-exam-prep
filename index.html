@@ -4896,7 +4896,7 @@
     <div class="card" id="tutorCard">
       <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
-      <div class="tt-face-row" id="ttFaceRow"><canvas id="ttFace" class="tt-face" width="160" height="120" aria-hidden="true"></canvas><div class="tt-face-cap" id="ttFaceCap"></div><button type="button" class="btn ghost" id="ttFaceBtn" onclick="ttToggleFace()" aria-pressed="false">Show face</button><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="min-height:30px;padding:3px 10px;font-size:12.5px;">Voice on</button><button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button></div>
+      <div class="tt-face-row" id="ttFaceRow"><canvas id="ttFace" class="tt-face" width="160" height="120" aria-hidden="true"></canvas><div class="tt-face-cap" id="ttFaceCap"></div><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="min-height:30px;padding:3px 10px;font-size:12.5px;">Voice on</button><button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button></div>
       <div class="api-key-nudge" id="tutorApiKeyHint" style="display:none;">
         <span>No AI connection yet. Add your API key to switch on the tutor and the app's AI tools.</span>
         <button class="btn ghost" onclick="openSettings()">Settings</button>
@@ -5056,6 +5056,12 @@
           <h3>Daily study time</h3>
           <div class="note" style="margin-bottom:6px;">how long today's plan should be</div>
           <div class="pt-mins" id="settingsPlanTime" role="group" aria-label="Daily study time"></div>
+        </div>
+
+        <div class="settings-section" id="settingsFaceSection">
+          <h3>Tutor face</h3>
+          <div class="note" style="margin-bottom:6px;">the little face that talks along with the tutor</div>
+          <div class="pt-mins"><button type="button" class="btn ghost" id="settingsFaceBtn" onclick="ttToggleFace();renderSettingsFace();" aria-pressed="false">Show face</button></div>
         </div>
 
         <div class="settings-section">
@@ -11804,6 +11810,11 @@ function planStepLabel(st){
 
 function planFmtMin(m){ m = Math.max(0, Math.round(m || 0)); return m >= 90 ? (Math.round(m / 6) / 10) + ' hrs' : m + ' min'; }
 // Daily study time lives in Settings now; the Today plan only reports time done, remaining and pace.
+function renderSettingsFace(){
+  const b = document.getElementById('settingsFaceBtn'); if(!b) return;
+  const on = ttFaceVisible();
+  b.textContent = on ? 'Hide face' : 'Show face'; b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
 function renderSettingsPlanTime(){
   const el = document.getElementById('settingsPlanTime'); if(!el) return;
   const a = studyPaceAdvice(); const cur = DATA.planMinutes || (a ? a.minutes : 360);
@@ -21651,6 +21662,7 @@ function settingsSetup(){
 }
 function openSettings(){
   try{ renderSettingsPlanTime(); }catch(e){}
+  try{ renderSettingsFace(); }catch(e){}
   try{ settingsSetup(); let g = 'study'; try{ g = localStorage.getItem('settingsGroup') || 'study'; }catch(e){} settingsShowGroup(g, true); }catch(e){}
   { const _h = document.getElementById('settingsHost'); if(_h) _h.classList.remove('closing'); }
   document.body.classList.add('settings-active');
@@ -32972,7 +32984,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.964';
+const BUILD_ID = '2026-10-26.965';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
