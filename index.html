@@ -2018,6 +2018,7 @@
   #pstBody .pst-pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:8px;}
   #pstBody .pst-c:has(.pst-pick):hover{border-color:var(--gold);}
   #tutorCard.tt-board.tt-qboard #pstBody{max-height:min(42vh, 380px) !important;overflow-y:auto !important;}
+  @media (min-width:641px) and (max-height:900px){ #tutorCard.tt-board.tt-qboard #pstBody{max-height:min(56vh, 460px) !important;} }
   #tutorCard.tt-qboard #tutorChips, #tutorCard.tt-qboard #ttActions{display:none !important;}
   /* Phone: the suggestions are one row you can swipe, and the conversation keeps its full height instead of being cut off under the board. */
   @media (max-width:640px){
@@ -2059,6 +2060,11 @@
     #tutorCard.tt-board #podcastStage{min-height:50vh !important;}
     #tutorCard.tt-board #pstBody{min-height:calc(50vh - 46px) !important;}
     #tutorCard.tt-board #tutorThread{min-height:120px !important;max-height:none !important;}
+  }
+  /* Shorter iPad landscape screens: the board gives a little height back so the whole tutor fits without scrolling. */
+  @media (min-width:641px) and (max-height:900px){
+    #tutorCard.tt-board #podcastStage{min-height:44vh !important;}
+    #tutorCard.tt-board #pstBody{min-height:calc(44vh - 46px) !important;}
   }
   /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
   #tutorCard{min-height:calc(var(--vh-real, 100vh) - var(--tab-h, 64px) - 96px);}
@@ -10514,8 +10520,8 @@ async function tutorCreateMaterial(inp){
   let qs = [];
   if(kind === 'practice_set' || Array.isArray(inp.questions) && inp.questions.length){
     const bank = allQuestions();
-    (Array.isArray(inp.questions) ? inp.questions : []).slice(0, 5).forEach((q, i) => {
-      try{
+    (Array.isArray(inp.questions) ? inp.questions : []).slice(0, 5).forEach((q0, i) => {
+      try{ const q = decodeGenEntities(q0);
         if(!q || !Array.isArray(q.choices) || q.choices.length !== 4 || !Array.isArray(q.rationale) || q.rationale.length !== 4) return;
         const ch = q.choices.map(x => String(x).trim()), rt = q.rationale.map(x => String(x).trim()), ci = Math.round(+q.correct);
         const stem = String(q.q || '').trim();
@@ -13298,16 +13304,29 @@ function ttVoiceSync(){ try{ ttFaceApply(); }catch(e){} const b = document.getEl
 function ttToggleVoice(){ DATA.tutorVoice = !(DATA.tutorVoice !== false); persist(); if(DATA.tutorVoice === false){ try{ if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); }catch(e){} } else { try{ speechAudioPrime(); }catch(e){} } ttVoiceSync(); }
 /* Today is one screen. If its content is still taller than the space below it, the tab is scaled down to fit, so nothing scrolls. */
 function studyFitScreen(){
-  const tab = document.getElementById('tab-study'); if(!tab) return;
   try{
-    tab.style.zoom = '';
-    if(!tab.classList.contains('active')) return;
-    const r = tab.getBoundingClientRect();
-    const avail = window.innerHeight - r.top - 10, need = r.height;
-    if(need > avail && avail > 0) tab.style.zoom = String(Math.max(0.72, Math.round((avail / need) * 100) / 100));
+    // Every tab is one screen: the tab that is showing is scaled down only if its content is taller than the window.
+    // Scale the whole app wrapper (tabs, quizzes and full-screen views alike) by the amount the page overflows.
+    const wrap = document.querySelector('.wrap'); if(!wrap) return;
+    wrap.style.zoom = '';
+    // The full-screen quiz is a fixed layer: its own panel is scaled to fit the same way.
+    const qin = document.querySelector('#quizFullscreenHost .quiz-inner');
+    if(qin){ qin.style.zoom = ''; if(qin.scrollHeight > qin.clientHeight + 1 && qin.clientHeight > 0) qin.style.zoom = String(Math.max(0.72, Math.round((qin.clientHeight / qin.scrollHeight) * 100) / 100)); }
+    const over = document.documentElement.scrollHeight - window.innerHeight;
+    if(over > 0){
+      const h = wrap.getBoundingClientRect().height;
+      wrap.style.zoom = String(Math.max(0.72, Math.round(((h - over - 8) / h) * 100) / 100));
+    }
   }catch(e){}
 }
 window.addEventListener('resize', () => { try{ studyFitScreen(); }catch(e){} });
+// Whatever changes on screen (a question, a reply, a slide) is refit once the change settles. Zoom changes do not alter the
+// DOM tree, so this cannot loop.
+try{
+  let _fitTimer = 0;
+  new MutationObserver(() => { clearTimeout(_fitTimer); _fitTimer = setTimeout(() => { try{ studyFitScreen(); }catch(e){} }, 160); })
+    .observe(document.body, { childList: true, subtree: true, characterData: true });
+}catch(e){}
 try{
   const _showTabBase = showTab;
   showTab = function(){ const out = _showTabBase.apply(this, arguments); try{ studyFitScreen(); }catch(e){} return out; };
@@ -14381,6 +14400,7 @@ function ttBoardNext(){ try{ nextQuestion(); }catch(e){} }
 function ttBoardEnd(){ try{ if(session) finishSession(); }catch(e){} }
 // Keeps the board on the question in front of you: the question while you answer it, then the answer and its reason once you have chosen.
 function ttMirrorLiveQuestion(answered){
+  try{ studyFitScreen(); }catch(e){}
   try{
     { const cd = document.getElementById('tutorCard'); if(cd) cd.classList.toggle('tt-qboard', !!window._boardRun); }
     if(!session || !session.queue || !(document.body.classList.contains('quiz-active') || window._boardRun)) return;
@@ -14724,6 +14744,7 @@ function stageDraw(soft){
   const ct = document.getElementById('scrCount'); if(ct) ct.textContent = stageState.hist.length > 1 ? (stageState.hi + 1) + ' of ' + stageState.hist.length : '';
   stageDots();
   if(!same){ try{ ttFaceNod(); }catch(e){} }
+  try{ studyFitScreen(); }catch(e){}
   try{ stageUpNext(); }catch(e){}
 }
 function stageSlideSummary(sl){
@@ -30120,7 +30141,7 @@ function tutorAddNext(bubble, opts){
 }
 // A line from the tutor that is not a reply to anything: the app speaking as the tutor, with its own buttons.
 function tutorSay(text, opts){
-  const b = renderTutorMessage('assistant', text);
+  const b = renderTutorMessage('assistant', typeof text === 'string' ? decodeGenEntities(text) : text);
   try{ tutorAddNext(b, opts); }catch(e){}
   try{ const c = document.getElementById('tutorCard'); if(c) c.classList.add('has-convo'); }catch(e){}
   return b;
@@ -31698,6 +31719,7 @@ async function sendTutorMessage(presetText){
     if(!ttFace.toolSet){ try{ ttFaceReact(reply); }catch(e){} }
     if(ttVoiceOn() && document.getElementById('tab-tutor').classList.contains('active')) ttSpeakReply(reply);
     if(document.getElementById('tab-tutor').classList.contains('active')) { try{ ttFollowReply(reply); }catch(e){} }
+    try{ studyFitScreen(); }catch(e){}
     status.textContent = '';
     try{ tutorGuideAfterMove(reply); }catch(e){}
     tutorMaybeOfferTree(text, reply);
@@ -32475,7 +32497,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.838';
+const BUILD_ID = '2026-10-25.839';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
