@@ -3073,6 +3073,9 @@
   .cc-card > .card-head{cursor:pointer;margin-bottom:0;}
   .cc-card > .card-head h2::after{content:"▾";display:inline-block;margin-left:8px;font-size:.8em;color:var(--muted);transition:transform var(--t-fast) var(--ease);}
   .cc-card.cc-open > .card-head h2::after{transform:rotate(180deg);}
+  /* During a plan step the tool is the whole task: no collapse chevron, and the heading is not a button. */
+  body.focus-mode .cc-card.focus-target > .card-head{cursor:default;}
+  body.focus-mode .cc-card.focus-target > .card-head h2::after{display:none;}
   .cc-card:not(.cc-open) > .cc-body{display:none;}
   .cc-card > .card-head h2{margin-top:0;}
   .cc-sum{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -33260,7 +33263,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9999';
+const BUILD_ID = '2026-10-26.99991';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -33748,7 +33751,8 @@ requestDurableStorage();
     card.appendChild(sum); card.appendChild(body);
     card.classList.add('cc-card');
     head.setAttribute('role', 'button'); head.setAttribute('tabindex', '0');
-    const toggle = () => ccSet(card, !card.classList.contains('cc-open'));
+    // A tool opened from today's plan stays open for the whole step, so its heading does not fold it away.
+    const toggle = () => { if(document.body.classList.contains('focus-mode') && card.classList.contains('focus-target')) return; ccSet(card, !card.classList.contains('cc-open')); };
     head.addEventListener('click', toggle);
     head.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } });
     ccSet(card, false);
