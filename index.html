@@ -2032,6 +2032,15 @@
   }
   #tutorCard.tt-board #podcastPlayer{overflow:visible !important;flex:none !important;}
   #tutorCard.tt-board #pstBody{flex:none !important;}
+  /* The board is the main surface: it takes most of the card, and the conversation becomes a compact, scrollable strip beneath it. */
+  #tutorCard.tt-board #podcastStage{min-height:56vh !important;}
+  #tutorCard.tt-board #pstBody{min-height:calc(56vh - 46px) !important;padding:14px 16px !important;}
+  #tutorCard.tt-board #tutorThread{min-height:120px !important;max-height:24vh !important;overflow-y:auto !important;}
+  @media (min-width:641px){
+    #tutorCard.tt-board #podcastStage{min-height:50vh !important;}
+    #tutorCard.tt-board #pstBody{min-height:calc(50vh - 46px) !important;}
+    #tutorCard.tt-board #tutorThread{min-height:120px !important;max-height:none !important;}
+  }
   /* Use the whole screen: the card fills the height, the board takes whatever the conversation does not need, and the input sits at the bottom. */
   #tutorCard{min-height:calc(var(--vh-real, 100vh) - var(--tab-h, 64px) - 96px);}
   #tutorCard #lessonsCard #podcastPlayer{flex:1 1 auto;display:flex;flex-direction:column;}
@@ -32346,7 +32355,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.831';
+const BUILD_ID = '2026-10-25.832';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
