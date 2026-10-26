@@ -2057,6 +2057,9 @@
       body.os-one .pt-lead{margin:6px 0 4px;padding:9px 12px 7px;}
       body.os-one .pt-lead-foot{margin-top:6px;}
       body.os-one .pt-lead-txt span{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+      /* The Up next text repeats the NEXT step beneath it, so on iPad landscape only the resume button and its time stay. */
+      body.os-one .pt-lead-txt{display:none !important;}
+      body.os-one .pt-lead{margin:4px 0 4px;padding:6px 10px;}
       body.os-one #todayPlanCard .pt-step{padding-top:4px !important;padding-bottom:4px !important;}
       body.os-one .pt-min{padding:5px 10px;min-height:0;}
     }
@@ -32584,7 +32587,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.861';
+const BUILD_ID = '2026-10-25.862';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
