@@ -4146,6 +4146,11 @@
   #tutorCard.tt-board #podcastStage .pst-bar{position:absolute !important;top:10px;right:10px;margin:0 !important;padding:0 !important;z-index:6;width:auto;}
   #tutorCard .pst-full-btn{width:34px;height:34px;min-height:34px;padding:0;justify-content:center;gap:0;border-radius:50%;}
   body.os-one #tutorCard .pst-full-btn{width:30px;height:30px;min-height:30px;padding:0;}
+
+  /* Send stays solid on the pinned question bar, not see-through. */
+  #tutorCard .tutor-input-row #tutorSendBtn{background:#FFFFFF;color:#8A6D1F;border:1px solid var(--gold);font-weight:600;}
+  :root[data-theme="dark"] #tutorCard .tutor-input-row #tutorSendBtn{background:#1E2A3D;color:#E3B73F;}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #tutorCard .tutor-input-row #tutorSendBtn{background:#1E2A3D;color:#E3B73F;} }
 </style>
 </head>
 <body>
@@ -33098,7 +33103,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.982';
+const BUILD_ID = '2026-10-26.983';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
