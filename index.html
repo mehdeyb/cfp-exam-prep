@@ -4049,6 +4049,14 @@
   #tutorCard.tt-board #tutorThread .tutor-msg + .tutor-msg{border-top:0 !important;padding-top:4px !important;}
   #tutorCard.tt-board #podcastStage{min-height:66vh !important;}
   #tutorCard.tt-board #pstBody{min-height:calc(66vh - 46px) !important;}
+
+  /* Tutor board: the reply sits beside the speaker, in the face's ink-and-skin palette, and the thread is out of the way. */
+  #tutorCard .tt-face-row{align-items:center;}
+  #tutorCard .tt-face-cap{font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.45;color:#0F1A2C;background:#ECE9DF;border-radius:10px;padding:6px 10px;max-height:110px;overflow-y:auto;}
+  :root[data-theme="dark"] #tutorCard .tt-face-cap{background:#1E2A3D;color:#ECE9DF;}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #tutorCard .tt-face-cap{background:#1E2A3D;color:#ECE9DF;} }
+  #tutorCard.tt-board #tutorThread{display:none !important;}
+  #tutorCard.tt-board .tt-face-cap, body.os-one #tutorCard.tt-board .tt-face-cap{display:block !important;}
 </style>
 </head>
 <body>
@@ -13683,6 +13691,23 @@ function ttFaceTick(){
 }
 function ttFaceStart(){ if(!ttFace.timer) ttFace.timer = setInterval(ttFaceTick, 110); }
 function ttFaceStop(){ if(ttFace.timer){ clearInterval(ttFace.timer); ttFace.timer = null; } }
+// On the board, the reply text sits beside the speaker icon in the face's own palette; the full thread is kept but hidden there.
+function ttSyncFaceCap(){
+  const cap = document.getElementById('ttFaceCap'), card = document.getElementById('tutorCard'); if(!cap || !card) return;
+  if(!card.classList.contains('tt-board')) return;
+  const bots = document.querySelectorAll('#tutorThread .tutor-msg-bot .tutor-bubble');
+  const last = bots.length ? bots[bots.length - 1] : null;
+  const txt = last ? (last.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  const want = txt || 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
+  if(cap.textContent !== want) cap.textContent = want;
+}
+function ttCapInit(){
+  const th = document.getElementById('tutorThread'), card = document.getElementById('tutorCard'); if(!th || !card) return;
+  new MutationObserver(() => { try{ ttSyncFaceCap(); }catch(e){} }).observe(th, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(() => { try{ ttFaceApply(); ttSyncFaceCap(); }catch(e){} }).observe(card, { attributes: true, attributeFilter: ['class'] });
+  try{ ttSyncFaceCap(); }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', ttCapInit);
 function ttFaceApply(){
   const row = document.getElementById('ttFaceRow'), btn = document.getElementById('ttFaceBtn');
   const cv = document.getElementById('ttFace'), cap = document.getElementById('ttFaceCap');
@@ -13693,6 +13718,7 @@ function ttFaceApply(){
   const sc = document.getElementById('scrFace'), scVis = DATA.tutorFace !== 'off';
   if(sc) sc.style.display = scVis ? 'block' : 'none';
   if(cap) cap.textContent = vis ? 'Your tutor. It talks along with what it says and reacts to your answers.' : 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
+  try{ ttSyncFaceCap(); }catch(e){}
   if(btn){ btn.textContent = vis ? 'Hide face' : 'Show face'; btn.setAttribute('aria-pressed', vis ? 'true' : 'false'); btn.title = vis ? 'Hide the tutor face' : 'Show the tutor face'; }
   if(vis || scVis){ ttFaceStart(); ttFaceDraw(); } else ttFaceStop();
 }
@@ -32888,7 +32914,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.958';
+const BUILD_ID = '2026-10-26.959';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
