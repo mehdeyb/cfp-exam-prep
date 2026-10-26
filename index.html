@@ -2895,17 +2895,27 @@
     }
     #tvmHost .dp-inner > *{grid-column:1;}
     #tvmHost .dp-inner > *:not(.tvm-device):not(.tvm-actions){margin-top:0 !important;margin-bottom:0 !important;}
-    #tvmHost .tvm-howto > *:not(summary){display:none !important;}
+    #tvmHost .tvm-howto > summary{display:none !important;}
+    #tvmHost .tvm-howto{display:block;}
+    #tvmHost .tvm-howto > *:not(summary){display:block !important;font-size:13px;line-height:1.4;margin:0 !important;}
     /* The calculator is a little smaller so the whole walkthrough is shorter; its two buttons move under the problem on the left. */
     #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 8;margin-bottom:0;position:sticky;top:0;align-self:start;zoom:.8;}
-    #tvmHost .dp-inner > .tvm-actions{grid-column:1;grid-row:9;align-self:start;margin:8px 0 0;}
+    #tvmHost .dp-inner > .tvm-actions{grid-column:1;grid-row:auto;align-self:start;margin:8px 0 0;}
     #tvmHost .dp-header{margin-bottom:0;}
     #tvmHost .dp-header h2{font-size:18px;}
     #tvmHost .tvm-howto, #tvmHost .tvm-status, #tvmHost .tvm-scenario, #tvmHost .tvm-level-badge{margin-top:0 !important;margin-bottom:4px !important;}
-    #tvmHost .tvm-timeline-wrap{grid-row:8;display:flex;flex-direction:column;min-height:0;margin:0 !important;}
+    #tvmHost .tvm-timeline-wrap{grid-row:auto;display:flex;flex-direction:column;min-height:0;margin:0 !important;}
     #tvmHost .tvm-timeline-label{display:none;}
     #tvmHost #tvmTimeline{flex:1 1 auto;min-height:0;}
     #tvmHost #tvmTimeline svg{height:100%;width:100%;max-height:none;}
+    /* Reading order on the left: the question first, then its timeline, then the progress chips and the buttons. The how-to text is a single line. */
+    #tvmHost .dp-inner > .pp{order:1;}
+    #tvmHost .dp-inner > .tvm-howto{order:2;}
+    #tvmHost .dp-inner > .tvm-scenario{order:3;}
+    #tvmHost .dp-inner > .tvm-level-badge{order:4;}
+    #tvmHost .dp-inner > .tvm-timeline-wrap{order:5;}
+    #tvmHost .dp-inner > .tvm-status{order:6;}
+    #tvmHost .dp-inner > .tvm-actions{order:7;}
   }
   /* Scale the whole walkthrough a little on shorter iPad landscape screens, so the problem, timeline, calculator and keys all fit. */
   @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:840px){ body.tvm-active #tvmHost .dp-inner{zoom:.92;} }
@@ -32524,7 +32534,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.843';
+const BUILD_ID = '2026-10-25.844';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
