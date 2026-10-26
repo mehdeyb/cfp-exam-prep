@@ -2005,6 +2005,11 @@
   #tutorCard #ttVoiceBtn{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-radius:17px;display:inline-flex;align-items:center;justify-content:center;}
   #tutorCard #ttVoiceBtn.off{opacity:.45;}
   #tutorCard #ttVoiceBtn svg{width:18px;height:18px;}
+  #tutorCard > #ttFaceRow{order:-8;display:flex;align-items:center;gap:10px;margin:0 0 10px;}
+  #tutorCard #ttFace{width:80px;height:60px;flex:none;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:10px;background:#eaf4fb;}
+  #tutorCard .tt-face-cap{flex:1;min-width:0;font-size:13px;color:var(--muted,#5b6b7a);line-height:1.35;}
+  #tutorCard #ttFaceBtn{margin-left:auto;min-height:30px;padding:3px 12px;font-size:12.5px;}
+  @media (max-width:640px){ #tutorCard #ttFace{width:56px;height:42px;} #tutorCard .tt-face-cap{display:none;} }
   #tutorCard .pst-dots{display:none !important;}
   /* The plan board shows every step in the flow (it used to scroll inside a short box and hide the last steps), with no empty now-playing line over it. */
   #tutorCard.tt-board #podcastStage{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;}
@@ -2022,7 +2027,8 @@
     #tutorCard #tutorChips, #tutorCard #ttActions, #tutorCard #ttLiveChips{flex:none !important;flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
     #tutorCard #tutorChips::-webkit-scrollbar, #tutorCard #ttActions::-webkit-scrollbar, #tutorCard #ttLiveChips::-webkit-scrollbar{display:none;}
     #tutorCard #tutorChips > *, #tutorCard #ttActions > *, #tutorCard #ttLiveChips > *{flex:none !important;}
-    #tutorCard #tutorThread{flex:none !important;max-height:none !important;overflow:visible !important;}
+    #tutorCard #tutorThread{flex:none !important;max-height:38vh !important;overflow-y:auto !important;}
+    #tab-tutor.active{padding-bottom:96px !important;}
   }
   #tutorCard.tt-board #podcastPlayer{overflow:visible !important;flex:none !important;}
   #tutorCard.tt-board #pstBody{flex:none !important;}
@@ -4580,8 +4586,9 @@
   <!-- ================= TUTOR TAB ================= -->
   <div class="tab-panel" id="tab-tutor">
     <div class="card" id="tutorCard">
-      <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="margin-right:10px;min-height:34px;padding:4px 12px;font-size:12.5px;">Voice on</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
+      <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
+      <div class="tt-face-row" id="ttFaceRow"><canvas id="ttFace" class="tt-face" width="160" height="120" aria-hidden="true"></canvas><div class="tt-face-cap" id="ttFaceCap"></div><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="min-height:30px;padding:3px 10px;font-size:12.5px;">Voice on</button><button type="button" class="btn ghost" id="ttFaceBtn" onclick="ttToggleFace()" aria-pressed="false">Show face</button></div>
       <div class="tutor-snapshot" id="tutorSnapshot">
         <div class="stat">
           <div class="num" id="tutorSnapToday">—</div>
@@ -13277,8 +13284,88 @@ function renderExamDayCallout(){
 =========================================================== */
 /* Tutor tab: lessons and chat are one surface. Opening a lesson brings the lesson block into view. */
 function ttVoiceOn(){ return !!(DATA && DATA.tutorVoice !== false) && hasSpeechSupport(); }
-function ttVoiceSync(){ const b = document.getElementById('ttVoiceBtn'); if(!b) return; const sup = hasSpeechSupport(); b.style.display = sup ? '' : 'none'; const on = ttVoiceOn(); b.innerHTML = SPEAKER_SVG; b.classList.toggle('off', !on); b.title = on ? 'Voice on' : 'Voice off'; b.setAttribute('aria-label', on ? 'Voice on. Tap to mute' : 'Voice off. Tap to turn on'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+function ttVoiceSync(){ try{ ttFaceApply(); }catch(e){} const b = document.getElementById('ttVoiceBtn'); if(!b) return; const sup = hasSpeechSupport(); b.style.display = sup ? '' : 'none'; const on = ttVoiceOn(); b.innerHTML = SPEAKER_SVG; b.classList.toggle('off', !on); b.title = on ? 'Voice on' : 'Voice off'; b.setAttribute('aria-label', on ? 'Voice on. Tap to mute' : 'Voice off. Tap to turn on'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
 function ttToggleVoice(){ DATA.tutorVoice = !(DATA.tutorVoice !== false); persist(); if(DATA.tutorVoice === false){ try{ if(!(naturalSpeechState.active && podcastPlayingKey)) stopSpeechSequence(); }catch(e){} } else { try{ speechAudioPrime(); }catch(e){} } ttVoiceSync(); }
+/* Pixel tutor face: a 16x12 pixel grid on a canvas, scaled up without smoothing. Hidden unless the student turns it on
+   or the tutor asks to show it. The student's own on/off choice (DATA.tutorFace) always wins over the tutor. */
+const TT_FACE_EXPR = ['neutral','happy','thinking','encouraging','concerned','excited'];
+const TT_FACE_COL = { skin:'#8fc5e6', ink:'#0d2236', hi:'#ffffff' };
+const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, timer:null, toolSet:false, tutorShow:false };
+function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
+function ttFaceTalking(){ try{ return !!(window.speechSynthesis && speechSynthesis.speaking); }catch(e){ return false; } }
+function ttFaceDraw(){
+  const cv = document.getElementById('ttFace'); if(!cv || !cv.getContext) return;
+  const g = cv.getContext('2d'); const W = 16, s = cv.width / W, now = Date.now();
+  const put = (c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x*s, y*s, w*s, h*s); };
+  const ex = ttFace.expr, ink = TT_FACE_COL.ink, hi = TT_FACE_COL.hi;
+  const board = !!(stageState && stageState.cur);
+  // Breathing bob (quicker when happy or excited), plus a nod whenever the expression or the board slide changes.
+  const bobSpeed = (ex === 'happy' || ex === 'excited') ? 220 : 800;
+  let bob = Math.sin(now / bobSpeed) * 0.35;
+  const nodLeft = ttFace.nodUntil - now;
+  if(nodLeft > 0) bob += Math.sin((1 - nodLeft / 420) * Math.PI) * 0.8;
+  g.clearRect(0, 0, cv.width, cv.height);
+  g.setTransform(1, 0, 0, 1, 0, bob * s);
+  put(TT_FACE_COL.skin, 3, 0, 10, 1); put(TT_FACE_COL.skin, 1, 1, 14, 10); put(TT_FACE_COL.skin, 3, 11, 10, 1);
+  // Gaze: a slide on the board pulls the eyes down toward it; thinking looks up and side to side.
+  let gx = 0, gy = board ? 1 : 0;
+  if(ex === 'thinking'){ gy = -1; gx = Math.floor(now / 900) % 2 ? 1 : -1; }
+  const ey = 3 + gy, lx = 4 + gx, rx = 10 + gx;
+  if(ttFace.blinkUntil > now){ put(ink, lx, ey + 1, 2, 1); put(ink, rx, ey + 1, 2, 1); }
+  else { put(ink, lx, ey, 2, 2); put(ink, rx, ey, 2, 2); put(hi, lx, ey, 1, 1); put(hi, rx, ey, 1, 1); }
+  // Worried brows slope down toward the middle.
+  if(ex === 'concerned'){ put(ink, 4, ey - 2, 1, 1); put(ink, 5, ey - 1, 1, 1); put(ink, 10, ey - 1, 1, 1); put(ink, 11, ey - 2, 1, 1); }
+  // Sparkle beside the head on happy or excited moments.
+  if((ex === 'excited' || ex === 'happy') && (Math.floor(now / 300) % 2 === 0)){ put(hi, 15, 1, 1, 1); put(hi, 0, 9, 1, 1); }
+  // Mouth: while speaking it opens, half-opens and closes in a speech-like rhythm; otherwise it holds the expression's shape.
+  const talking = ttFaceTalking();
+  const SPEECH = [0, 1, 2, 0, 1, 2, 0, 2]; // 0 open, 1 half, 2 closed
+  const shape = talking ? SPEECH[ttFace.tick % SPEECH.length] : -1;
+  if(shape === 0){ if(ex === 'thinking') put(ink, 7, 8, 2, 2); else put(ink, 6, 7, 4, 2); }
+  else if(shape === 1){ put(ink, 6, 7, 4, 1); }
+  else if(ex === 'happy' || ex === 'encouraging' || ex === 'excited'){ put(ink, 5, 7, 1, 1); put(ink, 10, 7, 1, 1); put(ink, 6, 8, 4, 1); }
+  else if(ex === 'concerned'){ put(ink, 6, 7, 4, 1); put(ink, 5, 8, 1, 1); put(ink, 10, 8, 1, 1); }
+  else if(ex === 'thinking'){ put(ink, 7, 8, 2, 1); }
+  else { put(ink, 6, 8, 4, 1); }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
+// A new slide on the board gets a nod from the face, so it visibly reacts to what is on screen.
+function ttFaceNod(){ ttFace.nodUntil = Date.now() + 420; try{ ttFaceDraw(); }catch(e){} }
+function ttFaceSet(ex){ if(TT_FACE_EXPR.indexOf(ex) < 0) return false; if(ttFace.expr !== ex){ ttFace.expr = ex; ttFace.nodUntil = Date.now() + 420; } ttFaceDraw(); return true; }
+// The tutor's mood comes from the words of its reply; a set_tutor_face call made this turn takes precedence.
+function ttFaceReact(reply){
+  const t = String(reply || '').toLowerCase(); let ex = 'neutral';
+  if(/\b(great|excellent|well done|exactly|you got it|that's right|that is right|awesome|nice work)\b/.test(t)) ex = 'happy';
+  else if(/\b(not quite|careful|watch out|common trap|mix-?up|incorrect|mistake)\b/.test(t)) ex = 'concerned';
+  else if(/\b(keep going|you can do|you've got this|on track|proud)\b/.test(t)) ex = 'encouraging';
+  ttFaceSet(ex);
+}
+function ttFaceTick(){
+  const row = document.getElementById('ttFaceRow');
+  if(!ttFaceVisible() || !row || row.offsetParent === null){ ttFaceStop(); return; }
+  const now = Date.now();
+  if(now >= ttFace.nextBlink){ ttFace.blinkUntil = now + 140; ttFace.nextBlink = now + 2200 + Math.random() * 3000; }
+  ttFace.tick++; ttFaceDraw();
+}
+function ttFaceStart(){ if(!ttFace.timer) ttFace.timer = setInterval(ttFaceTick, 110); }
+function ttFaceStop(){ if(ttFace.timer){ clearInterval(ttFace.timer); ttFace.timer = null; } }
+function ttFaceApply(){
+  const row = document.getElementById('ttFaceRow'), btn = document.getElementById('ttFaceBtn');
+  const cv = document.getElementById('ttFace'), cap = document.getElementById('ttFaceCap');
+  const vis = ttFaceVisible();
+  // The row stays as one compact control: a toggle when the face is hidden, the face and its toggle when it is shown.
+  if(row) row.style.display = 'flex';
+  if(cv) cv.style.display = vis ? 'block' : 'none';
+  if(cap) cap.textContent = vis ? 'Your tutor. It talks along with what it says and reacts to your answers.' : 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
+  if(btn){ btn.textContent = vis ? 'Hide face' : 'Show face'; btn.setAttribute('aria-pressed', vis ? 'true' : 'false'); btn.title = vis ? 'Hide the tutor face' : 'Show the tutor face'; }
+  if(vis){ ttFaceStart(); ttFaceDraw(); } else ttFaceStop();
+}
+function ttToggleFace(){
+  const on = ttFaceVisible();
+  DATA.tutorFace = on ? 'off' : 'on'; ttFace.tutorShow = false;
+  try{ persist(); }catch(e){}
+  ttFaceApply();
+}
 // What the tutor says, cleaned for the ear: no list letters, markdown or links.
 function ttSpeakable(t){
   return String(t || '').split('\n').filter(l => !/^\s*[A-E]\)\s/.test(l)).join(' ').replace(/https?:\/\/\S+/g, '').replace(/[*_#`>]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 700);
@@ -14265,6 +14352,7 @@ function ttMirrorLiveQuestion(answered){
     const la = session.answerLog && session.answerLog[session.answerLog.length - 1];
     if(answered && !(la && la.index === session.index)) return;
     if(answered){
+      try{ ttFaceSet(la.correct ? 'happy' : 'concerned'); }catch(e){}
       const sl = { kind:'question', qid:q.id, src:'tutor', at:0, idle:true, title:'Live question', live:true };
       if(!stageInlineVisible() && document.getElementById('tab-tutor') && document.getElementById('tab-tutor').classList.contains('active')) ttEnsureStage();
       stageShow(sl, 'tutor');
@@ -14597,6 +14685,7 @@ function stageDraw(soft){
   if(pv) pv.disabled = stageState.hi <= 0; if(nx) nx.disabled = live;
   const ct = document.getElementById('scrCount'); if(ct) ct.textContent = stageState.hist.length > 1 ? (stageState.hi + 1) + ' of ' + stageState.hist.length : '';
   stageDots();
+  if(!same){ try{ ttFaceNod(); }catch(e){} }
   try{ stageUpNext(); }catch(e){}
 }
 function stageSlideSummary(sl){
@@ -30117,6 +30206,7 @@ function tutorActionText(name, input, result){
     if(name === 'open_tvm_calculator') return 'Opened the calculator walkthrough' + (inp.mode === 'cashflow' ? ' (cash flows)' : '');
     if(name === 'open_formula_drill') return 'Opened formula drills' + (inp.formula ? ': ' + inp.formula : '');
     if(name === 'open_study_guide') return 'Opened your study guide';
+    if(name === 'set_tutor_face') return 'Adjusted your tutor face';
     if(name === 'show_readiness_breakdown') return 'Opened how your readiness score is built';
     if(name === 'show_progress') return inp.isolate ? 'Opened your progress on its own' : 'Opened your detailed progress (Today tab)';
     if(name === 'show_on_screen') return /^Error/.test(r) ? '' : 'On your screen: ' + String(inp.title || inp.term || inp.kind || 'a visual').slice(0, 50);
@@ -30524,6 +30614,17 @@ const TUTOR_TOOLS = [
     name: 'open_study_guide',
     description: "Open the app's personalized study guide -- a short, printable, one-or-two-page list built fresh from the student's own progress: specific unchecked subtopics in their weakest domains, flashcard terms still marked learning, the key numbers tied to those domains, questions they keep missing the same way (with the actual reasoning included), and any calculation questions they've gotten wrong (with the full worked steps included, not just a pointer back to the app). Genuinely self-contained -- built to be printed or saved and reviewed repeatedly without needing to open the app again. Use this when the student asks for a study guide, a summary to print or save, something concrete to review before exam day, or something they can go over without pulling up other resources. This is different from show_progress, which reports aggregate stats -- this names specific items to act on.",
     input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'set_tutor_face',
+    description: "Show or hide your small pixel face on the Tutor tab, and set its expression: neutral, happy, thinking, encouraging, concerned or excited. Use it sparingly, when a face helps: a celebration, a gentle warning, a moment to think. The student's own choice always wins: if they have switched the face on or off themselves, the app keeps their setting and says so in the result.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        expression: { type: 'string', enum: TT_FACE_EXPR, description: 'The expression to show.' },
+        show: { type: 'boolean', description: 'true to show the face, false to hide it.' },
+      },
+    },
   },
   {
     name: 'mark_subtopic_reviewed',
@@ -30955,6 +31056,18 @@ async function executeTutorTool(toolName, toolInput){
       if(!ebStartRun(picks, { from:'tutor', goal:n, note:String((toolInput && toolInput.note) || '').slice(0, 70) })) return 'Error: nothing to explain back right now.';
       return `Opened Explain it back full screen with ${picks.length} idea${picks.length === 1 ? '' : 's'}${topic ? ' on "' + toolInput.topic + '"' : ''}: ${picks.map(c => c.term).join('; ')}. The student writes each in their own words and rates it; the app checks coverage and shows progress. Do not explain these yet. Afterwards ask what felt shaky.`;
     }
+    if(toolName === 'set_tutor_face'){
+      const exName = String((toolInput && toolInput.expression) || '').toLowerCase();
+      if(exName && !ttFaceSet(exName)) return 'Error: expression must be one of ' + TT_FACE_EXPR.join(', ') + '.';
+      ttFace.toolSet = true;
+      if(toolInput && typeof toolInput.show === 'boolean' && DATA.tutorFace !== undefined){
+        ttFaceApply();
+        return 'The student has set the face ' + (DATA.tutorFace === 'on' ? 'on' : 'off') + " themselves, so it stays as they chose." + (exName ? ' Expression is ' + exName + ' for when it is visible.' : '');
+      }
+      if(toolInput && typeof toolInput.show === 'boolean') ttFace.tutorShow = toolInput.show;
+      ttFaceApply();
+      return 'Face ' + (ttFaceVisible() ? 'is showing' : 'is hidden') + (exName ? ', expression ' + exName : '') + '.';
+    }
     if(toolName === 'open_study_guide'){
       showTab('study');
       openStudyGuide();
@@ -31385,6 +31498,7 @@ async function sendTutorMessage(presetText){
 
   tutorNextStop = null; _tutorLastStepId = null;
   tutorBusy = true;
+  try{ ttFace.toolSet = false; ttFaceSet('thinking'); }catch(e){}
   document.getElementById('tutorSendBtn').disabled = true;
   input.disabled = true;
   const status = document.getElementById('tutorStatus');
@@ -31433,6 +31547,7 @@ async function sendTutorMessage(presetText){
     tutorRenderReply(typingBubble, reply, text);
     try{ tutorAddNext(typingBubble, nextSteps.opts); ttPostBoard(text, reply); }catch(e){}
     ttAddListen(typingBubble, reply);
+    if(!ttFace.toolSet){ try{ ttFaceReact(reply); }catch(e){} }
     if(ttVoiceOn() && document.getElementById('tab-tutor').classList.contains('active')) ttSpeakReply(reply);
     status.textContent = '';
     try{ tutorGuideAfterMove(reply); }catch(e){}
@@ -32231,7 +32346,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.829';
+const BUILD_ID = '2026-10-25.831';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
