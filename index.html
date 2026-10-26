@@ -2071,6 +2071,8 @@
       body.os-one #tab-study.active,
       body.os-one #tab-study.active .os-fit,
       body.os-one #tab-study.active #studyCols{overflow:hidden !important;touch-action:none;}
+      /* Progress on iPad landscape: the Snapshot tiles repeat the readiness score, the exam countdown and the strongest and weakest topics shown elsewhere on the page, and they took about 180px of the 606px available. */
+      body.os-one #blueprintCard #bpNext{display:none !important;}
       /* The fade and reserved gap at the foot of a fitted pane were covering the last rows and the This week banner on iPad landscape. */
       body.os-one #tab-study .os-fit{-webkit-mask-image:none !important;mask-image:none !important;padding-bottom:0 !important;}
       /* Done today starts its own column, so the heading and the finished steps it counts sit together. */
@@ -32620,7 +32622,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.874';
+const BUILD_ID = '2026-10-25.875';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
