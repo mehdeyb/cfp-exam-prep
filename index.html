@@ -1156,6 +1156,13 @@
   /* Progress: the exam-day panel repeated the estimate in the header, so it is left out here. */
   #studyHub[data-view="progress"] #edStandingCard{display:none !important;}
   #studyHub[data-view="progress"] #progressCard{display:none !important;}
+  /* Your progress answers three things: where I stand, what is holding me back, and what to do next. These panels repeat
+     those answers, or belong to the tutor and the plan, so they stay out of this view. */
+  #studyHub[data-view="progress"] #focusPills,
+  #studyHub[data-view="progress"] #difficultyIndicator,
+  #studyHub[data-view="progress"] #mixupCallout,
+  #studyHub[data-view="progress"] #edTutor,
+  #studyHub[data-view="progress"] #workshopCard{display:none !important;}
   .bp-value{margin:0 0 14px;}
   .bp-value-head{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:8px;}
   .bp-value-list{list-style:none;margin:0;padding:0;}
@@ -33320,7 +33327,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99998';
+const BUILD_ID = '2026-10-26.99999';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
