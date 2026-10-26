@@ -4041,9 +4041,9 @@
   .pt-stats b{color:var(--paper);font-weight:600;}
 
   /* Tutor board: play sits beside Send and only shows while a lesson player is open; the reply box is a slim, quiet strip so the board gets the height. */
-  #tutorCard .tutor-input-row #podcastPlayPauseBtn{display:none;width:44px;height:44px;flex:none;border-radius:50%;padding:0;}
-  #tutorCard:has(#podcastPlayer[style*="block"]) .tutor-input-row #podcastPlayPauseBtn{display:inline-flex;align-items:center;justify-content:center;}
-  #tutorCard .tutor-input-row #podcastPlayPauseBtn svg{width:16px;height:16px;}
+  #tutorCard #podcastPlayPauseBtn{display:none;width:40px;height:40px;flex:none;border-radius:50%;padding:0;margin-left:2px;}
+  #tutorCard:has(#podcastPlayer[style*="block"]) #podcastPlayPauseBtn{display:inline-flex;align-items:center;justify-content:center;}
+  #tutorCard #podcastPlayPauseBtn svg{width:16px;height:16px;}
   #tutorCard.tt-board #tutorThread{min-height:0 !important;max-height:min(12vh, 96px) !important;background:transparent !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 0 2px !important;}
   #tutorCard.tt-board #tutorThread .tutor-msg-bot .tutor-bubble{font-size:13px !important;line-height:1.4 !important;color:var(--muted);}
   #tutorCard.tt-board #tutorThread .tutor-msg + .tutor-msg{border-top:0 !important;padding-top:4px !important;}
@@ -4878,7 +4878,7 @@
     <div class="card" id="tutorCard">
       <div class="card-head"><h2>Your tutor</h2><button type="button" class="btn ghost" id="screenEntryBtn" style="display:none;margin-left:auto;margin-right:10px;" onclick="stageOpenFull()">Open screen</button><div class="note" id="tutorContextNote">knows your current progress</div></div>
 
-      <div class="tt-face-row" id="ttFaceRow"><canvas id="ttFace" class="tt-face" width="160" height="120" aria-hidden="true"></canvas><div class="tt-face-cap" id="ttFaceCap"></div><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="min-height:30px;padding:3px 10px;font-size:12.5px;">Voice on</button><button type="button" class="btn ghost" id="ttFaceBtn" onclick="ttToggleFace()" aria-pressed="false">Show face</button></div>
+      <div class="tt-face-row" id="ttFaceRow"><canvas id="ttFace" class="tt-face" width="160" height="120" aria-hidden="true"></canvas><div class="tt-face-cap" id="ttFaceCap"></div><button type="button" class="btn ghost" id="ttFaceBtn" onclick="ttToggleFace()" aria-pressed="false">Show face</button><button type="button" class="btn ghost" id="ttVoiceBtn" onclick="ttToggleVoice()" aria-pressed="true" style="min-height:30px;padding:3px 10px;font-size:12.5px;">Voice on</button><button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button></div>
       <div class="api-key-nudge" id="tutorApiKeyHint" style="display:none;">
         <span>No AI connection yet. Add your API key to switch on the tutor and the app's AI tools.</span>
         <button class="btn ghost" onclick="openSettings()">Settings</button>
@@ -4976,7 +4976,6 @@
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
         <input type="text" id="tutorInput" class="tutor-input" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" onkeydown="if(event.key==='Enter') sendTutorMessage();">
-        <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
         <button class="btn" id="tutorSendBtn" onclick="sendTutorMessage()">Send</button>
       </div>
       <div class="tutor-status" id="tutorStatus" role="status"></div>
@@ -32955,7 +32954,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.960';
+const BUILD_ID = '2026-10-26.961';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
