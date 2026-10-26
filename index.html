@@ -11731,17 +11731,31 @@ function buildStudyPlanCore(minutes){
 }
 
 // The faint reason under each step, cut to five words.
-function planWhyShort(t){
-  // One whole sentence, or the whole first clause, of at most seven words. Anything longer shows nothing rather than a cut-off line.
-  let txt = String(t || '').replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
-  if(/^(first|second|third|fourth|fifth|sixth|seventh|eighth)\b.*\bweak topics?\b/i.test(txt)) return 'Another weak topic to work on';
-  const dangling = /^(of|the|a|an|to|and|or|on|in|for|with|by|at|from|your|that|this|it|is|are|as|than|so|but|when|while|if|more)$/i;
-  const fits = c => { const w = c.split(' ').filter(Boolean); return w.length >= 2 && w.length <= 7 && !dangling.test(w[w.length - 1]); };
-  const sentence = txt.split(/(?<=[.!?])\s/)[0].replace(/[.!?]+$/, '').trim();
-  if(fits(sentence)) return sentence;
-  const clause = sentence.split(/\s*[,;:\u2014]\s*/)[0].trim();
-  return fits(clause) && clause !== sentence ? clause : '';
+// Every step gets the same kind of line: a short, complete phrase that says what the step is for.
+function planStepLabel(st){
+  const t = String(st.title || '');
+  const rules = [
+    [/^Learn .*flashcards?/i, 'Build recall on new terms'],
+    [/^Review .*flashcards?/i, 'Clear the cards due now'],
+    [/^Refresh .*figures?/i, 'Lock in key limits and figures'],
+    [/adaptive session/i, 'Mixed questions on your weak spots'],
+    [/^Review .*missed/i, 'Fix the questions you got wrong'],
+    [/^New ground:/i, 'Learn a topic you have not covered'],
+    [/^Read:/i, 'Read the topic summary'],
+    [/^Explain:/i, 'Say the idea back in your own words'],
+    [/^Calculator practice/i, 'Practice the HP 10bII+ key sequence'],
+    [/^Formula practice/i, 'Drill the core formulas'],
+    [/^Decision tool/i, 'Work through a business decision'],
+    [/case study/i, 'Apply the rules to a client case'],
+    [/timed (checkpoint|set)/i, 'Test yourself under exam timing'],
+    [/mixed round/i, 'Mixed questions across every domain'],
+    [/^(Drill|Weakest area):/i, 'Target your weakest topic'],
+    [/^Keep fresh:/i, 'Review a topic you already know'],
+  ];
+  const hit = rules.find(r => r[0].test(t));
+  return hit ? hit[1] : 'Practice this topic';
 }
+
 
 
 
@@ -12245,7 +12259,7 @@ function _renderTodayPlanInner(){
     const rowGo = (!st.manual && !st.done) ?` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : seqNo[i]}</div>
-      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? `<div class="pt-why">${escapeHtml(planWhyShort(st.why))}</div>` : ''}</div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}<div class="pt-why">${escapeHtml(planStepLabel(st))}</div></div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -32855,7 +32869,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.954';
+const BUILD_ID = '2026-10-26.955';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
