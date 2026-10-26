@@ -178,14 +178,14 @@
   .q-text,.mw-q{white-space:pre-line;}
   .pp{margin:0 0 10px;padding:0;}
   .pp-segs{display:flex;gap:3px;height:6px;margin:0 0 5px;}
-  .pp-s{flex:1 1 0;min-width:2px;border-radius:3px;background:var(--hair-strong);position:relative;overflow:hidden;display:block;}
+  .pp-s{flex:1 1 0 !important;width:0;min-width:2px;border-radius:3px;background:var(--hair-strong);position:relative;overflow:hidden;display:block;}
   .pp-s.done{background:var(--gold);}
   .pp-s.now{background:var(--hair-strong);box-shadow:0 0 0 1.5px var(--gold);}
   .pp-s.now::after,.pp-s.part::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--f,0%);background:var(--gold);opacity:.85;}
   .pp-s.part{background:var(--hair-strong);}
   .pp-txt{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:11.5px;color:var(--muted);line-height:1.3;}
   .pp-txt b{color:var(--paper);font-weight:600;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
-  .pp-txt .pp-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;}
+  .pp-txt .pp-t{min-width:0;flex:1 1 160px;white-space:normal;overflow-wrap:anywhere;line-height:1.3;}
   .pp-txt .pp-l{margin-left:auto;white-space:nowrap;}
   .pp-mini{margin:4px 0 0;}.pp-mini .pp-segs{height:4px;margin-bottom:3px;}.pp-mini .pp-txt{font-size:11.5px;}.pp-mini .pp-t{display:none;}
   body.flashcard-fullscreen .pp{margin:0 0 8px;padding-right:54px;}
@@ -32825,7 +32825,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.944';
+const BUILD_ID = '2026-10-26.945';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
