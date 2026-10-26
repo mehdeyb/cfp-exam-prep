@@ -8413,7 +8413,7 @@ function playNextSpeechChunk(){
     return;
   }
   const chunk = state.chunks[state.index];
-  const utter = new SpeechSynthesisUtterance(applyPronunciationDictionary(chunk.text));
+  const utter = ttFaceWordHook(new SpeechSynthesisUtterance(applyPronunciationDictionary(chunk.text)));
   // Subtle per-sentence variation, kept within a narrow band so it reads as
   // natural human variation rather than a noticeably different voice --
   // scaled by the person's chosen playback speed, same as real podcast apps.
@@ -8460,7 +8460,7 @@ function playNextSpeechChunk(){
     if(started || myGeneration !== state.generation || !state.active || state.paused) return;
     try{
       window.speechSynthesis.cancel();
-      const u2 = new SpeechSynthesisUtterance(applyPronunciationDictionary(chunk.text)); u2.rate = utter.rate; u2.pitch = 1;
+      const u2 = ttFaceWordHook(new SpeechSynthesisUtterance(applyPronunciationDictionary(chunk.text))); u2.rate = utter.rate; u2.pitch = 1;
       u2.onend = utter.onend; u2.onerror = utter.onerror;
       let st2 = false; u2.onstart = () => { st2 = true; };
       window.speechSynthesis.speak(u2);
@@ -13489,6 +13489,8 @@ const TT_FACE_COL = { skin:'#ECE9DF', ink:'#0F1A2C', hi:'#FFF8E1' }; // the app'
 const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, timer:null, toolSet:false, tutorShow:false };
 function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
 // Talking means voice is actually coming out: a paused lesson keeps speechSynthesis.speaking true, so pause is checked too.
+// Each spoken word (when the voice reports word boundaries) opens the mouth briefly, so it moves with the words.
+function ttFaceWordHook(u){ try{ u.onboundary = (e) => { if(!e || e.name === 'sentence') return; ttFace.wordAt = Date.now(); }; }catch(e){} return u; }
 function ttFaceTalking(){ try{ const s = window.speechSynthesis; return !!(s && s.speaking && !s.paused); }catch(e){ return false; } }
 function ttFaceDraw(){ ['ttFace','scrFace'].forEach(id => { const cv = document.getElementById(id); if(cv && cv.getContext) ttFaceDrawOn(cv); }); }
 function ttFaceDrawOn(cv){
@@ -13518,7 +13520,8 @@ function ttFaceDrawOn(cv){
   const talking = ttFaceTalking();
   // Varied, speech-like mouth cycle (0 open, 1 half, 2 closed); a longer pattern so it does not look mechanical.
   const SPEECH = [2, 0, 1, 0, 2, 1, 0, 2, 2, 1, 0, 1, 2]; 
-  const shape = talking ? SPEECH[ttFace.tick % SPEECH.length] : -1;
+  const recentWord = talking && (now - (ttFace.wordAt || 0)) < 170;
+  const shape = talking ? (recentWord ? 0 : (SPEECH[ttFace.tick % SPEECH.length] === 0 ? 1 : SPEECH[ttFace.tick % SPEECH.length])) : -1;
   if(shape === 0){ if(ex === 'thinking') put(ink, 7, 8, 2, 2); else put(ink, 6, 7, 4, 2); }
   else if(shape === 1){ put(ink, 6, 7, 4, 1); }
   else if(ex === 'happy' || ex === 'encouraging' || ex === 'excited'){ put(ink, 5, 7, 1, 1); put(ink, 10, 7, 1, 1); put(ink, 6, 8, 4, 1); }
@@ -32753,7 +32756,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.929';
+const BUILD_ID = '2026-10-26.930';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
