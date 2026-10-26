@@ -4094,7 +4094,7 @@
   #screenHost .scr-foot #scrPlay{flex:0 0 auto !important;min-width:132px;min-height:44px;padding:0 26px;border-radius:999px;}
 
   /* The lesson's Now saying line lives in the box beside the face on the board. */
-  #tutorCard.tt-board #pstNow{display:none !important;}
+  #podcastStage #pstNow, #tutorCard #pstNow{display:none !important;}
   #tutorCard #ttFaceCap .tt-cap-lab{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#8A6D1F;}
 </style>
 </head>
@@ -13743,13 +13743,13 @@ function ttFaceStop(){ if(ttFace.timer){ clearInterval(ttFace.timer); ttFace.tim
 // On the board, the reply text sits beside the speaker icon in the face's own palette; the full thread is kept but hidden there.
 function ttSyncFaceCap(){
   const cap = document.getElementById('ttFaceCap'), card = document.getElementById('tutorCard'); if(!cap || !card) return;
+  if(ttSyncNow()) return;
   if(!card.classList.contains('tt-board')) return;
   const bots = document.querySelectorAll('#tutorThread .tutor-msg-bot .tutor-bubble');
   const last = bots.length ? bots[bots.length - 1] : null;
   const txt = last ? (last.textContent || '').replace(/\s+/g, ' ').trim() : '';
   const want = txt || 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
   if(ttCap.active) return;
-  if(ttSyncNow()) return;
   ttCapRender(want);
 }
 // While a lesson is being read, its "Now saying" line goes in this box beside the face instead of under the board.
@@ -33014,7 +33014,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.968';
+const BUILD_ID = '2026-10-26.969';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
