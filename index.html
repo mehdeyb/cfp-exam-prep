@@ -3997,6 +3997,12 @@
     body.os-one .score-why{min-height:28px;padding:2px 8px;font-size:12px;}
     body.os-one .stat-strip{gap:16px;}
     body.os-one .exam-countdown-card{padding:6px 10px;}
+    body.os-one .score-ring-wrap{width:150px;height:auto;display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+    body.os-one .score-ring{display:none;}
+    body.os-one .score-ring-center{position:static;flex-direction:row;align-items:baseline;gap:4px;justify-content:flex-start;}
+    body.os-one .score-ring-block{align-items:flex-start;}
+    body.os-one .score-flat{display:block;width:100%;height:8px;border-radius:4px;background:var(--hair);overflow:hidden;}
+    body.os-one .score-flat i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--teal));transition:width .6s ease;}
   }
 </style>
 </head>
@@ -4061,6 +4067,7 @@
             <div class="score-big" id="readinessScore">—</div>
             <div class="score-ring-sub">/100</div>
           </div>
+          <div class="score-flat" aria-hidden="true"><i id="readinessFlatFill"></i></div>
         </div>
         <div class="score-meta"><span class="label">Overall readiness</span></div>
         <div class="score-band" id="readinessBand"></div>
@@ -8984,6 +8991,8 @@ function allDomainsWeakestFirst(){
 // behind the Blueprint Bar.
 function renderReadinessGauge(stats){
   animateReadinessNumber(document.getElementById('readinessScore'), stats.readiness);
+  const flat = document.getElementById('readinessFlatFill');
+  if(flat){ const pct = Math.max(0, Math.min(100, typeof stats.readinessExact === 'number' ? stats.readinessExact : stats.readiness)); flat.style.width = pct.toFixed(1) + '%'; }
   const ringFill = document.getElementById('readinessRingFill');
   if(ringFill){
     const circumference = 2 * Math.PI * 52;
@@ -32777,7 +32786,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.933';
+const BUILD_ID = '2026-10-26.934';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
