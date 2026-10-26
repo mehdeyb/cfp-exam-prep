@@ -4092,6 +4092,10 @@
 
   /* Full-screen lesson: Pause/Play is a compact button, not a full-width bar. */
   #screenHost .scr-foot #scrPlay{flex:0 0 auto !important;min-width:132px;min-height:44px;padding:0 26px;border-radius:999px;}
+
+  /* The lesson's Now saying line lives in the box beside the face on the board. */
+  #tutorCard.tt-board #pstNow{display:none !important;}
+  #tutorCard #ttFaceCap .tt-cap-lab{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#8A6D1F;}
 </style>
 </head>
 <body>
@@ -13745,11 +13749,25 @@ function ttSyncFaceCap(){
   const txt = last ? (last.textContent || '').replace(/\s+/g, ' ').trim() : '';
   const want = txt || 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
   if(ttCap.active) return;
+  if(ttSyncNow()) return;
   ttCapRender(want);
+}
+// While a lesson is being read, its "Now saying" line goes in this box beside the face instead of under the board.
+function ttSyncNow(){
+  const pn = document.getElementById('pstNow'), cap = document.getElementById('ttFaceCap'); if(!pn || !cap) return false;
+  const lab = pn.querySelector('b'); const who = lab ? lab.textContent.trim() : 'Now saying';
+  const body = (pn.textContent || '').replace(who, '').replace(/\s+/g, ' ').trim(); if(!body) return false;
+  const key = who + '|' + body;
+  if(cap.dataset.src === key && cap.querySelector('.tt-cap-w')) return true;
+  cap.dataset.src = key; cap.textContent = '';
+  const l = document.createElement('span'); l.className = 'tt-cap-lab'; l.textContent = who.toUpperCase(); cap.appendChild(l); cap.appendChild(document.createTextNode(' '));
+  body.split(' ').forEach((w, i, arr) => { const sp = document.createElement('span'); sp.className = 'tt-cap-w'; sp.textContent = w; cap.appendChild(sp); if(i < arr.length - 1) cap.appendChild(document.createTextNode(' ')); });
+  return true;
 }
 function ttCapInit(){
   const th = document.getElementById('tutorThread'), card = document.getElementById('tutorCard'); if(!th || !card) return;
   new MutationObserver(() => { try{ ttSyncFaceCap(); }catch(e){} }).observe(th, { childList: true, subtree: true, characterData: true });
+  const pnEl = document.getElementById('pstNow'); if(pnEl) new MutationObserver(() => { try{ ttSyncFaceCap(); }catch(e){} }).observe(pnEl, { childList: true, subtree: true, characterData: true });
   new MutationObserver(() => { try{ ttFaceApply(); ttSyncFaceCap(); }catch(e){} }).observe(card, { attributes: true, attributeFilter: ['class'] });
   try{ ttSyncFaceCap(); }catch(e){}
 }
@@ -32996,7 +33014,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.967';
+const BUILD_ID = '2026-10-26.968';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
