@@ -2064,6 +2064,8 @@
       body.os-one #tab-study .stat-strip{display:none !important;}
       /* Last 7 days repeats the This week tiles above it (same questions, study time and accuracy), so on iPad landscape it steps aside. */
       body.os-one #weekRecap{display:none !important;}
+      /* The Break card sat at the foot of the plan and was cut off by the bottom edge on iPad landscape, so it steps aside here. */
+      body.os-one #todayPlanCard .pt-break{display:none !important;}
       /* Today and Your progress stay on one screen on iPad landscape: no page scrolling, no pinch or drag panning. */
       body.os-one:has(#tab-study.active){overflow:hidden !important;overscroll-behavior:none;}
       body.os-one #tab-study.active,
@@ -32600,7 +32602,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.871';
+const BUILD_ID = '2026-10-25.872';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
