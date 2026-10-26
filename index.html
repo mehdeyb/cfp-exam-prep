@@ -8284,6 +8284,7 @@ function playNextSpeechChunk(){
     state.chunkSpeaking = false;
     if(!state.active || state.paused) return; // stopped or paused mid-chunk -- don't auto-advance
     state.index++;
+    if(checkpointGate(state.index)) return; // a quick check is due: the lesson waits for the student's answer
     // Scale the pause too, not just the spoken rate -- otherwise the gaps
     // between sentences would stay the same fixed length even as the words
     // themselves sped up, which would feel disjointed rather than genuinely faster.
@@ -15263,6 +15264,59 @@ function setPodcastPlayButtonState(state){
   }
 }
 
+/* Inline retrieval checkpoints. Every few chunks of a lesson the audio pauses for one question on the student's weakest
+   subtopic in that domain. Answering from memory before the explanation is the testing effect: it strengthens recall more
+   than rereading does, and the feedback that follows is anchored to what the student actually got wrong. The student can
+   skip it, and the lesson resumes on their tap. */
+const CHECKPOINT_EVERY = 6;
+function checkpointDomainKey(){
+  try{
+    const type = document.getElementById('podcastTypeSelect').value;
+    if(type === 'personalized' || type === 'custom'){ const b = podcastBriefing(); return (b && b.lead) || null; }
+    return document.getElementById('podcastDomainSelect').value || null;
+  }catch(e){ return null; }
+}
+function checkpointQuestion(){
+  const dk = checkpointDomainKey(); if(!dk) return null;
+  const used = window._cpUsed || (window._cpUsed = new Set());
+  let pool = [];
+  try{
+    const weak = weakSubtopics(12).filter(w => w.key === dk);
+    if(weak.length) pool = subtopicPool(weak[0].key, weak[0].idx) || [];
+  }catch(e){ pool = []; }
+  if(!pool.length) pool = allQuestions().filter(q => q.domain === dk);
+  const fresh = pool.filter(q => !used.has(q.id));
+  const src = fresh.length ? fresh : pool;
+  return src.length ? src[Math.floor(Math.random() * src.length)] : null;
+}
+function checkpointAsk(){
+  const q = checkpointQuestion(); if(!q || !Array.isArray(q.choices)) return false;
+  (window._cpUsed || (window._cpUsed = new Set())).add(q.id);
+  const opts = q.choices.map((c, i) => ({ label: 'ABCD'[i] + '. ' + c, run: () => checkpointAnswer(q, i) }));
+  opts.push({ label: 'Skip and continue', run: () => checkpointResume() });
+  tutorSay('Quick check before we go on: ' + q.q, opts);
+  return true;
+}
+function checkpointAnswer(q, i){
+  const ok = i === q.correct;
+  const why = String(q.rationale || '').trim();
+  const head = ok ? 'Right. ' : 'Not quite. The answer is ' + 'ABCD'[q.correct] + '. ';
+  tutorSay(head + why, [{ label: 'Continue the lesson', run: () => checkpointResume() }]);
+}
+function checkpointResume(){ try{ if(naturalSpeechState.active && naturalSpeechState.paused) resumeSpeechSequence(); }catch(e){} }
+// Called as each chunk finishes. Returns true when it has paused the lesson for a checkpoint.
+function checkpointGate(index){
+  try{
+    const n = naturalSpeechState.chunks ? naturalSpeechState.chunks.length : 0;
+    if(!podcastPlayingKey || index < CHECKPOINT_EVERY || index % CHECKPOINT_EVERY !== 0 || index >= n - 2) return false;
+    if(window._cpLast === index) return false;
+    window._cpLast = index;
+    if(!checkpointAsk()) return false;
+    pauseSpeechSequence(); setPodcastPlayButtonState('Resume');
+    const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Paused for a quick check.';
+    return true;
+  }catch(e){ return false; }
+}
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
@@ -32403,7 +32457,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.836';
+const BUILD_ID = '2026-10-25.837';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
