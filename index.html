@@ -12165,6 +12165,8 @@ function _renderTodayPlanInner(){
   const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
   const unitTxt = st => st.unit || 'questions';
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : `${st.have || 0} of ${st.need} ${unitTxt(st)} done`) : '';
+  // Numbers count the open steps in order, so a finished step never leaves a gap in the list.
+  let _openSeq = 0; const seqNo = plan.steps.map(x => x.done ? 0 : ++_openSeq);
   const stepRows = plan.steps.map((st, i) => {
     const partial = !st.done && (st.have || 0) > 0 && st.need > 0;
     const isNext = !st.done && plan.steps.findIndex(x => !x.done) === i;
@@ -12177,7 +12179,7 @@ function _renderTodayPlanInner(){
       : `<button type="button" class="pt-go" aria-label="${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}: ${escapeHtml(st.title)}" title="${partial ? escapeHtml((st.have || 0) + ' of ' + st.need + ' done so far') : ''}" onclick="${resumeIt ? 'resumeInProgressSession()' : `runPlanStep('${st.id}')`}">${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}</button>`);
     const rowGo = (!st.manual && !st.done) ?` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
-      <div class="pt-num">${st.done ? '✓' : i + 1}</div>
+      <div class="pt-num">${st.done ? '✓' : seqNo[i]}</div>
       <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? (st.why.length > (isNext ? 150 : 110) ? '<div class="pt-why pt-why-more" title="Tap to read the whole reason" onclick="event.stopPropagation();this.classList.toggle(\'open\');osFitRefresh()"><span class="pt-why-s">' + escapeHtml(st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026') + '</span><span class="pt-why-f">' + escapeHtml(st.why) + '</span></div>' : '<div class="pt-why">' + escapeHtml(st.why) + '</div>') : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${(pr && st.done) ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
@@ -32786,7 +32788,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.934';
+const BUILD_ID = '2026-10-26.935';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
