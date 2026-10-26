@@ -3532,6 +3532,19 @@
   body.quiz-active #resultsView > .card{flex:1 0 auto;display:flex;flex-direction:column;}
   body.quiz-active #resultsView > .card > *{flex-shrink:0;}
   body.quiz-active #resultsView > .card > .quiz-actions{margin-top:auto;}
+  /* Results on a tablet: the card takes the full width and splits into two columns, so the whole result fits on one screen. */
+  @media (min-width:641px){
+    body.quiz-active:has(#resultsView:not([style*="none"])) .quiz-inner{max-width:min(1180px, calc(100vw - 40px));}
+    body.quiz-active #resultsView:not([style*="none"]) > .card{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);column-gap:28px;align-items:start;}
+    body.quiz-active #resultsView > .card > .result-col{min-width:0;display:flex;flex-direction:column;}
+    body.quiz-active #resultsView > .card > .quiz-actions{grid-column:1 / -1;margin-top:10px;}
+    body.quiz-active #resultsView .recap-item-q > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    body.quiz-active #resultsView:not([style*="none"]) .retrieval-recap{margin:0 0 8px;}
+    body.quiz-active #resultsView .recap-item{margin-bottom:6px;}
+    body.quiz-active #resultsView .recap-item-q{padding:9px 12px;}
+    body.quiz-active #resultsView .breakdown th, body.quiz-active #resultsView .breakdown td{padding-top:5px;padding-bottom:5px;}
+    body.quiz-active #resultsView:not([style*="none"]){padding-bottom:12px;}
+  }
   body.quiz-active #quizView .quiz-inner{padding-top:max(6px, env(safe-area-inset-top));}
 
   /* ---- Screen-area pass (phones, upright): nothing floats over content ---- */
@@ -4577,6 +4590,7 @@
         <div id="resultsView">
           <div id="conductorResultsHost"></div>
           <div class="card">
+            <div class="result-col result-col-l">
             <div class="result-hero">
               <div class="big" id="resultScore">0/0</div>
               <div class="label" id="resultLabel">Session complete</div>
@@ -4587,17 +4601,20 @@
             <div class="rr-card" id="resultReadiness" style="display:none;"></div>
             <div class="improvement-callout" id="improvementCallout" style="display:none;"></div>
             <div id="sectionBreakdown" style="display:none;"></div>
-            <div id="retrievalRecap" style="display:none;"></div>
             <div class="rr-card" id="resultTools" style="display:none;"></div>
             <div class="rr-card" id="resultTvm" style="display:none;"></div>
             <div class="rr-card" id="resultCase" style="display:none;"></div>
             <div class="rr-card" id="resultPace" style="display:none;"></div>
             <div class="rr-card" id="resultChat" style="display:none;"></div>
+            </div>
+            <div class="result-col result-col-r">
+            <div id="retrievalRecap" style="display:none;"></div>
             <div class="result-sec-title" id="resultDomTitle">By domain</div>
             <table class="breakdown">
               <thead><tr><th>Domain</th><th style="text-align:right;">This session</th><th style="text-align:right;">Overall</th></tr></thead>
               <tbody id="resultBody"></tbody>
             </table>
+            </div>
             <div class="quiz-actions">
               <button class="btn ghost" onclick="exitToMenu()">Back to studio</button>
               <button class="btn" id="resultAgainBtn" onclick="restartSame()">Do it again</button>
@@ -11676,7 +11693,7 @@ function buildStudyPlanCore(minutes){
       const goal = Math.max(4, Math.min(8, planTarget('figGoal', Math.min(8, fr.due))));
       const have = Math.min(goal, (L.figs || []).length);
       return { id:'figures', title:`Refresh ${goal} key figures`, minutes: Math.max(4, Math.ceil(goal * 0.8)), need:goal, have, unit:'figures',
-        why: fr.never >= fr.total * 0.5 ? `${fr.never} of the ${fr.total} limits and thresholds have not come up in a drill yet. A few a day, newest and shakiest first, keeps them from blurring together.` : `${fr.due} of the ${fr.total} limits and thresholds are due to come back. Figures fade fastest, so a few each day keep them sharp for the exam.`,
+        why: fr.never >= fr.total * 0.5 ? `${fr.never} of ${fr.total} figures not drilled yet.` : `${fr.due} of ${fr.total} figures due to come back.`,
         run: () => { showTab('study'); startFigureDrill(goal - have > 0 ? goal - have : goal); } };
     },
     tutor: () => {
@@ -28703,7 +28720,7 @@ function finishSession(){
   });
   const improvEl = document.getElementById('improvementCallout');
   if(bestImprovement){
-    improvEl.innerHTML = `<b>${bestImprovement.name}</b> — ${bestImprovement.thisPct}% this session, up from your ${bestImprovement.priorPct}% average there. That's the targeted practice paying off, specifically.`;
+    improvEl.innerHTML = `<b>${bestImprovement.name}</b> — ${bestImprovement.thisPct}% this session, up from your ${bestImprovement.priorPct}% average there.`;
     improvEl.style.display = 'block';
   } else {
     improvEl.style.display = 'none';
@@ -28850,7 +28867,7 @@ function renderResultTools(){
     if(!top) return;
     const walkBtn = TREE_SCENARIOS[top.key] ? ` <button type="button" class="btn" onclick="exitToMenu();openTreeWalk('${top.key}')">Walk a client scenario</button>` : '';
     const drillBtn = walkBtn + (TREE_META[top.key] ? ` <button type="button" class="btn ghost" onclick="exitToMenu();startTreeDrill('${top.key}')">Apply the tree</button>` : '');
-    el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers. Seeing it as a picture can make the rule stick.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>${drillBtn}`;
+    el.innerHTML = `<div class="rr-note" style="margin:0 0 10px;">You missed ${counts[top.key] === 1 ? 'a question' : counts[top.key] + ' questions'} this session that the tool <b>${escapeHtml(top.name)}</b> covers.</div><button class="btn ghost" onclick="openToolFromResults('${top.key}')">Open the tool</button>${drillBtn}`;
     el.style.display = 'block';
   }catch(e){}
 }
@@ -28917,7 +28934,7 @@ function renderRetrievalRecap(){
 
   host.innerHTML = `<div class="retrieval-recap">
     <div class="retrieval-recap-title">Review what you missed (${missedThisSession.length})</div>
-    <div class="retrieval-recap-sub">Recall the key point first, then tap to check. That extra attempt is what makes it stick.</div>
+    <div class="retrieval-recap-sub">Recall the answer, then tap to check.</div>
     ${itemsHtml}
   </div>`;
   host.style.display = 'block';
@@ -33137,7 +33154,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.990';
+const BUILD_ID = '2026-10-26.991';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
