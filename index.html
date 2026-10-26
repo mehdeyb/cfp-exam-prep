@@ -1466,6 +1466,13 @@
   .simple-sec{display:flex;flex-direction:column;gap:2px;padding-left:10px;border-left:2px solid var(--teal);}
   .simple-sec-title{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);}
   .simple-sec-text{font-size:13px;line-height:1.5;color:var(--paper);}
+  .simple-more{margin-top:8px;}
+  .simple-more > summary{list-style:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);padding:4px 0;}
+  .simple-more > summary::-webkit-details-marker{display:none;}
+  .simple-more > summary::after{content:' · tap to open';text-transform:none;letter-spacing:0;opacity:.7;}
+  .simple-more[open] > summary::after{content:'';}
+  .simple-more[open] > summary{margin-bottom:6px;}
+  .simple-more > .simple-sec{margin-top:8px;}
   .simple-analogy{border-left-color:var(--gold);}
   .simple-analogy .simple-sec-title{color:var(--gold);}
   .simple-spot{border-left-color:var(--teal);}
@@ -28483,6 +28490,14 @@ function renderSimplifiedExplanation(box, reply, fromCache){
     addSection('Think of it like', reply.analogy, 'simple-analogy');
     addSection('Spot it next time', reply.spot, 'simple-spot');
     addSection('The trap', reply.trap, 'simple-trap');
+    // The plain-language idea stays up front; the supporting sections fold away so the answered question fits on one screen.
+    const more = document.createElement('details');
+    more.className = 'simple-more';
+    const moreSum = document.createElement('summary');
+    moreSum.textContent = 'Why, an analogy and the trap';
+    more.appendChild(moreSum);
+    [...body.children].slice(1).forEach(n => more.appendChild(n));
+    if(more.children.length > 1) body.appendChild(more);
   }
   box.appendChild(body);
   if(hasSpeechSupport()){
@@ -33247,7 +33262,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9996';
+const BUILD_ID = '2026-10-26.9997';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
