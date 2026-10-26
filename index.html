@@ -248,6 +248,8 @@
   .plan-forecast b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:2px;}
   .mix-line{display:block;margin-top:5px;}
   .mix-note{display:block;margin-top:6px;font-size:12px;opacity:.8;}
+  .flag-q-btn.on{color:var(--gold);opacity:1;}
+  .flag-q-btn:disabled{cursor:default;}
   .q-flag{font-weight:700;color:var(--gold);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;}
   .quiz-feedback svg{flex:none;}
   .miss-tip{display:block;font-weight:400;font-size:12px;opacity:.9;margin-top:3px;}
@@ -18947,6 +18949,20 @@ async function speakQuestionRationale(){
   return speakText(text, btn, 'qr-' + q.id, stillOnSameQuestion);
 }
 
+// Flag a question the student thinks is wrong, unclear or outdated. Kept as a short review list, so bad items can be fixed later.
+function flagQuestion(btn){
+  try{
+    const q = session && session.queue ? session.queue[session.index] : null;
+    if(!q) return;
+    if(!Array.isArray(DATA.flaggedQs)) DATA.flaggedQs = [];
+    if(!DATA.flaggedQs.some(f => f.id === q.id)){
+      DATA.flaggedQs.push({ id: String(q.id), q: String(q.q || '').slice(0, 300), t: Date.now() });
+      DATA.flaggedQs = DATA.flaggedQs.slice(-200);
+      persist();
+    }
+    if(btn){ btn.disabled = true; btn.title = 'Flagged for review'; btn.classList.add('on'); }
+  }catch(e){}
+}
 // A checkpoint every FC_CHECKPOINT cards: say what went well, name the cards
 // that come back first, and re-sort the deck so they actually do.
 const FC_CHECKPOINT = 12;
@@ -27532,7 +27548,8 @@ function selectAnswerCore(i){
   const correctLabel = wasPreviouslyMissed ? 'Correct — you\'ve got this one now.' : 'Correct!';
   const missTipText = missType ? missTipFor(missType, q) : '';
   const missTip = (missType && MISS_TYPES[missType] && missTipText) ? `<small class="miss-tip">${MISS_TYPES[missType].label}: ${missTipText}</small>` : '';
-  fb.innerHTML = fbIcon + '<span>' + (isCorrect ? correctLabel : `Not quite — the answer is ${letters[q.correct]}.` + missTip + (mixPair ? mixupContrastHtml(mixPair) : '')) + '</span>' + speakBtnHtml;
+  const flagBtnHtml = `<button class="speak-btn flag-q-btn" type="button" title="Flag this question for review (wrong, unclear or outdated)" aria-label="Flag this question for review" onclick="flagQuestion(this)"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></svg></button>`;
+  fb.innerHTML = fbIcon + '<span>' + (isCorrect ? correctLabel : `Not quite — the answer is ${letters[q.correct]}.` + missTip + (mixPair ? mixupContrastHtml(mixPair) : '')) + '</span>' + speakBtnHtml + flagBtnHtml;
   fb.className = 'quiz-feedback ' + (isCorrect ? 'good' : 'bad');
   fb.style.display = 'flex';
   quizRevealFeedback(fb);
@@ -32614,7 +32631,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.897';
+const BUILD_ID = '2026-10-26.898';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
