@@ -4039,6 +4039,16 @@
   body.screen-active #screenHost{touch-action:pan-y;}
   .pt-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
   .pt-stats b{color:var(--paper);font-weight:600;}
+
+  /* Tutor board: play sits beside Send and only shows while a lesson player is open; the reply box is a slim, quiet strip so the board gets the height. */
+  #tutorCard .tutor-input-row #podcastPlayPauseBtn{display:none;width:44px;height:44px;flex:none;border-radius:50%;padding:0;}
+  #tutorCard:has(#podcastPlayer[style*="block"]) .tutor-input-row #podcastPlayPauseBtn{display:inline-flex;align-items:center;justify-content:center;}
+  #tutorCard .tutor-input-row #podcastPlayPauseBtn svg{width:16px;height:16px;}
+  #tutorCard.tt-board #tutorThread{min-height:0 !important;max-height:min(12vh, 96px) !important;background:transparent !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 0 2px !important;}
+  #tutorCard.tt-board #tutorThread .tutor-msg-bot .tutor-bubble{font-size:13px !important;line-height:1.4 !important;color:var(--muted);}
+  #tutorCard.tt-board #tutorThread .tutor-msg + .tutor-msg{border-top:0 !important;padding-top:4px !important;}
+  #tutorCard.tt-board #podcastStage{min-height:66vh !important;}
+  #tutorCard.tt-board #pstBody{min-height:calc(66vh - 46px) !important;}
 </style>
 </head>
 <body>
@@ -4908,7 +4918,6 @@
           <div class="pp-prog"><input type="range" id="podcastSeek" min="0" max="0" value="0" step="1" aria-label="Position in episode" oninput="podcastSeekPreview(this.value)" onchange="podcastSeekCommit(this.value)"><div class="pp-time"><span id="podcastElapsed">0:00</span><span id="podcastLeft"></span></div></div>
           <div class="podcast-player-controls">
             <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipBackBtn" onclick="podcastSkip(-1)" title="Previous sentence" aria-label="Previous sentence"></button>
-            <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
             <button class="podcast-icon-btn podcast-icon-btn-skip" id="podcastSkipForwardBtn" onclick="podcastSkip(1)" title="Next sentence" aria-label="Next sentence"></button>
             <button class="podcast-icon-btn podcast-icon-btn-skip podcast-stop-btn" id="podcastStopBtn" onclick="stopPodcastPlayback()" title="Stop" aria-label="Stop" hidden><span></span></button>
           </div>
@@ -4954,6 +4963,7 @@
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
         <input type="text" id="tutorInput" class="tutor-input" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" onkeydown="if(event.key==='Enter') sendTutorMessage();">
+        <button class="podcast-icon-btn podcast-icon-btn-play" id="podcastPlayPauseBtn" onclick="togglePodcastPlayback()" aria-label="Play"></button>
         <button class="btn" id="tutorSendBtn" onclick="sendTutorMessage()">Send</button>
       </div>
       <div class="tutor-status" id="tutorStatus" role="status"></div>
@@ -32878,7 +32888,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.957';
+const BUILD_ID = '2026-10-26.958';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
