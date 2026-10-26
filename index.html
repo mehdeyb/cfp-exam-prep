@@ -3014,6 +3014,11 @@
     }
     #tvmHost .dp-inner > *{grid-column:1;}
     #tvmHost .dp-inner > *:not(.tvm-device):not(.tvm-actions){margin-top:0 !important;margin-bottom:0 !important;}
+    /* The progress chips and the buttons are the bottom of the walkthrough; they get their own breathing room
+       so the timeline's legend, the chips and the buttons read as three separate things. */
+    #tvmHost .dp-inner > .tvm-status{margin-top:12px !important;}
+    #tvmHost .dp-inner > .tvm-actions{margin-top:16px !important;}
+    #tvmHost .dp-inner > .tvm-actions .btn{min-height:44px;}
     #tvmHost .tvm-howto > summary{display:none !important;}
     #tvmHost .tvm-howto{display:block;}
     #tvmHost .tvm-howto > *:not(summary){display:block !important;font-size:13px;line-height:1.4;margin:0 !important;}
@@ -33302,7 +33307,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99995';
+const BUILD_ID = '2026-10-26.99996';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
