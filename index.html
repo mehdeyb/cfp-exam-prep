@@ -1163,6 +1163,10 @@
   #studyHub[data-view="progress"] #mixupCallout,
   #studyHub[data-view="progress"] #edTutor,
   #studyHub[data-view="progress"] #workshopCard{display:none !important;}
+  /* "Why this score" now sits right under the readiness number it explains, in the blueprint column. */
+  #blueprintCard .bp-colR > #readinessWhyBtn{margin:6px 0 0;}
+  #blueprintCard .bp-colR > #readinessBreakdown{margin:10px 0 0;}
+  #blueprintCard .bp-colR > #readinessBreakdown[hidden]{display:none;}
   .bp-value{margin:0 0 14px;}
   .bp-value-head{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:8px;}
   .bp-value-list{list-style:none;margin:0;padding:0;}
@@ -4307,7 +4311,6 @@
         <div class="score-band" id="readinessBand"></div>
         <div class="score-est" id="readinessEst" style="display:none;"></div>
         <div class="score-trend" id="readinessTrend" style="display:none;"></div>
-        <button type="button" class="score-why" id="readinessWhyBtn" aria-expanded="false" aria-controls="readinessBreakdown" onclick="toggleReadinessBreakdown()">Why this score<svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <div class="exam-countdown-card" id="examCountdownCard"></div>
       <div class="stat-strip">
@@ -4318,7 +4321,6 @@
       </div>
     </div>
 
-    <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
 
     <div class="coach-line empty" id="coachLine" role="status">
       <span class="coach-dot" id="coachDot"></span>
@@ -4351,6 +4353,8 @@
       </div>
       <div class="bp-colR">
       <div class="bp-value" id="bpValue"></div>
+<button type="button" class="score-why" id="readinessWhyBtn" aria-expanded="false" aria-controls="readinessBreakdown" onclick="toggleReadinessBreakdown()">Why this score<svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
       <div class="bp-trend" id="progressCard">
         <div class="bp-trend-head"><span class="bp-trend-title">Your trend</span><span class="trend-toggle" id="trendToggle" role="group" aria-label="What the line shows" style="display:none;"><button type="button" data-view="score" class="on" aria-pressed="true" onclick="setTrendView('score')">Score</button><button type="button" data-view="ready" aria-pressed="false" onclick="setTrendView('ready')">Readiness</button></span></div>
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
@@ -33327,7 +33331,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999';
+const BUILD_ID = '2026-10-26.999991';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
