@@ -13792,6 +13792,9 @@ function studyFitScreen(){
   try{
     // Every tab is one screen: the tab that is showing is scaled down only if its content is taller than the window.
     // Scale the whole app wrapper (tabs, quizzes and full-screen views alike) by the amount the page overflows.
+    // While a quiz question is answered, keep the scale it was given for the question. Refitting as the explanation
+    // appears is what made the screen jump; the next question refits from scratch.
+    if(window._quizFitHold && document.body.classList.contains('quiz-active')) return;
     const wrap = document.querySelector('.wrap'); if(!wrap) return;
     wrap.style.zoom = '';
     // The full-screen quiz is a fixed layer: its own panel is scaled to fit the same way.
@@ -27175,6 +27178,7 @@ function placeAnswerTools(){
 }
 window.addEventListener('resize', () => { try{ placeAnswerTools(); }catch(e){} });
 function renderQuestion(){
+  window._quizFitHold = false;
   paceTouch(); paceBegin(); updatePaceChip();
   const q = session.queue[session.index];
   try{ if(q && !isGenQ(q)) qHealKey(q); }catch(e){}
@@ -28075,6 +28079,7 @@ function selectAnswerCore(i){
     note.className = 'choice-note ' + (idx===q.correct ? 'is-correct' : 'is-wrong');
     note.style.display = text ? 'block' : 'none';
   });
+  window._quizFitHold = true;
   placeAnswerTools();
 
   const dt = session.domainTally[q.domain];
@@ -33297,7 +33302,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99994';
+const BUILD_ID = '2026-10-26.99995';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
