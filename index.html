@@ -11732,11 +11732,15 @@ function buildStudyPlanCore(minutes){
 
 // The faint reason under each step, cut to five words.
 function planWhyShort(t){
-  // The first clause of the reason, at most five words, so the line reads as a complete phrase.
-  const lead = String(t || '').replace(/\s+/g, ' ').trim().split(/[.;:(]|\s[\u2014-]\s/)[0].split(', ')[0].trim();
-  const w = lead.split(' ').filter(Boolean);
-  return w.length > 5 ? w.slice(0, 5).join(' ') : w.join(' ');
+  // A complete phrase of at most five words: the reason's first clause, with a dangling end trimmed off.
+  let lead = String(t || '').replace(/\s+/g, ' ').trim().split(/[.;:(]|\s[\u2014-]\s/)[0].split(', ')[0].trim();
+  if(/^(first|second|third|fourth|fifth|sixth|seventh|eighth)\b.*\bweak topics?\b/i.test(lead)) return 'Another weak topic to work on';
+  let w = lead.split(' ').filter(Boolean).slice(0, 5);
+  const dangling = /^(of|the|a|an|to|and|or|on|in|for|with|by|at|from|your|that|this|it|is|are)$/i;
+  while(w.length > 1 && dangling.test(w[w.length - 1])) w.pop();
+  return w.join(' ');
 }
+
 function planFmtMin(m){ m = Math.max(0, Math.round(m || 0)); return m >= 90 ? (Math.round(m / 6) / 10) + ' hrs' : m + ' min'; }
 // Daily study time lives in Settings now; the Today plan only reports time done, remaining and pace.
 function renderSettingsPlanTime(){
@@ -32847,7 +32851,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.950';
+const BUILD_ID = '2026-10-26.951';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
