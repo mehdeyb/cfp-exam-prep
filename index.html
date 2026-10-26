@@ -927,7 +927,8 @@
   .score-ring-block{display:flex;flex-direction:column;align-items:center;gap:8px;}
   .score-ring-wrap{position:relative;width:104px;height:104px;}
   .score-ring{transform:rotate(-90deg);}
-  .score-ring-track{fill:none;stroke:var(--surface2);stroke-width:8;}
+  .score-ring-track{fill:none;stroke:var(--hair-strong);stroke-width:8;}
+  .plan-today .note .nw{white-space:nowrap;}
   .score-ring-fill{
     fill:none;stroke:url(#ringGrad);stroke-width:8;stroke-linecap:round;
     stroke-dasharray:326.7264;stroke-dashoffset:326.7264;
@@ -12195,7 +12196,7 @@ function _renderTodayPlanInner(){
       + (en0 < orderedRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${orderedRows.length - en0} more step${orderedRows.length - en0 === 1 ? '' : 's'} · show all</button>` : '');
   } else rows = orderedRows.join('') + ((orderedRows.length > 11 && !document.body.classList.contains('os-one')) ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · ${doneN}/${plan.steps.length} done${leftTxt}` : ''}</div></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}${plan.steps.length ? ` · <span class="nw">${doneN}/${plan.steps.length} done${leftTxt}</span>` : ''}</div></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
@@ -32788,7 +32789,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.935';
+const BUILD_ID = '2026-10-26.936';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
