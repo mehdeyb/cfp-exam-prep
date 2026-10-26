@@ -15297,7 +15297,25 @@ function checkpointAsk(){
   tutorSay('Quick check before we go on: ' + q.q, opts);
   return true;
 }
+// A checkpoint answer counts exactly as a practice answer does: it moves the question's spacing, the domain totals, and the
+// missed list, so a miss comes back on schedule instead of being forgotten after the lesson.
+function checkpointRecord(q, i){
+  try{
+    const right = i === q.correct;
+    DATA.questionStats[q.id] = advanceSpacedStat(getSpacedStat(DATA.questionStats, q.id), right);
+    const ds = DATA.domainStats && DATA.domainStats[q.domain]; if(ds){ ds.total++; if(right) ds.correct++; }
+    DATA.answerCounter = (DATA.answerCounter || 0) + 1;
+    if(!right){
+      if(!DATA.missed.includes(q.id)) DATA.missed.push(q.id);
+      if(!DATA.wrongChoiceHistory[q.id]) DATA.wrongChoiceHistory[q.id] = {};
+      DATA.wrongChoiceHistory[q.id][i] = (DATA.wrongChoiceHistory[q.id][i] || 0) + 1;
+      try{ recordMixup(q, i); }catch(e){}
+    } else { DATA.missed = DATA.missed.filter(id => id !== q.id); try{ easeMixupOnCorrect(q); }catch(e){} }
+    persist();
+  }catch(e){}
+}
 function checkpointAnswer(q, i){
+  checkpointRecord(q, i);
   const ok = i === q.correct;
   const why = String(q.rationale || '').trim();
   const head = ok ? 'Right. ' : 'Not quite. The answer is ' + 'ABCD'[q.correct] + '. ';
@@ -32457,7 +32475,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.837';
+const BUILD_ID = '2026-10-25.838';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
