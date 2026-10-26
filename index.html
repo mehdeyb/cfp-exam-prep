@@ -3547,6 +3547,11 @@
     body.quiz-active #resultsView .recap-item-q{padding:9px 12px;}
     body.quiz-active #resultsView .breakdown th, body.quiz-active #resultsView .breakdown td{padding-top:5px;padding-bottom:5px;}
     body.quiz-active #resultsView:not([style*="none"]){padding-bottom:12px;}
+    /* Fill the card: the two columns share the height, readiness and the domain table sit at the bottom of their columns, and the buttons stay on the bottom edge. */
+    body.quiz-active #resultsView:not([style*="none"]) > .card{grid-template-rows:minmax(0,1fr) auto;align-items:stretch;}
+    body.quiz-active #resultsView > .card > .result-col-l{justify-content:space-between;gap:16px;}
+    body.quiz-active #resultsView > .card > .result-col-r{gap:14px;}
+    body.quiz-active #resultsView > .card > .result-col-r > #resultDomTitle{margin-top:auto;}
   }
   body.quiz-active #quizView .quiz-inner{padding-top:max(6px, env(safe-area-inset-top));}
 
@@ -33187,7 +33192,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.998';
+const BUILD_ID = '2026-10-26.999';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
