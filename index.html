@@ -29984,6 +29984,8 @@ function osFitStudy(extra){
       if(!hidden) foot.remove();
       if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     }
+    // Last resort before a scroll pane: keep the largest zoom that still fits, down to 60%, so the Today plan stays on one screen.
+    if(c.id === 'studyCols'){ for(let z = 0.94; z >= 0.6 - 1e-9; z = Math.round((z - 0.02) * 100) / 100){ c.style.zoom = String(z); if(zH(c) <= avail + 1) return; } }
     // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
@@ -32593,7 +32595,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.867';
+const BUILD_ID = '2026-10-25.868';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
