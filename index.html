@@ -2051,6 +2051,8 @@
     #tab-study #studyHub{padding-top:12px !important;padding-bottom:12px !important;}
     #tab-study #hubSeg{min-height:40px !important;height:40px !important;margin-bottom:8px !important;}
     #todayPlanCard .pt-rows{gap:8px !important;row-gap:8px !important;}
+    /* On iPad landscape the focus sentence above the plan repeats the step it belongs to, so it moves to a tooltip and the steps get the room. */
+    @media (orientation:landscape) and (min-width:900px) and (max-height:900px){ body.os-one .pt-focus{display:none !important;} }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
       body.os-one #todayPlanCard .pt-step{padding:6px 0 !important;}
@@ -12016,7 +12018,7 @@ function _renderTodayPlanInner(){
   const leftMin = Math.round(plan.steps.filter(x => !x.done).reduce((a, x) => a + x.minutes * (x.need > 0 ? Math.max(0, 1 - (x.have || 0) / x.need) : 1), 0));
   const leftTxt = plan.steps.length && leftMin > 0 ? ` · about ${leftMin >= 90 ? (Math.round(leftMin / 6) / 10) + ' hrs' : leftMin + ' min'} left` : '';
   const nowD = new Date(); const lateNote = leftMin > 0 && (nowD.getHours() * 60 + nowD.getMinutes() + leftMin > 23 * 60 + 30) && nowD.getHours() >= 18
-    ? ' It is late for all of this: do the first steps tonight and leave the rest for tomorrow rather than cutting sleep.' : '';
+    ? ' Late: do the first steps tonight, rest tomorrow.' : '';
   const runwayTxt = freshRunwayLine();
     const sub = plan.phase.key === 'after' ? 'The exam is behind you. Rest, and be proud of the work you put in.'
     : plan.phase.key === 'exam' ? 'Today is the exam. No studying: a calm morning, the checklist, and trust the work.'
@@ -32575,7 +32577,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.857';
+const BUILD_ID = '2026-10-25.858';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
