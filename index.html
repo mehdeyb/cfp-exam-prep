@@ -2326,6 +2326,15 @@
   @keyframes ptMeterIn{from{transform:scaleX(0);}}
   @keyframes ptMeterShine{from{transform:translateX(-120%);}to{transform:translateX(420%);}}
   .pt-prog{font:500 11px 'IBM Plex Mono',monospace;color:var(--muted);margin-top:3px;letter-spacing:.02em;}
+  /* Today plan cleanup (build .879): the plan list clears the floating tab bar, one selected duration, readable progress bars, and on phones only the next step shows a button; every other step opens when tapped. */
+  .plan-today .pt-min.sug::after{display:none;}
+  .pt-meter{height:6px;background:var(--hair-strong);}
+  .pt-prog{font-size:12px;}
+  .pt-actions .pt-mark{font:600 12px 'IBM Plex Sans',sans-serif;min-height:44px;padding:7px 14px;border-radius:22px;border:1px solid var(--hair-strong);background:transparent;color:var(--muted);cursor:pointer;}
+  @media (max-width:899px) and (orientation:portrait){
+    #todayPlanCard{padding-bottom:96px !important;}
+    #todayPlanCard .pt-step:not(.next) > .pt-go{display:none;}
+  }
   .pt-step.partial .pt-prog::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:middle;animation:pulse 1.4s ease-in-out infinite;}
   @media (prefers-reduced-motion: reduce){ .pt-meter i, .pt-meter.live::after, .pt-step.partial .pt-prog::before{animation:none !important;} }
   /* The Today / Your progress switch keeps its own height; it must not stretch into a tall bar when the card is taller than it. */
@@ -3981,7 +3990,7 @@
     <div class="card hub" id="studyHub" data-view="plan">
       <div class="hub-seg pod-seg" id="hubSeg" role="group" aria-label="Plan or progress">
         <button type="button" data-v="plan" onclick="hubShow('plan')"><span>Today's plan</span><em id="hubSegPlan"></em></button>
-        <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg"></em></button>
+        <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span></button>
       </div>
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
     <div class="card" id="blueprintCard">
@@ -12074,7 +12083,7 @@ function _renderTodayPlanInner(){
     const btn = st.done ? '' : (st.manual
       ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button><button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button></span>`
       : `<button type="button" class="pt-go" aria-label="${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}: ${escapeHtml(st.title)}" title="${partial ? escapeHtml((st.have || 0) + ' of ' + st.need + ' done so far') : ''}" onclick="${resumeIt ? 'resumeInProgressSession()' : `runPlanStep('${st.id}')`}">${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}</button>`);
-    const rowGo = (isNext && !st.manual && !st.done) ? ` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
+    const rowGo = (!st.manual && !st.done) ?` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
       <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${(pr && st.done) ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
@@ -12100,7 +12109,7 @@ function _renderTodayPlanInner(){
     ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${lateNote ? `<p class="pt-sub">${escapeHtml(lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
-    ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Just today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
+    ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Only today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
@@ -32622,7 +32631,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.878';
+const BUILD_ID = '2026-10-25.879';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
