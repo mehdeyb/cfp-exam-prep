@@ -4065,8 +4065,13 @@
   }
   /* The full-screen lesson does not pinch-zoom: a pinch there pushed the layout off the right edge on iPad. Vertical scrolling still works. */
   body.screen-active #screenHost{touch-action:pan-y;}
-  .pt-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  /* One narrow row: phase context, time done and left, and pace, all on a single line that truncates rather than wraps. */
+  .pt-stats{display:flex;flex-wrap:nowrap;align-items:center;gap:0 6px;margin:6px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0;}
+  .pt-stats > span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .pt-stats > .pt-ctx{flex:0 1 auto;}
   .pt-stats b{color:var(--paper);font-weight:600;}
+  .pt-stats .pt-sep{font-style:normal;opacity:.5;}
+  .pt-stats .pt-days{color:var(--gold);}
 
   /* Tutor board: play sits beside Send and only shows while a lesson player is open; the reply box is a slim, quiet strip so the board gets the height. */
   #tutorCard #podcastPlayPauseBtn{display:none;width:40px;height:40px;flex:none;border-radius:50%;padding:0;margin-left:2px;}
@@ -12466,14 +12471,15 @@ function _renderTodayPlanInner(){
       + (en0 < orderedRows.length ? `<button type="button" class="pt-more" onclick="ptToggleAll()">${orderedRows.length - en0} more step${orderedRows.length - en0 === 1 ? '' : 's'} · show all</button>` : '');
   } else rows = orderedRows.join('') + ((orderedRows.length > 11 && !document.body.classList.contains('os-one')) ? `<button type="button" class="pt-more" onclick="ptToggleAll()">Show fewer</button>` : '');
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2><div class="note">${plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b> · ` : ''}${escapeHtml(plan.phase.label)}${plan.focus ? ' · ' + escapeHtml(plan.focus.label) : ''}</div></div>
+  const headBits = [plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b>` : '', escapeHtml(plan.phase.label), plan.focus ? escapeHtml(plan.focus.label) : ''].filter(Boolean).join('<i class="pt-sep">·</i>');
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Today's plan</h2></div>
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
     ${plan.focus ? `<p class="pt-sub pt-focus">${escapeHtml(plan.focus.why)}</p>` : ''}
     ${plan.tutorNote ? `<p class="pt-sub pt-focus">${escapeHtml('Your tutor adjusted today: ' + plan.tutorNote)}</p>` : ''}
     ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${lateNote ? `<p class="pt-sub">${escapeHtml(lateNote).trim()}</p>` : ''}
-    <div class="pt-stats" role="status"><span><b>${planFmtMin(doneMinPlan)}</b> done</span><span><b>${planFmtMin(leftMin)}</b> remaining</span>${advice ? `<span>pace <b>${paceHrs(advice.minutes)}</b>/day</span>` : ''}</div>
+    <div class="pt-stats" role="status"><span class="pt-ctx">${headBits}</span><i class="pt-sep">·</i><span><b>${planFmtMin(doneMinPlan)}</b> done</span><i class="pt-sep">·</i><span><b>${planFmtMin(leftMin)}</b> left</span>${advice ? `<i class="pt-sep">·</i><span>pace <b>${paceHrs(advice.minutes)}</b>/day</span>` : ''}</div>
     ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return o ? `<div class="pt-today"><button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button></div>` : ''; })()}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
@@ -33222,7 +33228,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9993';
+const BUILD_ID = '2026-10-26.9994';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
