@@ -29920,6 +29920,20 @@ function showFitInfo(){
       const rows = Object.keys(by).sort((u, v) => by[v].ms - by[u].ms).map(k => k + ': ' + by[k].n + ' runs, ' + Math.round(by[k].ms) + ' ms total, slowest ' + by[k].max + ' ms');
       L.push('--- last 60 seconds ---', rows.length ? rows.join('\n') : 'no timed runs yet (answer a question, then open this again)');
     }catch(e){}
+    // Layout detail for the Today and Progress pages: where each block sits and how tall it is, and whether anything is clipped.
+    try{
+      const box = (id) => { const x = document.getElementById(id); if(!x) return id + ': missing'; const q = x.getBoundingClientRect(); return id + ': top ' + Math.round(q.top) + ' h ' + Math.round(q.height) + ' | content ' + x.scrollHeight + ' visible ' + x.clientHeight + (x.scrollHeight > x.clientHeight + 1 ? ' CLIPPED' : ''); };
+      L.push('--- layout detail ---', box('studyCols'), box('todayPlanCard'), box('blueprintCard'), box('studyHub'), box('scoreRow'), box('progressCard'));
+      const tab = document.getElementById('tab-study');
+      if(tab){
+        const tq = tab.getBoundingClientRect();
+        L.push('tab-study: top ' + Math.round(tq.top) + ' h ' + Math.round(tq.height) + ' scrollH ' + tab.scrollHeight + ' clientH ' + tab.clientHeight);
+        const kids = Array.from(tab.querySelectorAll('[id]')).filter(x => x.offsetParent !== null).slice(0, 14);
+        kids.forEach(x => { const q = x.getBoundingClientRect(); if(q.height > 0) L.push('  #' + x.id + ' top ' + Math.round(q.top) + ' bottom ' + Math.round(q.bottom) + ' h ' + Math.round(q.height)); });
+      }
+      const pc = document.getElementById('todayPlanCard');
+      if(pc){ const rows = pc.querySelectorAll('.pt-step'); L.push('plan steps shown ' + Array.from(rows).filter(x => x.offsetParent !== null).length + ' of ' + rows.length); }
+    }catch(e){ L.push('layout detail error: ' + e.message); }
     el.textContent = L.join('\n');
   }catch(e){}
 }
@@ -32602,7 +32616,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.872';
+const BUILD_ID = '2026-10-25.873';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
