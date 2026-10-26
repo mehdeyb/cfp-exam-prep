@@ -3946,6 +3946,18 @@
   }
   /* Tutor suggestion pills removed: the composer is the only way to ask. */
   #tutorCard #ttActions, #tutorCard #tutorChips, #tutorCard #ttLiveChips, #tutorCard .tt-actions, #tutorCard .tutor-suggest{display:none !important;}
+  /* iPad landscape: tighter lesson controls so the board gets the room. */
+  @media (orientation:landscape) and (min-width:900px){
+    #screenHost .scr-up{display:none !important;}
+    #screenHost .scr-lp{margin:2px 0 6px;}
+    #screenHost .scr-now{margin-top:4px;padding:6px 10px;font-size:13.5px;line-height:1.4;}
+    #screenHost .scr-ask{margin-top:2px;padding-top:6px;}
+    #screenHost .scr-chips{margin-bottom:5px;}
+    #screenHost .scr-chips button{padding:4px 10px;font-size:12px;}
+    #screenHost .scr-form input{padding:7px 12px;}
+    #screenHost .scr-form .btn{min-height:36px;padding:6px 14px;}
+    #screenHost .scr-foot{padding:4px 0 0;}
+  }
 </style>
 </head>
 <body>
@@ -32702,7 +32714,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.924';
+const BUILD_ID = '2026-10-26.925';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
