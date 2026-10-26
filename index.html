@@ -26174,6 +26174,11 @@ function applyQuizLayout(){
       if(!best || score < best.score) best = { score, sa, sc, cs };
     })));
     put(ask, best.sa); put(cue, best.sc); card.style.gridTemplateColumns = best.cs;
+    // The scorer does not see choices that are clipped in their own scroll area. If the answer choices still do not fit above
+    // the Next row, move the reading box and cue under the scenario on the left, where there is room, and check again.
+    const choicesFit = () => { const nb = document.getElementById('nextBtn'); const lim = nb && nb.offsetParent ? nb.getBoundingClientRect().top - 6 : window.innerHeight - 90; return ch.scrollHeight <= ch.clientHeight + 2 && ch.getBoundingClientRect().bottom <= lim; };
+    if(!choicesFit() && best.sa === 'right') put(ask, 'left');
+    if(!choicesFit() && best.sc === 'right') put(cue, 'left');
   }catch(e){}
 }
 window.addEventListener('resize', () => { try{ applyQuizLayout(); }catch(e){} });
@@ -32555,7 +32560,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.848';
+const BUILD_ID = '2026-10-25.849';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
