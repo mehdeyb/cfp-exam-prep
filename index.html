@@ -4127,6 +4127,19 @@
     #tutorCard.tt-board .tutor-input-row #tutorSendBtn{flex:none !important;width:auto !important;}
   }
 
+
+  /* Question bar: expands with the text, and collapses to a slim strip. */
+  #tutorCard .tt-bar-toggle{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid #C9C3B1;background:#ECE9DF;color:#0F1A2C;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  :root[data-theme="dark"] #tutorCard .tt-bar-toggle{background:#1E2A3D;color:#ECE9DF;border-color:#3A4A62;}
+  #tutorCard .tt-bar-toggle svg{width:16px;height:16px;transition:transform .2s ease;}
+  #tutorCard .tt-bar-toggle.is-collapsed svg{transform:rotate(180deg);}
+  #tutorCard textarea.tutor-input{resize:none;overflow-y:auto;line-height:1.4;min-height:44px;max-height:150px;padding-top:11px;padding-bottom:11px;font-family:inherit;}
+  #tutorCard.tt-bar-collapsed .tutor-input-row .tutor-input,
+  #tutorCard.tt-bar-collapsed .tutor-input-row #tutorSendBtn{display:none !important;}
+  #tutorCard.tt-bar-collapsed .tutor-input-row{padding-top:4px !important;padding-bottom:4px !important;}
+  #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle{width:auto;border-radius:999px;padding:0 12px;height:30px;}
+  #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle::after{content:'Ask a question';font:600 12px 'IBM Plex Sans',sans-serif;margin-left:6px;}
+  #tutorCard.tt-bar-collapsed .tutor-input-row .tt-bar-toggle svg{transform:rotate(180deg);}
 </style>
 </head>
 <body>
@@ -5040,7 +5053,8 @@
       <div class="tutor-suggest" id="ttLiveChips" role="group" aria-label="About this slide" style="display:none;"></div>
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
       <div class="tutor-input-row">
-        <input type="text" id="tutorInput" class="tutor-input" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" onkeydown="if(event.key==='Enter') sendTutorMessage();">
+        <button type="button" class="tt-bar-toggle" id="ttBarToggle" onclick="ttBarToggle()" aria-expanded="true" aria-controls="tutorInput" aria-label="Collapse the question bar" title="Collapse or expand"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+        <textarea id="tutorInput" class="tutor-input" rows="1" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" oninput="ttGrowInput(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendTutorMessage(); }"></textarea>
         <button class="btn" id="tutorSendBtn" onclick="sendTutorMessage()">Send</button>
       </div>
       <div class="tutor-status" id="tutorStatus" role="status"></div>
@@ -13771,6 +13785,24 @@ function ttFaceTick(){
 }
 function ttFaceStart(){ if(!ttFace.timer) ttFace.timer = setInterval(ttFaceTick, 110); }
 function ttFaceStop(){ if(ttFace.timer){ clearInterval(ttFace.timer); ttFace.timer = null; } }
+// The question bar grows with what you type and can be collapsed to a slim strip, giving the board the room back.
+function ttGrowInput(el){
+  try{
+    if(!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    ttFitBoard();
+  }catch(e){}
+}
+function ttBarToggle(){
+  const card = document.getElementById('tutorCard'), btn = document.getElementById('ttBarToggle'); if(!card || !btn) return;
+  const collapsed = card.classList.toggle('tt-bar-collapsed');
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  btn.setAttribute('aria-label', collapsed ? 'Expand the question bar' : 'Collapse the question bar');
+  btn.classList.toggle('is-collapsed', collapsed);
+  if(!collapsed){ const i = document.getElementById('tutorInput'); if(i) { ttGrowInput(i); } }
+  try{ ttFitBoard(); }catch(e){}
+}
 // Size the board from the real positions: it runs from its top down to just above the pinned question bar, with any lesson controls kept clear.
 function ttFitBoard(){
   try{
@@ -33060,7 +33092,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.978';
+const BUILD_ID = '2026-10-26.980';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
