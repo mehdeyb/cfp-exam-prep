@@ -4047,8 +4047,11 @@
   #tutorCard.tt-board #tutorThread{min-height:0 !important;max-height:min(12vh, 96px) !important;background:transparent !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 0 2px !important;}
   #tutorCard.tt-board #tutorThread .tutor-msg-bot .tutor-bubble{font-size:13px !important;line-height:1.4 !important;color:var(--muted);}
   #tutorCard.tt-board #tutorThread .tutor-msg + .tutor-msg{border-top:0 !important;padding-top:4px !important;}
-  #tutorCard.tt-board #podcastStage{min-height:max(260px, calc(var(--vh-real, 100vh) - 400px)) !important;}
-  #tutorCard.tt-board #pstBody{min-height:max(214px, calc(var(--vh-real, 100vh) - 446px)) !important;}
+  /* The board fills the screen down to the question bar: a little less room when no lesson player is open, more when one is. */
+  #tutorCard.tt-board #podcastStage{min-height:max(260px, calc(var(--vh-real, 100vh) - 300px)) !important;}
+  #tutorCard.tt-board #pstBody{min-height:max(214px, calc(var(--vh-real, 100vh) - 346px)) !important;}
+  #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #podcastStage{min-height:max(260px, calc(var(--vh-real, 100vh) - 400px)) !important;}
+  #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #pstBody{min-height:max(214px, calc(var(--vh-real, 100vh) - 446px)) !important;}
 
   /* Tutor board: the reply sits beside the speaker, in the face's ink-and-skin palette, and the thread is out of the way. */
   #tutorCard .tt-face-row{align-items:center;}
@@ -33028,7 +33031,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.971';
+const BUILD_ID = '2026-10-26.972';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
