@@ -20751,10 +20751,10 @@ If, and only if, a question genuinely requires the student to perform a numeric 
 ${ONE_ASK_RULE}
 Design the three wrong choices as plausible misconceptions (not throwaway options). For EVERY choice — the correct one and all three wrong ones — write a short one-sentence rationale explaining specifically why that choice is right or wrong. Begin the rationale for the correct choice with "Correct — " and the rationale for each wrong choice with "Wrong — ". This lets a student see why each wrong answer fails, not just which answer is correct.
 Return ONLY a raw JSON array, no markdown code fences, no commentary, in exactly this shape:
-[{"q":"question text","choices":["A text","B text","C text","D text"],"correct":0,"rationale":["why choice A is right/wrong","why choice B is right/wrong","why choice C is right/wrong","why choice D is right/wrong"],"calcSteps":["step one","step two"],"calcType":"tvm"}]
+[{"q":"question text","sub":"exact official subtopic name from the list above","choices":["A text","B text","C text","D text"],"correct":0,"rationale":["why choice A is right/wrong","why choice B is right/wrong","why choice C is right/wrong","why choice D is right/wrong"],"calcSteps":["step one","step two"],"calcType":"tvm"}]
 If the key depends on arithmetic on figures given in the question (a solvency test, a shortfall, a sum or difference, a percentage), you MUST include "calcSteps" showing that arithmetic ending on the keyed figure. A question with figures in the stem whose key is not supported by worked steps will be rejected.
 "calcSteps" and "calcType" are optional and should only appear together, only on genuinely computational questions -- omit both keys entirely otherwise, rather than including them empty.
-"correct" is the zero-based index into "choices". "rationale" must have exactly 4 entries in the same order as "choices", each under 20 words. Output nothing except the JSON array.`;
+"sub" must be copied exactly from the official subtopic list above, naming the subtopic the question actually tests. "correct" is the zero-based index into "choices". "rationale" must have exactly 4 entries in the same order as "choices", each under 20 words. Output nothing except the JSON array.`;
 }
 
 // Fallback for when the array as a whole isn't valid JSON — most often
@@ -20983,6 +20983,8 @@ function safeParseQuestions(rawText, domainKey, forceDifficulty, opts){
       rationale:item.rationale, generated:true
     };
     if(typeof item.scenario === 'string' && item.scenario.trim().length >= 15) q.scenario = item.scenario.trim();
+    // Keep the official subtopic tag only when it names a real subtopic of this domain; anything else is dropped.
+    if(typeof item.sub === 'string' && (SUBTOPICS[domainKey] || []).includes(item.sub.trim())) q.sub = item.sub.trim();
     if(Array.isArray(item.calcSteps) && item.calcSteps.length >= 2 && item.calcSteps.every(s => typeof s === 'string' && s.trim().length >= 5)){
       const stepsText = item.calcSteps.join(' ');
       const usesWrongCalculatorConvention = /\[CPT\]/i.test(stepsText) || /\[I\/Y\]/.test(stepsText);
@@ -29055,6 +29057,8 @@ const SYLLABUS_COVERAGE_PATTERNS = {
 // return its first matching pattern, so this is a reasonable guess for
 // finding a related follow-up, not a precise, authoritative tag.
 function inferQuestionSubtopic(q){
+  // An explicit tag is authoritative; keyword patterns are only the fallback for untagged questions.
+  if(q.sub){ const i = (SUBTOPICS[q.domain] || []).indexOf(q.sub); if(i >= 0) return q.domain+'-'+i; }
   const patterns = SYLLABUS_COVERAGE_PATTERNS[q.domain];
   if(!patterns) return null;
   const text = (q.q + ' ' + (q.scenario||'') + ' ' + q.choices.join(' ') + ' ' + q.rationale.join(' ')).toLowerCase();
@@ -29096,7 +29100,8 @@ function runSyllabusCoverageCheck(){
     SYLLABUS_COVERAGE_PATTERNS[domainKey].forEach((pattern, i) => {
       const subtopicName = SUBTOPICS[domainKey][i];
       if(subtopicName === undefined) return; // pattern array longer than SUBTOPICS for this domain -- skip rather than show "undefined"
-      const count = domainQs.filter(q => pattern.test(fullText(q))).length;
+      // Same rule as subtopicPool: an official tag counts, and keyword matches cover untagged questions.
+      const count = domainQs.filter(q => q.sub === subtopicName || pattern.test(fullText(q))).length;
       rows.push({ domain: domainMeta.name, subtopic: subtopicName, count });
     });
   });
@@ -33109,7 +33114,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.985';
+const BUILD_ID = '2026-10-26.986';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
