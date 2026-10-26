@@ -10162,10 +10162,10 @@ function typicalStudyMinutes(){
   }catch(e){ return 0; }
 }
 function paceHrs(m){
-  m = Math.round(m); if(m < 90) return m + ' min';
-  if(m % 60 === 0) return (m / 60) + ' hrs';
-  if(m % 30 === 0) return (m / 60) + ' hrs';
-  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  // One style for every length: minutes under an hour, then hours with at most two decimals ("3.75 hrs", "6 hrs", "1 hr").
+  m = Math.round(m); if(m < 60) return m + ' min';
+  const h = Math.round(m / 60 * 100) / 100;
+  return h + (h === 1 ? ' hr' : ' hrs');
 }
 // How long a day it takes to be ready on exam day, worked out from what is actually left: the questions and cards
 // not yet met, the weak domains, what was missed, and a few timed checks, spread over the days that remain.
@@ -32633,7 +32633,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.900';
+const BUILD_ID = '2026-10-26.901';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
