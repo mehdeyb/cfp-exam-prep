@@ -2381,7 +2381,8 @@
   .pt-prog{font-size:12px;}
   .pt-actions .pt-mark{font:600 12px 'IBM Plex Sans',sans-serif;min-height:44px;padding:7px 14px;border-radius:22px;border:1px solid var(--hair-strong);background:transparent;color:var(--muted);cursor:pointer;}
   @media (max-width:899px) and (orientation:portrait){
-    #todayPlanCard{padding-bottom:96px !important;}
+    #todayPlanCard{padding-bottom:0 !important;}
+    #tab-study.active{padding-bottom:96px !important;}
     #todayPlanCard .pt-step:not(.next) > .pt-go{display:none;}
   }
   .pt-step.partial .pt-prog::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:middle;animation:pulse 1.4s ease-in-out infinite;}
@@ -4004,6 +4005,14 @@
     body.os-one .score-ring-block{align-items:flex-start;}
     body.os-one .score-flat{display:block;width:100%;height:8px;border-radius:4px;background:var(--hair);overflow:hidden;}
     body.os-one .score-flat i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--teal));transition:width .6s ease;}
+  }
+  /* Phone: the Today plan sizes to its steps, with no empty band below, and the NEXT tag is dropped (the highlighted row already marks it). */
+  @media (max-width:699px){
+    #tab-study.active > #studyCols{min-height:0 !important;height:auto !important;}
+    #tab-study.active > #studyCols > #studyHub > #todayPlanCard{flex:none !important;height:auto !important;min-height:0 !important;}
+    #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold{flex:none !important;height:auto !important;}
+    #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{flex:none !important;height:auto !important;overflow:visible !important;}
+    #todayPlanCard .pt-nextlabel{display:none;}
   }
 </style>
 </head>
@@ -32789,7 +32798,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.936';
+const BUILD_ID = '2026-10-26.938';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
