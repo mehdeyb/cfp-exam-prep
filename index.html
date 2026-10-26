@@ -15087,7 +15087,8 @@ function stageLive(){ stageState.hi = stageState.hist.length - 1; stageState.cur
 function stageNow(idx){
   try{
     const ch = naturalSpeechState.chunks && naturalSpeechState.chunks[idx]; if(!ch) return;
-    let t = String(ch.text || '').replace(/^\s*HOST\s*[12]\s*:\s*/i, ''); if(!t) return;
+    // Option brackets like [[A | B]] are for buttons, never for the reader to see.
+    let t = String(ch.text || '').replace(/^\s*HOST\s*[12]\s*:\s*/i, '').replace(/\[\[[^\]]*\]\]/g, '').replace(/\s+/g, ' ').trim(); if(!t) return;
     const who = /HOST2/i.test(String(ch.speaker || '')) ? 'Host 2' : /HOST1/i.test(String(ch.speaker || '')) ? 'Host 1' : 'Now saying';
     const html = stageEsc(stageClip(t, 260)).replace(/(\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand))?|\b\d+(?:\.\d+)?\s?(?:%|percent|years?|months?|times)\b|\b[A-Z]{2,6}(?:s)?\b(?![a-z]))/g, '<mark>$1</mark>');
     ['pstNow', 'scrNow'].forEach(id => { const el = document.getElementById(id); if(!el) return; el.innerHTML = '<b>' + who + '</b>' + html; el.classList.remove('pst-tick'); void el.offsetWidth; el.classList.add('pst-tick'); });
@@ -32822,7 +32823,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.942';
+const BUILD_ID = '2026-10-26.943';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
