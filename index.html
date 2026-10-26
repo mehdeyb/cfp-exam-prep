@@ -12239,7 +12239,7 @@ function _renderTodayPlanInner(){
     ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${lateNote ? `<p class="pt-sub">${escapeHtml(lateNote).trim()}</p>` : ''}
     <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
-    ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return `<div class="pt-today"><span class="pt-today-l">Only today</span>${opts}${o ? `<button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button>` : ''}</div>`; })()}
+    ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return o ? `<div class="pt-today"><button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button></div>` : ''; })()}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
@@ -32825,7 +32825,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.945';
+const BUILD_ID = '2026-10-26.946';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
