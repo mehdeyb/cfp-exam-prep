@@ -394,6 +394,7 @@
   .dp-inner{max-width:680px;width:100%;margin:auto;}
   .dp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
   .dp-header h2{margin:0;}
+  .scr-face{flex:none;width:52px;height:39px;margin:0 12px 0 auto;border-radius:9px;background:var(--surface2);border:1px solid var(--hair);image-rendering:pixelated;image-rendering:crisp-edges;}
 
   #recallHost{ display:none; }
   body.recall-active #recallHost{
@@ -4136,6 +4137,7 @@
       <div class="scr-inner">
         <div class="dp-header">
           <h2 id="scrTitle">On screen</h2>
+          <canvas id="scrFace" class="scr-face" width="160" height="120" aria-hidden="true"></canvas>
           <button class="dp-close" id="scrClose" onclick="stageCloseFull()" aria-label="Close" title="Close">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
@@ -13456,8 +13458,8 @@ const TT_FACE_COL = { skin:'#ECE9DF', ink:'#0F1A2C', hi:'#FFF8E1' }; // the app'
 const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, timer:null, toolSet:false, tutorShow:false };
 function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
 function ttFaceTalking(){ try{ return !!(window.speechSynthesis && speechSynthesis.speaking); }catch(e){ return false; } }
-function ttFaceDraw(){
-  const cv = document.getElementById('ttFace'); if(!cv || !cv.getContext) return;
+function ttFaceDraw(){ ['ttFace','scrFace'].forEach(id => { const cv = document.getElementById(id); if(cv && cv.getContext) ttFaceDrawOn(cv); }); }
+function ttFaceDrawOn(cv){
   const g = cv.getContext('2d'); const W = 16, s = cv.width / W, now = Date.now();
   const put = (c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x*s, y*s, w*s, h*s); };
   const ex = ttFace.expr, ink = TT_FACE_COL.ink, hi = TT_FACE_COL.hi;
@@ -13519,9 +13521,11 @@ function ttFaceApply(){
   // The row stays as one compact control: a toggle when the face is hidden, the face and its toggle when it is shown.
   if(row) row.style.display = 'flex';
   if(cv) cv.style.display = vis ? 'block' : 'none';
+  const sc = document.getElementById('scrFace'), scVis = DATA.tutorFace !== 'off';
+  if(sc) sc.style.display = scVis ? 'block' : 'none';
   if(cap) cap.textContent = vis ? 'Your tutor. It talks along with what it says and reacts to your answers.' : 'Your tutor can show a face here that talks along with lessons and reacts to your answers.';
   if(btn){ btn.textContent = vis ? 'Hide face' : 'Show face'; btn.setAttribute('aria-pressed', vis ? 'true' : 'false'); btn.title = vis ? 'Hide the tutor face' : 'Show the tutor face'; }
-  if(vis){ ttFaceStart(); ttFaceDraw(); } else ttFaceStop();
+  if(vis || scVis){ ttFaceStart(); ttFaceDraw(); } else ttFaceStop();
 }
 function ttToggleFace(){
   const on = ttFaceVisible();
@@ -15308,6 +15312,7 @@ function stageOpenFull(){
   const host = document.getElementById('screenHost'); if(!host) return;
   if(host.parentElement !== document.body) document.body.appendChild(host);
   stageState.fullOpen = true; document.body.classList.add('screen-active'); try{ lockBodyScroll(); }catch(e){}
+  try{ ttFaceApply(); }catch(e){}
   if(!stageState.hist.length && (DATA.screenRecent || []).length){ stageState.hist = DATA.screenRecent.map(x => Object.assign({}, x, { ci:0, ti:0 })); stageState.hi = stageState.hist.length - 1; stageState.cur = stageState.hist[stageState.hi]; }
   stageState.drawn = null; stageChips();
   if(!stageState.cur && stageState.deck[0]) stageShow(stageState.deck[0], 'podcast'); else stageDraw();
@@ -32697,7 +32702,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.922';
+const BUILD_ID = '2026-10-26.923';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
