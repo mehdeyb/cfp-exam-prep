@@ -3405,6 +3405,11 @@
     body.quiz-active:not(.exam-sim-mode) .q-card{column-gap:40px;padding:26px 32px;}
     /* The answers and their explanations are the tall part, so they get the wider column when the question has no case text. */
     body.quiz-active:not(.exam-sim-mode) .q-card:not(:has(#qScenario:not([style*="none"]))){grid-template-columns:minmax(0,4fr) minmax(0,6fr);}
+    /* Answer tools moved under the scenario (see placeAnswerTools): spaced as a column, not as a footer. */
+    body.quiz-active:not(.exam-sim-mode) .q-left > #qFeedback.quiz-feedback{margin-top:18px;}
+    body.quiz-active:not(.exam-sim-mode) .q-left > .simplify-row{margin-top:12px;}
+    body.quiz-active:not(.exam-sim-mode) .q-left > .simplified-explanation{margin-top:12px;}
+    body.quiz-active:not(.exam-sim-mode) .q-left > .qchat-box{margin-top:12px;}
   }
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     body.quiz-active:not(.exam-sim-mode) .quiz-inner{max-width:min(1080px, calc(100vw - 144px));}
@@ -27143,6 +27148,30 @@ function scheduleQuizFit(){
 }
 window.addEventListener('resize', () => { if(document.body.classList.contains('quiz-active') && !(session && session.locked)) scheduleQuizFit(); });
 window.addEventListener('orientationchange', () => setTimeout(scheduleQuizFit, 300));
+// The rationale under each choice already says Correct or Wrong on the choice itself, so the prefix is dropped on screen.
+function stripVerdictPrefix(s){
+  return String(s == null ? '' : s).replace(/^(Correct|Wrong)\s*[—–-]\s*/i, '').replace(/^./, c => c.toUpperCase());
+}
+// On a tablet in landscape the answer tools (result bar, Explain simply, Ask the tutor, the explanation) sit under the
+// scenario on the left, so the choices and their rationales have the right column to themselves. Elsewhere they stay in
+// their original place. Only moves the nodes; their ids and handlers are unchanged.
+function placeAnswerTools(){
+  try{
+    const L = document.querySelector('#quizView .q-left'), R = document.querySelector('#quizView .q-right');
+    if(!L || !R) return;
+    const wide = window.matchMedia('(min-width:900px) and (min-height:600px)').matches;
+    ['qFeedback','simplifyRow','simplifiedExplanation','qChatBox'].forEach(id => {
+      const el = document.getElementById(id); if(!el) return;
+      if(!el._home) el._home = { parent: el.parentElement, next: el.nextElementSibling };
+      if(wide){ if(el.parentElement !== L) L.appendChild(el); }
+      else if(el.parentElement !== el._home.parent){
+        const nx = el._home.next && el._home.next.parentElement === el._home.parent ? el._home.next : null;
+        el._home.parent.insertBefore(el, nx);
+      }
+    });
+  }catch(e){}
+}
+window.addEventListener('resize', () => { try{ placeAnswerTools(); }catch(e){} });
 function renderQuestion(){
   paceTouch(); paceBegin(); updatePaceChip();
   const q = session.queue[session.index];
@@ -28024,9 +28053,9 @@ function selectAnswerCore(i){
     const note = wrap.querySelector('.choice-note');
     const icon = wrap.querySelector('.result-icon');
     btn.classList.add('locked');
-    if(idx === q.correct){ btn.classList.add('correct'); if(icon) icon.innerHTML = CHECK_SVG; }
+    if(idx === q.correct){ btn.classList.add('correct'); } // the CORRECT ANSWER label already says it; no second check mark
     if(idx === i && !isCorrect){ btn.classList.add('incorrect'); if(icon) icon.innerHTML = X_SVG; }
-    const text = (q.rationale && q.rationale[idx]) ? decodeGenEntities(q.rationale[idx]) : '';
+    const text = (q.rationale && q.rationale[idx]) ? stripVerdictPrefix(decodeGenEntities(q.rationale[idx])) : '';
     const priorWrongPicks = (!q.isVariant && DATA.wrongChoiceHistory[q.id] && DATA.wrongChoiceHistory[q.id][idx]) || 0;
     const isRepeatMistake = (idx === i && !isCorrect && priorWrongPicks >= 1);
     note.innerHTML = '';
@@ -28044,6 +28073,7 @@ function selectAnswerCore(i){
     note.className = 'choice-note ' + (idx===q.correct ? 'is-correct' : 'is-wrong');
     note.style.display = text ? 'block' : 'none';
   });
+  placeAnswerTools();
 
   const dt = session.domainTally[q.domain];
   dt.total++;
@@ -33265,7 +33295,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99992';
+const BUILD_ID = '2026-10-26.99993';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
