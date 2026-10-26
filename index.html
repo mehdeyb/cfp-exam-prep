@@ -4127,13 +4127,6 @@
     #tutorCard.tt-board .tutor-input-row #tutorSendBtn{flex:none !important;width:auto !important;}
   }
 
-  /* Tutor board: stretch the board down to the pinned question bar, using the real screen height. */
-  @media (min-width:641px){
-    #tutorCard.tt-board #podcastStage{min-height:max(260px, calc(100vh - 300px)) !important;min-height:max(260px, calc(100dvh - 300px)) !important;}
-    #tutorCard.tt-board #pstBody{min-height:max(214px, calc(100vh - 346px)) !important;min-height:max(214px, calc(100dvh - 346px)) !important;}
-    #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #podcastStage{min-height:max(260px, calc(100vh - 360px)) !important;min-height:max(260px, calc(100dvh - 360px)) !important;}
-    #tutorCard.tt-board:has(#podcastPlayer[style*="block"]) #pstBody{min-height:max(214px, calc(100vh - 406px)) !important;min-height:max(214px, calc(100dvh - 406px)) !important;}
-  }
 </style>
 </head>
 <body>
@@ -13778,6 +13771,19 @@ function ttFaceTick(){
 }
 function ttFaceStart(){ if(!ttFace.timer) ttFace.timer = setInterval(ttFaceTick, 110); }
 function ttFaceStop(){ if(ttFace.timer){ clearInterval(ttFace.timer); ttFace.timer = null; } }
+// Size the board from the real positions: it runs from its top down to just above the pinned question bar, with any lesson controls kept clear.
+function ttFitBoard(){
+  try{
+    const card = document.getElementById('tutorCard'), st = document.getElementById('podcastStage'), pl = document.getElementById('podcastPlayer'), bar = card && card.querySelector('.tutor-input-row'), pb = document.getElementById('pstBody');
+    if(!card || !st || !bar || !card.classList.contains('tt-board') || window.innerWidth < 641) { if(st) st.style.removeProperty('min-height'); if(pb) pb.style.removeProperty('min-height'); return; }
+    const sr = st.getBoundingClientRect(), barTop = bar.getBoundingClientRect().top;
+    const extra = (pl && pl.style.display !== 'none' && pl.offsetParent) ? Math.max(0, pl.getBoundingClientRect().bottom - sr.bottom) : 0;
+    const h = Math.max(260, Math.floor(barTop - sr.top - extra - 14));
+    st.style.setProperty('min-height', h + 'px', 'important');
+    if(pb) pb.style.setProperty('min-height', Math.max(214, h - 60) + 'px', 'important');
+  }catch(e){}
+}
+window.addEventListener('resize', () => { ttFitBoard(); });
 // On the board, the reply text sits beside the speaker icon in the face's own palette; the full thread is kept but hidden there.
 function ttSyncFaceCap(){
   const cap = document.getElementById('ttFaceCap'), card = document.getElementById('tutorCard'); if(!cap || !card) return;
@@ -13806,7 +13812,9 @@ function ttCapInit(){
   const th = document.getElementById('tutorThread'), card = document.getElementById('tutorCard'); if(!th || !card) return;
   new MutationObserver(() => { try{ ttSyncFaceCap(); }catch(e){} }).observe(th, { childList: true, subtree: true, characterData: true });
   const pnEl = document.getElementById('pstNow'); if(pnEl) new MutationObserver(() => { try{ ttSyncFaceCap(); }catch(e){} }).observe(pnEl, { childList: true, subtree: true, characterData: true });
-  new MutationObserver(() => { try{ ttFaceApply(); ttSyncFaceCap(); }catch(e){} }).observe(card, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => { try{ ttFaceApply(); ttSyncFaceCap(); ttFitBoard(); }catch(e){} }).observe(card, { attributes: true, attributeFilter: ['class'] });
+  const plEl = document.getElementById('podcastPlayer'); if(plEl) new MutationObserver(() => { try{ ttFitBoard(); }catch(e){} }).observe(plEl, { attributes: true, attributeFilter: ['style'] });
+  setTimeout(() => { try{ ttFitBoard(); }catch(e){} }, 300);
   try{ ttSyncFaceCap(); }catch(e){}
 }
 document.addEventListener('DOMContentLoaded', ttCapInit);
@@ -33052,7 +33060,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.975';
+const BUILD_ID = '2026-10-26.978';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
