@@ -2397,6 +2397,8 @@
   @media (max-width:899px) and (orientation:portrait){
     #todayPlanCard{padding-bottom:0 !important;}
     #tab-study.active{padding-bottom:96px !important;}
+    /* The floating tab bar sits over the bottom of the page; a spacer as the last thing on the page keeps the final plan rows clear of it. */
+    #tab-study.active::after{content:'';display:block;height:calc(72px + env(safe-area-inset-bottom,0px));}
     #todayPlanCard .pt-step:not(.next) > .pt-go{display:none;}
   }
   .pt-step.partial .pt-prog::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:middle;animation:pulse 1.4s ease-in-out infinite;}
@@ -33295,7 +33297,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99993';
+const BUILD_ID = '2026-10-26.99994';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
