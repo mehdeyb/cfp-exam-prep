@@ -4047,8 +4047,8 @@
   #tutorCard.tt-board #tutorThread{min-height:0 !important;max-height:min(12vh, 96px) !important;background:transparent !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 0 2px !important;}
   #tutorCard.tt-board #tutorThread .tutor-msg-bot .tutor-bubble{font-size:13px !important;line-height:1.4 !important;color:var(--muted);}
   #tutorCard.tt-board #tutorThread .tutor-msg + .tutor-msg{border-top:0 !important;padding-top:4px !important;}
-  #tutorCard.tt-board #podcastStage{min-height:66vh !important;}
-  #tutorCard.tt-board #pstBody{min-height:calc(66vh - 46px) !important;}
+  #tutorCard.tt-board #podcastStage{min-height:max(260px, calc(var(--vh-real, 100vh) - 400px)) !important;}
+  #tutorCard.tt-board #pstBody{min-height:max(214px, calc(var(--vh-real, 100vh) - 446px)) !important;}
 
   /* Tutor board: the reply sits beside the speaker, in the face's ink-and-skin palette, and the thread is out of the way. */
   #tutorCard .tt-face-row{align-items:center;}
@@ -4096,6 +4096,20 @@
   /* The lesson's Now saying line lives in the box beside the face on the board. */
   #podcastStage #pstNow, #tutorCard #pstNow{display:none !important;}
   #tutorCard #ttFaceCap .tt-cap-lab{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#8A6D1F;}
+
+  /* Tutor board bottom: one tidy row for the lesson controls, the status on its own line, and the question bar fully inside the card. */
+  #tutorCard.tt-board .podcast-player-panel{display:grid !important;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;row-gap:4px;padding:6px 2px 4px;margin:0;}
+  #tutorCard.tt-board .podcast-player-panel > .pp-cap{display:none !important;}
+  #tutorCard.tt-board .podcast-player-panel > .pp-prog{grid-column:2;grid-row:1;margin:0;min-width:0;}
+  #tutorCard.tt-board .podcast-player-panel .podcast-player-controls{grid-column:1;grid-row:1;display:flex;align-items:center;gap:6px;margin:0;}
+  #tutorCard.tt-board .podcast-player-panel .podcast-player-secondary-row{grid-column:3;grid-row:1;display:flex;gap:6px;margin:0;}
+  #tutorCard.tt-board .podcast-player-panel .podcast-player-secondary-row select{min-height:30px;}
+  #tutorCard.tt-board .podcast-player-panel > .podcast-status{grid-column:1 / -1;grid-row:2;font-size:12px;min-height:0;margin:0;}
+  #tutorCard.tt-board .podcast-player-panel > .pp-more{display:none !important;}
+  #tutorCard.tt-board .pp-prog input[type="range"]{width:100%;}
+  #tutorCard.tt-board .tutor-input-row{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;}
+  #tutorCard.tt-board .tutor-input-row .tutor-input{flex:1 1 auto;min-width:0;}
+  #tutorCard.tt-board .tutor-input-row #tutorSendBtn{flex:none;}
 </style>
 </head>
 <body>
@@ -33014,7 +33028,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.969';
+const BUILD_ID = '2026-10-26.971';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
