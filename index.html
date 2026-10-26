@@ -14043,6 +14043,16 @@ function podcastDomainPersonalizationContext(domainKey){
   } else {
     context += `They are Exam-ready here -- go straight at the nuance, edge cases, traps and close distinctions, briskly, with no basics.`;
   }
+  // Targeted instruction: within the domain, the lesson spends most of its time on the subtopics this student is weakest on
+  // (only ones with enough attempts to trust), with a worked example and one closing check, the pattern research on
+  // worked examples and retrieval practice supports for weak areas.
+  try{
+    const weak = weakSubtopics(12).filter(w => w.key === domainKey).slice(0, 2);
+    if(weak.length){
+      const list = weak.map(w => `${w.name} (${Math.round(w.st.acc * 100)}% over ${w.st.attempts} attempts)`).join('; ');
+      context += ` Their weakest subtopics in this domain right now: ${list}. Spend most of the lesson on these: name the common trap in each, work one concrete example, then close with one short question the student should answer before moving on.`;
+    }
+  }catch(e){}
   return context;
 }
 
@@ -19330,11 +19340,22 @@ function weightedDrawWithoutReplacement(sourcePool, count){
 }
 
 // The difficulty advice from recent results: 'up' when accuracy is high, 'down' when it is low, null when steady or too little history.
+// Difficulty follows the student's recent results without jumping. The newest sessions count most (exponential weighting, so
+// a session's influence fades by about a fifth each time a newer one arrives), and a move up or down also needs the last three
+// sessions to agree. That is a simple guard against one lucky or unlucky session flipping the level. The 85% target sits at the
+// top of the range that research on desirable difficulty puts as the best challenge for learning; below 55% the student
+// needs easier, more supported practice.
 function difficultyTilt(){
   const recent = (DATA.sessions || []).filter(s => sessionQuestionCount(s) > 0).slice(-20);
   if(recent.length < 3) return null;
-  const acc = recent.reduce((a, s) => a + (s.total ? (s.correct || 0) / s.total : 0), 0) / recent.length;
-  return acc >= 0.85 ? 'up' : acc < 0.5 ? 'down' : null;
+  const accOf = s => s.total ? (s.correct || 0) / s.total : 0;
+  let num = 0, den = 0;
+  recent.forEach((s, i) => { const wt = Math.pow(0.8, recent.length - 1 - i); num += accOf(s) * wt; den += wt; });
+  const weighted = num / den;
+  const last3 = recent.slice(-3).reduce((a, s) => a + accOf(s), 0) / 3;
+  if(weighted >= 0.85 && last3 >= 0.8) return 'up';
+  if(weighted < 0.55 && last3 < 0.6) return 'down';
+  return null;
 }
 function pickAdaptiveQueue(n){
   const allRaw = allQuestions();
@@ -32382,7 +32403,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.835';
+const BUILD_ID = '2026-10-25.836';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
