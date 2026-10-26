@@ -2888,20 +2888,23 @@
   /* iPad landscape (about 768 to 900px tall): the same two-column layout, using the full width instead of a narrow centred column. */
   @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:1100px){
     body.tvm-active #tvmHost .dp-inner{
-      max-width:none;width:100%;display:grid;column-gap:24px;row-gap:4px;align-items:start;align-content:start;
+      max-width:none;width:100%;margin:0 auto;display:grid;column-gap:24px;row-gap:4px;align-items:start;align-content:start;
       grid-template-columns:minmax(0,1fr) minmax(300px,380px);
-      grid-template-rows:none;
+      /* Seven compact rows (title, modes, how-to, pace, status, problem, level), then the timeline takes whatever height is left. */
+      grid-template-rows:repeat(7,auto) minmax(0,1fr) auto;
     }
     #tvmHost .dp-inner > *{grid-column:1;}
     #tvmHost .dp-inner > *:not(.tvm-device):not(.tvm-actions){margin-top:0 !important;margin-bottom:0 !important;}
     #tvmHost .tvm-howto > *:not(summary){display:none !important;}
-    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 7;margin-bottom:0;position:sticky;top:0;align-self:start;}
-    #tvmHost .dp-inner > .tvm-actions{grid-column:2;grid-row:8;align-self:start;margin:10px 0 0;}
+    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 8;margin-bottom:0;position:sticky;top:0;align-self:start;}
+    #tvmHost .dp-inner > .tvm-actions{grid-column:2;grid-row:9;align-self:start;margin:10px 0 0;}
     #tvmHost .dp-header{margin-bottom:0;}
     #tvmHost .dp-header h2{font-size:18px;}
-    #tvmHost .tvm-howto, #tvmHost .tvm-status, #tvmHost .tvm-scenario, #tvmHost .tvm-timeline-wrap, #tvmHost .tvm-level-badge{margin-top:0 !important;margin-bottom:4px !important;}
+    #tvmHost .tvm-howto, #tvmHost .tvm-status, #tvmHost .tvm-scenario, #tvmHost .tvm-level-badge{margin-top:0 !important;margin-bottom:4px !important;}
+    #tvmHost .tvm-timeline-wrap{grid-row:8;display:flex;flex-direction:column;min-height:0;margin:0 !important;}
     #tvmHost .tvm-timeline-label{display:none;}
-    #tvmHost #tvmTimeline svg{max-height:100px;}
+    #tvmHost #tvmTimeline{flex:1 1 auto;min-height:0;}
+    #tvmHost #tvmTimeline svg{height:100%;width:100%;max-height:none;}
   }
   /* Scale the whole walkthrough a little on shorter iPad landscape screens, so the problem, timeline, calculator and keys all fit. */
   @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:840px){ body.tvm-active #tvmHost .dp-inner{zoom:.92;} }
@@ -32520,7 +32523,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.841';
+const BUILD_ID = '2026-10-25.842';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
