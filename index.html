@@ -13488,7 +13488,8 @@ const TT_FACE_EXPR = ['neutral','happy','thinking','encouraging','concerned','ex
 const TT_FACE_COL = { skin:'#ECE9DF', ink:'#0F1A2C', hi:'#FFF8E1' }; // the app's paper cream face, navy ink and cream highlight
 const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, timer:null, toolSet:false, tutorShow:false };
 function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
-function ttFaceTalking(){ try{ return !!(window.speechSynthesis && speechSynthesis.speaking); }catch(e){ return false; } }
+// Talking means voice is actually coming out: a paused lesson keeps speechSynthesis.speaking true, so pause is checked too.
+function ttFaceTalking(){ try{ const s = window.speechSynthesis; return !!(s && s.speaking && !s.paused); }catch(e){ return false; } }
 function ttFaceDraw(){ ['ttFace','scrFace'].forEach(id => { const cv = document.getElementById(id); if(cv && cv.getContext) ttFaceDrawOn(cv); }); }
 function ttFaceDrawOn(cv){
   const g = cv.getContext('2d'); const W = 16, s = cv.width / W, now = Date.now();
@@ -13515,7 +13516,8 @@ function ttFaceDrawOn(cv){
   if((ex === 'excited' || ex === 'happy') && (Math.floor(now / 300) % 2 === 0)){ put(hi, 15, 1, 1, 1); put(hi, 0, 9, 1, 1); }
   // Mouth: while speaking it opens, half-opens and closes in a speech-like rhythm; otherwise it holds the expression's shape.
   const talking = ttFaceTalking();
-  const SPEECH = [0, 1, 2, 0, 1, 2, 0, 2]; // 0 open, 1 half, 2 closed
+  // Varied, speech-like mouth cycle (0 open, 1 half, 2 closed); a longer pattern so it does not look mechanical.
+  const SPEECH = [2, 0, 1, 0, 2, 1, 0, 2, 2, 1, 0, 1, 2]; 
   const shape = talking ? SPEECH[ttFace.tick % SPEECH.length] : -1;
   if(shape === 0){ if(ex === 'thinking') put(ink, 7, 8, 2, 2); else put(ink, 6, 7, 4, 2); }
   else if(shape === 1){ put(ink, 6, 7, 4, 1); }
@@ -13537,8 +13539,11 @@ function ttFaceReact(reply){
   ttFaceSet(ex);
 }
 function ttFaceTick(){
-  const row = document.getElementById('ttFaceRow');
-  if(!ttFaceVisible() || !row || row.offsetParent === null){ ttFaceStop(); return; }
+  const row = document.getElementById('ttFaceRow'), sc = document.getElementById('scrFace');
+  // Keep animating while either face is on screen (the tutor card or the full-screen lesson).
+  const mainShown = !!(ttFaceVisible() && row && row.offsetParent !== null);
+  const scShown = !!(sc && DATA.tutorFace !== 'off' && sc.offsetParent !== null);
+  if(!mainShown && !scShown){ ttFaceStop(); return; }
   const now = Date.now();
   if(now >= ttFace.nextBlink){ ttFace.blinkUntil = now + 140; ttFace.nextBlink = now + 2200 + Math.random() * 3000; }
   ttFace.tick++; ttFaceDraw();
@@ -32748,7 +32753,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.928';
+const BUILD_ID = '2026-10-26.929';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
