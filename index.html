@@ -2176,6 +2176,11 @@
   #studyCols.pt-dense.pt-dt .pt-step:not(.next) .pt-time{display:block;}
   #studyCols.pt-dense.pt-dfull .pt-title{-webkit-line-clamp:unset;display:block;overflow:visible;}
   #studyCols.pt-dense.pt-dwhy .pt-step:not(.next) .pt-why{display:block;font-size:11.5px;color:var(--muted);line-height:1.3;}
+  .pt-why-more{cursor:pointer;}
+  .pt-why .pt-why-f{display:none;}
+  .pt-why.open .pt-why-f{display:inline;}
+  .pt-why.open .pt-why-s{display:none;}
+  #studyCols .pt-why.open{-webkit-line-clamp:unset;overflow:visible;display:block;}
   /* Real-data readiness block on wide screens: two slim rows instead of five. */
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-block{display:grid;grid-template-columns:auto auto auto auto 1fr;column-gap:14px;row-gap:2px;align-items:baseline;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .score-ring-wrap{grid-column:1;grid-row:1 / span 2;align-self:center;}
@@ -12072,7 +12077,7 @@ function _renderTodayPlanInner(){
     const rowGo = (!st.manual && !st.done) ?` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : i + 1}</div>
-      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? '<div class="pt-why">' + escapeHtml(st.why.length > (isNext ? 150 : 110) ? st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026' : st.why) + '</div>' : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${(pr && st.done) ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}${st.why ? (st.why.length > (isNext ? 150 : 110) ? '<div class="pt-why pt-why-more" title="Tap to read the whole reason" onclick="event.stopPropagation();this.classList.toggle(\'open\');osFitRefresh()"><span class="pt-why-s">' + escapeHtml(st.why.slice(0, (isNext ? 147 : 107)).replace(/\s+\S*$/, '') + '\u2026') + '</span><span class="pt-why-f">' + escapeHtml(st.why) + '</span></div>' : '<div class="pt-why">' + escapeHtml(st.why) + '</div>') : ''}${(st.how && !st.done) ? `<details class="pt-how"${(isNext || partial) ? ' open' : ''}><summary>What you will do</summary><ol>${st.how.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ol></details>` : ''}<div class="pt-time">${st.done ? 'done' : 'about ' + st.minutes + ' min'}${(pr && st.done) ? ' · ' + escapeHtml(pr) : ''}</div>${partial ? `<div class="pt-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ''}</div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -29953,6 +29958,8 @@ function showFitInfo(){
     el.textContent = L.join('\n');
   }catch(e){}
 }
+// Opening a reason line changes the plan's height, so the study page is fitted again straight after.
+function osFitRefresh(){ try{ window._osStudyForce = true; setTimeout(() => { try{ osFitStudy(); }catch(e){} }, 0); }catch(e){} }
 function osFitStudy(extra){
   try{
     extra = extra || 0;
@@ -32633,7 +32640,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.902';
+const BUILD_ID = '2026-10-26.903';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
