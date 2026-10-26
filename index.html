@@ -3959,6 +3959,9 @@
     #screenHost .scr-form input{padding:7px 12px;}
     #screenHost .scr-form .btn{min-height:36px;padding:6px 14px;}
     #screenHost .scr-foot{padding:4px 0 0;}
+    body.screen-active #screenHost{padding-top:max(14px, env(safe-area-inset-top));padding-bottom:max(12px, env(safe-area-inset-bottom));}
+    #screenHost .scr-inner{min-height:100%;margin:0 auto;}
+    #screenHost .scr-body{flex:1 1 auto;min-height:0 !important;}
   }
 </style>
 </head>
@@ -32731,7 +32734,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.926';
+const BUILD_ID = '2026-10-26.927';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
