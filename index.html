@@ -29974,6 +29974,7 @@ function osFitStudy(extra){
     if(osSig === window._osStudySig && !window._osStudyForce) return;
     window._osStudySig = osSig; window._osStudyForce = false;
     c.style.maxHeight = ''; c.style.minHeight = ''; c.style.zoom = ''; c.classList.remove('os-fit', 'os-end', 'pt-dense', 'pt-tiny', 'pt-dt', 'pt-dfull', 'pt-dwhy', 'pt-rich');
+    c.style.transform = ''; c.style.transformOrigin = ''; c.style.width = ''; c.style.marginBottom = '';
     c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
     c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
     const rowsHost = c.querySelector('.pt-rows');
@@ -30033,6 +30034,9 @@ function osFitStudy(extra){
       if(c.scrollHeight <= avail + 2){ osGrow(c, avail, 1.25); return; }
     }
     // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
+    // Last resort, without clipping: scale the whole column down with a transform (not zoom, which some iPad browsers do not measure),
+    // so every row stays on screen at a size the screen can hold.
+    { const nat = c.scrollHeight; if(nat > avail + 2){ const k = Math.max(0.6, avail / nat); c.style.transformOrigin = 'top left'; c.style.width = (100 / k).toFixed(2) + '%'; c.style.transform = 'scale(' + k.toFixed(3) + ')'; c.style.marginBottom = Math.round(avail - nat) + 'px'; return; } }
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
 }
@@ -32642,7 +32646,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.904';
+const BUILD_ID = '2026-10-26.905';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
