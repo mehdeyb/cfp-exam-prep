@@ -1167,6 +1167,9 @@
   #blueprintCard .bp-colR > #readinessWhyBtn{margin:6px 0 0;}
   #blueprintCard .bp-colR > #readinessBreakdown{margin:10px 0 0;}
   #blueprintCard .bp-colR > #readinessBreakdown[hidden]{display:none;}
+  /* The four counters above (due, answered, accuracy, streak) are already shown by the readiness number, the blueprint and
+     the diagnosis on this page, so they step aside here; Today keeps them. */
+  #tab-study:has(#studyHub[data-view="progress"]) #scoreRow .stat-strip{display:none !important;}
   .bp-value{margin:0 0 14px;}
   .bp-value-head{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:8px;}
   .bp-value-list{list-style:none;margin:0;padding:0;}
@@ -33331,7 +33334,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.999991';
+const BUILD_ID = '2026-10-26.999992';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
