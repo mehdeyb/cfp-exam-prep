@@ -15022,6 +15022,34 @@ function ttIdleBoard0(){
   if(!stageInlineVisible()) ttEnsureStage();
   stageShow(sl, 'tutor');
 }
+// The board follows the tutor's reply one sentence at a time, at talking pace, so the screen shows what is being said right now.
+// A sentence that names a study term or formula puts that card up; the rest show the sentence itself.
+function ttFollowCancel(){ window._ttFollowId = (window._ttFollowId || 0) + 1; try{ clearTimeout(window._ttFollowTimer); }catch(e){} }
+function ttFollowReply(reply){
+  try{
+    ttFollowCancel(); const id = window._ttFollowId;
+    const sents = ttSpeakable(reply).split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length >= 12).slice(0, 10);
+    if(!sents.length) return;
+    if(!stageInlineVisible()) ttEnsureStage();
+    const show = (text, i) => {
+      let sl = null;
+      const spec = ttFindSlide(text);
+      if(spec){ const r = stageSlideFromTool(spec); if(!r.error) sl = r.slide; }
+      if(!sl) sl = { kind:'idea', title: i === 0 ? 'The tutor says' : 'Next point', text: stageClip(text, 260) };
+      sl.src = 'tutor'; sl.at = 0; sl.idle = true; // idle: follows the talk without filling the slide history
+      stageShow(sl, 'tutor');
+    };
+    let i = 0;
+    const step = () => {
+      if(id !== window._ttFollowId || i >= sents.length) return;
+      show(sents[i], i);
+      const words = sents[i].split(/\s+/).length;
+      i++;
+      if(i < sents.length) window._ttFollowTimer = setTimeout(step, Math.min(7000, Math.max(1800, words / 2.6 * 1000)));
+    };
+    step();
+  }catch(e){}
+}
 // Whatever you ask about, the board follows. Before the reply, a term, formula or concept you named goes up at once; after it, if the tutor did not
 // put anything up itself, the board takes the first line of the answer, so the screen always shows the thing being discussed.
 function ttFindSlide(text){
@@ -31507,7 +31535,7 @@ async function sendTutorMessage(presetText){
 
   tutorNextStop = null; _tutorLastStepId = null;
   tutorBusy = true;
-  try{ ttFace.toolSet = false; ttFaceSet('thinking'); }catch(e){}
+  try{ ttFollowCancel(); ttFace.toolSet = false; ttFaceSet('thinking'); }catch(e){}
   document.getElementById('tutorSendBtn').disabled = true;
   input.disabled = true;
   const status = document.getElementById('tutorStatus');
@@ -31558,6 +31586,7 @@ async function sendTutorMessage(presetText){
     ttAddListen(typingBubble, reply);
     if(!ttFace.toolSet){ try{ ttFaceReact(reply); }catch(e){} }
     if(ttVoiceOn() && document.getElementById('tab-tutor').classList.contains('active')) ttSpeakReply(reply);
+    if(document.getElementById('tab-tutor').classList.contains('active')) { try{ ttFollowReply(reply); }catch(e){} }
     status.textContent = '';
     try{ tutorGuideAfterMove(reply); }catch(e){}
     tutorMaybeOfferTree(text, reply);
@@ -32355,7 +32384,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.832';
+const BUILD_ID = '2026-10-25.833';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
