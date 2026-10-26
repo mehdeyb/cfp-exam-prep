@@ -4038,6 +4038,8 @@
   @media (max-width:699px){
     html{--bg-glow-1:transparent !important;--bg-glow-2:transparent !important;}
   }
+  /* The full-screen lesson does not pinch-zoom: a pinch there pushed the layout off the right edge on iPad. Vertical scrolling still works. */
+  body.screen-active #screenHost{touch-action:pan-y;}
 </style>
 </head>
 <body>
@@ -32823,7 +32825,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.943';
+const BUILD_ID = '2026-10-26.944';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
