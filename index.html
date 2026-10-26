@@ -4062,6 +4062,10 @@
   #tutorCard #ttFaceCap .tt-cap-past{opacity:.55;}
   #tutorCard #ttFaceCap .tt-cap-now{background:#E3B73F;color:#0F1A2C;opacity:1;padding:0 2px;margin:0 -2px;}
   :root[data-theme="dark"] #tutorCard #ttFaceCap .tt-cap-now{background:#C9A22E;color:#0F1A2C;}
+
+  /* Lesson topic pills: wrap onto as many lines as they need, so no name is cut off at either edge. */
+  #screenHost .scr-dots{flex-wrap:wrap !important;overflow:visible !important;row-gap:6px;}
+  #screenHost .scr-dots button{max-width:none !important;overflow:visible !important;text-overflow:clip !important;white-space:nowrap !important;font-size:11.5px !important;padding:5px 11px !important;}
 </style>
 </head>
 <body>
@@ -32954,7 +32958,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.961';
+const BUILD_ID = '2026-10-26.962';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
