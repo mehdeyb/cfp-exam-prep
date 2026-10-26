@@ -2907,6 +2907,7 @@
     #tvmHost .tvm-timeline-wrap{grid-row:auto;display:flex;flex-direction:column;min-height:0;margin:0 !important;}
     #tvmHost .tvm-timeline-label{display:none;}
     #tvmHost #tvmTimeline{flex:1 1 auto;min-height:0;}
+    #tvmHost .tvm-feedback{font-size:15px;line-height:1.4;min-height:22px;margin-bottom:10px;color:rgba(255,255,255,0.9);}
     #tvmHost #tvmTimeline svg{height:100%;width:100%;max-height:none;}
     /* Reading order on the left: the question first, then its timeline, then the progress chips and the buttons. The how-to text is a single line. */
     #tvmHost .dp-inner > .pp{order:1;}
@@ -23849,6 +23850,12 @@ function tvmPressVarKey(key, viaXppy){
   // I/YR is typed as the annual rate; the calculator divides it by P/YR. Everything else is typed as is.
   const expected = key === 'iy' ? tvmCurrent.known.iy * tvmPpy : tvmCurrent.known[key];
   const correct = !isNaN(entered) && Math.abs(entered - expected) < 0.005;
+  // Nothing typed yet (the display still shows 0): say so, rather than treating it as a wrong answer.
+  if(!correct && (tvmDisplay === '0' || tvmDisplay === '' || isNaN(entered))){
+    feedback.textContent = 'Type the value first, then press this key.';
+    feedback.className = 'tvm-feedback';
+    return;
+  }
   tvmRegisters[key] = isNaN(entered) ? 0 : entered;
   tvmRegisterStatus[key] = correct ? 'correct' : 'incorrect';
   if(!DATA.tvmMistakeCategories) DATA.tvmMistakeCategories = { signConvention: 0, decimalForm: 0, negativeN: 0, monthlyConversion: 0, beginEndMismatch: 0, generic: 0 };
@@ -32534,7 +32541,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.844';
+const BUILD_ID = '2026-10-25.845';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
