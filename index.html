@@ -1915,6 +1915,9 @@
   body.focus-mode #lessonsCard.has-lesson #podcastTypeSeg,body.focus-mode #lessonsCard.has-lesson .pod-opts,body.focus-mode #lessonsCard.has-lesson .card-head .note{display:none;}
   body.focus-mode #lessonsCard.has-lesson{border-color:transparent;box-shadow:none;background:transparent;padding-inline:0;}
   body.focus-mode #lessonsCard.has-lesson .pstage{min-height:min(52vh,420px);}
+  /* The calculator step grows with its content: nothing inside the lesson stage is cut off, and the tutor's chips and
+     question box start below it instead of sitting on top of its last line. */
+  body.focus-mode #lessonsCard.has-lesson .pstage{overflow:visible;margin-bottom:18px;}
   #lessonsCard.has-lesson #podcastHero{display:none;} #lessonsCard.has-lesson #podcastPlayer{order:-2;} #lessonsCard.has-lesson #podcastFocus{order:-1;}
   #lessonsCard.has-lesson #podcastTypeSeg{margin-top:18px;flex-wrap:wrap;} #lessonsCard.has-lesson #podcastTypeSeg::before{content:'Another lesson';display:block;flex:0 0 100%;font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
   #lessonsCard .pstage{border-radius:20px;box-shadow:0 10px 30px -18px rgba(0,0,0,.35);} #lessonsCard .pst-body{min-height:230px;padding:6px 6px 0;} #lessonsCard .pst-title{font-size:26px;} 
@@ -33317,7 +33320,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99997';
+const BUILD_ID = '2026-10-26.99998';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
