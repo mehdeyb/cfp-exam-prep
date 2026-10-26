@@ -17436,6 +17436,29 @@ function isGenQ(q){ return !!q && (!!q.tvmGen || !!q.treeGen || !!q.figGen); }
    2) "Apply the tree" turns every route through a tree into a client situation and asks where the tree lands. Routes you got wrong
       come back more often, and the count of routes solved shows under each tool.
 =========================================================== */
+// College funding: one client scenario per result. Each "why" line explains one decision on the route to that result.
+TREE_SCENARIOS.college = [
+  { to:'r_aotc', facts:"The Ruiz family's daughter starts her first year of a four-year undergraduate program this fall, enrolled at least half-time. The first tuition bill is due in August. The family files as a single filer with modified AGI of $95,000.",
+    why:["Costs are due now, so this is a current payment rather than a savings goal.","She is in the first four years of a first undergraduate degree, so the education credit applies.","Income is below the phase-out range, so the full credit is available."] },
+  { to:'r_llc', facts:"Dana, 34, takes a graduate certificate course at night to move into a compliance role. Tuition is due this term. She files single with modified AGI of $78,000.",
+    why:["Tuition is due now, so this is a current payment.","She is in graduate study, not the first four years of an undergraduate degree.","Her income is below the phase-out range, so the credit is available."] },
+  { to:'r_nocredit', facts:"Ravi earns $310,000 as a single filer. His son starts his first year of college this fall, and Ravi is paying tuition from his salary.",
+    why:["Costs are due now, so this is a current payment.","The son is in the first four years of an undergraduate degree.","Ravi's income is above the phase-out range, so no education credit is allowed."] },
+  { to:'r_bonds', facts:"Marta, 52, bought Series I bonds in her own name years ago. Her son is now a 19-year-old freshman, and tuition is due this semester. She files jointly with modified AGI of $96,000 and wants to cash the bonds for tuition.",
+    why:["She wants to pay tuition using bonds she already owns."] },
+  { to:'r_parent529', facts:"Joan and Mike, both 45, have $60,000 in a 529 plan in Mike's name for their 15-year-old. Their son will go to college in three years, and they expect to apply for need-based aid.",
+    why:["The money is for costs years away, not a payment due now.","Financial aid is likely to matter for this family.","A parent owns the account."] },
+  { to:'r_grand', facts:"Ellen, 70, wants to help her 8-year-old granddaughter with college. She plans to open a 529 in her own name and contribute $30,000. The family expects to apply for need-based aid.",
+    why:["The money is for costs years away.","Financial aid is likely to matter for this family.","A grandparent owns the account."] },
+  { to:'r_utma_aid', facts:"The Okafors opened a UTMA custodial account in their 6-year-old's name and have been adding to it each year. They expect to apply for need-based aid and want the money used for college.",
+    why:["The money is for costs years away.","Financial aid is likely to matter for this family.","The child owns the account."] },
+  { to:'r_flex', facts:"Priya, 40, saves $400 a month for her 12-year-old. Financial aid is not a concern. She wants the money to stay flexible in case her child does not go to college and the funds are needed for something else.",
+    why:["The money is for costs years away.","Financial aid is not likely to matter for this family.","The money might be needed for something other than education."] },
+  { to:'r_coverdell', facts:"Sam wants to put about $2,000 a year toward his 6-year-old nephew's private school and later college. He wants a wide choice of investment funds rather than a state plan's menu. Aid is not a concern, and the money is education only.",
+    why:["The money is for costs years away.","Financial aid is not likely to matter for this family.","The money is education only.","Contributions are modest and the client wants a wider investment menu and K-12 use."] },
+  { to:'r_529', facts:"The Chens save $800 a month for their infant's college. Aid is not a concern, the money is education only, and they want high contribution limits for a large fund.",
+    why:["The money is for costs years away.","Financial aid is not likely to matter for this family.","The money is education only.","They want large tax-advantaged savings."] }
+];
 const TREE_META = {
   trust: { name:'Which trust fits?', domain:'estate' },
   entity: { name:'Which business entity fits?', domain:'tax' },
@@ -33114,7 +33137,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.988';
+const BUILD_ID = '2026-10-26.989';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
