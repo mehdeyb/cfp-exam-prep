@@ -12477,10 +12477,8 @@ function _renderTodayPlanInner(){
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
   // What is left comes first, in plan order; what is finished sits below under one heading, so the next step is always at the top.
   const pendN = plan.steps.filter(x => !x.done).length;
-  // Finished steps are not actionable, so they live in their own collapsed group under the open steps instead of mixed into the grid.
-  const orderedRows = plan.steps.map((x, i) => i).filter(i => !plan.steps[i].done).map(i => stepRows[i]);
-  const doneRowsHtml = plan.steps.map((x, i) => i).filter(i => plan.steps[i].done).map(i => stepRows[i]).join('');
-  const doneHtml = doneN ? `<details class="pt-done"><summary class="pt-donehead">Done today · ${doneN}<span class="pt-done-tap">show</span></summary><div class="pt-donelist">${doneRowsHtml}</div></details>` : '';
+  const orderedRows = plan.steps.map((x, i) => i).sort((a, b) => (plan.steps[a].done - plan.steps[b].done) || (a - b)).map(i => stepRows[i]);
+  if(doneN && pendN) orderedRows.splice(pendN, 0, `<div class="pt-donehead">Done today · ${doneN}</div>`);
   let rows;
   if(orderedRows.length > 11 && !window._ptAll && !document.body.classList.contains('os-one')){
     const en0 = Math.min(orderedRows.length, 9);
@@ -12499,7 +12497,7 @@ function _renderTodayPlanInner(){
     <div class="pt-stats" role="status"><span class="pt-ctx">${headBits}</span><i class="pt-sep">·</i><span><b>${planFmtMin(doneMinPlan)}</b> done</span><i class="pt-sep">·</i><span><b>${planFmtMin(leftMin)}</b> left</span>${advice ? `<i class="pt-sep">·</i><span>pace <b>${paceHrs(advice.minutes)}</b>/day</span>` : ''}</div>
     ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return o ? `<div class="pt-today"><button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button></div>` : ''; })()}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
-    ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${doneHtml}${blocks}</div>`;
+    ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
   el.style.display = 'block';
   try{ hubRefreshSeg(); }catch(e){}
   try{ const cc = document.getElementById('examCountdownCard'); if(cc) cc.style.display = (plan.days !== null && plan.days >= 2) ? 'none' : ''; }catch(e){} // the countdown lives in the plan's header now
@@ -33262,7 +33260,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9998';
+const BUILD_ID = '2026-10-26.9999';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
