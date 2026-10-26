@@ -4113,6 +4113,11 @@
   #tutorCard.tt-board .tutor-input-row{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;}
   #tutorCard.tt-board .tutor-input-row .tutor-input{flex:1 1 auto;min-width:0;}
   #tutorCard.tt-board .tutor-input-row #tutorSendBtn{flex:none;}
+
+  /* Tutor board bottom is one piece: lesson controls, then the question bar directly under them, with no floating or gap. */
+  #tutorCard.tt-board #podcastPlayer{margin:0 0 4px;}
+  #tutorCard.tt-board .tutor-input-row{position:static !important;bottom:auto !important;z-index:auto;background:transparent;box-shadow:none;margin:0;padding:10px 0 2px;border-top:1px solid var(--hair);}
+  #tutorCard.tt-board .tutor-input-row .tutor-input{background:var(--surface2);}
 </style>
 </head>
 <body>
@@ -33031,7 +33036,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.972';
+const BUILD_ID = '2026-10-26.973';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
