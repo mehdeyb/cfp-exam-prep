@@ -4151,6 +4151,10 @@
   #tutorCard .tutor-input-row #tutorSendBtn{background:#FFFFFF;color:#8A6D1F;border:1px solid var(--gold);font-weight:600;}
   :root[data-theme="dark"] #tutorCard .tutor-input-row #tutorSendBtn{background:#1E2A3D;color:#E3B73F;}
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) #tutorCard .tutor-input-row #tutorSendBtn{background:#1E2A3D;color:#E3B73F;} }
+
+  /* Tutor board: the card's rounded bottom corners stay on screen, like the top ones. */
+  #tab-tutor:has(#tutorCard.tt-board){padding-bottom:max(10px, env(safe-area-inset-bottom, 0px)) !important;}
+  #tutorCard.tt-board{margin-bottom:0 !important;}
 </style>
 </head>
 <body>
@@ -33103,7 +33107,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.983';
+const BUILD_ID = '2026-10-26.984';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
