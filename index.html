@@ -3076,6 +3076,8 @@
   /* During a plan step the tool is the whole task: no collapse chevron, and the heading is not a button. */
   body.focus-mode .cc-card.focus-target > .card-head{cursor:default;}
   body.focus-mode .cc-card.focus-target > .card-head h2::after{display:none;}
+  /* A decision tool run from the plan is the whole screen, so it takes the side space the 900px page column leaves on a tablet. */
+  body.focus-mode:has(#tab-tools.active) .wrap{max-width:min(1180px, calc(100vw - 48px));}
   .cc-card:not(.cc-open) > .cc-body{display:none;}
   .cc-card > .card-head h2{margin-top:0;}
   .cc-sum{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -33263,7 +33265,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99991';
+const BUILD_ID = '2026-10-26.99992';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
