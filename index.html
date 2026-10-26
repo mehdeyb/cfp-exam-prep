@@ -32582,7 +32582,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.859';
+const BUILD_ID = '2026-10-25.860';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -33118,7 +33118,9 @@ requestDurableStorage();
   document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(measure, 120); });
   if(window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(measure, 60));
   document.addEventListener('DOMContentLoaded', measure);
-  setInterval(() => { if(!document.hidden) measure(); }, 4000); // the events above catch most changes; this poll is only a safety net
+  // Safety-net re-measure: every second while Today is open (where the plan must keep fitting), every fourth second elsewhere.
+  let _measureTick = 0;
+  setInterval(() => { if(document.hidden) return; _measureTick++; const today = document.getElementById('tab-study'); if((today && today.classList.contains('active')) || _measureTick % 4 === 0) measure(); }, 1000);
   setTimeout(measure, 100);
 })();
 
