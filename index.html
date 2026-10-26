@@ -24019,6 +24019,13 @@ function tvmCompactMoney(v){
   return a >= 1e6 ? tvmShortMoney(v) : sign + '$' + (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'K';
 }
 // model: { items:[{x:0..1, dx?, val:number|null, name, big?, solved?, hit?}], ticks:[{x,label}], dots:[x...], endLabel }
+function tvmThousandsMoney(v){
+  const a = Math.abs(v);
+  if(a < 1000) return tvmShortMoney(v);
+  if(a >= 1e6) return tvmShortMoney(v);
+  const k = Math.round(a / 100) / 10, sign = v < 0 ? '−' : '';
+  return sign + '$' + (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'K';
+}
 function tvmFlowSvg(model){
   const X0 = 46, X1 = 354, W = 400;
   const xs = f => X0 + (X1 - X0) * f;
@@ -24054,7 +24061,10 @@ function tvmFlowSvg(model){
     svg += `<path d="M ${x-5} ${tip - dir*7} L ${x} ${tip} L ${x+5} ${tip - dir*7} Z" fill="${col}"/>`;
     const ly = up ? tip - 4 : tip + 14;
     const wgt = it.hit || it.solved ? 700 : 500;
-    svg += `<text x="${x}" y="${ly}" text-anchor="${anchor}" font-size="11" font-weight="${wgt}" fill="${col}">${it.name ? it.name + ' ' : ''}${escapeHtml(it.compact ? tvmCompactMoney(it.val) : tvmShortMoney(it.val))}</text>`;
+    // Many payments share a short axis, so their labels switch to thousands (for example $5K) and a smaller size to stop neighbours colliding.
+    const crowded = items.filter(i => i.compact).length > 4;
+    const txt = it.compact ? (crowded ? tvmThousandsMoney(it.val) : tvmCompactMoney(it.val)) : tvmShortMoney(it.val);
+    svg += `<text x="${x}" y="${ly}" text-anchor="${anchor}" font-size="${it.compact && crowded ? 9.5 : 11}" font-weight="${wgt}" fill="${col}">${it.name ? it.name + ' ' : ''}${escapeHtml(txt)}</text>`;
   });
   svg += '</svg>';
   return svg;
@@ -33307,7 +33317,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99996';
+const BUILD_ID = '2026-10-26.99997';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
