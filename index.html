@@ -3380,6 +3380,13 @@
   #resultsView{padding-bottom:76px;}
   /* Landscape phones: Exit and Next move out into the empty side margins as round buttons, so the
      question and answers get the full height. Exam simulations keep their labelled bar. */
+  /* iPad landscape: the question card uses almost the full width, so each answer wraps onto fewer lines and the page fits without scrolling. */
+  @media (min-width:900px) and (min-height:600px){
+    body.quiz-active:not(.exam-sim-mode) .quiz-inner{max-width:min(1360px, calc(100vw - 48px));}
+    body.quiz-active:not(.exam-sim-mode) .q-card{column-gap:40px;padding:26px 32px;}
+    /* The answers and their explanations are the tall part, so they get the wider column when the question has no case text. */
+    body.quiz-active:not(.exam-sim-mode) .q-card:not(:has(#qScenario:not([style*="none"]))){grid-template-columns:minmax(0,4fr) minmax(0,6fr);}
+  }
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     body.quiz-active:not(.exam-sim-mode) .quiz-inner{max-width:min(1080px, calc(100vw - 144px));}
     body.quiz-active:not(.exam-sim-mode) #quizView{padding-bottom:0;}
@@ -33192,7 +33199,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9991';
+const BUILD_ID = '2026-10-26.9992';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
