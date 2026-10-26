@@ -462,6 +462,9 @@
   .dt-breadcrumb{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);letter-spacing:.02em;line-height:1.6;margin-bottom:12px;min-height:14px;}
   .dt-breadcrumb .dt-crumb-answer{color:var(--gold);}
   .dt-question{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--paper);margin-bottom:14px;line-height:1.35;}
+  .dt-switch{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
+  .dt-switch-btn{font-family:'IBM Plex Sans',sans-serif;font-size:13px;}
+  .dt-switch-btn.on{background:var(--gold);color:var(--ink);border-color:var(--gold);}
   .dt-options{display:flex;flex-direction:column;gap:8px;}
   .dt-option{font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.4;text-align:left;padding:13px 16px;border-radius:11px;border:1px solid var(--hair);background:var(--surface);color:var(--paper);cursor:pointer;transition:all var(--t-fast) var(--ease);}
   .dt-option:hover{border-color:var(--gold);background:var(--surface2);}
@@ -4329,54 +4332,55 @@
       <div class="tutor-chips" style="margin:10px 0 0;"><button type="button" class="chip" onclick="askTutorAbout('Look at where I am struggling and build me a custom tool or study routine that will most improve my chances of passing. Say what it is for first.')">Ask the tutor to build me a tool</button></div>
     </div>
 
-    <div class="card">
+    <div class="dt-switch" id="dtSwitch" role="tablist" aria-label="Choose a decision tree"><button type="button" class="chip dt-switch-btn" data-dt="trust" onclick="dtSelectTree('trust')">Trust</button><button type="button" class="chip dt-switch-btn" data-dt="entity" onclick="dtSelectTree('entity')">Business entity</button><button type="button" class="chip dt-switch-btn" data-dt="ira" onclick="dtSelectTree('ira')">Traditional IRA</button><button type="button" class="chip dt-switch-btn" data-dt="roth" onclick="dtSelectTree('roth')">Roth IRA</button><button type="button" class="chip dt-switch-btn" data-dt="socialSecurity" onclick="dtSelectTree('socialSecurity')">Social Security</button><button type="button" class="chip dt-switch-btn" data-dt="college" onclick="dtSelectTree('college')">College funding</button></div>
+    <div class="card dt-card" data-dt="trust">
       <div class="card-head"><h2>Which trust fits?</h2></div>
-      <p class="hint">Tap through the questions to reach a recommendation — not a substitute for the specifics in the estate planning section of the study guide.</p>
+      <p class="hint">Revocable keeps control and avoids probate; irrevocable moves assets out of the estate and protects them.</p>
       <div id="dt-trust"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-trust" onclick="dtToggleFull('trust')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-trust"></div>
       <div id="tool-practice-trust"></div>
     </div>
 
-    <div class="card">
+    <div class="card dt-card" data-dt="entity">
       <div class="card-head"><h2>Which business entity fits?</h2></div>
-      <p class="hint">Tap through the questions to reach a recommendation. Watch for "LLC" as an answer choice on a tax-treatment question — it's a legal structure, not a tax election, and defaults to being taxed as a sole proprietorship or partnership unless it elects otherwise.</p>
+      <p class="hint">Pick the entity by owner count, liability protection and how the business is taxed.</p>
       <div id="dt-entity"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-entity" onclick="dtToggleFull('entity')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-entity"></div>
       <div id="tool-practice-entity"></div>
     </div>
 
-    <div class="card">
+    <div class="card dt-card" data-dt="ira">
       <div class="card-head"><h2>Is a traditional IRA contribution deductible?</h2></div>
-      <p class="hint">Anyone can contribute to a traditional IRA — this only decides whether the contribution is deductible.</p>
+      <p class="hint">Deductibility depends on whether you or a spouse has a workplace plan and on your income.</p>
       <div id="dt-ira"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-ira" onclick="dtToggleFull('ira')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-ira"></div>
       <div id="tool-practice-ira"></div>
     </div>
 
-    <div class="card">
+    <div class="card dt-card" data-dt="roth">
       <div class="card-head"><h2>Roth IRA: direct, backdoor or none?</h2></div>
-      <p class="hint">Whether a client can fund a Roth IRA depends on compensation first, then income. Above the limit, the backdoor route depends on what else is sitting in their IRAs.</p>
+      <p class="hint">Income decides whether you can contribute directly, need a backdoor route, or cannot contribute.</p>
       <div id="dt-roth"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-roth" onclick="dtToggleFull('roth')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-roth"></div>
       <div id="tool-practice-roth"></div>
     </div>
 
-    <div class="card">
+    <div class="card dt-card" data-dt="socialSecurity">
       <div class="card-head"><h2>When should Social Security be claimed?</h2></div>
-      <p class="hint">Not a single "right age" — the client's own income need, work status, spousal situation, and longevity expectations each point in different directions.</p>
+      <p class="hint">Weigh a larger lifetime benefit against needing the income sooner, health and marital status.</p>
       <div id="dt-socialSecurity"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-socialSecurity" onclick="dtToggleFull('socialSecurity')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-socialSecurity"></div>
       <div id="tool-practice-socialSecurity"></div>
     </div>
 
-    <div class="card">
+    <div class="card dt-card" data-dt="college">
       <div class="card-head"><h2>Which college funding choice fits?</h2></div>
-      <p class="hint">Start with the goal, then aid and ownership. The tree picks between credits, 529s, Coverdell, custodial accounts and savings bonds.</p>
+      <p class="hint">Match the funding vehicle to the goal, the tax treatment and who controls the money.</p>
       <div id="dt-college"></div>
       <button type="button" class="dt-full-toggle" id="dt-toggle-college" onclick="dtToggleFull('college')"><span class="dt-chevron">▾</span> See the full decision tree at once</button>
       <div class="dt-full-tree" id="dt-full-college"></div>
@@ -16836,6 +16840,14 @@ function openTreeWalk(key){
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
   if(card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
+function dtSelectTree(k){
+  try{
+    document.querySelectorAll('.dt-card').forEach(c => { c.style.display = c.dataset.dt === k ? '' : 'none'; });
+    document.querySelectorAll('#dtSwitch .dt-switch-btn').forEach(b => b.classList.toggle('on', b.dataset.dt === k));
+    try{ localStorage.setItem('dtSelected', k); }catch(e){}
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', () => { let k = 'trust'; try{ k = localStorage.getItem('dtSelected') || 'trust'; }catch(e){} dtSelectTree(k); });
 function dtToggleFull(treeKey){
   const tree = document.getElementById('dt-full-' + treeKey);
   const btn = document.getElementById('dt-toggle-' + treeKey);
@@ -32564,7 +32576,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-25.855';
+const BUILD_ID = '2026-10-25.856';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
