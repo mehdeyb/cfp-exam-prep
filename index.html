@@ -4040,6 +4040,8 @@
   }
   /* The full-screen lesson does not pinch-zoom: a pinch there pushed the layout off the right edge on iPad. Vertical scrolling still works. */
   body.screen-active #screenHost{touch-action:pan-y;}
+  .pt-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .pt-stats b{color:var(--paper);font-weight:600;}
 </style>
 </head>
 <body>
@@ -5011,6 +5013,12 @@
         </div>
         <div id="examWindowPick" class="ewp"></div>
       </div>
+        </div>
+
+        <div class="settings-section" id="settingsPlanTimeSection">
+          <h3>Daily study time</h3>
+          <div class="note" style="margin-bottom:6px;">how long today's plan should be</div>
+          <div class="pt-mins" id="settingsPlanTime" role="group" aria-label="Daily study time"></div>
         </div>
 
         <div class="settings-section">
@@ -11725,6 +11733,14 @@ function buildStudyPlanCore(minutes){
   return { phase, days, minutes, used, steps, blocks, answered, dueCards, dueQs, missedN, breakAfter, focus, tutorNote: (ov && !(ov.focus && focus && focus.key === ov.focus) && ov.reason) ? ov.reason : '' };
 }
 
+function planFmtMin(m){ m = Math.max(0, Math.round(m || 0)); return m >= 90 ? (Math.round(m / 6) / 10) + ' hrs' : m + ' min'; }
+// Daily study time lives in Settings now; the Today plan only reports time done, remaining and pace.
+function renderSettingsPlanTime(){
+  const el = document.getElementById('settingsPlanTime'); if(!el) return;
+  const a = studyPaceAdvice(); const cur = DATA.planMinutes || (a ? a.minutes : 360);
+  const choices = [...new Set([...PLAN_MINUTE_CHOICES, cur])].sort((x, y) => x - y);
+  el.innerHTML = choices.map(v => `<button type="button" class="pt-min${v === cur ? ' on' : ''}${a && v === a.minutes ? ' sug' : ''}" onclick="setPlanMinutes(${v});renderSettingsPlanTime();" aria-pressed="${v === cur}">${paceHrs(v)}</button>`).join('');
+}
 function setPlanMinutes(m){
   // Taking the suggestion means "follow it": it keeps adjusting as the exam date, progress and pace change.
   { const a = studyPaceAdvice(); DATA.planMinutes = (a && a.minutes === m) ? 0 : m; DATA.planToday = null; }
@@ -12198,6 +12214,7 @@ function _renderTodayPlanInner(){
   const chips = planChipChoices(plan.minutes);
   const mins = chips.arr.map(m => `<button type="button" class="pt-min${plan.minutes === m && !planTodayOverride() ? ' on' : ''}${m === chips.sug ? ' sug' : ''}" onclick="setPlanMinutes(${m})" aria-pressed="${plan.minutes === m && !planTodayOverride()}"${m === chips.sug ? ' title="Suggested for your exam date"' : ''}>${planMinuteLabel(m)}</button>`).join('');
   const advice = studyPaceAdvice();
+  const doneMinPlan = Math.round(plan.steps.reduce((a, x) => a + x.minutes * (x.done ? 1 : (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0)), 0));
   const paceLine = advice ? `<p class="pt-pace" title="${escapeHtml('Estimate from: ' + advice.parts.filter(p => p.min >= 1).map(p => p.label + ' (' + paceHrs(p.min) + ')').join(', ') + ', over ' + advice.days + ' days with the last day for rest.')}">${escapeHtml(paceAdviceText(advice))}${plan.minutes !== advice.minutes ? ` <button type="button" class="pt-use" onclick="setPlanMinutes(${advice.minutes})">Use ${escapeHtml(planMinuteLabel(advice.minutes))}</button>` : ''}</p>` : '';
   const unitTxt = st => st.unit || 'questions';
   const progTxt = st => (st.need > 0 && !st.manual) ? (st.done ? `${st.need} of ${st.need} ${unitTxt(st)} done` : `${st.have || 0} of ${st.need} ${unitTxt(st)} done`) : '';
@@ -12238,7 +12255,7 @@ function _renderTodayPlanInner(){
     ${plan.tutorNote ? `<p class="pt-sub pt-focus">${escapeHtml('Your tutor adjusted today: ' + plan.tutorNote)}</p>` : ''}
     ${['taper','rest','exam'].includes(plan.phase.key) && plan.minutes - plan.used >= 60 ? `<p class="pt-sub" style="color:var(--gold);">You picked ${escapeHtml(planMinuteLabel(plan.minutes))}, but this close to the exam the plan stays at about ${escapeHtml(planMinuteLabel(Math.round(plan.used / 5) * 5))} on purpose. Sleep and calm are worth more than extra hours now.</p>` : ''}
     ${lateNote ? `<p class="pt-sub">${escapeHtml(lateNote).trim()}</p>` : ''}
-    <div class="pt-mins" role="group" aria-label="How much time you have today">${mins}</div>
+    <div class="pt-stats" role="status"><span><b>${planFmtMin(doneMinPlan)}</b> done</span><span><b>${planFmtMin(leftMin)}</b> remaining</span>${advice ? `<span>pace <b>${paceHrs(advice.minutes)}</b>/day</span>` : ''}</div>
     ${(() => { const o = planTodayOverride(); const opts = [60, 120, 240, 360].filter(v => v !== plan.minutes || !!o).map(v => `<button type="button" class="pt-min sm${o === v ? ' on' : ''}" onclick="setPlanToday(${v})" aria-pressed="${o === v}">${planMinuteLabel(v)}</button>`).join(''); return o ? `<div class="pt-today"><button type="button" class="pt-use" onclick="setPlanToday(0)">Back to ${escapeHtml(planMinuteLabel(planStandingMinutes()))}</button></div>` : ''; })()}
     ${(plan.steps.length && doneN === plan.steps.length) ? '<p class="pt-alldone">All done for today. Rest, or take an adaptive session if you still have energy.</p>' : ''}
     ${rows ? `<div class="pt-rows">${rows}</div>` : '<p class="hint">Nothing queued right now.</p><button type="button" class="btn" onclick="showTab(\'study\');startAdaptive()">Take an adaptive session</button>'}${blocks}</div>`;
@@ -21504,6 +21521,7 @@ function settingsSetup(){
   const hd = host.querySelector('.dp-header'); if(hd) hd.after(seg);
 }
 function openSettings(){
+  try{ renderSettingsPlanTime(); }catch(e){}
   try{ settingsSetup(); let g = 'study'; try{ g = localStorage.getItem('settingsGroup') || 'study'; }catch(e){} settingsShowGroup(g, true); }catch(e){}
   { const _h = document.getElementById('settingsHost'); if(_h) _h.classList.remove('closing'); }
   document.body.classList.add('settings-active');
@@ -32825,7 +32843,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.946';
+const BUILD_ID = '2026-10-26.947';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
