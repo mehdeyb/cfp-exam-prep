@@ -30036,7 +30036,12 @@ function osFitStudy(extra){
     // Whatever still does not fit is a proper scroll pane with a fade, not a cut-off card.
     // Last resort, without clipping: scale the whole column down with a transform (not zoom, which some iPad browsers do not measure),
     // so every row stays on screen at a size the screen can hold.
-    { const nat = c.scrollHeight; if(nat > avail + 2){ const k = Math.max(0.6, avail / nat); c.style.transformOrigin = 'top left'; c.style.width = (100 / k).toFixed(2) + '%'; c.style.transform = 'scale(' + k.toFixed(3) + ')'; c.style.marginBottom = Math.round(avail - nat) + 'px'; return; } }
+    { const nat = c.scrollHeight; if(nat > avail + 2){
+      const setK = k => { c.style.transformOrigin = 'top left'; c.style.width = (100 / k).toFixed(2) + '%'; c.style.transform = 'scale(' + k.toFixed(3) + ')'; c.style.marginBottom = Math.round(avail - nat) + 'px'; };
+      let k = Math.max(0.6, avail / nat); setK(k);
+      // Measure what is actually on screen (the transformed box) and correct once, so the column fills the room without spilling past it.
+      for(let pass = 0; pass < 2; pass++){ const h = c.getBoundingClientRect().height; if(!h || Math.abs(h - avail) <= 3) break; k = Math.min(1, Math.max(0.5, k * avail / h)); setK(k); }
+      return; } }
     c.style.maxHeight = avail + 'px'; c.classList.add('os-fit'); osFade(c);
   }catch(e){}
 }
@@ -32646,7 +32651,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.905';
+const BUILD_ID = '2026-10-26.906';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
