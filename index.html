@@ -2097,7 +2097,7 @@
       html body.os-one #tab-study.active > #studyCols > #studyHub{flex:1 1 auto;min-height:0;display:flex !important;flex-direction:column;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard{flex:1 1 auto;min-height:0 !important;display:flex !important;flex-direction:column;overflow:hidden;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold{flex:1 1 0;min-height:0;height:auto;display:flex !important;flex-direction:column;overflow:hidden;}
-      html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{flex:1 1 0;min-height:0;height:auto;overflow:hidden;display:grid !important;column-count:auto !important;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:column;grid-template-rows:var(--plan-first,auto) repeat(var(--plan-rest,6),var(--plan-fill,minmax(0,1fr)));column-gap:22px;row-gap:0;}
+      html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{flex:1 1 0;min-height:0;height:auto;overflow:hidden;display:grid !important;column-count:auto !important;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:column;grid-template-rows:repeat(var(--plan-rows,7),var(--plan-fill,minmax(0,1fr)));column-gap:22px;row-gap:0;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold{flex-wrap:nowrap !important;align-items:stretch;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > *{flex:0 0 auto !important;max-width:100%;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{flex:1 1 0 !important;}
@@ -2108,8 +2108,6 @@
       html body.os-one #studyCols .pt-rows > .pt-step .pt-prog{display:none;}
       html body.os-one #studyCols .pt-rows > .pt-step .pt-meter{margin:3px 0;}
       html body.os-one #studyCols .pt-rows > .pt-step.next .pt-nextlabel{display:none;}
-      html body.os-one #studyCols .pt-rows > .pt-step .pt-actions{display:flex;flex-direction:row;gap:6px;align-items:center;}
-      html body.os-one #studyCols .pt-rows > .pt-step .pt-actions button{min-height:28px;padding:2px 10px;font-size:11.5px;}
       html body.os-one #studyCols .pt-rows > .pt-step.next .pt-why{-webkit-line-clamp:1 !important;}
       html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows > .pt-donehead{break-before:auto;-webkit-column-break-before:auto;}
     }
@@ -30000,7 +29998,7 @@ function osFitStudy(extra){
       c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
       c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
       const host = c.querySelector('.pt-rows');
-      if(host){ const n = host.children.length; const rows = Math.max(1, Math.ceil(n / 3)); host.style.setProperty('--plan-rows', String(rows)); host.style.setProperty('--plan-rest', String(Math.max(1, rows - 1))); host.style.setProperty('--plan-first', rows >= 6 ? 'auto' : 'auto'); host.style.setProperty('--plan-fill', rows >= 6 ? 'minmax(0,1fr)' : 'auto'); }
+      if(host){ const n = host.children.length; const rows = Math.max(1, Math.ceil(n / 3)); host.style.setProperty('--plan-rows', String(rows)); host.style.setProperty('--plan-fill', rows >= 6 ? 'minmax(0,1fr)' : 'auto'); }
       return;
     }
     if(document.body.classList.contains('quiz-active')) return;
@@ -32688,7 +32686,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.910';
+const BUILD_ID = '2026-10-26.909';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
