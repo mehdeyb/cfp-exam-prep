@@ -25637,9 +25637,18 @@ function stuckIdSet(){ try{ return new Set(stuckPoints().open.map(q => q.id)); }
 function startMissedReview(o){
   if(!DATA.missed.length){ try{ setCoach('Nothing to review yet. Questions you miss land here, so an adaptive session is the quickest way to start. Tap Study to begin one.', false); }catch(e){} return; }
   const skip = o && o.skip;
-  const pool = shuffle(allQuestions().filter(q=>DATA.missed.includes(q.id) && !(skip && skip.has(q.id))));
-  if(!pool.length){ pruneRetiredQuestionIds(); renderAll(); return; }
-  beginSession(pool, 'review', null);
+  const cap = (o && o.limit) || 15;
+  // Prioritize what hurts most: questions missed the most often, then the ones not seen for longest.
+  const missCount = id => Object.values(DATA.wrongChoiceHistory[id] || {}).reduce((a, b) => a + (+b || 0), 0);
+  const lastSeen = id => { const st = DATA.questionStats[id]; return (st && st.lastSeenAt) || 0; };
+  const ranked = allQuestions()
+    .filter(q => DATA.missed.includes(q.id) && !(skip && skip.has(q.id)))
+    .sort((a, b) => (missCount(b.id) - missCount(a.id)) || (lastSeen(a.id) - lastSeen(b.id)))
+    .slice(0, cap);
+  if(!ranked.length){ pruneRetiredQuestionIds(); renderAll(); return; }
+  const reasons = {};
+  ranked.forEach(q => { reasons[q.id] = 'due'; });
+  beginSession(adaptiveInterleave(ranked, reasons), 'review', null, reasons);
 }
 
 // Orders an adaptive session so the mix works as practice, not a pile: it opens with a plain due-or-new recall question,
@@ -28005,6 +28014,17 @@ function selectAnswerCore(i){
   dt.total++;
   if(isCorrect){ dt.correct++; session.correct++; }
   session.answerLog.push({index: session.index, correct: isCorrect});
+  // In a missed-question review, a question missed again comes back once, a few places later, so it is
+  // retried after some distance instead of being dropped or repeated right away. Only once per session.
+  if(!isCorrect && session.mode === 'review'){
+    session.requeued = session.requeued || {};
+    if(!session.requeued[q.id]){
+      session.requeued[q.id] = true;
+      const at = Math.min(session.queue.length, session.index + 4);
+      session.queue.splice(at, 0, shuffleQuestionChoices(Object.assign({}, q)));
+      session.plannedLen = session.queue.length;
+    }
+  }
   soundCue(isCorrect ? 'right' : 'wrong');
 
   if(q.takeDir !== 'easier'){
@@ -28956,10 +28976,13 @@ function renderRetrievalRecap(){
   const inStudyScope = isStudyMode();
   if(!inStudyScope){ host.style.display = 'none'; host.innerHTML = ''; return; }
 
-  const missedThisSession = session.answerLog
-    .filter(e => !e.correct)
-    .map(e => session.queue[e.index])
-    .filter(Boolean);
+  // One entry per question: a review question missed twice (once on the requeue) is still one thing to review.
+  const missedThisSession = [];
+  const missedIds = new Set();
+  session.answerLog.filter(e => !e.correct).forEach(e => {
+    const mq = session.queue[e.index];
+    if(mq && !missedIds.has(mq.id)){ missedIds.add(mq.id); missedThisSession.push(mq); }
+  });
 
   if(!missedThisSession.length){ host.style.display = 'none'; host.innerHTML = ''; return; }
 
@@ -33199,7 +33222,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.9992';
+const BUILD_ID = '2026-10-26.9993';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
