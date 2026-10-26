@@ -2008,7 +2008,7 @@
   #tutorCard #ttVoiceBtn.off{opacity:.45;}
   #tutorCard #ttVoiceBtn svg{width:18px;height:18px;}
   #tutorCard > #ttFaceRow{order:-8;display:flex;align-items:center;gap:10px;margin:0 0 10px;}
-  #tutorCard #ttFace{width:80px;height:60px;flex:none;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:10px;background:#eaf4fb;}
+  #tutorCard #ttFace{width:80px;height:60px;flex:none;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:10px;background:var(--surface2);border:1px solid var(--hair);}
   #tutorCard .tt-face-cap{flex:1;min-width:0;font-size:13px;color:var(--muted,#5b6b7a);line-height:1.35;}
   #tutorCard #ttFaceBtn{margin-left:auto;min-height:30px;padding:3px 12px;font-size:12.5px;}
   @media (max-width:640px){ #tutorCard #ttFace{width:56px;height:42px;} #tutorCard .tt-face-cap{display:none;} }
@@ -13450,7 +13450,7 @@ try{
 /* Pixel tutor face: a 16x12 pixel grid on a canvas, scaled up without smoothing. Hidden unless the student turns it on
    or the tutor asks to show it. The student's own on/off choice (DATA.tutorFace) always wins over the tutor. */
 const TT_FACE_EXPR = ['neutral','happy','thinking','encouraging','concerned','excited'];
-const TT_FACE_COL = { skin:'#8fc5e6', ink:'#0d2236', hi:'#ffffff' };
+const TT_FACE_COL = { skin:'#C9A227', ink:'#0F1A2C', hi:'#FFF8E1' }; // the app's gold, navy ink and cream highlight
 const ttFace = { expr:'neutral', tick:0, blinkUntil:0, nextBlink:0, nodUntil:0, timer:null, toolSet:false, tutorShow:false };
 function ttFaceVisible(){ return DATA.tutorFace === 'on' || (DATA.tutorFace !== 'off' && ttFace.tutorShow); }
 function ttFaceTalking(){ try{ return !!(window.speechSynthesis && speechSynthesis.speaking); }catch(e){ return false; } }
@@ -32695,7 +32695,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.919';
+const BUILD_ID = '2026-10-26.920';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
