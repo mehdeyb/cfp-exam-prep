@@ -11731,29 +11731,32 @@ function buildStudyPlanCore(minutes){
 }
 
 // The faint reason under each step, cut to five words.
-// Every step gets the same kind of line: a short, complete phrase that says what the step is for.
+// Every step gets one short line that follows its own state: what is left today, or what the step is for, with its real numbers.
 function planStepLabel(st){
   const t = String(st.title || '');
-  const rules = [
-    [/^Learn .*flashcards?/i, 'Build recall on new terms'],
-    [/^Review .*flashcards?/i, 'Clear the cards due now'],
-    [/^Refresh .*figures?/i, 'Lock in key limits and figures'],
-    [/adaptive session/i, 'Mixed questions on your weak spots'],
-    [/^Review .*missed/i, 'Fix the questions you got wrong'],
-    [/^New ground:/i, 'Learn a topic you have not covered'],
-    [/^Read:/i, 'Read the topic summary'],
-    [/^Explain:/i, 'Say the idea back in your own words'],
-    [/^Calculator practice/i, 'Practice the HP 10bII+ key sequence'],
-    [/^Formula practice/i, 'Drill the core formulas'],
-    [/^Decision tool/i, 'Work through a business decision'],
-    [/case study/i, 'Apply the rules to a client case'],
-    [/timed (checkpoint|set)/i, 'Test yourself under exam timing'],
-    [/mixed round/i, 'Mixed questions across every domain'],
-    [/^(Drill|Weakest area):/i, 'Target your weakest topic'],
-    [/^Keep fresh:/i, 'Review a topic you already know'],
-  ];
-  const hit = rules.find(r => r[0].test(t));
-  return hit ? hit[1] : 'Practice this topic';
+  const n = Math.max(0, Math.round(st.need || 0));
+  const have = Math.max(0, Math.round(st.have || 0));
+  const rem = Math.max(0, n - have);
+  const unit = st.unit || 'items';
+  if(st.done) return 'Finished for today';
+  if(have > 0 && n > 0) return `${rem} ${unit} left to go`;
+  if(/^Learn .*flashcards?/i.test(t)) return `Learn ${n} new terms`;
+  if(/^Review .*flashcards?/i.test(t)) return `Clear ${n} cards due today`;
+  if(/^Refresh .*figures?/i.test(t)) return `Lock in ${n} key figures`;
+  if(/adaptive session/i.test(t)) return `${n} mixed questions on your weak spots`;
+  if(/^Review .*missed/i.test(t)) return `Fix ${n} questions you missed`;
+  if(/^Calculator practice/i.test(t)) return `${n} keypad problems on the HP 10bII+`;
+  if(/^Formula practice/i.test(t)) return `Drill ${n} core formulas`;
+  if(/^New ground:/i.test(t)) return `Learn a topic you have not covered`;
+  if(/^Read:/i.test(t)) return 'Read the topic summary';
+  if(/^Explain:/i.test(t)) return 'Say the idea back in your own words';
+  if(/^Decision tool/i.test(t)) return 'Work through a business decision';
+  if(/case study/i.test(t)) return `Apply the rules to ${n} client questions`;
+  if(/timed (checkpoint|set)/i.test(t)) return `Test yourself under exam timing`;
+  if(/mixed round/i.test(t)) return `${n} mixed questions across every domain`;
+  if(/^(Drill|Weakest area):/i.test(t)) return 'Target your weakest topic';
+  if(/^Keep fresh:/i.test(t)) return 'Review a topic you already know';
+  return n > 0 ? `${n} ${unit} to work through` : 'Practice this topic';
 }
 
 
@@ -32869,7 +32872,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.955';
+const BUILD_ID = '2026-10-26.956';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
