@@ -2162,7 +2162,10 @@
       html body.os-one #studyCols .pt-rows > .pt-step:not(.next) .pt-title{-webkit-line-clamp:1 !important;line-height:1.25;}
       html body.os-one #studyCols .pt-rows > .pt-step{overflow:visible;}
       /* "Done today" labels the finished column, so it sits at the top of that column instead of under the open steps. */
-      html body.os-one #studyCols .pt-rows > .pt-donehead{grid-column:2;grid-row:1;align-self:end;}
+      /* The grid fills column by column, so an empty seventh cell in the first column would pull the first finished item into it.
+         Reserving that cell keeps the finished items in the second and third columns, under their label. */
+      html body.os-one #studyCols .pt-rows::after{content:'';grid-column:1;grid-row:7;}
+      html body.os-one #studyCols .pt-rows > .pt-donehead{grid-column:2;grid-row:1;align-self:end;align-self:center;}
     }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
@@ -33343,7 +33346,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.999995';
+const BUILD_ID = '2026-10-26.999996';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
