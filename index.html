@@ -2168,8 +2168,18 @@
       /* The grid has fixed row heights here: the open steps are already listed in the rows, so the 'Still to do' sentence goes and the title stays on one small line. */
       html body.os-one #todayPlanCard .pt-still{display:none !important;}
       html body.os-one #todayPlanCard .plan-fold > .card-head > h2{font-size:13px;margin:0;line-height:1.2;}
-      /* The four counters sit on one horizontal line, not stacked. */
-      @media (min-width:561px){ html body.os-one #tab-study #scoreRow{flex-wrap:wrap !important;} html body.os-one #tab-study #scoreRow .stat-strip{flex:1 1 100% !important;justify-content:space-between !important;margin:8px 0 0 !important;display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;grid-template-columns:none !important;gap:16px !important;} html body.os-one #tab-study #scoreRow .stat-strip .stat{white-space:nowrap;} }
+      /* Readiness and the day's counters as one quiet line on iPad landscape: the ring becomes a number, everything sits in a single row. */
+      html body.os-one #tab-study #scoreRow{display:flex !important;flex-wrap:nowrap !important;align-items:center !important;gap:14px !important;padding:4px 2px 8px !important;margin:0 0 6px !important;border-bottom:1px solid var(--hair);}
+      html body.os-one #tab-study #scoreRow .score-ring-block{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;align-items:center !important;gap:10px !important;flex:0 1 auto;min-width:0;}
+      html body.os-one #tab-study #scoreRow .score-ring-wrap{width:auto !important;height:auto !important;flex:0 0 auto;}
+      html body.os-one #tab-study #scoreRow .score-ring, html body.os-one #tab-study #scoreRow .score-flat{display:none !important;}
+      html body.os-one #tab-study #scoreRow .score-ring-center{position:static !important;transform:none !important;display:flex;align-items:baseline;gap:2px;}
+      html body.os-one #tab-study #scoreRow .score-big{font-size:22px !important;line-height:1;}
+      html body.os-one #tab-study #scoreRow .score-meta, html body.os-one #tab-study #scoreRow .score-band, html body.os-one #tab-study #scoreRow .score-est, html body.os-one #tab-study #scoreRow .score-trend{margin:0 !important;font-size:11px !important;white-space:nowrap;}
+      html body.os-one #tab-study #scoreRow .stat-strip{flex:1 1 auto !important;justify-content:flex-end !important;margin:0 !important;display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;grid-template-columns:none !important;gap:16px !important;}
+      html body.os-one #tab-study #scoreRow .stat-strip .stat{white-space:nowrap;text-align:right;}
+      html body.os-one #tab-study #scoreRow .stat-strip .num{font-size:14px !important;}
+      html body.os-one #tab-study #scoreRow .stat-strip .lbl{font-size:9.5px !important;}
     }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
@@ -33353,7 +33363,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999913';
+const BUILD_ID = '2026-10-26.99999914';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
