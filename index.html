@@ -3308,6 +3308,12 @@
   }
   /* Landscape phones, fullscreen flashcards: the two rating buttons sit in the side margins, left for
      "still learning" and right for "I know this" (the same sides as the swipe), so a thumb reaches them. */
+  /* Definition, numbers and the client example used to run down one column and needed scrolling while the other column sat empty.
+     With no retell or contrast panel open, the back flows into two columns across the full card (landscape tablets). */
+  @media (orientation:landscape) and (min-width:700px){
+    body.flashcard-fullscreen .fc-card > #fcBack:not(:has(~ #fcContrast[style*="block"])):not(:has(~ #fcRetell[style*="block"])){grid-column:1 / -1;column-count:2;column-gap:24px;text-align:left;}
+    body.flashcard-fullscreen .fc-card > #fcBack > *{break-inside:avoid;margin-bottom:8px;}
+  }
   @media (orientation:landscape) and (max-height:520px) and (min-width:520px){
     body.flashcard-fullscreen #fcActions .btn.learning,body.flashcard-fullscreen #fcActions .btn.know{position:fixed;bottom:max(18px, var(--sab, env(safe-area-inset-bottom, 0px)));min-width:0;width:78px;height:46px;padding:0 6px;font-size:13px;line-height:1.15;z-index:5;background-color:color-mix(in srgb,var(--ink) 92%,transparent);}
     /* Use the width: a wider card, with the contrast note beside the definition instead of under it. */
@@ -33382,7 +33388,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999920';
+const BUILD_ID = '2026-10-26.99999922';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
