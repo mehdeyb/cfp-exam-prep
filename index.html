@@ -4297,6 +4297,15 @@
   .pt-head{display:flex;align-items:baseline;flex-wrap:nowrap;gap:10px;min-width:0;}
   .pt-head > h2{flex:0 0 auto;white-space:nowrap;margin:0;}
   .pt-head > .pt-stats{flex:1 1 auto;min-width:0;margin:0;}
+
+  /* Lesson screen: give the step buttons, the ask chips and the playback bar clear space so nothing sits on top of another. */
+  #screenHost .pst-acts{gap:12px;row-gap:12px;margin-top:22px;align-items:center;}
+  #screenHost .pst-acts .btn{margin:0;}
+  #screenHost .scr-ask{margin-top:22px;padding-top:16px;}
+  #screenHost .scr-chips{gap:8px;margin-bottom:14px;}
+  #screenHost .scr-chips button{padding:6px 14px;}
+  #screenHost .scr-form{margin-bottom:14px;}
+  #screenHost .scr-foot{margin-top:10px;padding-top:14px;gap:14px;}
 </style>
 </head>
 <body>
@@ -33571,7 +33580,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-27.00000009';
+const BUILD_ID = '2026-10-27.00000010';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
