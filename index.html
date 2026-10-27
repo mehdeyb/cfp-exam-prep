@@ -2160,13 +2160,10 @@
       html body.os-one #studyCols .pt-rows > .pt-step:not(.next) .pt-why{display:none !important;}
       html body.os-one #studyCols .pt-rows > .pt-step:not(.next) .pt-title{-webkit-line-clamp:1 !important;line-height:1.25;}
       html body.os-one #studyCols .pt-rows > .pt-step{overflow:visible;}
-      /* "Done today" labels the finished column, so it sits at the top of that column instead of under the open steps. */
-      /* The grid fills column by column, so an empty seventh cell in the first column would pull the first finished item into it.
-         Reserving that cell keeps the finished items in the second and third columns, under their label. */
-      html body.os-one #studyCols .pt-rows::after{content:'';grid-column:1;grid-row:7;}
-      html body.os-one #studyCols .pt-rows > .pt-donehead{grid-column:2;grid-row:1;align-self:end;align-self:center;}
       /* The grid has fixed row heights here: the open steps are already listed in the rows, so the 'Still to do' sentence goes and the title stays on one small line. */
       html body.os-one #todayPlanCard .pt-still{display:none !important;}
+      /* The finished steps already carry a green check, so the separate label goes; its count sits in the plan title. */
+      html body.os-one #studyCols .pt-rows > .pt-donehead{display:none !important;}
       html body.os-one #todayPlanCard .plan-fold > .card-head > h2{font-size:13px;margin:0;line-height:1.2;}
       /* Readiness and the day's counters as one quiet line on iPad landscape: the ring becomes a number, everything sits in a single row. */
       html body.os-one #tab-study #scoreRow{display:flex !important;flex-wrap:nowrap !important;align-items:center !important;gap:14px !important;padding:4px 2px 8px !important;margin:0 0 6px !important;border-bottom:1px solid var(--hair);}
@@ -12570,7 +12567,7 @@ function _renderTodayPlanInner(){
   const blocks = plan.blocks.map(b => `<div class="pt-block"><div class="pt-block-text"><b>This week:</b> ${escapeHtml(b.title)} (about 6 hours). ${escapeHtml(b.why)}</div><button type="button" class="pt-go" onclick="runPlanStep('${b.id}')">Start</button></div>`).join('');
   const headBits = [plan.days !== null && plan.days >= 2 ? `<b class="pt-days">${left}</b>` : '', escapeHtml(plan.phase.label), plan.focus ? escapeHtml(plan.focus.label) : ''].filter(Boolean).join('<i class="pt-sep">·</i>');
   const stillOpen = plan.steps.filter(x => !x.done);
-  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Due today${stillOpen.length ? ` · ${stillOpen.length} left` : ' · all done'}</h2></div>
+  el.innerHTML = `<div class="plan-fold"><div class="card-head"><h2>Due today${stillOpen.length ? ` · ${stillOpen.length} left` : ' · all done'}${doneN ? ` · ${doneN} done` : ''}</h2></div>
     ${stillOpen.length ? `<p class="pt-sub pt-still" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">Still to do: ${escapeHtml(stillOpen.map(x => x.title).join(' · '))}</p>` : ''}
     ${planAdvanceHtml(plan)}
     ${planLeadHtml(plan)}
@@ -33388,7 +33385,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999922';
+const BUILD_ID = '2026-10-26.99999923';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
