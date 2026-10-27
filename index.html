@@ -2156,6 +2156,11 @@
       html body.os-one #studyCols .pt-rows > .pt-step .pt-actions{display:flex;flex-direction:row;gap:6px;align-items:center;}
       html body.os-one #studyCols .pt-rows > .pt-step .pt-actions button{min-height:28px;padding:2px 10px;font-size:11.5px;}
       html body.os-one #studyCols .pt-rows > .pt-step.next .pt-why{-webkit-line-clamp:1 !important;}
+      /* Each row is a fixed slice of the screen here, so a row's own description was spilling into the row below and clipping titles.
+         Only the next step keeps its one-line description; the other rows show the title, bar and button. */
+      html body.os-one #studyCols .pt-rows > .pt-step:not(.next) .pt-why{display:none !important;}
+      html body.os-one #studyCols .pt-rows > .pt-step:not(.next) .pt-title{-webkit-line-clamp:1 !important;line-height:1.25;}
+      html body.os-one #studyCols .pt-rows > .pt-step{overflow:visible;}
     }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
@@ -33336,7 +33341,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.999993';
+const BUILD_ID = '2026-10-26.999994';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
