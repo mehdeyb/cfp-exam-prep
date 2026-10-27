@@ -2180,6 +2180,17 @@
       html body.os-one #tab-study #scoreRow .stat-strip .stat{white-space:nowrap;text-align:right;}
       html body.os-one #tab-study #scoreRow .stat-strip .num{font-size:14px !important;}
       html body.os-one #tab-study #scoreRow .stat-strip .lbl{font-size:9.5px !important;}
+      /* Each part reads differently at a glance: the number in gold, the band in bold ink, the estimate and trend in small type,
+         and the counters set apart by a hairline with brighter values over quiet labels. */
+      html body.os-one #tab-study #scoreRow .score-big{color:var(--gold) !important;font-size:24px !important;font-weight:700;}
+      html body.os-one #tab-study #scoreRow .score-ring-sub{font-size:11px;color:var(--muted);}
+      html body.os-one #tab-study #scoreRow .score-meta .label{font-size:9.5px !important;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+      html body.os-one #tab-study #scoreRow .score-band{font-size:12.5px !important;font-weight:600;color:var(--paper);}
+      html body.os-one #tab-study #scoreRow .score-est{font-size:10.5px !important;color:var(--muted);font-style:normal;}
+      html body.os-one #tab-study #scoreRow .score-trend{font-size:10.5px !important;font-weight:600;}
+      html body.os-one #tab-study #scoreRow .stat-strip{padding-left:16px;border-left:1px solid var(--hair);}
+      html body.os-one #tab-study #scoreRow .stat-strip .num{color:var(--paper) !important;font-size:15px !important;font-weight:600;}
+      html body.os-one #tab-study #scoreRow .stat-strip .lbl{color:var(--muted) !important;font-size:9px !important;letter-spacing:.07em;}
     }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
@@ -33363,7 +33374,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999914';
+const BUILD_ID = '2026-10-26.99999915';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
