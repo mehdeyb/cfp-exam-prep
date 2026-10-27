@@ -10925,7 +10925,7 @@ function ppHtml(curId){
   if(!marks) n = idx >= 0 ? idx + 1 : doneN;
   const left = steps.reduce((a, x) => a + (x.done ? 0 : (x.minutes || 0) * (1 - (x.need > 0 ? Math.min(1, (x.have || 0) / x.need) : 0))), 0);
   const leftTxt = left >= 5 ? (left >= 90 ? 'about ' + paceHrs(Math.round(left / 15) * 15) + ' left' : 'about ' + Math.round(left / 5) * 5 + ' min left') : 'nearly done';
-  const lab = idx >= 0 || marks ? `Part ${n} of ${total}` : `${doneN} of ${total} steps done`;
+  const lab = idx >= 0 || marks ? `Today's plan · part ${n} of ${total}` : `${doneN} of ${total} steps done`;
   const cur = idx >= 0 ? steps[idx] : null;
   return `<div class="pp-segs" aria-hidden="true">${segs}</div><div class="pp-txt"><b>${lab}</b>${cur ? `<span class="pp-t">${escapeHtml(String(cur.title).replace(/^(Drill|New ground|Keep fresh): /, '').slice(0, 40))}</span>` : ''}<span class="pp-l">${leftTxt}</span></div>`;
 }
@@ -33571,7 +33571,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-27.00000008';
+const BUILD_ID = '2026-10-27.00000009';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
