@@ -5733,6 +5733,7 @@ const KEY_NUMBERS = [
   {label:"NIIT threshold (MAGI), single / MFJ", value:"$200,000 / $250,000", domain:"tax", hook:"A clean $50,000 gap between single and married either way you look at it — $200K vs $250K."},
   {label:"Conventional mortgage front-end ratio guideline", value:"~28%", domain:"general", hook:"28 — the same number as the days in February, an easy visual peg."},
   {label:"Conventional mortgage back-end ratio guideline", value:"~36%", domain:"general", hook:"28 (front-end, above) plus 8 more equals 36 — the back-end ratio just adds room for debts beyond housing."},
+  {label:"Reverse mortgage (HECM) minimum borrower age", value:"62", domain:"retirement", hook:"The same age as early Social Security. Both spouses generally need to be 62 or older for a HECM."},
   {label:"529 plan superfunding (5-year election), individual", value:"$95,000", domain:"general", hook:"Exactly 5 years' worth of the annual gift exclusion above ($19,000 × 5 = $95,000) — superfunding is literally front-loading 5 years at once."},
   {label:"Coverdell ESA annual contribution limit", value:"$2,000 per child", domain:"general", hook:"Small and round — just $2,000, per child, per year."},
   {label:"FDIC insurance limit, per depositor per bank", value:"$250,000", domain:"invest", hook:"A quarter of a million — \"FDIC, a quarter-mil.\""},
@@ -18983,6 +18984,7 @@ const FCN_MAP = [
   [/capital loss/i, /Net capital loss/],
   [/adoption/i, /Adoption credit/],
   [/fdic/i, /FDIC/], [/sipc/i, /SIPC/], [/margin|reg t/i, /margin/],
+  [/reverse mortgage|hecm/i, /HECM|Reverse mortgage/i],
   [/mortgage|front-end|back-end|debt-to-income/i, /mortgage/],
   [/\bria\b|registration|adviser|advisor/i, /SEC vs/],
   [/continuing education|\bce\b/i, /CE requirement/],
@@ -19006,9 +19008,11 @@ function fcNumbersFor(card, max){
     if(!card || !card.term || typeof KEY_NUMBERS === 'undefined') return [];
     const term = String(card.term);
     const out = [], seen = new Set();
+    const reverse = /reverse mortgage|hecm/i.test(term);
     FCN_MAP.forEach(([termRe, labRe]) => {
       if(!termRe.test(term)) return;
-      KEY_NUMBERS.forEach(k => { if(labRe.test(k.label) && !seen.has(k.label)){ seen.add(k.label); out.push(k); } });
+      if(reverse && !/HECM|Reverse/.test(String(labRe.source))) return;
+      KEY_NUMBERS.forEach(k => { if(labRe.test(k.label) && !seen.has(k.label) && (reverse || !/HECM/.test(k.label))){ seen.add(k.label); out.push(k); } });
     });
     const tw = String(card.term).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
     const sc = k => tw.reduce((n, w) => n + (k.label.toLowerCase().indexOf(w) >= 0 ? 1 : 0), 0);
@@ -33377,7 +33381,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999917';
+const BUILD_ID = '2026-10-26.99999919';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
