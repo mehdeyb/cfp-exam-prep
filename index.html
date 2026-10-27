@@ -2169,7 +2169,7 @@
       html body.os-one #todayPlanCard .pt-still{display:none !important;}
       html body.os-one #todayPlanCard .plan-fold > .card-head > h2{font-size:13px;margin:0;line-height:1.2;}
       /* The four counters sit on one horizontal line, not stacked. */
-      @media (min-width:561px){ html body.os-one #tab-study #scoreRow .stat-strip{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;grid-template-columns:none !important;gap:22px !important;} html body.os-one #tab-study #scoreRow .stat-strip .stat{white-space:nowrap;} }
+      @media (min-width:561px){ html body.os-one #tab-study #scoreRow{flex-wrap:wrap !important;} html body.os-one #tab-study #scoreRow .stat-strip{flex:1 1 100% !important;justify-content:space-between !important;margin:8px 0 0 !important;display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;grid-template-columns:none !important;gap:16px !important;} html body.os-one #tab-study #scoreRow .stat-strip .stat{white-space:nowrap;} }
     }
     /* Compact Today plan on iPad landscape: tighter steps and rows so the whole plan sits on one screen with room to spare. */
     @media (orientation:landscape) and (min-width:900px) and (max-height:900px){
@@ -33353,7 +33353,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999912';
+const BUILD_ID = '2026-10-26.99999913';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
