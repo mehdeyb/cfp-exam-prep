@@ -19017,7 +19017,8 @@ function fcNumbersFor(card, max){
     const tw = String(card.term).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
     const sc = k => tw.reduce((n, w) => n + (k.label.toLowerCase().indexOf(w) >= 0 ? 1 : 0), 0);
     out.sort((x, y) => sc(y) - sc(x));
-    return out.slice(0, max || 3);
+    // Only numbers whose label shares a real word with this card's term: a broad pattern must not attach an unrelated figure.
+    return out.filter(k => sc(k) >= 1).slice(0, max || 3);
   }catch(e){ return []; }
 }
 function fcNumbersHtml(card){
@@ -33381,7 +33382,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999919';
+const BUILD_ID = '2026-10-26.99999920';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
