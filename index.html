@@ -8194,6 +8194,7 @@ async function loadData(){
       if(!DATA.sessions) DATA.sessions = [];
       if(!DATA.questionStats) DATA.questionStats = {};
       if(!DATA.generatedBank) DATA.generatedBank = [];
+      { const before = DATA.generatedBank.length; DATA.generatedBank = DATA.generatedBank.filter(q => !staleRuleProblem(q)); if(DATA.generatedBank.length !== before) try{ persist(); }catch(e){} }
       DATA.generatedBank.forEach(q => {
         if(Array.isArray(q.calcSteps)){
           const stepsText = q.calcSteps.join(' ');
@@ -21093,6 +21094,22 @@ function rationaleAgreesWithKey(q){
 }
 // Deterministic soundness check for AI-written items. A calculation item whose last worked step ends on a number other than
 // the keyed choice is unsound. Also removes the insolvency item the learner reported (its key contradicted its own figures).
+// Superseded rules that generated items must never state. Each pattern is a rule that has changed or expired; a match
+// means the item is out of date, however well it is written. Kept narrow so ordinary history questions still pass.
+const STALE_RULE_PATTERNS = [
+  /bonus[^.]{0,120}\b(80|60|40|20|eighty|sixty|forty|twenty)\b\s*(%|percent)?/i,
+  /bonus[^.]{0,80}expired after (calendar )?year 2022/i,
+  /bonus[^.]{0,60}phase(d|-)?\s*-?down/i,
+  /expired after (calendar )?year 2022[^.]{0,60}bonus/i
+];
+function staleRuleProblem(q){
+  if(!q) return null;
+  const text = [q.q || '', ...(q.choices || []), ...(Array.isArray(q.rationale) ? q.rationale : [q.rationale || ''])].join(' ');
+  // A question explicitly about an earlier year (and no current year) is history, not an out-of-date statement.
+  if(/\b(2022|2023|2024)\b/.test(text) && !/\b(2025|2026|2027)\b/.test(text)) return null;
+  const hit = STALE_RULE_PATTERNS.find(re => re.test(text));
+  return hit ? 'states a superseded rule (' + String(hit.source).slice(0, 40) + ')' : null;
+}
 function generatedItemIsSound(q){
   try{
     if(!q || typeof q.q !== 'string') return false;
@@ -26352,7 +26369,8 @@ Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "c
     try{
       lastRaw = await anthropicMessagesRequest({ messages: [{ role: 'user', content: prompt + feedback }], maxTokens: 1000 });
       const parsed = safeParseQuestions(lastRaw, domain, null, { variant: true, lenient: attempt >= 1 });
-      if(parsed.length) made = parsed[0];
+      if(parsed.length && staleRuleProblem(parsed[0])) feedback = '\n\nYour previous attempt was rejected: it ' + staleRuleProblem(parsed[0]) + '. Use the current rule stated in the instructions and return only the JSON array.';
+      else if(parsed.length) made = parsed[0];
       else feedback = '\n\nYour previous attempt was rejected. ' + diagnoseRejectedQuestion(lastRaw) + ' Write a corrected version and return only the JSON array.';
     }catch(e){ if(attempt === 2) return 'Error: the question could not be written (' + ((e && e.message) || 'unknown error') + ').'; }
   }
@@ -33386,7 +33404,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999925';
+const BUILD_ID = '2026-10-26.99999927';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
