@@ -26343,6 +26343,7 @@ async function executeWriteNewQuestion(input){
 ${stagePromptLine(domain) ? stagePromptLine(domain) + '\n' : ''}The idea it must test: ${idea}
 Shape: ${WRITE_ANGLE_TEXT[angle]}.${miscon ? '\nThe mistake to build a believable wrong choice from: ' + miscon + '.' : ''}
 It must be a real, different question, not a reworded copy: new situation, new details, different names. The correct answer must rest on current U.S. rules (use 2026 figures only if you are certain of them; otherwise avoid dollar limits).
+Rules that are easy to get wrong and must be applied as stated: 100% bonus depreciation is permanent for qualified property acquired after January 19, 2025 (2025 tax law), so the 2018 phase-down (80%, 60%, 40%, 20%) does not apply to property acquired after that date. Do not use the phase-down for 2026 property.
 ${ONE_ASK_RULE}
 Four answer choices of similar length, exactly one correct, and no choice that uses an absolute word such as always, never, only or must. Use only the figures stated in the question, and do the arithmetic once, silently: every field you return must read as finished, clean text, never as thinking aloud (no "wait", "let me check", "ah" or corrections). Begin the rationale for the correct choice with "Correct — " and each wrong choice's rationale with "Wrong — ", explaining specifically why that choice fails.
 Return ONLY a JSON array with exactly one object, no other text: [{"q":"...", "choices":["...","...","...","..."], "correct":0, "rationale":["...","...","...","..."]${cur && cur.scenario ? ', "scenario":"..."' : ''}}]. "correct" is the index (0 to 3) of the right choice.`;
@@ -33385,7 +33386,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-26.99999924';
+const BUILD_ID = '2026-10-26.99999925';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
