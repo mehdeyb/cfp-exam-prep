@@ -28999,9 +28999,36 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
   }
 }
 
+// Brick by brick: after a wrong answer in a practice mode, the next question is an easier one from the same domain (the
+// nearest lower tier, same subtopic first) so the missed idea is rebuilt before the level goes back up. Rest of the queue keeps
+// its order, so after one correct easier answer the session climbs again. Mock and full exams, cases and checkpoints never step down.
+const STEP_DOWN_MODES = ['drill', 'adaptive', 'review'];
+function stepDownAfterMiss(){
+  try{
+    if(!session || !session.queue || !STEP_DOWN_MODES.includes(session.mode)) return;
+    const log = session.answerLog || [];
+    const last = log[log.length - 1];
+    if(!last || last.correct !== false) return;
+    const cur = session.queue[session.index];
+    if(!cur) return;
+    const tier = questionDifficulty(cur);
+    if(tier <= 1) return;
+    const cands = [];
+    for(let i = session.index + 1; i < session.queue.length; i++){
+      const q = session.queue[i];
+      if(q.domain === cur.domain && questionDifficulty(q) < tier) cands.push({ q, i });
+    }
+    if(!cands.length) return;
+    cands.sort((a, b) => (questionDifficulty(a.q) - questionDifficulty(b.q)) || ((a.q.sub === cur.sub ? 0 : 1) - (b.q.sub === cur.sub ? 0 : 1)));
+    const pick = cands[0];
+    session.queue.splice(pick.i, 1);
+    session.queue.splice(session.index + 1, 0, pick.q);
+  }catch(e){}
+}
 function nextQuestion(){
   stopSpeech();
   if(session.index < session.queue.length-1){
+    try{ stepDownAfterMiss(); }catch(e){}
     let note = '';
     try{
       if(session.mode === 'case' && session.caseLevels){
@@ -33655,7 +33682,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000030';
+const BUILD_ID = '2026-10-28.00000031';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
