@@ -10903,7 +10903,7 @@ function fmtWeakest(){
 function retagSessionPlan(){ try{ session.planRef = undefined; initPlanRef(session); renderTutorBrief(); }catch(e){} }
 function startStatementDrill(n){
   n = Math.max(4, Math.min(12, n || 8));
-  const pool = QUESTIONS.filter(q => q.ordered || q.neg);
+  const pool = tiltedPool(QUESTIONS.filter(q => q.ordered || q.neg), n);
   if(!pool.length) return false;
   const dAcc = {}; DOMAINS.forEach(d => { const st = (DATA.domainStats || {})[d.key] || {}; dAcc[d.key] = st.total >= 4 ? st.correct / st.total : 0.5; });
   // If one format (statements or EXCEPT) trails the other by 15 points or more, the drill leans toward it.
@@ -17048,7 +17048,7 @@ function weakSubtopics(limit){
   return rows.slice(0, limit || 3);
 }
 function startSubtopicDrill(domainKey, idx){
-  const pool = subtopicPool(domainKey, idx);
+  const pool = tiltedPool(subtopicPool(domainKey, idx), SUBTOPIC_DRILL_LENGTH);
   if(pool.length < 3) return;
   const missed = new Set(DATA.missed || []);
   const ranked = pool.map(q => ({ q, st: getSpacedStat(DATA.questionStats, q.id), r: Math.random() })).sort((a, b) => {
@@ -17755,7 +17755,8 @@ function toolPracticeStats(key){
 function toolPracticePick(key, n){
   const all = new Map(allQuestions().map(q => [q.id, q]));
   const missedSet = new Set(DATA.missed || []);
-  const scored = (TOOL_PRACTICE_SETS[key] || []).filter(id => all.has(id)).map(id => {
+  const cand = tiltedPool((TOOL_PRACTICE_SETS[key] || []).filter(id => all.has(id)).map(id => all.get(id)), n).map(q => q.id);
+  const scored = cand.map(id => {
     const st = getSpacedStat(DATA.questionStats, id);
     let sc = 0;
     if(missedSet.has(id)) sc += 3;
@@ -17926,7 +17927,7 @@ function treeDrillStats(key){
 }
 function startTreeDrill(key){
   const ts = DATA.treeStats || {};
-  const scored = treeQuestions(key).map(q => {
+  const scored = tiltedPool(treeQuestions(key), 6).map(q => {
     const s = ts[q.id]; let sc = 0;
     if(!s) sc = 1.5; else { sc = (s.miss || 0) * 3 - (s.correct >= 2 && !(s.miss) ? 1 : 0); }
     return { q, sc:sc + Math.random() * 0.9 };
@@ -20279,8 +20280,9 @@ function figBuildQuestion(item){
     for(let fi = 0; fi < 6; fi++){ const t = figNear(item.value, fi); if(t && !poolSeen.has(t)){ poolSeen.add(t); pool.push({ text: t, from: null }); } }
     same.forEach(k => { if(!poolSeen.has(k.value)){ poolSeen.add(k.value); pool.push({ text: k.value, from: k.label }); } });
     const nums = pool.filter(c => isFinite(figVal(c.text)) && figVal(c.text) !== x0);
-    const lower = nums.filter(c => figVal(c.text) < x0).sort((a, b) => Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0));
-    const upper = nums.filter(c => figVal(c.text) > x0).sort((a, b) => Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0));
+    const figDir = difficultyTilt() === 'down' ? -1 : 1; // 'down': farther, easier near misses
+    const lower = nums.filter(c => figVal(c.text) < x0).sort((a, b) => (Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0)) * figDir);
+    const upper = nums.filter(c => figVal(c.text) > x0).sort((a, b) => (Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0)) * figDir);
     const below = Math.floor(Math.random() * 4);
     let pickL = lower.slice(0, below), pickU = upper.slice(0, 3 - below);
     if(pickL.length + pickU.length < 3){ const extra = [...lower.slice(below), ...upper.slice(3 - below)]; while(pickL.length + pickU.length < 3 && extra.length){ const c = extra.shift(); if(c && pickL.length + pickU.length < 3) (figVal(c.text) < x0 ? pickL : pickU).push(c); } }
@@ -20419,6 +20421,15 @@ function difficultyTilt(){
   if(weighted >= 0.85 && last3 >= 0.8) return 'up';
   if(weighted < 0.55 && last3 < 0.6) return 'down';
   return null;
+}
+// The same recent-results signal the adaptive session uses, applied to any mode that picks questions: 'up' keeps tier 2 and 3,
+// 'down' keeps tier 1 and 2. If that would leave too few questions to fill the session, the full pool is used instead.
+function tiltedPool(cands, need){
+  try{
+    const t = difficultyTilt(); if(!t || !cands || !cands.length) return cands;
+    const f = cands.filter(q => t === 'up' ? questionDifficulty(q) >= 2 : questionDifficulty(q) <= 2);
+    return f.length >= Math.max(need || 0, 6) ? f : cands;
+  }catch(e){ return cands; }
 }
 function pickAdaptiveQueue(n){
   const allRaw = allQuestions();
@@ -24674,7 +24685,16 @@ function tvmMakeMultiStage(){
 }
 function startTvmMultiStage(){
   let problem = null;
-  try{ problem = tvmMakeMultiStage(); }catch(e){}
+  try{
+    // Recent results pick the length: 'up' asks for three-part problems, 'down' for two-part ones. Tries a few generated problems first.
+    const want = difficultyTilt();
+    for(let k = 0; k < 8; k++){
+      problem = tvmMakeMultiStage();
+      if(!want || !problem) break;
+      const parts = tvmMsStages(problem).length;
+      if(want === 'up' ? parts >= 3 : parts <= 2) break;
+    }
+  }catch(e){}
   if(!problem) problem = TVM_MULTISTAGE_PROBLEMS[Math.floor(Math.random()*TVM_MULTISTAGE_PROBLEMS.length)];
   tvmMultiStageActive = true;
   tvmMultiStageProblem = problem;
@@ -25481,12 +25501,12 @@ function launchDrill(domainKey, size, unseen){
     }
   };
   const unseenNotRecent = unseen.filter(q => !recent.has(q.id)); // what the last drill just showed waits, as long as enough else is new
-  draw(unseenNotRecent.length >= size ? unseenNotRecent : unseen, 'fresh', size);
+  draw(tiltedPool(unseenNotRecent.length >= size ? unseenNotRecent : unseen, size), 'fresh', size);
   // Only if there is still no new material (offline, or the AI could not write more): the questions that are due, least recent first.
   if(picks.length < size){
     const due = all.filter(q => !used.has(q.id) && !recent.has(q.id) && isDue(getSpacedStat(DATA.questionStats, q.id)))
       .sort((a, b) => getSpacedStat(DATA.questionStats, a.id).lastSeenAt - getSpacedStat(DATA.questionStats, b.id).lastSeenAt);
-    draw(due, 'due', size);
+    draw(tiltedPool(due, size), 'due', size);
   }
   if(!picks.length){ const any = all.filter(q => !used.has(q.id)).slice(0, size); any.forEach(q => take(q, 'resting')); }
   // Early levels climb from easy to hard with some shuffle; later levels are fully mixed.
@@ -33636,7 +33656,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000028';
+const BUILD_ID = '2026-10-28.00000029';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
