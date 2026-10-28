@@ -29019,16 +29019,19 @@ function stepDownAfterMiss(){
       if(q.domain === cur.domain && questionDifficulty(q) < tier) cands.push({ q, i });
     }
     if(!cands.length) return;
-    cands.sort((a, b) => (questionDifficulty(a.q) - questionDifficulty(b.q)) || ((a.q.sub === cur.sub ? 0 : 1) - (b.q.sub === cur.sub ? 0 : 1)));
+    // One brick at a time: the nearest lower tier first (tier 3 steps to 2, tier 2 to 1), and the same subtopic before others.
+    cands.sort((a, b) => ((tier - questionDifficulty(a.q)) - (tier - questionDifficulty(b.q))) || ((a.q.sub === cur.sub ? 0 : 1) - (b.q.sub === cur.sub ? 0 : 1)));
     const pick = cands[0];
     session.queue.splice(pick.i, 1);
     session.queue.splice(session.index + 1, 0, pick.q);
-  }catch(e){}
+    return true;
+  }catch(e){ return false; }
 }
 function nextQuestion(){
   stopSpeech();
   if(session.index < session.queue.length-1){
-    try{ stepDownAfterMiss(); }catch(e){}
+    let stepped = false;
+    try{ stepped = stepDownAfterMiss(); }catch(e){}
     let note = '';
     try{
       if(session.mode === 'case' && session.caseLevels){
@@ -29040,6 +29043,7 @@ function nextQuestion(){
         note = nl > prevLv ? 'Next: a tougher one, since you are handling these.' : nl < prevLv ? 'Next: a gentler one to rebuild your footing.' : '';
       }
     }catch(e){}
+    if(stepped) note = 'Next: an easier one, to rebuild the idea behind that miss before going back up.';
     session.index++;
     renderQuestion();
     if(note){ try{ const row = document.getElementById('takeRow'); if(row){ row.textContent = note; row.style.display = ''; } }catch(e){} }
@@ -33682,7 +33686,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000031';
+const BUILD_ID = '2026-10-28.00000032';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
