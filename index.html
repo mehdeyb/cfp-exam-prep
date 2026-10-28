@@ -4293,10 +4293,10 @@
   /* Quiz screen: one progress bar and one label. The plan chip, pace chip, pace strip, topic name and time-left repeat what the bar and Question N of M already say. */
   #quizView #planChip,#quizView #paceChip,#quizView #paceStrip,#quizView .pp[data-pp="quiz"] .pp-t,#quizView .pp[data-pp="quiz"] .pp-l{display:none !important;}
 
-  /* Today: the heading and its stats share one row; the stats shorten rather than wrap. */
-  .pt-head{display:flex;align-items:baseline;flex-wrap:nowrap;gap:10px;min-width:0;}
+  /* Today: the heading and its stats share a row when there is room for them; otherwise the stats drop to their own line, clear of the heading. */
+  .pt-head{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:18px;row-gap:2px;min-width:0;}
   .pt-head > h2{flex:0 0 auto;white-space:nowrap;margin:0;}
-  .pt-head > .pt-stats{flex:1 1 auto;min-width:0;margin:0;}
+  .pt-head > .pt-stats{flex:1 1 320px;min-width:0;margin:0;}
 
   /* Lesson screen: give the step buttons, the ask chips and the playback bar clear space so nothing sits on top of another. */
   #screenHost .pst-acts{gap:12px;row-gap:12px;margin-top:22px;align-items:center;}
@@ -33591,7 +33591,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000019';
+const BUILD_ID = '2026-10-28.00000020';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
