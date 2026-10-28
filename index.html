@@ -4159,9 +4159,10 @@
   /* The full-screen lesson does not pinch-zoom: a pinch there pushed the layout off the right edge on iPad. Vertical scrolling still works. */
   body.screen-active #screenHost{touch-action:pan-y;}
   /* One row of distinct figures: each item keeps its own words and gets real space; a dot marks each break, and the row wraps between items rather than cutting text. */
-  .pt-stats{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:6px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.4;color:var(--muted);min-width:0;}
-  .pt-stats > span{white-space:nowrap;}
-  .pt-stats > .pt-ctx{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 12px;min-width:0;}
+  .pt-stats{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 14px;margin:6px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.4;color:var(--muted);min-width:0;overflow:hidden;}
+  .pt-stats > span{white-space:nowrap;flex:none;}
+  .pt-stats > .pt-ctx{display:flex;align-items:center;gap:8px 10px;min-width:0;flex:0 1 auto;overflow:hidden;}
+  .pt-stats > .pt-ctx > *{flex:none;}
   .pt-stats b{color:var(--paper);font-weight:600;}
   .pt-stats .pt-sep{display:inline-block;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.45;font-size:0;line-height:0;flex:none;}
   .pt-stats .pt-days{color:var(--gold);}
@@ -4293,10 +4294,10 @@
   /* Quiz screen: one progress bar and one label. The plan chip, pace chip, pace strip, topic name and time-left repeat what the bar and Question N of M already say. */
   #quizView #planChip,#quizView #paceChip,#quizView #paceStrip,#quizView .pp[data-pp="quiz"] .pp-t,#quizView .pp[data-pp="quiz"] .pp-l{display:none !important;}
 
-  /* Today: the heading and its stats share a row when there is room for them; otherwise the stats drop to their own line, clear of the heading. */
-  .pt-head{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:18px;row-gap:2px;min-width:0;}
+  /* Today: the heading and its stats stay on one row. The phase context gives way first (it truncates); the figures keep their space. */
+  .pt-head{display:flex;align-items:baseline;flex-wrap:nowrap;gap:14px;min-width:0;}
   .pt-head > h2{flex:0 0 auto;white-space:nowrap;margin:0;}
-  .pt-head > .pt-stats{flex:1 1 320px;min-width:0;margin:0;}
+  .pt-head > .pt-stats{flex:1 1 auto;min-width:0;margin:0;}
 
   /* Lesson screen: give the step buttons, the ask chips and the playback bar clear space so nothing sits on top of another. */
   #screenHost .pst-acts{gap:12px;row-gap:12px;margin-top:22px;align-items:center;}
@@ -33591,7 +33592,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000020';
+const BUILD_ID = '2026-10-28.00000021';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
