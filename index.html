@@ -12666,8 +12666,13 @@ function planLeadHtml(plan){
   if(!inSess && typeof conductorState === 'function' && conductorState()) return '';
   return `<div class="pt-lead"><div class="pt-lead-txt"><b>${inSess ? escapeHtml(s.title) : 'Up next'}</b><span>${escapeHtml(s.why)}</span></div><div class="pt-lead-foot"><button type="button" class="ns-cta" onclick="runNextStep()">${escapeHtml(s.cta)}</button><span class="ns-meta">${escapeHtml(s.meta || '')}</span></div></div>`;
 }
+// On iPad landscape the plan is a fixed-height block, so the "steps done" strip would sit over the rows. There the
+// finished steps already show under "Done today" and the next step is at the top of the list, so the strip is skipped.
+function planAdvanceOnIpadLandscape(){
+  return document.body.classList.contains('os-one') && innerWidth >= 900 && innerWidth > innerHeight && innerHeight <= 900;
+}
 function planAdvanceHtml(plan){
-  if(!_planAdv) return '';
+  if(!_planAdv || planAdvanceOnIpadLandscape()) return '';
   if(typeof conductorState === 'function' && conductorState()) return '';
   const nxt = planNextAfter(_planAdv.lastId) || plan.steps.find(x => !x.done);
   const t = _planAdv.titles;
@@ -33631,7 +33636,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000027';
+const BUILD_ID = '2026-10-28.00000028';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
