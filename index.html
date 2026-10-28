@@ -4158,12 +4158,12 @@
   }
   /* The full-screen lesson does not pinch-zoom: a pinch there pushed the layout off the right edge on iPad. Vertical scrolling still works. */
   body.screen-active #screenHost{touch-action:pan-y;}
-  /* One narrow row: phase context, time done and left, and pace, all on a single line that truncates rather than wraps. */
-  .pt-stats{display:flex;flex-wrap:nowrap;align-items:center;gap:0 6px;margin:6px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0;}
-  .pt-stats > span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-  .pt-stats > .pt-ctx{flex:0 1 auto;}
+  /* One row of distinct figures: each item keeps its own words and gets real space; a dot marks each break, and the row wraps between items rather than cutting text. */
+  .pt-stats{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin:6px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.4;color:var(--muted);min-width:0;}
+  .pt-stats > span{white-space:nowrap;}
+  .pt-stats > .pt-ctx{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 12px;min-width:0;}
   .pt-stats b{color:var(--paper);font-weight:600;}
-  .pt-stats .pt-sep{font-style:normal;opacity:.5;}
+  .pt-stats .pt-sep{display:inline-block;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.45;font-size:0;line-height:0;flex:none;}
   .pt-stats .pt-days{color:var(--gold);}
 
   /* Tutor board: play sits beside Send and only shows while a lesson player is open; the reply box is a slim, quiet strip so the board gets the height. */
@@ -33591,7 +33591,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000018';
+const BUILD_ID = '2026-10-28.00000019';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
