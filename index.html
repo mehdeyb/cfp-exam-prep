@@ -20280,9 +20280,8 @@ function figBuildQuestion(item){
     for(let fi = 0; fi < 6; fi++){ const t = figNear(item.value, fi); if(t && !poolSeen.has(t)){ poolSeen.add(t); pool.push({ text: t, from: null }); } }
     same.forEach(k => { if(!poolSeen.has(k.value)){ poolSeen.add(k.value); pool.push({ text: k.value, from: k.label }); } });
     const nums = pool.filter(c => isFinite(figVal(c.text)) && figVal(c.text) !== x0);
-    const figDir = difficultyTilt() === 'down' ? -1 : 1; // 'down': farther, easier near misses
-    const lower = nums.filter(c => figVal(c.text) < x0).sort((a, b) => (Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0)) * figDir);
-    const upper = nums.filter(c => figVal(c.text) > x0).sort((a, b) => (Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0)) * figDir);
+      const lower = nums.filter(c => figVal(c.text) < x0).sort((a, b) => Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0));
+    const upper = nums.filter(c => figVal(c.text) > x0).sort((a, b) => Math.abs(figVal(a.text) - x0) - Math.abs(figVal(b.text) - x0));
     const below = Math.floor(Math.random() * 4);
     let pickL = lower.slice(0, below), pickU = upper.slice(0, 3 - below);
     if(pickL.length + pickU.length < 3){ const extra = [...lower.slice(below), ...upper.slice(3 - below)]; while(pickL.length + pickU.length < 3 && extra.length){ const c = extra.shift(); if(c && pickL.length + pickU.length < 3) (figVal(c.text) < x0 ? pickL : pickU).push(c); } }
@@ -20422,12 +20421,13 @@ function difficultyTilt(){
   if(weighted < 0.55 && last3 < 0.6) return 'down';
   return null;
 }
-// The same recent-results signal the adaptive session uses, applied to any mode that picks questions: 'up' keeps tier 2 and 3,
-// 'down' keeps tier 1 and 2. If that would leave too few questions to fill the session, the full pool is used instead.
+// The same recent-results signal the adaptive session uses, applied to any mode that picks questions. It only ever raises the
+// level: after strong results a mode drops the tier-1 recall items. It never drops the hard ones, so no mode gets easier than its
+// normal mix. If that would leave too few questions to fill the session, the full pool is used instead.
 function tiltedPool(cands, need){
   try{
-    const t = difficultyTilt(); if(!t || !cands || !cands.length) return cands;
-    const f = cands.filter(q => t === 'up' ? questionDifficulty(q) >= 2 : questionDifficulty(q) <= 2);
+    const t = difficultyTilt(); if(t !== 'up' || !cands || !cands.length) return cands;
+    const f = cands.filter(q => questionDifficulty(q) >= 2);
     return f.length >= Math.max(need || 0, 6) ? f : cands;
   }catch(e){ return cands; }
 }
@@ -24686,13 +24686,12 @@ function tvmMakeMultiStage(){
 function startTvmMultiStage(){
   let problem = null;
   try{
-    // Recent results pick the length: 'up' asks for three-part problems, 'down' for two-part ones. Tries a few generated problems first.
+    // After strong results, ask for three-part problems. Tries a few generated problems first.
     const want = difficultyTilt();
     for(let k = 0; k < 8; k++){
       problem = tvmMakeMultiStage();
-      if(!want || !problem) break;
-      const parts = tvmMsStages(problem).length;
-      if(want === 'up' ? parts >= 3 : parts <= 2) break;
+      if(want !== 'up' || !problem) break;
+      if(tvmMsStages(problem).length >= 3) break;
     }
   }catch(e){}
   if(!problem) problem = TVM_MULTISTAGE_PROBLEMS[Math.floor(Math.random()*TVM_MULTISTAGE_PROBLEMS.length)];
@@ -33656,7 +33655,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000029';
+const BUILD_ID = '2026-10-28.00000030';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
