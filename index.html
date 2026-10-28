@@ -20224,16 +20224,31 @@ function figRecordOutcome(q, ok){
 function figNums(v){ return String(v).match(/\d[\d,]*(\.\d+)?/g) || []; }
 function figShape(v){ return String(v).replace(/\d[\d,]*(\.\d+)?/g, '#'); }
 function figNear(v){
-  // The same figure nudged: what a student who half remembers it would pick (last year's figure, a neighbouring round number).
+  // A near miss a student might pick: the same figure moved a few percent, written at the same precision as the right answer.
+  // The step matches the right answer's own granularity (its decimals, or the largest neat step that divides it), so the right answer
+  // never stands out as the only precise-looking figure among round ones.
   const nums = figNums(v); if(!nums.length) return null;
   const raw = nums[0], x = parseFloat(raw.replace(/,/g, '')); if(!isFinite(x) || x === 0) return null;
-  let y;
-  if(x >= 1000) y = Math.round(x * 0.96 / 100) * 100;
-  else if(x >= 100) y = Math.round(x * 0.95 / 10) * 10;
-  else if(x >= 10) y = x + (x % 5 === 0 ? 5 : 10 - (x % 10 || 10)) || x + 5;
-  else y = x + 1;
-  if(y === x) y = x + (x >= 1000 ? 500 : 5);
-  const txt = raw.indexOf(',') >= 0 ? y.toLocaleString('en-US') : String(y);
+  const decimals = (raw.split('.')[1] || '').length;
+  let step = 1;
+  if(decimals) step = Math.pow(10, -decimals);
+  else { const xi = Math.round(Math.abs(x)); for(const s of [100000, 10000, 5000, 1000, 500, 250, 100, 50, 25, 10, 5]){ if(xi % s === 0 && xi >= s * 10){ step = s; break; } } }
+  const neat = [100000, 10000, 5000, 1000, 500, 250, 100, 50, 25, 10, 5];
+  const roundness = n => { const k = Math.round(Math.abs(n)); if(decimals) return 0; for(let i = 0; i < neat.length; i++){ if(k % neat[i] === 0 && k >= neat[i] * 10) return i + 1; } return 0; };
+  const factors = [0.93, 0.95, 0.97, 1.04, 1.06, 1.08];
+  const f = factors[Math.floor(Math.abs(x) * 7) % factors.length];
+  const base = Math.round((x * f) / step) * step;
+  // Keep the same roundness as the right answer: a near miss that lands on a rounder number would give the answer away.
+  let y = null;
+  for(const k of [0, 1, -1, 2, -2, 3, -3, 4, -4]){
+    const c = base + k * step;
+    if(c <= 0 || Math.abs(c - x) < step / 2) continue;
+    if(roundness(c) === roundness(x)){ y = c; break; }
+  }
+  if(y === null) y = x + (f < 1 ? -step : step);
+  if(y <= 0) y = x + step;
+  y = decimals ? Number(y.toFixed(decimals)) : Math.round(y);
+  const txt = decimals ? y.toFixed(decimals) : (raw.indexOf(',') >= 0 ? y.toLocaleString('en-US') : String(y));
   return String(v).replace(raw, txt);
 }
 function figBuildQuestion(item){
@@ -33592,7 +33607,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000021';
+const BUILD_ID = '2026-10-28.00000022';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
