@@ -15750,6 +15750,7 @@ function stageDraw(soft){
   stageDots();
   if(!same){ try{ ttFaceNod(); }catch(e){} }
   try{ stageChips(); }catch(e){}
+  try{ renderTutorStart(computeStats()); }catch(e){}
   try{ studyFitScreen(); }catch(e){}
   try{ stageUpNext(); }catch(e){}
 }
@@ -34018,7 +34019,9 @@ function tutorCoachOpening(stats){
 // Start here: four clear first moves, shown until the first message. Each one only appears when it can help.
 function renderTutorStart(stats){
   const host = document.getElementById('tutorStart'); if(!host) return;
-  if(tutorMessages.length){ host.style.display = 'none'; host.innerHTML = ''; return; }
+  // Only on the plain start screen: when a term, question or topic is on the board, the board keeps the whole panel.
+  const onBoard = stageState && stageState.cur && ['term','question','formula','calc','topicbrowse','recap'].includes(stageState.cur.kind);
+  if(tutorMessages.length || onBoard){ host.style.display = 'none'; host.innerHTML = ''; return; }
   const acts = [];
   let w = null; try{ w = stats && stats.totalAnswered ? weakestDrillTarget(stats) : null; }catch(e){}
   if(w && w.name) acts.push({ label: 'Drill my weakest: ' + w.name, primary: true, run: () => { try{ startWeakestDrill(); }catch(e){} } });
@@ -34224,7 +34227,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000073';
+const BUILD_ID = '2026-10-28.00000074';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
