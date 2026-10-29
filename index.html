@@ -7844,6 +7844,37 @@ async function reverifyBankOnce(){
   }catch(e){ /* try again next load */ }
   finally { _reverifyRunning = false; }
 }
+// Cases saved before the blind solve existed were never re-checked. Each saved case question is solved blind once; a question the
+// solver contradicts is removed, and a case left with fewer than four questions is removed with it. Network errors are tried again later.
+let _caseReverifyRunning = false;
+async function reverifyCasesOnce(){
+  if(_caseReverifyRunning || !aiFeaturesAvailable || !DATA || !Array.isArray(DATA.generatedBank) || !Array.isArray(DATA.generatedCases)) return;
+  const todo = DATA.generatedBank.filter(q => q && q.caseGen && !q.caseChecked && !q.caseRejected).slice(0, 30);
+  if(!todo.length) return;
+  _caseReverifyRunning = true;
+  try{
+    let changed = false;
+    for(const q of todo){
+      const r = await blindSolveResult(q);
+      if(r === 'ok') q.caseChecked = true;
+      else if(r === 'mismatch'){ q.caseRejected = true; changed = true; }
+    }
+    if(changed){
+      DATA.generatedBank = DATA.generatedBank.filter(q => !(q && q.caseRejected));
+      DATA.generatedCases = DATA.generatedCases.filter(c => {
+        const left = DATA.generatedBank.filter(q => String(q.id).startsWith(c.id + '-')).length;
+        if(left >= 4) return true;
+        DATA.generatedBank = DATA.generatedBank.filter(q => !String(q.id).startsWith(c.id + '-'));
+        if(DATA.caseStats) delete DATA.caseStats[c.id];
+        return false;
+      });
+      pruneRetiredQuestionIds();
+      await persist();
+      if(!session) renderAll();
+    } else { await persist(); }
+  }catch(e){ /* try again on a later load */ }
+  finally { _caseReverifyRunning = false; }
+}
 async function checkAIAvailability(){
   
   if(hasArtifactStorage()){
@@ -7869,6 +7900,7 @@ async function checkAIAvailability(){
   try{ refreshCoachSurfaces(); }catch(e){} // the plan depends on whether the tutor is connected
   // The saved-bank re-check no longer runs on load: its burst of requests competed with tutor and explain calls. It can be run on demand.
   if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { testAiConnection().catch(() => {}); }, 1500);
+  if(aiMode === 'direct' || aiMode === 'gemini') setTimeout(() => { reverifyCasesOnce().catch(() => {}); }, 12000);
   if(aiMode === 'direct' && geminiKey) setTimeout(() => { testGeminiConnection().catch(() => {}); }, 4000);
 }
 
@@ -22318,6 +22350,12 @@ async function generateNewCase(opts){
       try{
         const raw = await anthropicMessagesRequest({ messages:[{role:'user', content: buildCasePrompt(keys, variant)}], maxTokens });
         made = parseGeneratedCase(raw, keys, attempt >= 2);
+        // Each question must be solved blind to its own key before the case is kept: a case whose key the solver contradicts is retried.
+        if(made){
+          const kept = [];
+          for(const q of made.questions){ if(await blindSolveOk(q)) kept.push(q); }
+          made = kept.length >= 4 ? Object.assign({}, made, { questions: kept }) : null;
+        }
         if(!made && !/[\]}]\s*$/.test(String(raw).trim())) maxTokens += 1200;
       }catch(e){ /* try again */ }
     }
@@ -34314,7 +34352,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000079';
+const BUILD_ID = '2026-10-29.00000080';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
