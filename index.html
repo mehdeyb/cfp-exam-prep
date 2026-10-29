@@ -19351,7 +19351,14 @@ function renderFlashcard(){
   }
   document.getElementById('fcCard').style.display = '';
   { const rc = document.getElementById('fcRecap'); if(rc && rc.style.display !== 'none' && fcRound.total === 0){ rc.style.display = 'none'; rc.innerHTML = ''; } }
-  window._fcWrap = fcIndex >= fcQueue.length; if(fcIndex >= fcQueue.length) fcIndex = 0;
+  window._fcWrap = fcIndex >= fcQueue.length;
+  // The queue has run out. Start a fresh one that leaves out cards already shown this session, rather than replaying the same list.
+  if(fcIndex >= fcQueue.length && fcQueue.length && !window._fcRebuilding){
+    window._fcRebuilding = true;
+    try{ fcCustomQueue = false; fcCustomKind = null; rebuildFlashcardQueue(); } finally { window._fcRebuilding = false; }
+    return;
+  }
+  if(fcIndex >= fcQueue.length) fcIndex = 0;
   const card = fcQueue[fcIndex];
   try{ if(fcCustomQueue && fcCustomKind && fcIndex > 0){ DATA.fcProgress = { at:Date.now(), kind:fcCustomKind, ids:fcQueue.map(c => c.id), i:fcIndex, round:{ total:fcRound.total, knew:fcRound.knew, missedIds:fcRound.missedIds } }; persist(); } else if(fcCustomQueue && fcIndex === 0 && DATA.fcProgress && window._fcWrap){ DATA.fcProgress = null; persist(); } }catch(e){}
   { const _el = document.getElementById('fcCard'); if(_el && window._fcShownId !== card.id){ window._fcShownId = card.id; _el.classList.remove('fc-card-in'); void _el.offsetWidth; _el.classList.add('fc-card-in'); setTimeout(() => _el.classList.remove('fc-card-in'), 420); } }
@@ -19867,7 +19874,6 @@ function continueFlashcards(){
   const box = document.getElementById('fcRecap'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
   const missedIds = fcRound.missedIds.slice();
   fcRound = { total:0, knew:0, missed:[], missedIds:[] };
-  if(fcCustomQueue && !fcCustomKind){ fcIndex = 0; renderFlashcard(); renderFlashcardStats(); return; }
   rebuildFlashcardQueue();
   // Put the cards just missed at the front, so what the checkpoint promised is what happens.
   if(missedIds.length){
@@ -33716,7 +33722,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000036';
+const BUILD_ID = '2026-10-28.00000037';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
