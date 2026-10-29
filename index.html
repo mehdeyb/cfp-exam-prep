@@ -774,6 +774,8 @@
   .tvm-feedback.tvm-feedback-err{color:#FF8A7A;}
   .tvm-feedback.tvm-feedback-ok{color:#7FCB9E;}
   /* Rapid key presses must never read as a double-tap zoom or a text selection. */
+  /* Buttons inherit the app font unless a component sets its own, so no control falls back to the browser's system face. */
+  button,input,select,textarea{font-family:inherit;}
   button,.btn,.chip,[role="button"],a,select,summary,label,input[type="checkbox"],input[type="radio"]{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
   .tvm-device,.tvm-keypad,.tvm-key,.tvm-screen-wrap,.tvm-screen{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
   .tvm-keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;}
@@ -34680,7 +34682,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000107';
+const BUILD_ID = '2026-10-29.00000108';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
