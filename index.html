@@ -14018,7 +14018,7 @@ function ebRenderWrite(){
     `<div class="eb-write">${st.note ? `<p class="eb-prompt" style="color:var(--gold);font-weight:600;">${escapeHtml(st.note)}</p>` : ''}<p class="eb-prompt">${escapeHtml(st.prompt)}</p>${nudge}${ebCuesHtml()}<div class="eb-ca"><textarea class="eb-ta" id="ebTa" rows="5" placeholder="Say it the way you would to a client. Tap a prompt above if you get stuck." aria-label="Your explanation" autocapitalize="sentences" oninput="ebOnInput()"></textarea>
     <div class="eb-meta"><span id="ebCount">0 words</span><span>A full answer has ${n} key idea${n === 1 ? '' : 's'}</span></div></div>
     <div class="eb-cb"><div class="eb-row">${hasMic ? '<button type="button" class="eb-mic" id="ebMic" aria-label="Dictate" onclick="ebToggleMic()">🎤</button>' : ''}<button type="button" class="btn" id="ebCheck" onclick="ebCheck()" disabled>Check my explanation</button></div>
-    <div class="eb-note" id="ebHint">Aim for two or three sentences. Nothing is graded until you choose how it went.</div></div></div>`;
+    <div class="eb-note" id="ebMicMsg" aria-live="polite"></div><div class="eb-note" id="ebHint">Aim for two or three sentences. Nothing is graded until you choose how it went.</div></div></div>`;
   const ta = document.getElementById('ebTa'); ta.value = st.text || ''; ebOnInput(); ebUpdateCues();
   if(!(window.matchMedia && matchMedia('(pointer:coarse)').matches)) try{ ta.focus({ preventScroll:true }); }catch(e){}
 }
@@ -14031,21 +14031,49 @@ function ebOnInput(){
   try{ ebUpdateCues(); }catch(e){}
   const h = document.getElementById('ebHint'); if(h) h.textContent = w < 6 ? 'A few more words, then check it. Two or three sentences is plenty.' : 'Nothing is graded until you choose how it went.';
 }
+let ebMicWant = false;
 function ebToggleMic(){
   const btn = document.getElementById('ebMic'); const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR || !btn) return;
-  if(ebRec){ try{ ebRec.stop(); }catch(e){} return; }
+  if(ebMicWant){ ebMicWant = false; try{ if(ebRec) ebRec.stop(); }catch(e){} return; }
+  ebMicWant = true; ebMicStart(SR);
+}
+// Keeps listening through the browser's silence and time limits until the student taps the mic again; keeps every final phrase; reports errors plainly.
+function ebMicStart(SR){
+  if(!ebMicWant || !ebState || ebState.phase !== 'write') return;
   try{
-    const r = new SR(); r.lang = 'en-US'; r.interimResults = true; r.continuous = true;
-    const base = (document.getElementById('ebTa').value || '').replace(/\s+$/,''); let finalTxt = '';
-    r.onresult = ev => { let interim = ''; for(let i = ev.resultIndex; i < ev.results.length; i++){ const t = ev.results[i][0].transcript; if(ev.results[i].isFinal) finalTxt += t + ' '; else interim += t; }
-      const ta = document.getElementById('ebTa'); if(ta){ ta.value = (base ? base + ' ' : '') + finalTxt + interim; ebOnInput(); } };
-    r.onend = () => { ebRec = null; const m = document.getElementById('ebMic'); if(m) m.classList.remove('live'); };
-    r.onerror = () => { ebRec = null; const m = document.getElementById('ebMic'); if(m) m.classList.remove('live'); };
-    ebRec = r; btn.classList.add('live'); r.start();
-  }catch(e){ ebRec = null; btn.classList.remove('live'); }
+    const r = new SR(); r.lang = navigator.language || 'en-US'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
+    const ta0 = document.getElementById('ebTa'); const base = (ta0 ? ta0.value : '').replace(/\s+$/,''); let finalTxt = '';
+    r.onresult = ev => {
+      let interim = '';
+      for(let i = ev.resultIndex; i < ev.results.length; i++){ const res = ev.results[i]; const t = res[0].transcript; if(res.isFinal) finalTxt += t.trim() + ' '; else interim += t; }
+      const ta = document.getElementById('ebTa'); if(ta){ ta.value = (base ? base + ' ' : '') + finalTxt.trim() + (interim.trim() ? ' ' + interim.trim() : ''); ebOnInput(); }
+    };
+    r.onend = () => {
+      ebRec = null;
+      if(ebMicWant && ebState && ebState.phase === 'write'){ setTimeout(() => ebMicStart(SR), 200); return; }
+      ebMicWant = false; ebMicUi(false, '');
+    };
+    r.onerror = ev => {
+      const code = ev && ev.error;
+      if(code === 'not-allowed' || code === 'service-not-allowed'){ ebMicWant = false; ebMicUi(false, 'The microphone is blocked. Allow it in your browser settings, then tap the mic again.'); return; }
+      if(code === 'no-speech' || code === 'aborted') return;
+      ebMicUi(true, 'The mic hiccupped. Keep talking, or tap it to stop.');
+    };
+    ebRec = r; ebMicUi(true, 'Listening. Speak your explanation, then tap the mic to stop.'); r.start();
+  }catch(e){ ebRec = null; ebMicWant = false; ebMicUi(false, 'The mic could not start on this device. You can type instead.'); }
+}
+function ebMicUi(on, msg){
+  const btn = document.getElementById('ebMic'); if(btn) btn.classList.toggle('live', !!on);
+  const m = document.getElementById('ebMicMsg'); if(m) m.textContent = msg || '';
 }
 function ebCheck(){
+  const st = ebState; if(!st) return;
+  // Let the last spoken words land in the box before reading it.
+  if(ebRec){ ebMicWant = false; try{ ebRec.stop(); }catch(e){} setTimeout(ebCheckNow, 450); return; }
+  ebCheckNow();
+}
+function ebCheckNow(){
   const st = ebState; if(!st) return;
   try{ if(ebRec) ebRec.stop(); }catch(e){}
   const ta = document.getElementById('ebTa'); if(ta) st.text = ta.value;
@@ -34612,7 +34640,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000100';
+const BUILD_ID = '2026-10-29.00000101';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
