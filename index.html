@@ -4321,6 +4321,18 @@
 
   /* Fullscreen flashcards: the card fills the screen height and centres its content, so the space above and below is used rather than left empty. */
   body.flashcard-fullscreen .fc-card{min-height:calc(100dvh - 300px) !important;align-content:center !important;}
+  /* Breathing room in the progress panel on taller screens: sections and rows get more air. Shorter screens keep the tighter
+     spacing, so the study hours and the pace line are never pushed past the bottom of the card. */
+  @media (min-height:800px){
+    .bp-value{margin:0 0 22px;}
+    .bp-value-head{margin-bottom:12px;}
+    .bp-value-row{padding:12px 0;}
+    .bp-value-act{margin-top:5px;}
+    .bp-value-pace{margin:14px 0 0;}
+    .bp-value-trend{margin:14px 0 10px;}
+    .bp-hours{margin-top:20px;}
+    .bp-hours-bar{margin:8px 0 6px;}
+  }
 </style>
 </head>
 <body>
@@ -33704,7 +33716,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000035';
+const BUILD_ID = '2026-10-28.00000036';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
