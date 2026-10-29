@@ -18215,6 +18215,8 @@ const TOOL_PRACTICE_SETS = {
   college: ['g5','g9','g10','g18','g19','g31','g39','g48','cs2-5','cs4-5','t43','cv4-32','cv4-35','cv3-05','cv3-06','cv3-21','cv18-15','cv18-17','cv18-18','cv18-19','cv18-78','cv10-22','cv10-23','nq3-44','nq3-45','nq3-46','nq3-48','cov-g2','cov2-04','cov5-3','cv2-10','cv9-02','cv6-01'],
   optionsMatrix: ['i21','i27','eq1','eq4','n7','cov-i6','cv2-08'],
   qualifiedPlans: ['p4','p32','p48','ret-n7','n8','cov-p3','cov-p4','cov-p5','cv4-10','cv4-12','cv4-14','cv6-07','cv6-08','cv6-09'],
+  lifeInsurance: ['r1','r2','t-c26-02','fmt-risk-3'],
+  giftStrategy: ['t6','cv2-32','cv3-05','sst3-1','calc-7'],
 };
 
 // How you stand on the questions a tool covers: tried, right, and how many are due or missed. Drives the line under each tool
@@ -18328,6 +18330,9 @@ function toolForQuestion(q){
     socialSecurity: /\b(when|what age|which age|best age|optimal)\b[^.?]{0,60}\b(claim|begin|start)\w*[^.?]{0,40}\b(Social Security|benefits?)\b|\bshould\b[^.?]{0,60}\b(claim|delay)\w*/i,
     college: /\b(which|what) (type of |kind of )?(529|Coverdell|UTMA|UGMA|education credit|savings vehicle|account|savings bond|education funding)\b|\b(best|most appropriate|most suitable) (way|vehicle|account|credit|strategy)[^.?]{0,40}\b(education|college|tuition)\b/i,
     optionsMatrix: /\b(which|what)\b[^.?]{0,50}\b(option|position|strategy)\b/i,
+    invest: /\b(which|what)\b[^.?]{0,60}\b(investment|vehicle|asset class)\b[^.?]{0,40}\b(best|fits?|suits?|most appropriate)\b/i,
+    lifeInsurance: /\b(term|whole|universal|variable) life\b[^.?]{0,80}\b(best|lowest|fits?|suits?|appropriate)\b|\b(which|what)\b[^.?]{0,40}\b(life insurance|policy)\b/i,
+    giftStrategy: /\b(annual exclusion|step-up|step up|carryover basis|Form 709|gift tax return)\b/i,
     qualifiedPlans: /\b(which|what)\b[^.?]{0,50}\b(plan|retirement plan)\b[^.?]{0,40}\b(best|appropriate|suitable|fits?)\b|\bbest\b[^.?]{0,40}\bplan\b/i
   };
   const hit = RESULT_TOOL_MATCH.find(t => t.re.test(hay) && PICK[t.key] && PICK[t.key].test(stem));
@@ -30205,9 +30210,9 @@ const RESULT_TOOL_MATCH = [
   { key:'socialSecurity', name:'When to claim Social Security', re:/social security[^.?]{0,120}\b(claim|delay|full retirement|FRA|spousal|early)\w*|\b(claim|delay)\w*[^.?]{0,80}social security/i },
   { key:'optionsMatrix', name:'Options matrix', re:/\b(long|short) (call|put)s?\b|\b(call|put) options?\b|covered call|protective put|\boption (buyer|seller|writer|premium|holder)|\bwrit(e|ing) (a )?(call|put)/i },
   { key:'qualifiedPlans', name:'Qualified plan family tree', re:/\b(401\(k\)|403\(b\)|SIMPLE IRA|SEP[ -]IRA|profit[- ]sharing|defined benefit|cash balance|money purchase|ESOP|qualified plan)\b/i },
-  { key:'lifeInsurance', name:'Which life insurance type fits?', re:/\b(term|whole|universal|variable|permanent) life\b[^.?]{0,60}\b(or|vs\.?|versus|fits|suits)\b/i },
-  { key:'giftStrategy', name:'Should the client give now or hold until death?', re:/\bgift\w*[^.?]{0,80}\b(annual exclusion|appreciated|step-up|carryover basis|hold until death)\b/i },
-  { key:'invest', name:'Which investment fits this goal?', re:/\bwhich (investment|vehicle|asset)\b[^.?]{0,60}\b(fits|suits|best|right)\b|\b(cash|bonds?|annuit\w*|alternatives?)\b[^.?]{0,40}\b(or|versus|vs\.?)\b[^.?]{0,40}\b(stocks?|equit\w*)\b/i },
+  { key:'lifeInsurance', name:'Which life insurance type fits?', re:/\b(term|whole|universal|variable|permanent) life\b[^.?]{0,60}\b(or|vs\.?|versus|fits|suits)\b|\blife insurance\b/i },
+  { key:'giftStrategy', name:'Should the client give now or hold until death?', re:/\bgift\w*[^.?]{0,80}\b(annual exclusion|appreciated|step-up|carryover basis|hold until death)\b|\bgift tax\b|\bgift, estate\b|\bstep-up\b/i },
+  { key:'invest', name:'Which investment fits this goal?', re:/\bwhich (investment|vehicle|asset)\b[^.?]{0,60}\b(fits|suits|best|right)\b|\b(cash|bonds?|annuit\w*|alternatives?)\b[^.?]{0,40}\b(or|versus|vs\.?)\b[^.?]{0,40}\b(stocks?|equit\w*)\b|\b(investment vehicles|asset allocation|investment strategies|alternative investments|portfolio development)\b/i },
 ];
 function renderResultTools(){
   const el = document.getElementById('resultTools');
@@ -34590,7 +34595,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000090';
+const BUILD_ID = '2026-10-29.00000091';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
