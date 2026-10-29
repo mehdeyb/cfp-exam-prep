@@ -12734,6 +12734,7 @@ function conductorMaybeStartFromTutor(){
 
 let _planLaunchId = null, _planLaunchTimer = null;
 function runPlanStep(id){
+  if(id === 'listen' || id === 'tlesson') window._planLessonStep = id; // so finishing the lesson can close its step
   try{ const L0 = planDayLog(); if(!L0.started){ L0.started = true; persist(); } }catch(e){} // opening any part ends the pre-start re-planning for the day
   const plan = buildStudyPlan();
   const st = plan.steps.concat(plan.blocks).find(x => x.id === id);
@@ -12780,6 +12781,26 @@ function planAdvanceHtml(plan){
     : nxt ? `<div class="pt-adv-next">Next: ${escapeHtml(nxt.title)} \u00b7 about ${nxt.minutes} min</div><button type="button" class="btn pt-adv-go" onclick="planAdvanceDismiss();runPlanStep('${nxt.id}')">${(nxt.have||0) > 0 && nxt.need > 0 ? 'Continue' : 'Start'} \u2192</button>`
       : `<div class="pt-adv-next">That is everything on today's plan. Rest, or take an adaptive session if you still have energy.</div>`)
     + '</div>';
+}
+// A lesson launched from today's plan offers the next step or the plan once it finishes (its step is ticked as it ends).
+function planLessonNextPrompt(){
+  const sid = window._planLessonStep; window._planLessonStep = null;
+  if(!sid) return;
+  try{
+    const plan = buildStudyPlan();
+    const nxt = planNextAfter(sid) || plan.steps.find(x => !x.done && x.id !== sid);
+    const card = (document.getElementById('podcastTypeSelect') || {}).closest ? document.getElementById('podcastTypeSelect').closest('.card') : null;
+    if(!card) return;
+    const old = document.getElementById('lessonDoneBox'); if(old) old.remove();
+    const box = document.createElement('div'); box.id = 'lessonDoneBox'; box.className = 'pt-adv'; box.setAttribute('role', 'status');
+    box.innerHTML = '<div class="pt-adv-top"><b>\u2713 Lesson finished</b></div>'
+      + (nxt ? '<div class="pt-adv-next">Next: ' + escapeHtml(nxt.title) + ' \u00b7 about ' + nxt.minutes + ' min</div><button type="button" class="btn pt-adv-go" id="lessonDoneNext">Start next step</button>' : '<div class="pt-adv-next">That is everything on today\'s plan.</div>')
+      + '<button type="button" class="btn ghost pt-adv-go" id="lessonDoneBack">Back to today\'s plan</button>';
+    card.appendChild(box);
+    const back = document.getElementById('lessonDoneBack'); if(back) back.onclick = () => { box.remove(); showTab('study'); };
+    const go = document.getElementById('lessonDoneNext'); if(go && nxt) go.onclick = () => { box.remove(); runPlanStep(nxt.id); };
+    box.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }catch(e){}
 }
 function planAdvanceDismiss(){ _planAdv = null; try{ renderTodayPlan(); }catch(e){} }
 // After a tool closes, bring the strip into view so the next step is the first thing you see.
@@ -14852,6 +14873,7 @@ function podcastSayBack(){
 // From today's plan: set the tutor's pick, write it fresh if it is missing or out of date, and start it.
 function tutorLessonOpen(id){
   const tl = (DATA.tutorLessons || {})[id]; if(!tl) return;
+  window._planLessonStep = 'tlesson';
   podcastCustomId = id;
   try{
     document.getElementById('podcastTypeSelect').value = 'custom'; document.getElementById('podcastLengthSelect').value = tl.length || 'standard';
@@ -16349,7 +16371,7 @@ function checkpointGate(index){
 function podcastPlaybackCallbacks(){
   const status = document.getElementById('podcastStatus');
   return {
-    onDone: () => { try{ const rc = stageState.deck.find(x => x.kind === 'recap'); if(rc){ stageState.podId = stageId(rc); stageShow(rc, 'podcast'); } }catch(e){} podcastClearPos(); setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} },
+    onDone: () => { try{ const rc = stageState.deck.find(x => x.kind === 'recap'); if(rc){ stageState.podId = stageId(rc); stageShow(rc, 'podcast'); } }catch(e){} podcastClearPos(); setPodcastPlayButtonState('Play'); status.textContent = ''; clearPodcastHighlight(); try{ podcastUpdateProgress(0); const cp = document.getElementById('podcastCaption'); if(cp) cp.innerHTML = '<small>Finished</small>Nice listening.'; }catch(e){} try{ if(!podcastQueueState.active) podcastShowAfter(); }catch(e){} try{ planLessonNextPrompt(); }catch(e){} },
     onChunkStart: (index) => { podcastSavePos(index); setPodcastPlayButtonState('Pause'); status.textContent = 'Playing…'; highlightPodcastSentence(index); try{ podcastStageSync(index); stageTransportSync(); }catch(e){} try{ podcastSetCaption(index); podcastUpdateProgress(index); }catch(e){} try{ const af = document.getElementById('podcastAfter'); if(af) af.style.display = 'none'; const n = naturalSpeechState.chunks.length; if(n > 4 && index >= Math.floor(n * 0.6)) planMarkManualDone('listen'); }catch(e){} },
   };
 }
@@ -34188,7 +34210,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000065';
+const BUILD_ID = '2026-10-28.00000066';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
