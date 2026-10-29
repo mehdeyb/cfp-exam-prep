@@ -19633,22 +19633,24 @@ async function fcMaybeRetell(card){
 }
 // Without a generated angle, rotate through what the app already knows about this card.
 function fcRetellLocal(card, lp){
-  // Fixed order, most useful first, so each return adds something the last one did not:
-  // the contrast with its look-alike, then how it is tested, then your own miss, then a related scenario, then a memory hook.
-  const opts = [];
+  // Built from this learner's own evidence. Each option carries a weight from how it has actually tripped them up,
+  // the strongest goes first, and each return moves to the next one.
   const ctx = fcMissContext(card);
   const n = Math.max(0, (lp && lp.n ? lp.n : 2) - 2);
-  if(ctx.mix) opts.push({ label:'The look-alike to watch', text:'Often confused with ' + ctx.mix.other + '. Ask which of the two the question describes: the concept or the wording.' });
+  const opts = [];
+  if(ctx.mix) opts.push({ w: 2 + (ctx.mix.n || 1), label:'The look-alike to watch', text:'Often confused with ' + ctx.mix.other + '. Ask which of the two the question describes: the concept or the wording.' });
+  ctx.picks.forEach(p => opts.push({ w: 2 + (p.n || 1), label:'Where you slipped before', text:'On “' + p.stem + '” you chose “' + p.wrong + '”. The answer is “' + p.right + '”, because it is the concept, not the wording, that matters here.' }));
   const ex = fcExampleFor(card, n);
-  if(ex) opts.push({ label:'How it is tested', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
-  ctx.picks.forEach(p => opts.push({ label:'Where you slipped before', text:'On “' + p.stem + '” you chose “' + p.wrong + '”. The answer is “' + p.right + '”, because it is the concept, not the wording, that matters here.' }));
+  if(ex) opts.push({ w: 1.5, label:'How it is tested', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
   try{
     const rq = fcRelatedQuestions(card).find(q => q && q.scenario) || fcRelatedQuestions(card)[0];
-    if(rq && rq.choices && rq.choices[rq.correct] !== undefined) opts.push({ label:'In a scenario', text:'Read this and see where the concept fits: “' + String(rq.q).slice(0, 160) + '” The answer: ' + String(rq.choices[rq.correct]).slice(0, 140) + '.' });
+    if(rq && rq.choices && rq.choices[rq.correct] !== undefined) opts.push({ w: 1, label:'In a scenario', text:'Read this and see where the concept fits: “' + String(rq.q).slice(0, 160) + '” The answer: ' + String(rq.choices[rq.correct]).slice(0, 140) + '.' });
   }catch(e){}
   const mn = DATA.flashcardMnemonics && DATA.flashcardMnemonics[card.id];
-  if(mn) opts.push({ label:'A way to remember it', text: mn });
-  return opts.length ? opts[n % opts.length] : null;
+  if(mn) opts.push({ w: 0.5, label:'A way to remember it', text: mn });
+  if(!opts.length) return null;
+  opts.sort((a, b) => b.w - a.w); // stable: ties keep their order
+  return opts[n % opts.length];
 }
 function ordinalWord(n){ const w = ['zero','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth']; return n < w.length ? w[n] : n + 'th'; }
 function fcRetellPick(card){
@@ -34138,7 +34140,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000054';
+const BUILD_ID = '2026-10-28.00000055';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
