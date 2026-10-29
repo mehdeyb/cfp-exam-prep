@@ -19869,6 +19869,7 @@ function fcExplainContext(card){
   }catch(e){}
   return { picks: ctx.picks, mix: ctx.mix, justRated: jr ? { knew: jr.knew } : null, distractor: ctx.picks.length ? null : fcCommonDistractor(card), quiz };
 }
+const fcClientsUsed = []; // client types already used this session, so examples do not repeat
 function fcExplainSignature(card, ctx){
   return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card), ctx.justRated ? (ctx.justRated.knew ? 'k' : 'm') : '', ctx.distractor || '', ctx.quiz ? (ctx.quiz.stem + ctx.quiz.right) : ''].join('::');
 }
@@ -19912,6 +19913,12 @@ async function requestFlashcardExplain(){
     '2) Client example: one short, concrete client situation. Use figures only from the definition; if you add any, label them as illustrative.\n' +
     '3) The exam trap: how the exam disguises this and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first; otherwise use the common wrong answer given.\n' +
     '4) Check: one quick question the student can answer in their head, then the answer on the next line.');
+  // Vary the client: a different person, job and life stage each time, and never one already used this session.
+  const cast = ['a retired nurse in her 70s', 'a freelance graphic designer with irregular income', 'a couple with twin toddlers', 'a small-business owner selling her company', 'a new graduate with student loans', 'a widower managing his late wife\'s accounts', 'a tech employee with stock options', 'a contractor paid in cash and checks', 'a farmer with a seasonal income', 'a physician in her second year of practice', 'a divorced father sharing custody', 'a young couple buying their first home'];
+  const usedCast = fcClientsUsed.slice(-8);
+  const pool = cast.filter(c => !usedCast.includes(c)); const pick = pool[Math.floor(Math.random() * pool.length)] || cast[0];
+  fcClientsUsed.push(pick);
+  lines.push('Client for the example: ' + pick + '. Use this client, give them a first name of your own choosing, and do not reuse names or situations from other examples.');
   lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
   if(ctx.picks.length) lines.push('Their own wrong picks on related questions:\n' + ctx.picks.map(p => '- "' + p.stem + '" They chose "' + p.wrong + '" (correct: "' + p.right + '")' + (p.n > 1 ? ' ' + p.n + ' times' : '')).join('\n'));
   if(ctx.mix) lines.push('They have mixed this up with: ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '.');
@@ -34180,7 +34187,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000063';
+const BUILD_ID = '2026-10-28.00000064';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
