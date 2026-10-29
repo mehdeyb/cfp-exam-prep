@@ -21388,6 +21388,10 @@ async function callClaude(promptText, maxTokens){
 function buildPrompt(domainMeta, hardMode, focus){
   const existing = allQuestions().filter(q=>q.domain===domainMeta.key).map(q=>q.q.slice(0,70)).join(' | ');
   const subtopics = (SUBTOPICS[domainMeta.key]||[]).join('; ');
+  // Subtopics with no client-scenario question yet: the exam tests these as cases, so new questions here are written as cases.
+  const allQ = allQuestions().filter(q => q.domain === domainMeta.key);
+  const thinScenario = (SUBTOPICS[domainMeta.key]||[]).filter(n => !allQ.some(q => q.sub === n && q.scenario));
+  const scenarioLine = thinScenario.length ? `Where you write about one of these subtopics, make it a client scenario, because it has none yet: ${thinScenario.slice(0,6).join('; ')}. For those, include a "scenario" field: 60 to 120 words of specific client facts (ages, incomes, balances, goals, a complication), and the question asks what to do or conclude from those facts.` : '';
   const difficultyInstruction = hardMode
     ? `This candidate has been performing very well on standard practice questions in this domain and needs harder material to keep growing — write these at the upper end of real CFP exam difficulty: multi-step application questions, client scenarios requiring you to weigh competing considerations, or calculations, rather than single-fact recall.`
     : `Write ${focus && focus.count ? 'exactly ' + focus.count : 'exactly 5'} new multiple-choice questions at real CFP exam difficulty. ${stagePromptLine(domainMeta.key)}`;
@@ -21395,6 +21399,7 @@ function buildPrompt(domainMeta, hardMode, focus){
   return `You write original CFP® certification exam practice questions (never copied from a real exam) for the "${domainMeta.name}" Principal Knowledge Domain.
 This domain's official CFP Board subtopics are: ${subtopics}.
 ${difficultyInstruction}${focusLine}
+${scenarioLine}
 Spread across DIFFERENT subtopics from that official list, and testing DIFFERENT concepts than these already-covered stems: ${existing}
 Every question must be meaningfully different from every stem listed above — do not restate, lightly reword, or reuse the same scenario as any of them.
 Before you choose the key, work every number in the question yourself, step by step. The rationale for the keyed choice must show those same figures reaching that choice, and the wrong rationales must show where their figures fail. Insolvency for the cancellation-of-debt exclusion means total liabilities exceed the fair market value of total assets, and the excluded amount is capped at that shortfall; a client whose assets exceed liabilities is not insolvent and gets no exclusion.
@@ -34213,7 +34218,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000068';
+const BUILD_ID = '2026-10-28.00000069';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
