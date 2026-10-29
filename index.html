@@ -33802,7 +33802,10 @@ async function sendTutorMessage(presetText){
       const followUp = await anthropicMessagesRequest({ system: buildTutorSystemPrompt(), messages: tutorMessages, tools: TUTOR_TOOLS, maxTokens: 2500 });
       if(tutorConversationId !== conversationIdAtRequestTime) return;
       finalTextBlocks = followUp.filter(b => b.type === 'text').map(b => b.text);
-      tutorMessages.push({role:'assistant', content: followUp});
+      // One round of tool use per reply: a tool request in the follow-up is not run (so a step never chains on its own), and it is
+      // left out of the history too, since a tool request with no result would make the next message fail.
+      const fuText = followUp.filter(b => b.type === 'text');
+      tutorMessages.push({role:'assistant', content: fuText.length ? fuText : [{type:'text', text:'Done.'}]});
     } else {
       tutorMessages.push({role:'assistant', content: response});
     }
@@ -34640,7 +34643,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000101';
+const BUILD_ID = '2026-10-29.00000102';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
