@@ -4306,7 +4306,10 @@
   .pt-day-bar > i{display:block;height:100%;width:0;background:var(--gold,#b8860b);transition:width .4s ease;}
   .pt-day-bar.full > i{background:var(--good,#2e9b5e);}
   .pt-head > h2{flex:0 0 auto;white-space:nowrap;margin:0;}
-  .pt-head > .pt-stats{flex:1 1 auto;min-width:0;margin:0;}
+  /* A clear rule between the day's count and the day's context, with room either side. */
+  .pt-head > .pt-stats{flex:1 1 auto;min-width:0;margin:0;padding-left:22px;position:relative;}
+  .pt-head > .pt-stats::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:70%;border-radius:2px;background:var(--gold);opacity:.55;}
+  .pt-head > h2{margin-right:4px;}
 
   /* Lesson screen: give the step buttons, the ask chips and the playback bar clear space so nothing sits on top of another. */
   #screenHost .pst-acts{gap:12px;row-gap:12px;margin-top:22px;align-items:center;}
@@ -34175,7 +34178,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000061';
+const BUILD_ID = '2026-10-28.00000062';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
