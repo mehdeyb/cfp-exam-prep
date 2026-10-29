@@ -4333,6 +4333,15 @@
     .bp-hours{margin-top:20px;}
     .bp-hours-bar{margin:8px 0 6px;}
   }
+  /* Short landscape (iPad with Safari toolbar): the flashcard view fits without scrolling. */
+  @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
+    body{padding-bottom:16px !important;}
+    #tab-flashcards .fc-deck-line, #tab-flashcards p.hint.fc-deck-line{display:none !important;}
+    #tab-flashcards .fc-card{padding:16px 22px !important;min-height:0 !important;}
+    #tab-flashcards .fc-actions{margin-top:8px !important;}
+    #tab-flashcards .fc-controls{margin-top:6px !important;gap:6px !important;}
+    #tab-flashcards .fc-controls .btn{padding:6px 10px !important;font-size:12px !important;}
+  }
 </style>
 </head>
 <body>
@@ -33738,7 +33747,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000038';
+const BUILD_ID = '2026-10-28.00000039';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
