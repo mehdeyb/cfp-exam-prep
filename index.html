@@ -2798,6 +2798,19 @@
   .tutor-guide .tg-row{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:4px;}
   .tutor-guide .tg-back{margin-left:0;margin-right:auto;padding:1px 9px;font-size:11.5px;line-height:1.5;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;padding:2px 4px;line-height:1.5;cursor:pointer;}
+  /* Domain breakdown (read-only): topic states and answers for one domain, with a way back to all domains. */
+  .dd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+  .dd-back{background:none;border:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;padding:4px 0;cursor:pointer;}
+  .dd-title{font-size:14px;color:var(--paper);}
+  .dd-sum{font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .dd-list{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;}
+  .dd-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:1px;padding:6px 0;border-bottom:1px solid var(--hair);}
+  .dd-name{font-size:12.5px;color:var(--paper);min-width:0;}
+  .dd-state{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;}
+  .dd-num{grid-column:1 / -1;font-size:11.5px;color:var(--muted);}
+  .dd-row.solid .dd-state{color:var(--correct);}
+  .dd-row.shaky .dd-state{color:var(--incorrect);}
+  .dd-row.thin .dd-state{color:var(--gold);}
   /* The tutor note is a compact card: the words are capped at two lines, the label sits inline with them, and Next, Back and Got it share one row. */
   .tutor-guide{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:6px;width:min(300px,100%);max-width:min(300px,100%);padding:6px 10px;}
   .tutor-guide .tg-k{display:none;}
@@ -10138,7 +10151,7 @@ function renderBlueprint(){
     chip.tabIndex = 0;
     chip.setAttribute('role', 'button');
     chip.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery${inFoundation ? ', currently rebuilding fundamentals' : ''}${dueCount ? `, ${dueCount} due for review` : ''}`);
-    chip.onclick = () => blueprintDrill(d.key);
+    chip.onclick = () => openDomainBreakdown(d.key);
     chip.innerHTML = `<div class="bp-chip-main"><span class="bp-chip-name"><b class="bp-chip-code">${d.code}</b> ${d.name}</span>${metaBits.length ? `<div class="bp-chip-meta-row">${metaBits.join('')}</div>` : ''}</div><span class="bp-chip-pct ${pctClass}" title="Readiness in this topic, the same measure as the bar and your overall score">${s.total ? mastery+'%' : '—'}</span>`;
     legend.appendChild(chip);
   });
@@ -10565,6 +10578,35 @@ function renderPaceBlock(stats){
   return `<div class="rb-pace ${cls}"><b>Pace to exam day</b><span>${p.remaining} questions are still untried before every domain reaches its coverage target, with ${p.daysLeft} day${p.daysLeft===1?'':'s'} left: about ${need} a day. ${verdict}</span></div>`;
 }
 
+// Progress: tapping a domain opens a read-only breakdown of its topics (no quiz). The back link returns to all domains.
+window._domainOpen = null;
+function openDomainBreakdown(key){
+  window._domainOpen = key;
+  try{ renderReadinessExtras(computeStats()); }catch(e){}
+  const panel = document.getElementById('readinessBreakdown'); if(panel){ panel.hidden = false; }
+}
+function closeDomainBreakdown(){
+  window._domainOpen = null;
+  try{ renderReadinessExtras(computeStats()); }catch(e){}
+}
+function domainBreakdownHtml(stats, key){
+  const part = (stats.parts || []).find(p => p.key === key), d = DOMAINS.find(x => x.key === key);
+  if(!part || !d) return '';
+  const topics = exposureModel().topics.filter(t => t.dom === key);
+  const label = { new:'Not seen yet', thin:'Just started', shaky:'Shaky', solid:'Solid' };
+  const answered = topics.reduce((a, t) => a + (t.st.attempts || 0), 0);
+  const right = topics.reduce((a, t) => a + Math.round((t.st.acc || 0) * (t.st.attempts || 0)), 0);
+  const pct = answered ? Math.round(100 * right / answered) + '% right' : 'no answers yet';
+  const list = topics.map(t => {
+    const detail = t.st.attempts ? `${t.st.attempts} answered · ${Math.round((t.st.acc || 0) * 100)}% right` : 'no answers yet';
+    return `<div class="dd-row ${t.state}"><span class="dd-name">${escapeHtml(t.name)}</span><span class="dd-state">${label[t.state] || ''}</span><span class="dd-num">${detail}</span></div>`;
+  }).join('');
+  return `<div class="dd-wrap">
+    <div class="dd-top"><button type="button" class="dd-back" onclick="closeDomainBreakdown()">← All domains</button><span class="dd-title"><b>${escapeHtml(d.code || '')}</b> ${escapeHtml(d.name)}</span></div>
+    <div class="dd-sum">${part.earned.toFixed(1)} of ${part.weight} points · ${answered} answered · ${pct} · ${topics.length} topics</div>
+    <div class="dd-list">${list}</div>
+  </div>`;
+}
 function renderReadinessExtras(stats){
   const bandEl = document.getElementById('readinessBand');
   const trendEl = document.getElementById('readinessTrend');
@@ -10610,6 +10652,7 @@ function renderReadinessExtras(stats){
 
   const panel = document.getElementById('readinessBreakdown');
   if(!panel) return;
+  if(window._domainOpen){ panel.innerHTML = domainBreakdownHtml(stats, window._domainOpen); return; }
   const parts = stats.parts.slice().sort((a,b)=> b.lost - a.lost);
   const maxW = Math.max(...parts.map(p=>p.weight));
   const rows = parts.map(p=>{
@@ -10625,7 +10668,7 @@ function renderReadinessExtras(stats){
     else { hint = `Well covered · ${recall} · about ${est}% expected`; tone = 'mid'; }
     const trackPct = (p.weight / maxW * 100).toFixed(1);
     const fillPct = (p.earned / p.weight * 100).toFixed(1);
-    return `<button type="button" class="rb-row" onclick="startDrill('${p.key}')" aria-label="${escapeHtml(p.name)}: ${p.earned.toFixed(1)} of ${p.weight} points. ${escapeHtml(hint)}. Tap to drill this domain.">
+    return `<button type="button" class="rb-row" onclick="openDomainBreakdown('${p.key}')" aria-label="${escapeHtml(p.name)}: ${p.earned.toFixed(1)} of ${p.weight} points. ${escapeHtml(hint)}. Tap to see this domain's breakdown.">
       <span class="rb-code">${p.code}</span>
       <span class="rb-main">
         <span class="rb-name">${escapeHtml(p.name)}</span>
@@ -34332,7 +34375,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000083';
+const BUILD_ID = '2026-10-29.00000084';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
