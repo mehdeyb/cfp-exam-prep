@@ -15667,8 +15667,18 @@ function stageUpNext(){
   el.style.display = '';
 }
 function stageHosts(){ return ['pstBody', 'scrBody'].map(id => document.getElementById(id)).filter(Boolean); }
+// A key-term slide offers the three things you would do next with a term, so the board is never a dead end.
+function termSlideButtons(sl){
+  const term = String(sl.term || '').trim(); if(!term) return null;
+  return [
+    { label:'Quiz me on this', run: () => askTutorAbout('Quiz me on the CFP term "' + term + '" (' + sl.def + '). Ask ONE short scenario question, wait for my answer, then tell me exactly what I got right or missed.') },
+    { label:'How the exam tests it', run: () => askTutorAbout('How would the CFP exam test "' + term + '"? Show me the trap answer people fall for and why it is wrong.') },
+    { label:'Explain it simply', run: () => askTutorAbout('Explain "' + term + '" simply, with one plain-language example.') },
+  ];
+}
 function stageDraw(soft){
   const sl = stageState.cur; if(!sl) return;
+  if(!sl.buttons && sl.kind === 'term'){ const tb = termSlideButtons(sl); if(tb) sl.buttons = tb; }
   const sid = stageId(sl), same = soft === true || stageState.drawn === sid; // same slide again (a step or a tap): update in place, no re-entrance
   const back = stageState.hi < (stageState.prevHi == null ? 0 : stageState.prevHi); stageState.prevHi = stageState.hi; stageState.drawn = sid;
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -34140,7 +34150,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000055';
+const BUILD_ID = '2026-10-28.00000056';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
