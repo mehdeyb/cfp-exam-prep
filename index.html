@@ -29760,12 +29760,20 @@ document.addEventListener('keydown', e => {
 });
 
 // The model returns a small JSON object (idea, why, analogy, spot, trap). Anything that isn't that shape falls back to plain text.
+// A "think of it like" comparison is only shown when it maps the idea onto something concrete from a household's own life and
+// says where the comparison breaks. Stock comparisons (phone plans, price tiers, pizza, sports teams) are dropped, not shown.
+const ANALOGY_STOCK_RE = /cell ?phone|phone plan|mobile plan|price tier|pricing tier|pizza|restaurant|coupon|movie ticket|sports? team|video game|netflix|subscription|gym membership|cable (tv|plan)|tiers? on a/i;
+function gateAnalogy(text){
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if(t.length < 25 || ANALOGY_STOCK_RE.test(t)) return '';
+  return t;
+}
 function parseSimpleExplanation(raw){
   try{
     const m = String(raw || '').match(/\{[\s\S]*\}/); if(!m) return null;
     const o = JSON.parse(m[0]);
     const pick = k => String(o[k] || '').replace(/\s+/g, ' ').trim().slice(0, 400);
-    const out = { idea: pick('idea'), why: pick('why'), analogy: pick('analogy'), spot: pick('spot'), trap: pick('trap') };
+    const out = { idea: pick('idea'), why: pick('why'), analogy: gateAnalogy(pick('analogy')), spot: pick('spot'), trap: pick('trap') };
     return out.idea && out.why ? out : null;
   }catch(e){ return null; }
 }
@@ -29845,7 +29853,7 @@ async function requestSimplerExplanation(){
   const isRetry = btn.textContent === 'Try a different explanation';
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[q.id];
   if(!isRetry && cached){
-    renderSimplifiedExplanation(box, cached, true);
+    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy) }) : cached, true);
     btn.textContent = 'Try a different explanation';
     return;
   }
@@ -29887,7 +29895,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section the most common way people get this type of question wrong."}\nReturn ONLY a JSON object, no other text, with these string fields, each short: {"idea": "the rule or core idea in one plain sentence", "why": "two short sentences on why the correct answer is right, using the question's own facts", "analogy": "one everyday comparison, or an empty string if none truly helps", "spot": "the clue in a question like this that signals this idea, in one sentence", "trap": "the specific mistake to avoid, in one sentence"}. Keep the whole object under 110 words. Use only the facts in the question; do not invent figures.`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section the most common way people get this type of question wrong."}\nReturn ONLY a JSON object, no other text, with these string fields, each short: {"idea": "the rule or core idea in one plain sentence", "why": "two short sentences on why the correct answer is right, using the question's own facts", "analogy": "a comparison from an ordinary household's life that maps the question's own term onto it in one sentence, then says where the comparison breaks in one more sentence (pattern: \"[the question's term] works like [an everyday thing] because [the matching part]; unlike that thing, [where it differs]\"). Do not use phone plans, price tiers, pizza, restaurants, sports, games or subscriptions. Use an empty string if no comparison maps cleanly onto this question's facts", "spot": "the clue in a question like this that signals this idea, in one sentence", "trap": "the specific mistake to avoid, in one sentence"}. Keep the whole object under 110 words. Use only the facts in the question; do not invent figures.`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -34672,7 +34680,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000105';
+const BUILD_ID = '2026-10-29.00000106';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
