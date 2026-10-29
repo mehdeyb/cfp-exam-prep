@@ -12464,6 +12464,18 @@ function buildStudyPlanCore(minutes){
       steps.push(st); used += st.minutes;
     });
   }
+  // Fill pass: when the budget is still well under-used after the first pass and the extras, add the most useful steps the student is ready for
+  // (exam-style practice, the decision tool in practice, a tutor walk-through, more drilling), each only if it fits and is not already in the plan.
+  if(!['rest','exam','after'].includes(phase.key) && used < minutes * 0.85){
+    const fillOrder = phase.key === 'taper' ? ['tool','checkpoint','case','tutor','cards2'] : ['tool','case','checkpoint','weak2','adaptive2','cards2','tutor','read','case2','calc2','checkpoint2','weak3','figures2','tutor2','weak4'];
+    fillOrder.forEach(k => {
+      if(used >= minutes * 0.92 || steps.some(x => x.id === k) || !mk[k]) return;
+      const st = finish(k, mk[k]()); if(!st) return;
+      const worked = st.done || (st.have || 0) > 0;
+      if(!worked && used + st.minutes > minutes) return;
+      steps.push(st); used += st.minutes;
+    });
+  }
   // From 3.5 hours, one real break near the middle. Spaced rounds after a rest beat one unbroken push.
   let breakAfter = null;
   if(minutes >= 200 && steps.length >= 5 && used >= 150){
@@ -34599,7 +34611,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000098';
+const BUILD_ID = '2026-10-29.00000099';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
