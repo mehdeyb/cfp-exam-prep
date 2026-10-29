@@ -14059,6 +14059,7 @@ function ebCheck(){
   const canAI = (typeof aiFeaturesAvailable !== 'undefined') && aiFeaturesAvailable;
   document.getElementById('ebBody').innerHTML = ebStepper(3) +
     `<div class="eb-verdict"><b>${verdict}</b><span>${got} of ${n} key idea${n === 1 ? '' : 's'}</span></div><div class="eb-bar" aria-hidden="true">${bar}</div>${pts}
+     ${(!canAI && st.full) ? '<div class="eb-model"><small>Compare with the reference</small>' + escapeHtml(String(st.full).slice(0, 600)) + '</div>' : ''}
      ${canAI ? '<div class="eb-ai" id="ebAI" aria-live="polite"><div class="eb-ai-load">Checking your reasoning for meaning, not just wording…</div></div>' : ''}
      <div class="eb-yours">${escapeHtml(st.text.trim())}</div>
      <div class="eb-note" id="ebWordNote">Matching is by wording, so a right idea in different words can show as missing. You are the judge: how did it go?</div>
@@ -34611,7 +34612,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000099';
+const BUILD_ID = '2026-10-29.00000100';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
