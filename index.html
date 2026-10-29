@@ -2821,6 +2821,15 @@
   .tutor-guide .tg-row{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:4px;}
   .tutor-guide .tg-back{margin-left:0;margin-right:auto;padding:1px 9px;font-size:11.5px;line-height:1.5;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;padding:2px 4px;line-height:1.5;cursor:pointer;}
+  /* The tutor note is a compact card: the words are capped at two lines, the label sits inline with them, and Next, Back and Got it share one row. */
+  .tutor-guide{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:6px;width:min(300px,100%);max-width:min(300px,100%);padding:6px 10px;}
+  .tutor-guide .tg-k{display:none;}
+  .tutor-guide .tg-t{flex:1 1 100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.3;}
+  .tutor-guide .tg-t::before{content:"From your tutor \00b7  ";font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
+  .tutor-guide .tg-next{flex:1 1 0;min-width:0;margin:0;padding:4px 8px;font-size:12px;}
+  .tutor-guide .tg-next .tg-next-k{display:none;}
+  .tutor-guide .tg-row{flex:none;margin:0;gap:4px;}
+  .tutor-guide .tg-back, .tutor-guide .tg-x{white-space:nowrap;min-height:26px;}
   @keyframes tgIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
   /* Focus: one thing on screen. Everything else in the panel, the header, the tab bar and the floating pill step aside. */
   body.cd-flow #qCardLink,body.cd-flow #qToolLink{display:none !important;}
@@ -34352,7 +34361,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000080';
+const BUILD_ID = '2026-10-29.00000081';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
