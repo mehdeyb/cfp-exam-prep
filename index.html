@@ -4966,6 +4966,11 @@
           <button type="button" class="mode-alt" id="missedWalkBtn" style="display:none;" onclick="event.stopPropagation(); mwOpen();">Talk through them</button>
           <div class="mode-meta" data-mm="review"></div>
         </div>
+        <div class="mode-card" onclick="startPatternDrill()" tabindex="0" role="button">
+          <h3>Fix my mistake pattern</h3>
+          <div class="mode-when">Only the questions you missed for the same reason, with the fix for that habit.</div>
+          <div class="mode-meta" data-mm="pattern"></div>
+        </div>
         <div class="mode-card" onclick="openCalcPicker()" tabindex="0" role="button" id="fdModeCard">
           <h3>Calculator practice</h3>
           <div class="mode-when">Practise the HP 10bII+ steps and formulas.</div>
@@ -13459,7 +13464,7 @@ function logMiss(q, wasPrev){
   if(!Array.isArray(DATA.errorLog)) DATA.errorLog = [];
   const elapsed = (session && session.qShownAt && session.qShownIdx === session.index) ? Date.now() - session.qShownAt : null;
   const type = classifyMiss(q, wasPrev, elapsed);
-  DATA.errorLog.push({ t: Date.now(), d: q.domain, k: type });
+  DATA.errorLog.push({ t: Date.now(), d: q.domain, k: type, q: q.id });
   if(DATA.errorLog.length > 300) DATA.errorLog.splice(0, DATA.errorLog.length - 300);
   return type;
 }
@@ -17988,6 +17993,33 @@ function treeDrillStats(key){
   qs.forEach(q => { const s = ts[q.id]; if(!s) return; tried++; if(s.correct > 0 && (s.miss || 0) === 0) solved++; if((s.miss || 0) > 0) weak++; });
   return { total:qs.length, tried, solved, weak };
 }
+// ---- Fix my mistake pattern ----------------------------------------------------------------------------------------
+// Takes the kind of miss you make most often (misreading, mixing two ideas, a setup slip, a gap...) and drills only the
+// questions you missed that way, so you practise the fix for that habit rather than random topics.
+function patternDrillPlan(){
+  const log = (Array.isArray(DATA.errorLog) ? DATA.errorLog : []).filter(e => e && e.q && MISS_TYPES[e.k]).slice(-120);
+  const byType = {};
+  log.forEach(e => { (byType[e.k] = byType[e.k] || []).push(e); });
+  const kinds = Object.keys(byType).sort((a, b) => byType[b].length - byType[a].length);
+  if(!kinds.length) return null;
+  const kind = kinds[0];
+  const byId = {}; allQuestions().forEach(q => { byId[q.id] = q; });
+  const seen = new Set(), ids = [];
+  byType[kind].slice().reverse().forEach(e => { if(!seen.has(e.q)){ seen.add(e.q); ids.push(e.q); } }); // most recent first
+  // Questions you have since got right twice in a row drop off, so the drill shrinks as you fix each one.
+  const open = ids.map(id => byId[id]).filter(q => q && (((DATA.questionStats || {})[q.id] || {}).box || 0) < 2);
+  return { kind, count: byType[kind].length, open };
+}
+function startPatternDrill(){
+  const plan = patternDrillPlan();
+  if(!plan){ setCoach('Your misses are not tagged by type yet. Answer a few more questions and this drill will target the mistake you make most often.', false); return; }
+  if(!plan.open.length){ setCoach(`You have fixed the questions behind your most common miss (${MISS_TYPES[plan.kind].label.toLowerCase()}). Keep going with the adaptive session.`, false); return; }
+  const qs = shuffle(plan.open.slice(0, 10));
+  const reasons = {};
+  qs.forEach(q => { reasons[q.id] = `Your most common miss: ${MISS_TYPES[plan.kind].label.toLowerCase()}. ${MISS_TYPES[plan.kind].tip}`.trim(); });
+  beginSession(qs.map(q => shuffleQuestionChoices(q)), 'drill', null, reasons);
+}
+
 function startTreeDrill(key){
   const ts = DATA.treeStats || {};
   const scored = tiltedPool(treeQuestions(key), 6).map(q => {
@@ -33779,7 +33811,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000041';
+const BUILD_ID = '2026-10-28.00000042';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
