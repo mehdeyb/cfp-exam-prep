@@ -4411,6 +4411,10 @@
   /* The score and its /100 sit together, not apart. */
   #scoreRow .score-ring-center{display:flex;align-items:baseline;justify-content:flex-start;gap:2px;position:static;transform:none;}
   #scoreRow .score-ring-sub{margin:0;}
+  /* The score and its label read as one unit: the label sits right against the number. */
+  #scoreRow .score-ring-wrap{width:auto !important;min-width:0;height:auto !important;flex:0 0 auto;margin-right:-6px !important;}
+  #scoreRow .score-ring-wrap + .score-meta{margin-left:0 !important;}
+  #scoreRow .score-ring-wrap + .score-meta .label{white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -34221,7 +34225,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000070';
+const BUILD_ID = '2026-10-28.00000071';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
