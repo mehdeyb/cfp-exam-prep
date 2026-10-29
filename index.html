@@ -3188,21 +3188,27 @@
     body.tvm-active #tvmHost .dp-inner{
       max-width:none;width:100%;margin:0 auto;display:grid;column-gap:24px;row-gap:4px;align-items:start;align-content:start;
       grid-template-columns:minmax(0,1fr) minmax(300px,380px);
-      /* Seven compact rows (title, modes, how-to, pace, status, problem, level), then the timeline takes whatever height is left. */
-      grid-template-rows:repeat(8,auto) auto;
+      /* The left column fills the screen height. Header, modes, how-to, problem and level take their natural height;
+         the timeline row takes all the spare height, so the page has no empty band at the bottom. */
+      min-height:calc((var(--vh-real, 100vh) - 56px) / var(--tvm-z, 1));
+      row-gap:10px;
+      /* Rows in reading order: header, modes, plan strip, how-to, problem, level, timeline (flexible), chips, buttons. */
+      grid-template-rows:auto auto auto auto auto auto minmax(0,1fr) auto auto;
     }
     #tvmHost .dp-inner > *{grid-column:1;}
     #tvmHost .dp-inner > *:not(.tvm-device):not(.tvm-actions){margin-top:0 !important;margin-bottom:0 !important;}
     /* The progress chips and the buttons are the bottom of the walkthrough; they get their own breathing room
        so the timeline's legend, the chips and the buttons read as three separate things. */
-    #tvmHost .dp-inner > .tvm-status{margin-top:12px !important;}
-    #tvmHost .dp-inner > .tvm-actions{margin-top:16px !important;}
+    #tvmHost .dp-inner > .tvm-status{margin-top:4px !important;}
+    #tvmHost .dp-inner > .tvm-actions{margin-top:4px !important;}
     #tvmHost .dp-inner > .tvm-actions .btn{min-height:44px;}
     #tvmHost .tvm-howto > summary{display:none !important;}
     #tvmHost .tvm-howto{display:block;}
     #tvmHost .tvm-howto > *:not(summary){display:block !important;font-size:13px;line-height:1.4;margin:0 !important;}
     /* The calculator is a little smaller so the whole walkthrough is shorter; its two buttons move under the problem on the left. */
-    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / span 8;margin-bottom:0;position:sticky;top:0;align-self:start;zoom:.8;}
+    /* The calculator fills the right column. contain:size keeps its height out of the left column's row sizing, so the timeline row gets the spare height; the keypad rows then share the calculator's height. */
+    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / -1;margin-bottom:0;position:sticky;top:0;align-self:stretch;contain:size;display:flex;flex-direction:column;min-height:0;}
+    #tvmHost .tvm-device > .tvm-keypad{flex:1 1 auto;min-height:0;grid-auto-rows:minmax(0,1fr);margin-bottom:0;}
     #tvmHost .dp-inner > .tvm-actions{grid-column:1;grid-row:auto;align-self:start;margin:8px 0 0;}
     #tvmHost .dp-header{margin-bottom:0;}
     #tvmHost .dp-header h2{font-size:18px;}
@@ -3222,8 +3228,8 @@
     #tvmHost .dp-inner > .tvm-actions{order:7;}
   }
   /* Scale the whole walkthrough a little on shorter iPad landscape screens, so the problem, timeline, calculator and keys all fit. */
-  @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:840px){ body.tvm-active #tvmHost .dp-inner{zoom:.92;} }
-  @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:790px){ body.tvm-active #tvmHost .dp-inner{zoom:.84;} }
+  @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:840px){ body.tvm-active #tvmHost .dp-inner{zoom:.92;--tvm-z:.92;} }
+  @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:790px){ body.tvm-active #tvmHost .dp-inner{zoom:.84;--tvm-z:.84;} }
   body.tvm-active .tabbar{display:none;}
   /* Very narrow screens (a foldable's cover display is about 280px wide) */
   @media (max-width:340px){
@@ -34814,7 +34820,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.0000011B';
+const BUILD_ID = '2026-10-29.0000011C';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
