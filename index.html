@@ -14861,7 +14861,8 @@ function tutorLessonOpen(id){
   try{ const card = document.getElementById('lessonsCard'); if(card) focusEnter({ tab:'tutor', el:card, title:'Your lesson', stepId:'tlesson' }); }catch(e){}
   try{
     const key = podcastCacheKey(); const have = DATA.podcastEpisodes && DATA.podcastEpisodes[key];
-    if(!have){ if(aiFeaturesAvailable) generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
+    // Built now with or without an AI connection (without one it is read from your flashcards), so the step does what it says.
+    if(!have){ generatePodcastEpisode(true).then(() => { try{ const st = document.getElementById('podcastStatus'); if(st) st.textContent = 'Ready. Tap play.'; }catch(e){} }); }
     else togglePodcastPlayback();
   }catch(e){}
 }
@@ -34187,7 +34188,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000064';
+const BUILD_ID = '2026-10-28.00000065';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
