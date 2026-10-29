@@ -4374,6 +4374,7 @@
   @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
     html body.os-one #tab-study.active #studyHub[data-view="progress"] > #blueprintCard{overflow-y:auto !important;overscroll-behavior:contain;touch-action:pan-y !important;-webkit-overflow-scrolling:touch;}
   }
+  .concept-bridge{display:block;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.4;}
 </style>
 </head>
 <body>
@@ -28477,6 +28478,266 @@ function selectAnswer(i){
   }catch(e){}
   requestAnimationFrame(() => setTimeout(() => { try{ selectAnswerCore(i); }catch(err){ if(session) session.locked = false; throw err; } }, 0));
 }
+// ---- Concept bridge -----------------------------------------------------------------------------------------------
+// After a miss, names one other subtopic that shares an idea with the one you missed, so the links between topics are visible.
+// Links are written by hand for the official subtopics, so each one names a real shared idea rather than a shared word.
+const CONCEPT_BRIDGES = [
+[
+"CFP Board's Code of Ethics and Standards of Conduct",
+"Fiduciary standard and application",
+"the duty of loyalty is the core of the Code"
+],
+[
+"CFP Board's Procedural Rules",
+"CFP Board's Code of Ethics and Standards of Conduct",
+"how breaches of the Code are investigated and sanctioned"
+],
+[
+"Function, purpose, and general structure of financial institutions",
+"Financial services regulations and requirements",
+"which regulator oversees which institution"
+],
+[
+"Consumer protection laws",
+"Financial services regulations and requirements",
+"disclosure rules that protect the client"
+],
+[
+"Fiduciary standard and application",
+"Insurance policy and company selection",
+"products chosen for the client, not for the commission"
+],
+[
+"Financial planning process",
+"Retirement needs analysis",
+"the same gather, analyze, recommend steps"
+],
+[
+"Financial statements",
+"Cash flow management",
+"net worth and cash flow are read together"
+],
+[
+"Financing strategies and debt management",
+"Cash flow management",
+"debt payments are paid out of cash flow"
+],
+[
+"Economic concepts",
+"Market cycles",
+"inflation and interest rates drive the cycle"
+],
+[
+"Time value of money concepts and calculations",
+"Quantitative investment concepts and measures of investment returns",
+"the same growth and discounting math"
+],
+[
+"Education needs analysis",
+"Education funding",
+"the cost estimate sets how much to fund"
+],
+[
+"Education savings vehicles",
+"Characteristics, uses and taxation of investment vehicles",
+"529 plans and other education accounts are vehicles with their own tax rules"
+],
+[
+"Gift / income tax strategies",
+"Gift, estate, and GST tax compliance and calculation",
+"annual exclusion and lifetime gift limits"
+],
+[
+"Principles of risk and insurance",
+"Analysis and evaluation of risk exposures",
+"the same risk-handling choices"
+],
+[
+"Health insurance and health care cost management (individual and group)",
+"Social Security and Medicare planning",
+"Medicare coverage choices and gaps"
+],
+[
+"Disability income insurance (individual and group)",
+"Business owner insurance solutions",
+"disability buy-out funding for a business owner"
+],
+[
+"Long-term care insurance and long-term care planning (individual and group)",
+"Eldercare and special needs planning",
+"paying for care as needs grow"
+],
+[
+"Qualified and non-qualified annuities",
+"Retirement income and distribution strategies",
+"guaranteed income streams in retirement"
+],
+[
+"Life insurance (individual and group)",
+"Sources for estate liquidity",
+"life insurance supplies estate cash"
+],
+[
+"Insurance needs analysis",
+"Retirement needs analysis",
+"the same needs-gap method"
+],
+[
+"Characteristics, uses and taxation of investment vehicles",
+"Tax reduction/management techniques",
+"asset location and tax-efficient vehicles"
+],
+[
+"Types of investment risk",
+"Alternative investments and liquidity risk",
+"liquidity is one kind of risk"
+],
+[
+"Asset allocation and portfolio diversification",
+"Types of investment risk",
+"diversification reduces risk you do not need to take"
+],
+[
+"Bond and stock valuation concepts",
+"Quantitative investment concepts and measures of investment returns",
+"valuation uses present-value math"
+],
+[
+"Portfolio development and analysis",
+"Investment strategies",
+"strategy choices shape the portfolio design"
+],
+[
+"Fundamental and current tax law",
+"Income tax fundamentals and calculations",
+"the rules every calculation depends on"
+],
+[
+"Income tax fundamentals and calculations",
+"Distribution rules and taxation",
+"how distributions are taxed as income"
+],
+[
+"Characteristics and income taxation of business entities",
+"Business succession planning",
+"entity choice affects a sale or succession"
+],
+[
+"Income taxation of trusts and estates",
+"Types, features, and taxation of trusts",
+"trust income tax rules"
+],
+[
+"Tax reduction/management techniques",
+"Charitable/philanthropic contributions and deductions",
+"charitable gifts lower tax"
+],
+[
+"Tax consequences of property transactions",
+"Strategies to transfer property",
+"the basis rules for property transfers"
+],
+[
+"Tax implications of special circumstances",
+"Planning for divorce, unmarried couples and other special circumstances",
+"tax on transfers in a divorce"
+],
+[
+"Qualified plan rules and options",
+"Types of retirement plans",
+"how plan types differ under the rules"
+],
+[
+"Non-qualified plan rules and options",
+"Qualified plan rules and options",
+"the contrast with qualified plans"
+],
+[
+"Key factors affecting plan selection for businesses",
+"Types of retirement plans",
+"which plan fits which business"
+],
+[
+"Distribution rules and taxation",
+"Retirement income and distribution strategies",
+"withdrawal timing and tax"
+],
+[
+"Social Security and Medicare planning",
+"Retirement income and distribution strategies",
+"benefit timing affects income"
+],
+[
+"Property titling and beneficiary designations",
+"Strategies to transfer property",
+"titling controls how property passes"
+],
+[
+"Estate and incapacity planning documents",
+"Planning for special needs and circumstances",
+"documents that plan for incapacity"
+],
+[
+"Gift, estate, and GST tax compliance and calculation",
+"Marital deduction",
+"estate tax exemptions and deductions"
+],
+[
+"Types, features, and taxation of trusts",
+"Planning for special needs and circumstances",
+"special needs trusts"
+],
+[
+"Intra-family and other business transfer techniques",
+"Business succession planning",
+"transferring a business to the next owner"
+],
+[
+"Postmortem estate planning techniques",
+"Marital deduction",
+"deductions and elections after death"
+],
+[
+"Client and planner attitudes, values, biases",
+"Behavioral finance",
+"biases that shape decisions"
+],
+[
+"Sources of money conflict",
+"Principles of counseling",
+"handling disagreement about money"
+],
+[
+"Principles of counseling",
+"General principles of effective communication",
+"listening and questioning in a client meeting"
+],
+[
+"Crisis events with severe consequences",
+"Disability income insurance (individual and group)",
+"income loss after a crisis"
+]
+];
+let _bridgeIdx = null;
+function conceptBridgeIndex(){
+  if(_bridgeIdx) return _bridgeIdx;
+  const m = new Map();
+  CONCEPT_BRIDGES.forEach(([a, b, idea]) => {
+    if(!m.has(a)) m.set(a, []); if(!m.has(b)) m.set(b, []);
+    m.get(a).push({ sub: b, idea }); m.get(b).push({ sub: a, idea });
+  });
+  return (_bridgeIdx = m);
+}
+function conceptBridges(q, limit){
+  if(!q || !q.sub) return [];
+  return (conceptBridgeIndex().get(q.sub) || []).slice(0, limit || 1);
+}
+function conceptBridgeLine(q){
+  const br = conceptBridges(q, 1);
+  if(!br.length) return '';
+  return 'Connected idea: ' + br[0].idea + ' (see ' + br[0].sub + ').';
+}
+
 function selectAnswerCore(i){
   if(!session || !session.queue || !session.queue[session.index]) return;
   hideTutorBrief();
@@ -28556,6 +28817,10 @@ function selectAnswerCore(i){
     }
     note.className = 'choice-note ' + (idx===q.correct ? 'is-correct' : 'is-wrong');
     note.style.display = text ? 'block' : 'none';
+    if(idx === i && !isCorrect){ // only on the wrong pick: where the idea you missed connects to another
+      const bl = conceptBridgeLine(q);
+      if(bl){ const cb = document.createElement('span'); cb.className = 'concept-bridge'; cb.textContent = bl; note.appendChild(cb); note.style.display = 'block'; }
+    }
   });
   window._quizFitHold = true;
   placeAnswerTools();
@@ -33811,7 +34076,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000042';
+const BUILD_ID = '2026-10-28.00000043';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
