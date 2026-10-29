@@ -4408,6 +4408,9 @@
 .tutor-start .tutor-act.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);}
   /* The day's progress bar sits under the heading, not over the card's top edge. */
   .pt-day-bar.pt-day-bar-under{position:relative;top:auto;left:auto;right:auto;margin:2px 0 6px;border-radius:4px;}
+  /* The score and its /100 sit together, not apart. */
+  #scoreRow .score-ring-center{display:flex;align-items:baseline;justify-content:flex-start;gap:2px;position:static;transform:none;}
+  #scoreRow .score-ring-sub{margin:0;}
 </style>
 </head>
 <body>
@@ -34218,7 +34221,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000069';
+const BUILD_ID = '2026-10-28.00000070';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
