@@ -16399,7 +16399,7 @@ function ttIdleBoard0(){
     const plan = buildStudyPlan(); const left = plan.steps.filter(x => !x.done).slice(0, (window.innerHeight < 900 || window.innerWidth < 500) ? 5 : 7);
     if(left.length){
       const head = [days !== null && days >= 0 ? (days === 0 ? 'Exam day' : days + (days === 1 ? ' day' : ' days') + ' to go') : '', (st.totalAnswered && st.weakestMeta) ? 'weakest: ' + tutorShort(st.weakestMeta.name, 24) : ''].filter(Boolean).join(' \u00b7 ');
-      const r = stageSlideFromTool({ kind:'steps', title: head || 'Today with your tutor', steps: left.map((x, i) => ({ title: stageClip((i === 0 ? 'Next: ' : '') + x.title, 80), detail: x.minutes + ' min' + (i === 0 && x.why ? ' \u00b7 ' + stageClip(x.why, 110) : ''), planId: x.id })) });
+      const r = stageSlideFromTool({ kind:'steps', title: head || 'Today with your tutor', steps: left.map((x, i) => ({ title: stageClip((i === 0 ? 'Next: ' : '') + x.title, 80), detail: x.minutes + ' min' + (x.why ? ' \u00b7 ' + stageClip(x.why, 120) : ''), planId: x.id })) });
       if(!r.error){ r.slide.idle = true; r.slide.src = 'tutor'; if(!stageInlineVisible()) ttEnsureStage(); stageShow(r.slide, 'tutor'); return; }
     }
   }catch(e){}
@@ -34700,7 +34700,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000111';
+const BUILD_ID = '2026-10-29.00000112';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
