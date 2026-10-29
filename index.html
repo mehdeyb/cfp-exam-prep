@@ -9750,13 +9750,15 @@ function renderProgressValue(){
         if(rs.length >= 3){
           const d = rs[rs.length - 1] - rs[0];
           const words = d >= 3 ? `up ${d} points` : d <= -3 ? `down ${-d} points` : 'holding steady';
+          let nowR = null; try{ nowR = Math.round(computeStats().readiness); }catch(e){}
+          const nowTxt = nowR !== null && nowR !== rs[rs.length - 1] ? `, now ${nowR}` : '';
           // Readiness after each of your last sessions, drawn as a small line. The scale keeps at least 10 points of height so small moves are not exaggerated.
           const W = 176, H = 40, lo0 = Math.min(...rs) - 2, hi0 = Math.max(...rs) + 2, lo = hi0 - lo0 < 10 ? hi0 - 10 : lo0, hi = hi0;
           const xy = rs.map((v, i) => [rs.length === 1 ? W : (i / (rs.length - 1)) * W, H - 3 - ((v - lo) / (hi - lo)) * (H - 6)]);
           const pts = xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
           const last = xy[xy.length - 1];
           const spark = `<svg class="bp-spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Readiness over your last ${rs.length} sessions: from ${rs[0]} to ${rs[rs.length - 1]}"><polyline pathLength="1" points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="var(--gold)"/></svg>`;
-          trend = `<div class="bp-trendrow"><p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions.</p>${spark}</div>`;
+          trend = `<div class="bp-trendrow"><p class="bp-value-trend">Readiness ${rs[0]} → ${rs[rs.length - 1]}, ${words} over your last ${rs.length} sessions${nowTxt}.</p>${spark}</div>`;
         } else trend = `<p class="bp-value-trend">Trend shows after three sessions.</p>`;
       }catch(e){}
       try{
@@ -9800,7 +9802,7 @@ function topicTrend(key){
 // Time per topic is estimated from questions answered in each topic times your average minutes per question.
 function studyTimeHtml(){
   try{
-    const hours = (DATA.totalStudyMinutes || 0) / 60;
+    const hours = studyMinutesLogged() / 60;
     const hpct = Math.min(100, Math.round(100 * hours / 250));
     const hoursRow = `<div class="bp-hours"><div class="bp-hours-top"><span class="bp-num-k">Study hours</span><span class="bp-hours-v">${hours < 10 ? hours.toFixed(1) : Math.round(hours)} <span class="bp-hours-of">of 250</span></span></div><div class="bp-hours-bar"><i style="width:${hpct}%"></i></div><div class="bp-num-s">The CFP Board's recommended minimum is 250 hours.</div></div>`;
     return hoursRow;
@@ -20439,6 +20441,14 @@ function tiltedPool(cands, need){
     return f.length >= Math.max(need || 0, 6) ? f : cands;
   }catch(e){ return cands; }
 }
+// Study time from the running total and from the saved sessions, whichever is larger, so the hours shown in the plan,
+// the progress card and the diagnosis always agree (older data may only be in one of the two).
+function studyMinutesLogged(){
+  try{
+    const fromSessions = (DATA.sessions || []).reduce((a, s) => a + (+s.minutes || 0), 0);
+    return Math.max(+DATA.totalStudyMinutes || 0, fromSessions);
+  }catch(e){ return +DATA.totalStudyMinutes || 0; }
+}
 function pickAdaptiveQueue(n){
   const allRaw = allQuestions();
   const reasons = {}; // questionId -> short reason code, surfaced to the student as "why this now"
@@ -30129,7 +30139,7 @@ function renderDiagnosisCard(){
   const bodyEl = document.getElementById('diagnosisBody');
   if(!summaryEl || !bodyEl) return;
 
-  const totalHours = (DATA.totalStudyMinutes || 0) / 60;
+  const totalHours = studyMinutesLogged() / 60;
   let findings = []; try{ findings = diagnosisFindings(); }catch(e){}
   const lead = findings.find(f => f.kind !== 'good');
   summaryEl.innerHTML = lead
@@ -30681,7 +30691,7 @@ function buildTutorSystemPrompt(){
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
   try{ const lv = DATA.treeLevel || {}; const ks = Object.keys(lv).filter(k => DECISION_TREES[k]); if(ks.length) timeContext += ' Decision-tool scenario levels (1 Build, 2 Apply, 3 Tell apart, 4 Transfer; new clients are written at that level): ' + ks.map(k => k + ' L' + lv[k].lvl).join(', ') + '. When you open a tool for them, match your coaching to the level.'; }catch(e){}
-  const hoursLogged = Math.round(((DATA.totalStudyMinutes||0)/60)*10)/10;
+  const hoursLogged = Math.round((studyMinutesLogged()/60)*10)/10;
   if(hoursLogged > 0){
     timeContext += ` They've logged about ${hoursLogged} study hours in this app so far (CFP Board's own guidance points to roughly 250–300 hours of dedicated review as a typical benchmark).`;
   }
@@ -33694,7 +33704,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000034';
+const BUILD_ID = '2026-10-28.00000035';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
