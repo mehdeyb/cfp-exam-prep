@@ -19440,7 +19440,7 @@ function updateFcPlanLine(){
   if(!st){ progress.textContent = fcCustomQueue ? pos : pos + ' of ' + fcQueue.length; return; }
   if(st.done){
     let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter(st.id || 'cards'); }catch(e){}
-    progress.innerHTML = escapeHtml(pos) + ` · plan done ✓` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
+    progress.innerHTML = escapeHtml(pos) + ` · today’s card goal met ✓` + (nx ? ` · <button class="fc-plan-next" onclick="planGoNext('${nx.id}')">Next: ${escapeHtml(nx.title)} →</button>` : '');
   } else progress.textContent = `${pos} · plan ${st.have} of ${st.need} cards`;
 }
 function renderFlashcard(){
@@ -34121,7 +34121,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000050';
+const BUILD_ID = '2026-10-28.00000051';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
