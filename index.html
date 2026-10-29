@@ -5016,7 +5016,7 @@
       <div class="tutor-chips" style="margin:10px 0 0;"><button type="button" class="chip" onclick="askTutorAbout('Look at where I am struggling and build me a custom tool or study routine that will most improve my chances of passing. Say what it is for first.')">Ask the tutor to build me a tool</button></div>
     </div>
 
-    <div class="dt-switch" id="dtSwitch" role="tablist" aria-label="Choose a decision tree"><button type="button" class="chip dt-switch-btn" data-dt="trust" onclick="dtSelectTree('trust')">Trust</button><button type="button" class="chip dt-switch-btn" data-dt="entity" onclick="dtSelectTree('entity')">Business entity</button><button type="button" class="chip dt-switch-btn" data-dt="ira" onclick="dtSelectTree('ira')">Traditional IRA</button><button type="button" class="chip dt-switch-btn" data-dt="roth" onclick="dtSelectTree('roth')">Roth IRA</button><button type="button" class="chip dt-switch-btn" data-dt="socialSecurity" onclick="dtSelectTree('socialSecurity')">Social Security</button><button type="button" class="chip dt-switch-btn" data-dt="college" onclick="dtSelectTree('college')">College funding</button><button type="button" class="chip dt-switch-btn" data-dt="invest" onclick="dtSelectTree('invest')">Investment choice</button></div>
+    <div class="dt-switch" id="dtSwitch" role="tablist" aria-label="Choose a decision tree"><button type="button" class="chip dt-switch-btn" data-dt="trust" onclick="dtSelectTree('trust')">Trust</button><button type="button" class="chip dt-switch-btn" data-dt="entity" onclick="dtSelectTree('entity')">Business entity</button><button type="button" class="chip dt-switch-btn" data-dt="ira" onclick="dtSelectTree('ira')">Traditional IRA</button><button type="button" class="chip dt-switch-btn" data-dt="roth" onclick="dtSelectTree('roth')">Roth IRA</button><button type="button" class="chip dt-switch-btn" data-dt="socialSecurity" onclick="dtSelectTree('socialSecurity')">Social Security</button><button type="button" class="chip dt-switch-btn" data-dt="college" onclick="dtSelectTree('college')">College funding</button><button type="button" class="chip dt-switch-btn" data-dt="invest" onclick="dtSelectTree('invest')">Investment choice</button><button type="button" class="chip dt-switch-btn" data-dt="lifeInsurance" onclick="dtSelectTree('lifeInsurance')">Life insurance type</button><button type="button" class="chip dt-switch-btn" data-dt="giftStrategy" onclick="dtSelectTree('giftStrategy')">Give now or hold</button></div>
     <div class="card dt-card" data-dt="trust">
       <div class="card-head"><h2>Which trust fits?</h2></div>
       <p class="hint">Revocable keeps control and avoids probate; irrevocable moves assets out of the estate and protects them.</p>
@@ -5059,6 +5059,20 @@
       <div id="dt-invest"></div>
       <div id="dt-full-invest" hidden></div>
       <div id="tool-practice-invest"></div>
+    </div>
+    <div class="card dt-card" data-dt="lifeInsurance">
+      <div class="card-head"><h2>Which life insurance type fits?</h2></div>
+      <p class="hint">Start with whether the need ends, then whether it is lifelong and what the client wants from the cash value.</p>
+      <div id="dt-lifeInsurance"></div>
+      <div id="dt-full-lifeInsurance" hidden></div>
+      <div id="tool-practice-lifeInsurance"></div>
+    </div>
+    <div class="card dt-card" data-dt="giftStrategy">
+      <div class="card-head"><h2>Should the client give now or hold until death?</h2></div>
+      <p class="hint">Start with the client's own security, then the built-in gain and the annual exclusion.</p>
+      <div id="dt-giftStrategy"></div>
+      <div id="dt-full-giftStrategy" hidden></div>
+      <div id="tool-practice-giftStrategy"></div>
     </div>
     <div class="card dt-card" data-dt="socialSecurity">
       <div class="card-head"><h2>When should Social Security be claimed?</h2></div>
@@ -11620,7 +11634,7 @@ function ctValidate(kind, inp){
       if(action === 'flashcards' && ['gaps','learning','due','new'].includes(s.focus)) r.focus = s.focus;
       if(action === 'formula' && typeof FD_NAMES !== 'undefined' && FD_NAMES.includes(s.formula)) r.formula = s.formula;
       if(action === 'calculator') r.mode = s.mode === 'cashflow' ? 'cashflow' : 'tvm';
-      if(action === 'tool'){ if(!['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'].includes(s.tool)) return; r.tool = s.tool; }
+      if(action === 'tool'){ if(!['trust','entity','ira','roth','socialSecurity','college','invest','lifeInsurance','giftStrategy','optionsMatrix','qualifiedPlans'].includes(s.tool)) return; r.tool = s.tool; }
       steps.push(r);
     });
     if(steps.length < 2) return 'Error: a routine needs at least 2 valid steps (actions: ' + Object.keys(CT_ROUTINE_ACTIONS).join(', ') + ').';
@@ -17610,6 +17624,48 @@ const DECISION_TREES = {
         body:"For a long horizon and a tolerance for volatility, broadly diversified stock funds, often low-cost index funds, capture market returns without single-company risk. Hold the least tax-efficient assets in tax-deferred accounts where possible." }
     }
   },
+  lifeInsurance: {
+    start: 'l1',
+    nodes: {
+      l1: { question:"Does the client need coverage for a fixed period, such as while children are dependent or a loan is outstanding?",
+        options: [ {label:"Yes", next:'r_term'}, {label:"No", next:'l2'} ] },
+      r_term: { result:true, title:"Term life fits a need that ends",
+        body:"Term insurance pays a death benefit for a set period with no cash value. It covers the need at the lowest premium. When the need becomes lifelong, revisit the choice." },
+      l2: { question:"Is the need lifelong, such as estate liquidity or a final-expense need that will certainly arise?",
+        options: [ {label:"No", next:'r_term'}, {label:"Yes", next:'l3'} ] },
+      l3: { question:"Does the client want guaranteed level premiums and a guaranteed death benefit for life?",
+        options: [ {label:"Yes", next:'r_whole'}, {label:"No", next:'l4'} ] },
+      r_whole: { result:true, title:"Whole life: guarantees and level premiums",
+        body:"Permanent coverage with a guaranteed death benefit, level premiums and a guaranteed cash value that grows at a set rate. Dividends from participating policies are not guaranteed. Premiums are higher than term, so the trade-off is cost for certainty." },
+      l4: { question:"Does the client want flexible premiums, and accept that the cash value's growth depends on the crediting rate or index?",
+        options: [ {label:"Yes", next:'r_universal'}, {label:"No", next:'r_variable'} ] },
+      r_universal: { result:true, title:"Universal life: flexible premiums and cash value",
+        body:"Permanent coverage with flexible premiums and a cash value credited at a current rate, subject to a guaranteed minimum. The policy can lapse if the premiums paid and the cash value fall too low, so the client should review it regularly." },
+      r_variable: { result:true, title:"Variable life: cash value at market risk",
+        body:"The cash value sits in investment sub-accounts, so it and the death benefit can fall with the market. Only a representative with the right securities licence can sell it, and the client should accept that risk on purpose." }
+    }
+  },
+  giftStrategy: {
+    start: 'g1',
+    nodes: {
+      g1: { question:"Does the client need this asset for their own security?",
+        options: [ {label:"Yes", next:'r_keep'}, {label:"No", next:'g2'} ] },
+      r_keep: { result:true, title:"Keep the asset",
+        body:"Giving away what the client needs for their own security trades future safety for a tax result that does not matter enough. Plan the gift only with assets the client can spare." },
+      g2: { question:"Does the asset carry a large built-in gain above its cost basis?",
+        options: [ {label:"Yes", next:'g3'}, {label:"No", next:'g4'} ] },
+      g3: { question:"Is the goal to avoid tax on that gain entirely?",
+        options: [ {label:"Yes", next:'r_hold'}, {label:"No", next:'g4'} ] },
+      r_hold: { result:true, title:"Hold until death for a basis step-up",
+        body:"Heirs generally take a basis equal to the value at death, so the built-in gain that built up during the owner's life is not taxed to them. A lifetime gift would instead carry over the donor's basis." },
+      g4: { question:"Is the gift within the annual exclusion for each recipient?",
+        options: [ {label:"Yes", next:'r_annual'}, {label:"No", next:'r_lifetime'} ] },
+      r_annual: { result:true, title:"Make gifts within the annual exclusion",
+        body:"Gifts within the annual exclusion per recipient need no gift tax return and use no lifetime exclusion. Repeated each year, they move value out of the taxable estate." },
+      r_lifetime: { result:true, title:"Larger gifts use part of the lifetime exclusion",
+        body:"A gift above the annual exclusion requires a gift tax return. It uses part of the lifetime exclusion, and gift tax is due only after that is used up. The recipient takes the donor's basis, so giving away a highly appreciated asset gives up the step-up at death." }
+    }
+  },
 };
 
 DECISION_TREES.roth = {
@@ -17822,6 +17878,18 @@ const TREE_SCENARIOS = {
     { to:'r_balanced', facts:"Tom, 62, plans to retire in six years. He lost sleep during the last downturn and wants a portfolio that limits large losses.", why:["His horizon is shorter and his tolerance for losses is limited, so an allocation weighted toward bonds fits.","A balanced mix still grows the savings while reducing the size of a drop."] },
     { to:'r_alt', facts:"Ana, 45, has a $2M portfolio of stocks and bonds, a 20-year horizon and a high tolerance for risk. She wants to diversify beyond public markets and accepts that the money may be tied up.", why:["Her core is already in stocks and bonds, and she is looking for diversification beyond them.","She accepts illiquidity and higher fees, so a limited alternatives allocation is appropriate."] },
     { to:'r_equity', facts:"Marcus, 33, is saving for retirement in 30 years. He can ride out large swings and wants growth with low costs.", why:["A long horizon and a tolerance for volatility favor equities for growth.","Broad, low-cost funds give market returns without single-company risk."] },
+  ],
+  lifeInsurance: [
+    { to:'r_term', facts:"Rahul, 36, has two young children and a $400,000 mortgage. He wants coverage until the children are independent in about 20 years and has no savings goal for the policy.", why:["The need is for a fixed period, so term pays the benefit at the lowest premium.","He has no lifelong need, so cash value would add cost without a matching benefit."] },
+    { to:'r_whole', facts:"Lucia, 60, wants a death benefit that will be there for her heirs' estate tax and does not want the premium to rise or the policy to lapse.", why:["Her need is lifelong, so a permanent policy fits.","She wants guaranteed premiums and a guaranteed benefit, which whole life provides."] },
+    { to:'r_universal', facts:"Mei, 45, wants lifelong coverage and room to pay more in some years and less in others as her income changes.", why:["Her need is lifelong, so permanent coverage fits.","Flexible premiums suit her changing income, and she accepts that cash value growth is not guaranteed."] },
+    { to:'r_variable', facts:"Victor, 50, is an experienced investor who wants permanent coverage with cash value he can direct into equity sub-accounts, and understands the market risk.", why:["His need is lifelong, and he wants the cash value to grow with investments.","He accepts that the cash value and death benefit can fall, which is why a licensed representative must sell it."] },
+  ],
+  giftStrategy: [
+    { to:'r_keep', facts:"Joan, 74, has a $900,000 portfolio that she will need to cover her care costs. She wants to give some of it to her grandchildren now.", why:["She needs the assets for her own security, so gifting them would be a poor trade.","The tax result does not outweigh her need for the money."] },
+    { to:'r_hold', facts:"Paul, 70, holds stock bought for $50,000 that is now worth $700,000. He has enough other assets and wants his children to inherit it.", why:["The built-in gain is large and he wants to avoid tax on it.","Holding until death gives the heirs a basis equal to the value at death."] },
+    { to:'r_annual', facts:"Nadia, 55, wants to give $18,000 a year to each of her three children, in cash, while keeping her own security intact.", why:["Each gift is within the annual exclusion, so no gift tax return is needed.","Repeated gifts move value out of her estate without using her lifetime exclusion."] },
+    { to:'r_lifetime', facts:"Samuel, 68, wants to give his daughter $250,000 of a rental property he bought years ago, while he has enough for his own needs.", why:["The gift is above the annual exclusion, so a gift tax return is required.","Because the property is appreciated, the daughter takes his basis, so the gain is not erased at death."] },
   ],
 };
 const dtwState = {}, dtModeMap = {};
@@ -18120,6 +18188,8 @@ function initToolsTab(){
   dtInit('roth');
   dtInit('college');
   dtInit('invest');
+  dtInit('lifeInsurance');
+  dtInit('giftStrategy');
   document.getElementById('dt-full-trust').innerHTML = sgTrustFlowchartSvg();
   document.getElementById('dt-full-entity').innerHTML = sgEntityFlowchartSvg();
   document.getElementById('dt-full-ira').innerHTML = sgIraFlowchartSvg();
@@ -18241,7 +18311,9 @@ const TREE_META = {
   roth: { name:'Roth IRA: direct, backdoor or none?', domain:'retirement', distinct:true },
   socialSecurity: { name:'When to claim Social Security', domain:'retirement' },
   college: { name:'College funding: which vehicle?', domain:'general' },
-  invest: { name:'Which investment fits this goal?', domain:'invest' }
+  invest: { name:'Which investment fits this goal?', domain:'invest' },
+  lifeInsurance: { name:'Which life insurance type fits?', domain:'risk' },
+  giftStrategy: { name:'Should the client give now or hold until death?', domain:'estate' }
 };
 function toolForQuestion(q){
   for(const key of Object.keys(TOOL_PRACTICE_SETS)){ if((TOOL_PRACTICE_SETS[key] || []).includes(q.id)) return key; }
@@ -30133,6 +30205,8 @@ const RESULT_TOOL_MATCH = [
   { key:'socialSecurity', name:'When to claim Social Security', re:/social security[^.?]{0,120}\b(claim|delay|full retirement|FRA|spousal|early)\w*|\b(claim|delay)\w*[^.?]{0,80}social security/i },
   { key:'optionsMatrix', name:'Options matrix', re:/\b(long|short) (call|put)s?\b|\b(call|put) options?\b|covered call|protective put|\boption (buyer|seller|writer|premium|holder)|\bwrit(e|ing) (a )?(call|put)/i },
   { key:'qualifiedPlans', name:'Qualified plan family tree', re:/\b(401\(k\)|403\(b\)|SIMPLE IRA|SEP[ -]IRA|profit[- ]sharing|defined benefit|cash balance|money purchase|ESOP|qualified plan)\b/i },
+  { key:'lifeInsurance', name:'Which life insurance type fits?', re:/\b(term|whole|universal|variable|permanent) life\b[^.?]{0,60}\b(or|vs\.?|versus|fits|suits)\b/i },
+  { key:'giftStrategy', name:'Should the client give now or hold until death?', re:/\bgift\w*[^.?]{0,80}\b(annual exclusion|appreciated|step-up|carryover basis|hold until death)\b/i },
   { key:'invest', name:'Which investment fits this goal?', re:/\bwhich (investment|vehicle|asset)\b[^.?]{0,60}\b(fits|suits|best|right)\b|\b(cash|bonds?|annuit\w*|alternatives?)\b[^.?]{0,40}\b(or|versus|vs\.?)\b[^.?]{0,40}\b(stocks?|equit\w*)\b/i },
 ];
 function renderResultTools(){
@@ -32582,6 +32656,8 @@ const TUTOR_POINT_TARGETS = {
   tool_ira:       { tab:'tools', sel:'.card:has(#dt-full-ira)',            label:'Is a traditional IRA contribution deductible?' },
   tool_college: { tab:'tools', sel:'.card:has(#dt-full-college)', label:'Which college funding choice fits?' },
   tool_invest: { tab:'tools', sel:'.card:has(#dt-full-invest)', label:'Which investment fits this goal?' },
+  tool_lifeInsurance: { tab:'tools', sel:'.card:has(#dt-full-lifeInsurance)', label:'Which life insurance type fits?' },
+  tool_giftStrategy: { tab:'tools', sel:'.card:has(#dt-full-giftStrategy)', label:'Should the client give now or hold until death?' },
   tool_socialSecurity: { tab:'tools', sel:'.card:has(#dt-full-socialSecurity)', label:'When should Social Security be claimed?' },
   tool_optionsMatrix:  { tab:'tools', sel:'.card:has(#dt-full-optionsMatrix)',  label:'Options matrix' },
   tool_qualifiedPlans: { tab:'tools', sel:'.card:has(#dt-full-qualifiedPlans)', label:'Qualified plan family tree' },
@@ -32784,11 +32860,11 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'open_decision_tool',
-    description: "Open one of the app's nine interactive decision tools (Decision tools, under Study) and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
+    description: "Open one of the app's eleven interactive decision tools (Decision tools, under Study) and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
     input_schema: {
       type: 'object',
       properties: {
-        tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','lifeInsurance','giftStrategy','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
         isolate: { type: 'boolean', description: 'True to pull this one tool into its own focus view with everything else hidden (works for all seven, with or without practice). Use it when you are walking the student through a step of today\'s plan with this tool, so nothing else competes for attention. They leave with Done or Back to chat, and get a note pointing to the next step.' },
         note: { type: 'string', description: 'With isolate: one short line (under 70 characters) shown at the top of the focus view saying what to do here, for example "Pick the trust that fits each client".' },
         scenarios: { type: 'integer', minimum: 1, maximum: 6, description: 'With practice true on trust, entity, ira, roth or socialSecurity: opens a focused run of exactly this many client scenarios, picked from the weakest and newest first, and prompts the student to move on when they are done. Use 2 to 4. Leave it out to show one scenario in the chat.' },
@@ -32912,7 +32988,7 @@ const TUTOR_TOOLS = [
       steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' } }, required: ['title'] }, description: 'Step-through: 3 to 12 steps.' },
       start: { type: 'string', description: 'Tree: id of the first node.' },
       nodes: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, question: { type: 'string' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, next: { type: 'string' } }, required: ['label','next'] } }, result: { type: 'boolean' }, title: { type: 'string' }, body: { type: 'string' } }, required: ['id'] } },
-      routine: { type: 'array', items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, label: { type: 'string' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, count: { type: 'integer' }, focus: { type: 'string', enum: ['gaps','learning','due','new'] }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string', enum: ['tvm','cashflow'] }, tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'] } }, required: ['action'] } },
+      routine: { type: 'array', items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, label: { type: 'string' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, count: { type: 'integer' }, focus: { type: 'string', enum: ['gaps','learning','due','new'] }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string', enum: ['tvm','cashflow'] }, tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','lifeInsurance','giftStrategy','optionsMatrix','qualifiedPlans'] } }, required: ['action'] } },
     }, required: ['kind','title','why'] },
   },
   {
@@ -33217,6 +33293,8 @@ async function executeTutorTool(toolName, toolInput){
         ira: { anchorId: 'dt-ira', label: 'Is a traditional IRA contribution deductible?' },
         socialSecurity: { anchorId: 'dt-socialSecurity', label: 'When should Social Security be claimed?' },
         invest: { anchorId: 'dt-invest', label: 'Which investment fits this goal?' },
+        lifeInsurance: { anchorId: 'dt-lifeInsurance', label: 'Which life insurance type fits?' },
+        giftStrategy: { anchorId: 'dt-giftStrategy', label: 'Should the client give now or hold until death?' },
         college: { anchorId: 'dt-college', label: 'Which college funding choice fits?' },
         optionsMatrix: { anchorId: 'tc-optionsMatrix-host', label: 'Options matrix' },
         qualifiedPlans: { anchorId: 'tc-qualifiedPlans-host', label: 'Qualified plan family tree' },
@@ -34512,7 +34590,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000089';
+const BUILD_ID = '2026-10-29.00000090';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
