@@ -4408,15 +4408,12 @@
 .tutor-start .tutor-act.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);}
   /* The day's progress bar sits under the heading, not over the card's top edge. */
   .pt-day-bar.pt-day-bar-under{position:relative;top:auto;left:auto;right:auto;margin:2px 0 6px;border-radius:4px;}
-  /* The score and its /100 sit together, not apart. */
-  #scoreRow .score-ring-center{display:flex;align-items:baseline;justify-content:flex-start;gap:2px;position:static;transform:none;}
-  #scoreRow .score-ring-sub{margin:0;}
-  /* The score and its label read as one unit: the label sits right against the number. */
-  /* The score sits on top, its label directly underneath. */
-  html body.os-one #tab-study #scoreRow .score-ring-block,
-  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{display:flex !important;flex-direction:column !important;flex-wrap:nowrap !important;grid-template-columns:none !important;align-items:flex-start !important;justify-content:center !important;gap:2px !important;}
-  #scoreRow .score-ring-wrap{width:auto !important;min-width:0;height:auto !important;flex:0 0 auto;margin:0 !important;}
-  #scoreRow .score-meta{margin:0 !important;}
+  /* Only change: the score sits on top and its label directly underneath. The band keeps its place to the right. */
+  html body.os-one #tab-study #scoreRow > .score-ring-block,
+  html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study #scoreRow > .score-ring-block{display:grid !important;grid-template-columns:157px auto !important;grid-template-rows:auto auto !important;column-gap:14px !important;row-gap:2px !important;align-items:center !important;}
+  html body.os-one #tab-study #scoreRow > .score-ring-block > .score-ring-wrap{grid-column:1 !important;grid-row:1 !important;}
+  html body.os-one #tab-study #scoreRow > .score-ring-block > .score-meta{grid-column:1 !important;grid-row:2 !important;}
+  html body.os-one #tab-study #scoreRow > .score-ring-block > .score-band{grid-column:2 !important;grid-row:1 / span 2 !important;}
 </style>
 </head>
 <body>
@@ -34227,7 +34224,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000072';
+const BUILD_ID = '2026-10-28.00000073';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
