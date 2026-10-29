@@ -31393,7 +31393,7 @@ function osFitStudy(extra){
       c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
       c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
       const host = c.querySelector('.pt-rows');
-      if(host){ const n = host.children.length; const cols = (n >= 13 && innerWidth >= 1000) ? 4 : 3; const rows = Math.max(1, Math.ceil(n / cols)); host.style.setProperty('--plan-cols', String(cols)); host.style.setProperty('--plan-rows', String(rows)); host.style.setProperty('--plan-fill', (rows >= 6 || cols === 4) ? 'minmax(0,1fr)' : 'auto'); host.classList.toggle('pt-many', cols === 4); } // many steps spread across four columns so every one fits without scrolling
+      if(host){ const n = host.children.length; const cols = n >= 13 ? 4 : 3; const rows = Math.max(1, Math.ceil(n / cols)); host.style.setProperty('--plan-cols', String(cols)); host.style.setProperty('--plan-rows', String(rows)); host.style.setProperty('--plan-fill', (rows >= 6 || cols === 4) ? 'minmax(0,1fr)' : 'auto'); host.classList.toggle('pt-many', cols === 4); } // many steps spread across four columns so every one fits without scrolling
       return;
     }
     if(document.body.classList.contains('quiz-active')) return;
@@ -34082,7 +34082,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000045';
+const BUILD_ID = '2026-10-28.00000046';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
