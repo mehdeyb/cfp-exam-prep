@@ -4392,6 +4392,10 @@
     html body.os-one #studyCols .pt-rows:has(> :nth-child(13)) > .pt-step .pt-sub{display:none !important;}
     html body.os-one #studyCols .pt-rows:has(> :nth-child(13)) > .pt-step .pt-title{-webkit-line-clamp:1 !important;}
   }
+/* Tutor start row: first moves until the first message */
+.tutor-start{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 2px;}
+.tutor-start-lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,var(--paper));opacity:.8;margin-right:4px;}
+.tutor-start .tutor-act.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);}
 </style>
 </head>
 <body>
@@ -5313,6 +5317,7 @@
       <div class="tt-actions" id="ttActions" role="group" aria-label="Where next"></div>
       <div class="tutor-suggest" id="ttLiveChips" role="group" aria-label="About this slide" style="display:none;"></div>
       <div class="tutor-suggest" id="tutorChips" role="group" aria-label="Suggestions" style="display:none;"></div>
+      <div class="tutor-start" id="tutorStart" role="group" aria-label="Start here" style="display:none;"></div>
       <div class="tutor-input-row">
         <button type="button" class="tt-bar-toggle" id="ttBarToggle" onclick="ttBarToggle()" aria-expanded="true" aria-controls="tutorInput" aria-label="Collapse the question bar" title="Collapse or expand"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
         <textarea id="tutorInput" class="tutor-input" rows="1" aria-label="Message to tutor" placeholder="Ask about any CFP topic…" oninput="ttGrowInput(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendTutorMessage(); }"></textarea>
@@ -33957,8 +33962,24 @@ function tutorCoachOpening(stats){
   try{ const w = weakestDrillTarget(stats); if(w && w.name) weak = 'Your weakest area is ' + w.name + (w.acc !== null ? ' at ' + w.acc + '%' : '') + '. '; }catch(e){}
   return when + 'Readiness is ' + stats.readiness + '/100. ' + weak + (next || 'Where do you want to start?');
 }
+// Start here: four clear first moves, shown until the first message. Each one only appears when it can help.
+function renderTutorStart(stats){
+  const host = document.getElementById('tutorStart'); if(!host) return;
+  if(tutorMessages.length){ host.style.display = 'none'; host.innerHTML = ''; return; }
+  const acts = [];
+  let w = null; try{ w = stats && stats.totalAnswered ? weakestDrillTarget(stats) : null; }catch(e){}
+  if(w && w.name) acts.push({ label: 'Drill my weakest: ' + w.name, primary: true, run: () => { try{ startWeakestDrill(); }catch(e){} } });
+  try{ if(fcRound && fcRound.missed && fcRound.missed.length) acts.push({ label: 'Quiz me on what I missed', run: () => askTutorAboutMisses() }); }catch(e){}
+  acts.push({ label: 'Browse topics', run: () => tutorBrowseTopics() });
+  acts.push({ label: 'Look up a term', run: () => { const i = document.getElementById('tutorInput'); if(i){ i.value = 'What is '; i.focus(); } } });
+  host.innerHTML = '';
+  const lab = document.createElement('span'); lab.className = 'tutor-start-lab'; lab.textContent = 'Start here'; host.appendChild(lab);
+  acts.forEach(a => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tutor-act' + (a.primary ? ' primary' : ''); b.textContent = a.label; b.onclick = () => { try{ a.run(); }catch(e){} }; host.appendChild(b); });
+  host.style.display = 'flex';
+}
 function updateTutorContextNote(){
   try{ renderTutorChips(); }catch(e){}
+  try{ renderTutorStart(computeStats()); }catch(e){}
   const stats = computeStats();
 
   // The welcome bubble is static HTML on first page load, so it can't
@@ -34150,7 +34171,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000056';
+const BUILD_ID = '2026-10-28.00000057';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
