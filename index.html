@@ -2117,8 +2117,6 @@
       body.os-one #tab-study.active,
       body.os-one #tab-study.active .os-fit,
       body.os-one #tab-study.active #studyCols{overflow:hidden !important;touch-action:none;}
-      /* Progress on iPad landscape: the Snapshot tiles repeat the readiness score, the exam countdown and the strongest and weakest topics shown elsewhere on the page, and they took about 180px of the 606px available. */
-      body.os-one #blueprintCard #bpNext{display:none !important;}
       /* The fade and reserved gap at the foot of a fitted pane were covering the last rows and the This week banner on iPad landscape. */
       body.os-one #tab-study .os-fit{-webkit-mask-image:none !important;mask-image:none !important;padding-bottom:0 !important;}
       /* Done today starts its own column, so the heading and the finished steps it counts sit together. */
@@ -2505,8 +2503,6 @@
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{font-size:12px;line-height:1.45;padding:6px 10px;}
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est span{font-size:12px;}
   }
-  /* Your progress, middle ground: the domain list keeps its full names and coverage on the left; the repeated "where the points are" heading is hidden; the score rows keep their full names. */
-  body.os-one #studyHub[data-view="progress"] #blueprintCard #bpValue{display:none !important;}
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -2815,7 +2811,10 @@
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-cols{display:block !important;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-colR, body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown{width:100% !important;max-width:none !important;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown .rb-rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;}
-  /* Domain breakdown (read-only): topic states and answers for one domain, with a way back to all domains. */
+  /* Domain breakdown (read-only): topic states and answers for one domain, with a way back to all domains. It replaces the domain list in the "By domain" view. */
+  #bpDetail[hidden]{display:none !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv] #bpLegend[hidden]{display:none !important;}
+  .bp-detail{min-width:0;}
   .dd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
   .dd-back{background:none;border:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;padding:4px 0;cursor:pointer;}
   .dd-title{font-size:14px;color:var(--paper);}
@@ -4596,7 +4595,7 @@
         <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg" hidden></em></button>
       </div>
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
-    <div class="card" id="blueprintCard">
+    <div class="card" id="blueprintCard" data-pv="domains">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
         <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
@@ -4610,14 +4609,15 @@
       <div class="bp-bar" id="bpBar"></div>
       <div class="bp-code-row" id="bpCodeRow"></div>
       <div class="bp-plan" id="bpPlan" style="display:none !important;" hidden></div>
+      <div class="bp-detail" id="bpDetail" hidden></div>
       <div class="bp-legend" id="bpLegend"></div>
       <div class="bp-next" id="bpNext"></div>
       <div class="rb-side" id="readinessSide"></div>
       </div>
       <div class="bp-colR">
-      <div class="bp-value" id="bpValue"></div>
 <button type="button" class="score-why" id="readinessWhyBtn" aria-expanded="false" aria-controls="readinessBreakdown" onclick="toggleReadinessBreakdown()">Why this score<svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 <div class="rb-panel" id="readinessBreakdown" role="region" aria-label="How your readiness score is built" hidden></div>
+      <div class="bp-value" id="bpValue"></div>
       <div class="bp-trend" id="progressCard">
         <div class="bp-trend-head"><span class="bp-trend-title">Your trend</span><span class="trend-toggle" id="trendToggle" role="group" aria-label="What the line shows" style="display:none;"><button type="button" data-view="score" class="on" aria-pressed="true" onclick="setTrendView('score')">Score</button><button type="button" data-view="ready" aria-pressed="false" onclick="setTrendView('ready')">Readiness</button></span></div>
         <div id="progressEmpty" class="focus-empty">Finish a session and your trend will appear here.</div>
@@ -10122,10 +10122,10 @@ function renderBlueprint(){
     seg.style.flex = d.weight;
     const foundationNote = inFoundation ? ' — currently rebuilding fundamentals' : '';
     seg.title = `${d.name} — ${d.weight}% of exam across ${(SUBTOPICS[d.key]||[]).length} official subtopics${dx.length ? ' (' + dxSeen + ' seen, ' + dxShaky + ' shaky, ' + dxNew + ' not yet seen)' : ''}, ${mastery}% ready (${accuracy}% right, ${s.correct}/${s.total})${d.key === focusKey ? ', your biggest gap for the exam' : ''}${s.total ? ', level ' + STAGES[domainStageOf(d.key) - 1].name + '. ' + stageNextText(d.key) : ''}${foundationNote}${dueCount ? `, ${dueCount} due for review` : ''}`;
-    seg.onclick = () => blueprintDrill(d.key);
+    seg.onclick = () => openDomainBreakdown(d.key);
     seg.tabIndex = 0;
     seg.setAttribute('role', 'button');
-    seg.setAttribute('aria-label', `Drill ${d.name}, ${mastery}% mastery${inFoundation ? ', currently rebuilding fundamentals' : ''}`);
+    seg.setAttribute('aria-label', `${d.name}, ${mastery}% ready${inFoundation ? ', currently rebuilding fundamentals' : ''}. Open this domain's breakdown`);
 
     const tag = document.createElement('div');
     tag.className = 'weight-tag';
@@ -10176,6 +10176,16 @@ function renderBlueprint(){
     chip.innerHTML = `<div class="bp-chip-main"><span class="bp-chip-name"><b class="bp-chip-code">${d.code}</b> ${d.name}</span>${metaBits.length ? `<div class="bp-chip-meta-row">${metaBits.join('')}</div>` : ''}</div><span class="bp-chip-pct ${pctClass}" title="Readiness in this topic, the same measure as the bar and your overall score">${s.total ? mastery+'%' : '—'}</span>`;
     legend.appendChild(chip);
   });
+
+  // An open domain replaces the domain list in this view, so the breakdown and the list never both show.
+  const det = document.getElementById('bpDetail');
+  if(det){
+    let html = '';
+    try{ if(window._domainOpen) html = domainBreakdownHtml(computeStats(), window._domainOpen); }catch(e){ html = ''; }
+    det.innerHTML = html;
+    det.hidden = !html;
+    legend.hidden = !!html;
+  }
 
   try{ renderBlueprintPlan(); }catch(e){}
   applyBlueprintCompactStyling();
@@ -10607,14 +10617,14 @@ function setBpView(v){
   card.querySelectorAll('#bpPv button').forEach(btn => { const on = btn.dataset.pv === card.dataset.pv; btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); });
 }
 function openDomainBreakdown(key){
-  setBpView('score');
   window._domainOpen = key;
-  try{ renderReadinessExtras(computeStats()); }catch(e){}
-  const panel = document.getElementById('readinessBreakdown'); if(panel){ panel.hidden = false; }
+  setBpView('domains');
+  try{ renderBlueprint(); }catch(e){}
+  const back = document.querySelector('#bpDetail .dd-back'); if(back){ try{ back.focus({preventScroll:true}); }catch(e){} }
 }
 function closeDomainBreakdown(){
   window._domainOpen = null;
-  try{ renderReadinessExtras(computeStats()); }catch(e){}
+  try{ renderBlueprint(); }catch(e){}
 }
 function domainBreakdownHtml(stats, key){
   const part = (stats.parts || []).find(p => p.key === key), d = DOMAINS.find(x => x.key === key);
@@ -10625,8 +10635,8 @@ function domainBreakdownHtml(stats, key){
   const right = topics.reduce((a, t) => a + Math.round((t.st.acc || 0) * (t.st.attempts || 0)), 0);
   const pct = answered ? Math.round(100 * right / answered) + '% right' : 'no answers yet';
   const list = topics.map(t => {
-    const detail = t.st.attempts ? `${t.st.attempts} answered · ${Math.round((t.st.acc || 0) * 100)}% right` : 'no answers yet';
-    return `<div class="dd-row ${t.state}"><span class="dd-name">${escapeHtml(t.name)}</span><span class="dd-state">${label[t.state] || ''}</span><span class="dd-num">${detail}</span></div>`;
+    const detail = t.st.attempts ? `${t.st.attempts} answered · ${Math.round((t.st.acc || 0) * 100)}% right` : '';
+    return `<div class="dd-row ${t.state}"><span class="dd-name">${escapeHtml(t.name)}</span><span class="dd-state">${label[t.state] || ''}</span>${detail ? `<span class="dd-num">${detail}</span>` : ''}</div>`;
   }).join('');
   return `<div class="dd-wrap">
     <div class="dd-top"><button type="button" class="dd-back" onclick="closeDomainBreakdown()">← All domains</button><span class="dd-title"><b>${escapeHtml(d.code || '')}</b> ${escapeHtml(d.name)}</span></div>
@@ -10679,7 +10689,6 @@ function renderReadinessExtras(stats){
 
   const panel = document.getElementById('readinessBreakdown');
   if(!panel) return;
-  if(window._domainOpen){ panel.innerHTML = domainBreakdownHtml(stats, window._domainOpen); return; }
   const parts = stats.parts.slice().sort((a,b)=> b.lost - a.lost);
   const maxW = Math.max(...parts.map(p=>p.weight));
   const rows = parts.map(p=>{
@@ -34402,7 +34411,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000085';
+const BUILD_ID = '2026-10-29.00000086';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
