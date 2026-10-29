@@ -33760,17 +33760,22 @@ function tutorOfflineAnswer(text, down){
     const norm = fcNorm(text), toks = norm.trim().split(' ').filter(w => w.length > 3 && !stop.has(w));
     const cards = allFlashcards();
     const dm = (typeof DOMAINS !== 'undefined' ? DOMAINS : []).find(d => String(text).toLowerCase().indexOf(d.name.toLowerCase()) >= 0 || norm.indexOf(' ' + d.name.toLowerCase().replace(/[^a-z0-9]+/g,' ') + ' ') >= 0);
+    // A card only counts as an answer when the question names its term (or one of its forms). Shared words in the
+    // definition alone are too weak: they would present an unrelated card as "what your flashcards say about it".
     const scored = cards.map(c => {
-      let sc = 0;
-      fcTermForms(c).forEach(f => { if(norm.indexOf(' ' + f.n.trim() + ' ') >= 0) sc += 10 * f.weight; });
+      let term = 0, formHit = false;
+      fcTermForms(c).forEach(f => { if(norm.indexOf(' ' + f.n.trim() + ' ') >= 0){ term += 10 * f.weight; formHit = true; } });
       const tw = fcNorm(c.term).trim().split(' ').filter(w => w.length > 3 && !stop.has(w));
-      tw.forEach(w => { if(toks.indexOf(w) >= 0) sc += 3; });
+      let wordHits = 0; tw.forEach(w => { if(toks.indexOf(w) >= 0) wordHits++; });
+      // One shared word (such as "limit") is not enough to name a term; a full term or two of its words is.
+      if(formHit || wordHits >= 2) term += 3 + wordHits * 3;
+      let sc = term;
       const dw = fcNorm(c.def).trim().split(' ');
       let hit = 0; toks.forEach(w => { if(dw.indexOf(w) >= 0) hit++; });
       sc += Math.min(hit, 4) * 0.7;
       if(dm && c.domain === dm.key) sc += 0.5;
-      return { c, sc };
-    }).filter(x => x.sc >= 3).sort((a, b) => b.sc - a.sc);
+      return { c, sc, term };
+    }).filter(x => x.term >= 3).sort((a, b) => b.sc - a.sc);
     let picks = scored.slice(0, 3).map(x => x.c), lead;
     if(picks.length){ lead = (down ? 'I can\'t reach the AI right now' : 'I can\'t write a fresh explanation without an API key') + ', but here is what your flashcards say about it:'; }
     else if(dm){
@@ -34700,7 +34705,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000113';
+const BUILD_ID = '2026-10-29.00000114';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
