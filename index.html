@@ -19549,11 +19549,17 @@ const FC_ANGLES = [
 ];
 const _fcRetellBusy = {};
 function fcLapseN(card){ const l = DATA && DATA.fcLapse && DATA.fcLapse[card.id]; return l ? (l.n || 0) : 0; }
-// Worth retelling: missed at least twice and still not solid.
-function fcNeedsRetell(card){
+// Worth retelling: missed at least twice and still not solid (these also get a rewritten angle when AI is connected).
+function fcNeedsRetellLapse(card){
   if(!fcAdaptOn()) return false;
   const n = fcLapseN(card); if(n < 2) return false;
   return getSpacedStat(DATA.flashcardStats, card.id).box <= 2;
+}
+// How many times this card has come back to you. Any card that has come back gets a different angle each time.
+function fcSeenN(card){ const st = getSpacedStat(DATA.flashcardStats, card.id); return st ? (st.seen || 0) : 0; }
+function fcNeedsRetell(card){
+  if(fcNeedsRetellLapse(card)) return true;
+  return fcAdaptOn() && fcSeenN(card) >= 2;
 }
 function fcNoteLapse(card, knew){
   if(!DATA.fcLapse || typeof DATA.fcLapse !== 'object') DATA.fcLapse = {};
@@ -19604,7 +19610,7 @@ async function fcRetellCall(card, angle, prior, lp, ctx){
   return trimToSentence(await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 480 }));
 }
 async function fcMaybeRetell(card){
-  if(!aiFeaturesAvailable || !fcNeedsRetell(card) || _fcRetellBusy[card.id]) return;
+  if(!aiFeaturesAvailable || !fcNeedsRetellLapse(card) || _fcRetellBusy[card.id]) return;
   const lp = DATA.fcLapse[card.id];
   if(!DATA.fcRetell || typeof DATA.fcRetell !== 'object') DATA.fcRetell = {};
   const list = (DATA.fcRetell[card.id] || []).filter(v => fcRetellOk(v.text));
@@ -19635,18 +19641,25 @@ function fcRetellLocal(card, lp){
   if(ex) opts.push({ label:'How it shows up on the exam', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
   const mn = DATA.flashcardMnemonics && DATA.flashcardMnemonics[card.id];
   if(mn) opts.push({ label:'A way to remember it', text: mn });
+  if(ctx.mix) opts.push({ label:'The look-alike to watch', text:'Often confused with ' + ctx.mix.other + '. Before you choose, ask which of the two the question is describing.' });
+  try{
+    const rq = fcRelatedQuestions(card).find(q => q && q.scenario) || fcRelatedQuestions(card)[0];
+    if(rq && rq.choices && rq.choices[rq.correct] !== undefined) opts.push({ label:'Seen in a question', text:'“' + String(rq.q).slice(0, 160) + '” The answer: ' + String(rq.choices[rq.correct]).slice(0, 140) + '.' });
+  }catch(e){}
   return opts.length ? opts[n % opts.length] : null;
 }
+function ordinalWord(n){ const w = ['zero','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth']; return n < w.length ? w[n] : n + 'th'; }
 function fcRetellPick(card){
   const lp = DATA.fcLapse && DATA.fcLapse[card.id];
+  const n = lp && lp.n ? lp.n : fcSeenN(card);
   let list = DATA.fcRetell && DATA.fcRetell[card.id];
   if(list) list = list.filter(v => fcRetellOk(v.text)); // anything saved earlier that was cut off is ignored
-  if(list && list.length && lp){
-    const v = list[((lp.n - 2) % list.length + list.length) % list.length];
+  if(list && list.length){
+    const v = list[((n - 2) % list.length + list.length) % list.length];
     const a = FC_ANGLES.find(x => x.k === v.k);
     return { label: a ? a.label : 'Another angle', text: v.text };
   }
-  return lp ? fcRetellLocal(card, lp) : null;
+  return fcRetellLocal(card, { n: n });
 }
 function fcPaintRetell(){
   const box = document.getElementById('fcRetell'); if(!box) return;
@@ -19655,7 +19668,7 @@ function fcPaintRetell(){
   const p = fcRetellPick(card);
   if(!p){ box.style.display = 'none'; return; }
   box.innerHTML = '';
-  const l = document.createElement('b'); l.textContent = p.label + ' · still learning ' + fcLapseN(card) + '×'; box.appendChild(l);
+  const lapses = fcLapseN(card); const l = document.createElement('b'); l.textContent = p.label + (lapses ? ' · still learning ' + lapses + '×' : ' · back for the ' + ordinalWord(fcSeenN(card)) + ' time'); box.appendChild(l);
   box.appendChild(document.createTextNode(p.text));
   box.style.display = 'block';
 }
@@ -34123,7 +34136,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000052';
+const BUILD_ID = '2026-10-28.00000053';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
