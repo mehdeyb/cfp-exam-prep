@@ -2505,6 +2505,31 @@
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{font-size:12px;line-height:1.45;padding:6px 10px;}
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est span{font-size:12px;}
   }
+  /* Your progress layout: the domain rows run down the left; the snapshot, the detail blocks and the headline sit on the right. */
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colL, body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colR, body.os-one #studyHub[data-view="progress"] #readinessBreakdown{display:contents !important;}
+  body.os-one #studyHub[data-view="progress"] #readinessRowsSlot{display:block;}
+  body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-rows{display:flex;flex-direction:column;}
+  @media (min-width:900px) and (orientation:landscape){
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-cols{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;grid-template-rows:auto auto auto;column-gap:32px;row-gap:12px;align-items:start;}
+    body.os-one #studyHub[data-view="progress"] #bpNext{grid-column:1 / span 2;grid-row:1;}
+    body.os-one #studyHub[data-view="progress"] #readinessRowsSlot{grid-column:1 / span 2;grid-row:1;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide{grid-column:1;grid-row:2;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-head{grid-column:2;grid-row:2;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-penalty{grid-column:2;grid-row:3;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{grid-column:1;grid-row:3;}
+    body.os-one #studyHub[data-view="progress"] #readinessRowsSlot .rb-rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;}
+  }
+  @media (max-width:899px), (orientation:portrait){
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-cols{display:flex !important;flex-direction:column;gap:10px;}
+    body.os-one #studyHub[data-view="progress"] #bpNext{order:1;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide{order:2;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-head{order:3;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-penalty{order:4;}
+    body.os-one #studyHub[data-view="progress"] #readinessRowsSlot{order:5;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{order:6;}
+  }
+  /* Your progress: one domain list (the score rows), so the separate domain list and the repeated "where the points are" list are hidden here. */
+  body.os-one #studyHub[data-view="progress"] #blueprintCard #bpLegend, body.os-one #studyHub[data-view="progress"] #blueprintCard #bpValue{display:none !important;}
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -4568,6 +4593,7 @@
       <div class="bp-legend" id="bpLegend"></div>
       <div class="bp-next" id="bpNext"></div>
       <div class="rb-side" id="readinessSide"></div>
+      <div class="rb-rows-slot" id="readinessRowsSlot"></div>
       </div>
       <div class="bp-colR">
       <div class="bp-value" id="bpValue"></div>
@@ -10569,6 +10595,9 @@ function renderReadinessExtras(stats){
   if(!panel) return;
   const parts = stats.parts.slice().sort((a,b)=> b.lost - a.lost);
   const maxW = Math.max(...parts.map(p=>p.weight));
+  // One domain list on this page: the topic coverage that used to sit in the separate list is carried on each row.
+  let coverTopics = [];
+  try{ const E = exposureModel(); coverTopics = (E && E.topics) || []; }catch(e){}
   const rows = parts.map(p=>{
     // Say both things that are true: how much of the domain has been tried,
     // and how solid recall is on what has been tried.
@@ -10576,7 +10605,8 @@ function renderReadinessExtras(stats){
     const recall = estPct >= 80 ? 'recall strong' : (estPct >= 65 ? 'recall solid' : (estPct >= 45 ? 'recall building' : 'recall early'));
     let hint, tone;
     const est = Math.round(p.expectedAccuracy*100);
-    if(p.attempted === 0){ hint = 'Not started yet'; tone = 'gap'; }
+    const domTopics = coverTopics.filter(t => t.dom === p.key);
+    if(p.attempted === 0){ hint = domTopics.length ? `${domTopics.length} topics to learn` : 'Not started yet'; tone = 'gap'; }
     else if(p.coverage < 0.999){ hint = `${p.attempted} of ${p.coverageTarget} tried · ${recall} · about ${est}% expected`; tone = 'gap'; }
     else if(estPct >= 80){ hint = `Well covered · strong · about ${est}% expected. Keep it fresh with reviews`; tone = 'good'; }
     else { hint = `Well covered · ${recall} · about ${est}% expected`; tone = 'mid'; }
@@ -10632,6 +10662,8 @@ function renderReadinessExtras(stats){
     if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
   }catch(e){}
   const side = document.getElementById('readinessSide');
+  const slot = document.getElementById('readinessRowsSlot');
+  if(slot) slot.innerHTML = `<div class="rb-rows">${rows}</div>`;
   if(side) side.innerHTML = `
     ${moveBlock}
     ${estimateBlock}
@@ -10643,7 +10675,6 @@ function renderReadinessExtras(stats){
       <h3>Where your ${stats.readiness} comes from</h3>
       <details class="rb-how"><summary>How this score is built</summary><p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p><p class="rb-foot-note">An estimate of readiness, not a pass prediction: nobody outside the exam knows where the cut score will fall. It moves whenever you answer, and it fades on its own if you stop reviewing, because forgotten material counts for less. Tap any row to drill that domain.</p></details>
     </div>
-    <div class="rb-rows">${rows}</div>
     ${penaltyRow}
     `;
 }
@@ -34283,7 +34314,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000078';
+const BUILD_ID = '2026-10-29.00000079';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
