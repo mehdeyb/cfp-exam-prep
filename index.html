@@ -2798,6 +2798,23 @@
   .tutor-guide .tg-row{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:4px;}
   .tutor-guide .tg-back{margin-left:0;margin-right:auto;padding:1px 9px;font-size:11.5px;line-height:1.5;}
   .tutor-guide .tg-x{background:none;border:none;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;padding:2px 4px;line-height:1.5;cursor:pointer;}
+  /* Your progress: two views in one card, so nothing is cut and nothing scrolls. "By domain" shows the domain list and topic exposure;
+     "How the score is built" shows the score rows, the breakdown and the explanation. */
+  .bp-pv{display:none;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-pv{display:inline-flex;gap:2px;margin:0 0 8px;padding:3px;border:1px solid var(--hair-strong);border-radius:20px;}
+  body.os-one #studyHub[data-view="progress"] .bp-pv button{min-height:28px;padding:0 14px;border-radius:16px;border:0;background:transparent;color:var(--muted);font:600 12px 'IBM Plex Sans',sans-serif;cursor:pointer;}
+  body.os-one #studyHub[data-view="progress"] .bp-pv button.on{background:var(--gold);color:var(--on-gold);}
+  body.os-one #tab-study:has(#studyHub[data-view="progress"]) #studyCols{width:100%;max-width:none !important;}
+  body.os-one #studyHub[data-view="progress"] #studyHub, body.os-one #studyHub[data-view="progress"] #blueprintCard{width:100%;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard{flex:1 1 100%;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessBreakdown,
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-colR{display:none !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-colL{display:none !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-cols{display:block !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #bpLegend{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:12px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-cols{display:block !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-colR, body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown{width:100% !important;max-width:none !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown .rb-rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;}
   /* Domain breakdown (read-only): topic states and answers for one domain, with a way back to all domains. */
   .dd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
   .dd-back{background:none;border:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;padding:4px 0;cursor:pointer;}
@@ -4583,6 +4600,10 @@
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
         <div class="note" id="bpNote">width = exam weight · fill = readiness</div>
+      </div>
+      <div class="bp-pv" id="bpPv" role="group" aria-label="What to show">
+        <button type="button" data-pv="domains" class="on" aria-pressed="true" onclick="setBpView('domains')">By domain</button>
+        <button type="button" data-pv="score" aria-pressed="false" onclick="setBpView('score')">How the score is built</button>
       </div>
       <div class="bp-cols">
       <div class="bp-colL">
@@ -10580,7 +10601,13 @@ function renderPaceBlock(stats){
 
 // Progress: tapping a domain opens a read-only breakdown of its topics (no quiz). The back link returns to all domains.
 window._domainOpen = null;
+function setBpView(v){
+  const card = document.getElementById('blueprintCard'); if(!card) return;
+  card.dataset.pv = v === 'score' ? 'score' : 'domains';
+  card.querySelectorAll('#bpPv button').forEach(btn => { const on = btn.dataset.pv === card.dataset.pv; btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
 function openDomainBreakdown(key){
+  setBpView('score');
   window._domainOpen = key;
   try{ renderReadinessExtras(computeStats()); }catch(e){}
   const panel = document.getElementById('readinessBreakdown'); if(panel){ panel.hidden = false; }
@@ -34375,7 +34402,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000084';
+const BUILD_ID = '2026-10-29.00000085';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
