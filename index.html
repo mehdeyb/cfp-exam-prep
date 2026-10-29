@@ -15819,6 +15819,12 @@ function stageSlideNode(sl){
   } else if(sl.kind === 'recap'){
     const li = (sl.items || []).map(x => `<li><i>${E(x.k)}</i>${E(stageClip(x.t, 80))}</li>`).join('');
     d.innerHTML = `<div class="pst-kicker">What this covered</div><ul class="pst-recap">${li}</ul><div class="pst-acts"><button type="button" class="btn" onclick="stageCloseFull();podcastQuizNow()">Quiz me on this</button>${(() => { let nx = null; try{ nx = (typeof conductorState === 'function' && conductorState()) ? null : planNextAfter('listen'); }catch(e){} return nx ? `<button type="button" class="btn ghost" onclick="stageCloseFull();planGoNext('${nx.id}')">Next: ${stageEsc(stageClip(nx.title, 34))} →</button>` : ''; })()}${(sl.qids || []).length ? `<button type="button" class="btn ghost" onclick="stageWalkMiss('${(sl.qids || []).join(',')}')">Walk through the misses</button>` : ''}</div>`;
+  } else if(sl.kind === 'tree'){
+    // The board hosts the same walker as Decision tools, so the student taps through the tree here and the tutor sees each step.
+    const inst = sl.tree + '@b' + (++_stageTreeN);
+    dtModeMap[inst] = sl.practice ? 'walk' : 'explore';
+    d.innerHTML = `<div class="pst-kicker">${sl.practice ? 'Client scenario' : 'Decision tree'}</div><div class="pst-title">${E(sl.title)}</div><div id="dt-${inst}" class="pst-tree-host"></div>`;
+    setTimeout(() => { try{ dtInit(inst); }catch(e){} }, 0);
   } else if(sl.kind === 'intro'){
     d.innerHTML = `<div class="pst-idb"><div class="pst-kicker">${naturalSpeechState.active ? 'Now playing' : 'This lesson'}</div><div class="pst-title">${E(sl.title)}</div></div>${sl.text ? `<div class="pst-text">${E(sl.text)}</div>` : (podcastLessonReady() ? '<div class="pst-text pst-dim">Press play to start this lesson. Terms, formulas and quick checks show up here as your tutor goes.</div>' : '<div class="pst-text pst-dim">This lesson is not written yet. <button type="button" class="btn" onclick="generatePodcastEpisode(true)">Write this lesson</button> then press play.</div>')}`;
   } else if(sl.kind === 'term'){
@@ -16183,7 +16189,13 @@ function stageSlideFromTool(a){
     else return { error:'mode must be question, recall or calc.' };
   }
   else if(k === 'idea'){ if(!a.text) return { error:'an idea slide needs text.' }; sl.title = stageClip(a.title, 40); sl.text = stageClip(a.text, 260); }
-  else return { error:'kind must be one of term, formula, number, compare, steps, bar, line, pie, table, chart, calc, question, check, idea.' };
+  else if(k === 'tree'){
+    if(!a.tree || !DECISION_TREES[a.tree]) return { error:'a tree slide needs tree, one of: ' + Object.keys(DECISION_TREES).join(', ') + '.' };
+    const meta = RESULT_TOOL_MATCH.find(t => t.key === a.tree);
+    sl.tree = a.tree; sl.title = stageClip(a.title || (meta ? meta.name : a.tree), 60);
+    sl.practice = !!a.practice && !!TREE_SCENARIOS[a.tree];
+  }
+  else return { error:'kind must be one of term, formula, number, compare, steps, bar, line, pie, table, chart, calc, question, check, idea, tree.' };
   if(Array.isArray(a.buttons)) sl.buttons = a.buttons.slice(0, 4).map(b => ({ label:stageClip(b && b.label, 40), say:stageClip((b && (b.say || b.label)) || '', 300) })).filter(b => b.label);
   return { slide:sl };
 }
@@ -16194,10 +16206,10 @@ function tutorScreenText(){
   const sl = stageState.cur; if(!sl || !stageState.deckKey) return '';
   const playing = naturalSpeechState.active;
   if(!playing && !stageState.fullOpen) return '';
-  const what = sl.kind === 'question' ? 'a question they missed: "' + stageClip(((allQuestions().find(q => q.id === sl.qid) || {}).q || ''), 140) + '"' : sl.kind === 'term' ? 'the term ' + sl.term : sl.kind === 'formula' ? 'the formula ' + sl.title : stageClip(sl.title || sl.big || sl.text || sl.kind, 80);
+  const what = sl.kind === 'question' ? 'a question they missed: "' + stageClip(((allQuestions().find(q => q.id === sl.qid) || {}).q || ''), 140) + '"' : sl.kind === 'term' ? 'the term ' + sl.term : sl.kind === 'formula' ? 'the formula ' + sl.title : sl.kind === 'tree' ? 'the decision tree "' + sl.title + '"' + (sl.practice ? ' with a client scenario' : '') : stageClip(sl.title || sl.big || sl.text || sl.kind, 80);
   const line = playing ? stageClip(((naturalSpeechState.chunks[naturalSpeechState.index] || {}).text || ''), 160) : '';
   const cs = (sl.kind === 'check' || sl.check) ? (sl.kind === 'check' && sl.mode === 'question' ? ' They are being asked to work that question' + (typeof sl.pick === 'number' ? ' and chose ' + 'ABCD'[sl.pick] + ((allQuestions().find(q => q.id === sl.qid) || {}).correct === sl.pick ? ' (right)' : ' (wrong)') : ' and have not answered yet') + '.' : ' It is a task for them to do' + (sl.passed ? ' (they have continued)' : ' and the lesson is waiting on them') + '.') : '';
-  return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are in a lesson: "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a lesson', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen (including kind calc, which lights each step's keys on an HP 10bII+ keypad), so use it to show what you are explaining instead of describing it. You can also run the lesson with lesson_control (pause, resume, make them work a question, tap the keys or say it back). Treat questions as likely about what is playing or showing.${cs}`;
+  return `\nON THE STUDENT'S SCREEN right now: ${playing ? 'they are in a lesson: "' + stageClip(podcastLabelForCacheKey(stageState.deckKey) || 'a lesson', 80) + (naturalSpeechState.paused ? '" (paused)' : '"') + (line ? ', at: "' + line + '"' : '') + '. ' : ''}The screen shows ${what}. You can put something on it with show_on_screen (including kind tree, which has the student walk a decision tree on the board, tapping each answer, with practice true for a client scenario; use it when a decision needs a sequence of checks, such as which trust, entity, IRA or Social Security choice fits, and then ask what they chose and why; and kind calc, which lights each step's keys on an HP 10bII+ keypad), so use it to show what you are explaining instead of describing it. You can also run the lesson with lesson_control (pause, resume, make them work a question, tap the keys or say it back). Treat questions as likely about what is playing or showing.${cs}`;
 }
 // The board lives right on the Tutor screen, above the conversation, so what the tutor shows and what it says share one view.
 function ttEnsureStage(){
@@ -31346,7 +31358,7 @@ function buildTutorSystemPrompt(){
   timeContext += ' NEXT STEPS: end almost every reply with one final line of 2 to 4 tappable next steps, written exactly as [[option | option | option]]. They must be real choices that fit this moment and what you just taught (for example: Go deeper on the trap, Quiz me on this, Show me on the board, Back to the lesson, Move on to the next topic), each under 40 characters, written as the student would say it. The student taps one and it is sent as their message, so you steer the session together. Do not repeat options they already used. Leave the line off when you just asked a lettered multiple choice question. If a lesson is paused, include Back to the lesson.';
   timeContext += ' PLAN: the plan is yours to change. When the student tells you their time, energy or situation changed, or what you see in their results means today no longer fits, say what you would change and why in one sentence, make the change with shape_today_plan or plan_my_study, and the new plan goes on the board. When the plan feels off but you are unsure what changed, include [[Adjust my plan]] as a next step. Never leave a plan you know is wrong.';
   timeContext += EXAM_PASS_FOCUS;
-  timeContext += ' SCREEN: you teach with a board that sits right above this conversation on the same screen (show_on_screen), and your reply is read aloud in a natural voice. Work like a live tutor: for a concept, a number or a procedure, SHOW it first (term, formula, number, compare, steps, a chart, or kind calc for any calculation so the student sees the HP keypad lit step by step; kind question to put a question in front of them), then say two or three short spoken sentences that point at the board. For a longer idea put up two or three boards in order, one after the other, each with a line of its own. After you teach something, check it with kind check (a question, a say-it-back, or keystrokes) instead of asking "does that make sense". Write for the ear: plain sentences, no markdown, no bullet lists, no symbols that read badly aloud, and under about 90 words. Do not repeat what the board already shows; say what to look at and why it matters. If a lesson is playing, keep it short and let the lesson lead.';
+  timeContext += ' SCREEN: you teach with a board that sits right above this conversation on the same screen (show_on_screen), and your reply is read aloud in a natural voice. Work like a live tutor: for a concept, a number or a procedure, SHOW it first (term, formula, number, compare, steps, a chart, or kind tree to walk them through a decision tree step by step, or kind calc for any calculation so the student sees the HP keypad lit step by step; kind question to put a question in front of them), then say two or three short spoken sentences that point at the board. For a longer idea put up two or three boards in order, one after the other, each with a line of its own. After you teach something, check it with kind check (a question, a say-it-back, or keystrokes) instead of asking "does that make sense". Write for the ear: plain sentences, no markdown, no bullet lists, no symbols that read badly aloud, and under about 90 words. Do not repeat what the board already shows; say what to look at and why it matters. If a lesson is playing, keep it short and let the lesson lead.';
   timeContext += ' VISUALS: when a picture teaches better than words (a timeline, how two things compare, a bracket or threshold ladder, a stepwise process, how a balance grows), call show_visual with real numbers from the 2026 figures and then add one or two sentences saying what to notice. Do not use it for simple definitions or when a sentence is enough. Never invent figures for a chart.';
   timeContext += tnPromptBlock();
   try{ const tw = Object.keys(TREE_SCENARIOS).map(k => ({ k, st: dtwStats(k) })).filter(x => x.st.tried); if(tw.length) timeContext += ' Client-scenario walks on the decision trees (scenarios walked clean of total): ' + tw.map(x => `${x.k} ${x.st.clean}/${x.st.total}${x.st.weak ? ' (' + x.st.weak + ' to revisit)' : ''}`).join(', ') + '. Mention only if relevant.'; }catch(e){}
@@ -32036,7 +32048,7 @@ function tutorLockChoices(){ document.querySelectorAll('#tutorThread .tutor-choi
 
 // A decision tree shown right in the conversation: the student walks it without leaving the chat. Diagram tools
 // (options matrix, plan family tree) cannot run inline, so they get a button to the Tools tab instead.
-let _tutorTreeN = 0, _tutorTreeShown = {};
+let _tutorTreeN = 0, _tutorTreeShown = {}, _stageTreeN = 0;
 // A small, safe chart/table/step renderer for the tutor. Everything is clamped and escaped; drawn as inline SVG/HTML in the chat flow.
 function tutorVisualHtml(spec){
   const kind = String(spec.kind || ''), title = String(spec.title || '').slice(0, 70), unit = String(spec.unit || '').slice(0, 10), note = String(spec.note || '').slice(0, 140);
@@ -32763,7 +32775,9 @@ const TUTOR_TOOLS = [
     name: 'show_on_screen',
     description: "Put something on the student's screen, a second screen that sits beside the lesson (and opens full size if they are not looking at it). Use it to SHOW what you are talking about: a question they missed (kind question, leave question_id out for their latest miss), a key term, a formula, one big number, two things side by side, steps, a chart or a table. While a podcast plays it appears with the audio and returns when they replay that part. Prefer it over describing in words whenever seeing it helps, and when they ask to see something.",
     input_schema: { type: 'object', properties: {
-      kind: { type: 'string', enum: ['question','term','formula','number','compare','steps','bar','line','pie','table','chart','calc','check','idea'] },
+      kind: { type: 'string', enum: ['question','term','formula','number','compare','steps','bar','line','pie','table','chart','calc','check','idea','tree'] },
+      tree: { type: 'string', enum: Object.keys(DECISION_TREES), description: 'tree: which decision tree to walk on the board.' },
+      practice: { type: 'boolean', description: 'tree: true gives the student a client scenario to work through the tree, when the tree has scenarios. Leave out to walk the tree itself.' },
       mode: { type: 'string', enum: ['question','recall','calc'], description: 'check: what the student does. question works a bank question (give question_id or a topic); recall asks them to say it back (give prompt); calc has them tap the keys (give steps).' },
       prompt: { type: 'string', description: 'check recall: what to say back.' },
       topic: { type: 'string', description: 'check question: a topic to pick a bank question for, when you have no question_id.' },
@@ -34411,7 +34425,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000086';
+const BUILD_ID = '2026-10-29.00000087';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
