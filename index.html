@@ -2059,6 +2059,9 @@
   #tutorCard .pst-dots{display:none !important;}
   /* The plan board shows every step in the flow (it used to scroll inside a short box and hide the last steps), with no empty now-playing line over it. */
   #tutorCard.tt-board #podcastStage{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;}
+  .pst-idle{display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:160px;padding:8px 4px;color:var(--muted);}
+  .pst-idle .pst-title{color:var(--paper);font-size:18px;}
+  .pst-idle .pst-text{max-width:56ch;line-height:1.5;}
   #tutorCard.tt-board #pstBody{height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;padding-bottom:6px !important;}
   #tutorCard.tt-board #podcastStage .pst-bar{position:static !important;margin-top:8px !important;}
   #tutorCard.tt-board #pstNow:empty{display:none !important;}
@@ -5427,7 +5430,7 @@
       <div class="podcast-focus" id="podcastFocus" style="display:none;"></div>
       <div class="podcast-player" id="podcastPlayer" style="display:none;">
         <div class="pstage" id="podcastStage" style="display:none;" role="region" aria-label="What this episode is showing">
-          <div class="pst-body" id="pstBody"></div>
+          <div class="pst-body" id="pstBody"><div class="pst-idle"><div class="pst-kicker">Your board</div><div class="pst-title">Nothing on the board yet</div><div class="pst-text">The board shows one thing at a time: a lesson, a formula, a decision tree or a practice question. Pick a start above, or ask the tutor anything below and it will put the answer here.</div></div></div>
           <div class="pst-now" id="pstNow" aria-hidden="true"></div>
           <div class="pst-bar"><div class="pst-dots" id="pstDots"></div><button type="button" class="pst-full" id="ttBoardHideBtn" onclick="ttBoardHide()">Hide</button><button type="button" class="pst-full pst-full-btn" onclick="stageOpenFull()" aria-label="Open the lesson full screen" title="Full screen"><svg class="pst-full-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
         </div>
@@ -34682,7 +34685,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000108';
+const BUILD_ID = '2026-10-29.00000109';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
