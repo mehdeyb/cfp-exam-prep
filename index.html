@@ -5134,7 +5134,7 @@
         </div>
         <div class="mode-card" onclick="openExamPicker()" tabindex="0" role="button">
           <h3>Practice exam</h3>
-          <div class="mode-when">Timed, like the real exam: <span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>.</div>
+          <div class="mode-when">Timed, like the real exam: <span data-dyn="mockQ">24</span> questions, or the full <span data-dyn="examQ">170</span>. Questions you have not seen come first, then the ones seen longest ago, weighted to the exam blueprint.</div>
           <div class="mode-meta" data-mm="exam"></div>
         </div>
         <div class="mode-card" onclick="openCasePicker()" tabindex="0" role="button" id="caseModeCard">
@@ -12275,8 +12275,9 @@ function buildStudyPlanCore(minutes){
       if(!g1 || fr.due - g1 < 4) return null;
       const goal = Math.max(4, Math.min(8, planTarget('figGoal2', Math.min(8, fr.due - g1))));
       const have = Math.min(goal, Math.max(0, (L.figs || []).length - g1));
+      const picks = figPick(g1 + goal).slice(g1);
       return { id:'figures2', title:`Refresh ${goal} more key figures`, minutes: Math.max(4, Math.ceil(goal * 0.8)), need:goal, have, unit:'figures',
-        why:'Limits and thresholds fade fastest, and a second short round after a long stretch of other work is a spaced repeat that locks them in.',
+        why:'A second short round, after other work, locks in limits and thresholds. ' + figWhy(picks, goal),
         run: () => { showTab('study'); startFigureDrill(goal - have > 0 ? goal - have : goal); } };
     },
     tutor2: () => {
@@ -12362,8 +12363,9 @@ function buildStudyPlanCore(minutes){
       if(fr.due < 6 && !L.targets.figGoal) return null;
       const goal = Math.max(4, Math.min(8, planTarget('figGoal', Math.min(8, fr.due))));
       const have = Math.min(goal, (L.figs || []).length);
+      const picks = figPick(goal);
       return { id:'figures', title:`Refresh ${goal} key figures`, minutes: Math.max(4, Math.ceil(goal * 0.8)), need:goal, have, unit:'figures',
-        why: fr.never >= fr.total * 0.5 ? `${fr.never} of ${fr.total} figures not drilled yet.` : `${fr.due} of ${fr.total} figures due to come back.`,
+        why: `${fr.due} of ${fr.total} figures are due and ${fr.never} never drilled. ` + figWhy(picks, goal),
         run: () => { showTab('study'); startFigureDrill(goal - have > 0 ? goal - have : goal); } };
     },
     tutor: () => {
@@ -20904,12 +20906,36 @@ function figBuildQuestion(item){
   const q = { id: 'fig-' + Math.random().toString(36).slice(2, 8), domain: item.domain, q: `2026 law: which is right for "${item.label}"?`, choices, correct: 0, rationale, figGen: true, figLabel: item.label, difficulty: 1 };
   return shuffleQuestionChoices(q);
 }
+// Key-figure picks are deterministic: due figures first (missed, then never drilled, then oldest), nothing drilled today,
+// nothing drilled in the last 20 hours, at most half from one domain. The same state always gives the same list, so the
+// plan's "why" can name the exact figures and the drill opens those same figures.
+function figRecentlyDrilled(label, hours){ const s = figStatOf(label); return !!(s && s.last && (Date.now() - s.last) < hours * 3600000); }
+function figTier(k){ const s = figStatOf(k.label); if(!figDue(k)) return 3; if(s && s.lastOk === false) return 0; if(!s) return 1; return 2; }
+function figPick(n){
+  const L = planDayLog(); const today = new Set(L.figs || []);
+  const w = d => (DOMAINS.find(x => x.key === d) || { weight: 10 }).weight / 100;
+  const pool = KEY_NUMBERS.filter(k => !today.has(k.label) && !figRecentlyDrilled(k.label, 20));
+  const ranked = pool.slice().sort((a, b) => {
+    const ta = figTier(a), tb = figTier(b); if(ta !== tb) return ta - tb;
+    const sa = figStatOf(a.label), sb = figStatOf(b.label);
+    const aa = sa ? (Date.now() - sa.last) : Infinity, ab = sb ? (Date.now() - sb.last) : Infinity;
+    if(aa !== ab) return ab - aa;
+    if(w(a.domain) !== w(b.domain)) return w(b.domain) - w(a.domain);
+    return a.label < b.label ? -1 : a.label > b.label ? 1 : 0;
+  });
+  const picks = []; const perDom = {};
+  ranked.forEach(k => { if(picks.length < n && (perDom[k.domain] || 0) < Math.ceil(n / 2)){ picks.push(k); perDom[k.domain] = (perDom[k.domain] || 0) + 1; } });
+  if(picks.length < n) ranked.forEach(k => { if(picks.length < n && !picks.includes(k)) picks.push(k); });
+  return picks;
+}
+function figWhy(picks, goal){
+  const names = picks.slice(0, 4).map(k => { const t = figTier(k); const why = t === 0 ? 'missed last time' : t === 1 ? 'not drilled yet' : 'due to come back'; return `${k.label} (${why})`; });
+  const more = picks.length > 4 ? `, and ${picks.length - 4} more` : '';
+  return names.length ? `Today's picks: ${names.join('; ')}${more}. Order: missed figures first, then ones never drilled, then ones whose recall interval has run out. Nothing you drilled today or in the last 20 hours is repeated.` : `No figures are due, so this round is the next ${goal} by how long ago each was drilled.`;
+}
 function startFigureDrill(n){
   n = Math.max(3, Math.min(12, n || 6));
-  const w = d => (DOMAINS.find(x => x.key === d) || { weight: 10 }).weight / 100;
-  const scored = KEY_NUMBERS.map(k => { const s = figStatOf(k.label); const age = s ? (Date.now() - s.last) / ONE_DAY_MS : 30; return { k, sc: (s ? 0 : 3) + (s && s.lastOk === false ? 2.5 : 0) + Math.min(3, age / figRest(s || { streak: 0 })) + w(k.domain) * 4 + Math.random() }; }).sort((a, b) => b.sc - a.sc);
-  const picks = []; const perDom = {};
-  scored.forEach(x => { if(picks.length < n && (perDom[x.k.domain] || 0) < Math.ceil(n / 2)){ picks.push(x.k); perDom[x.k.domain] = (perDom[x.k.domain] || 0) + 1; } });
+  const picks = figPick(n);
   if(!picks.length) return false;
   beginSession(picks.map(figBuildQuestion), 'drill', null);
   if(session){ session.figDrill = true; retagSessionPlan(); }
@@ -34646,7 +34672,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000103';
+const BUILD_ID = '2026-10-29.00000104';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
