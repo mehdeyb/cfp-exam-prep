@@ -2435,6 +2435,9 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #tab-study .stat-strip{display:flex;gap:18px;}
   html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:3;column-gap:24px;}
   @media (max-width:900px){ html:is([data-lay="wide"],[data-lay="xwide"]) body.os-one #todayPlanCard .pt-rows{column-count:2;} }
+  /* Tablet portrait: two plan columns, so step titles and progress lines have room instead of truncating. */
+  @media (min-width:600px) and (max-width:1000px) and (orientation:portrait){ html body #todayPlanCard .pt-rows{column-count:2 !important;column-gap:28px !important;} }
+  @media (min-width:600px) and (max-width:1000px) and (orientation:portrait){ html body .pt-head > .pt-stats, html body .pt-stats > .pt-ctx{flex-wrap:wrap !important;overflow:visible !important;} }
   #blueprintCard.bp-t1 .week-recap, #blueprintCard.bp-t1 #edTutor, #blueprintCard.bp-t1 .progress-hint, #blueprintCard.bp-t1 #edPacing{display:none !important;}
   #blueprintCard.bp-t2 .progress-diff-row, #blueprintCard.bp-t2 #progressLabels, #blueprintCard.bp-t2 #progressReadout, #blueprintCard.bp-t2 #edStandingText{display:none !important;}
   #blueprintCard.bp-t3 .bp-focus, #blueprintCard.bp-t3 #diagnosisCard{display:none !important;}
@@ -34643,7 +34646,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000102';
+const BUILD_ID = '2026-10-29.00000103';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
