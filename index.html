@@ -15711,6 +15711,7 @@ function stageTutorButtons(sl){
 }
 function stageTutorSay(i){
   const sl = stageState.cur, b = sl && sl.buttons && sl.buttons[i]; if(!b) return;
+  if(b.run){ try{ b.run(); }catch(e){} return; }
   if(typeof tutorBusy !== 'undefined' && tutorBusy) return;
   try{ sendTutorMessage(b.say || b.label); }catch(e){}
 }
@@ -33092,6 +33093,7 @@ function tutorParseDate(text){
   return { iso, dt, days: Math.round((dt - today) / 86400000) };
 }
 function tutorLocalGuide(text){
+  if(!aiFeaturesAvailable && /\b(browse|topics?|subtopics?|list)\b/i.test(String(text || '')) && !/\b(explain|why|what is|what does)\b/i.test(String(text || ''))){ tutorBrowseTopics(); return true; }
   const kind = tutorGuessIntent(text);
   if(!kind) return false;
   try{
@@ -33805,6 +33807,34 @@ function tutorToolFocus(){
   const least = Object.keys(TREE_SCENARIOS).sort((a, b) => { const x = dtwStats(a), y = dtwStats(b); return (x.clean / (x.total || 1)) - (y.clean / (y.total || 1)); })[0];
   return least ? { key: least, missed: 0 } : null;
 }
+// Topic browser: works without an AI key, from the app's own topics, summaries, questions and flashcards.
+// It shows on the board as slides with buttons, so it is visible in the board layout.
+function tutorShowTopicSlide(title, text, buttons){
+  stageShow({ kind:'topicbrowse', src:'tutor', at: Date.now(), idle:true, title, text, buttons: buttons.filter(Boolean) }, 'tutor');
+}
+function tutorBrowseTopics(){
+  const doms = DOMAINS.slice().sort((a, b) => b.weight - a.weight);
+  tutorShowTopicSlide('Topics', 'Pick a domain, then a topic. Each topic shows what it covers, with a drill and its flashcards.',
+    doms.map(d => ({ label: d.name, run: () => tutorDomainTopics(d.key) })));
+}
+function tutorDomainTopics(key){
+  const dm = DOMAINS.find(d => d.key === key); const subs = (SUBTOPICS[key] || []);
+  tutorShowTopicSlide(dm ? dm.name : key, `${subs.length} topics. Choose one.`,
+    subs.map((name, i) => ({ label: name.length > 46 ? name.slice(0, 44) + '…' : name, run: () => tutorTopic(key, i) }))
+      .concat([{ label: 'All domains', run: () => tutorBrowseTopics() }]));
+}
+function tutorTopic(key, i){
+  const name = (SUBTOPICS[key] || [])[i]; if(!name) return;
+  const sum = String((SUBTOPIC_SUMMARIES[key] || [])[i] || '').trim();
+  const short = sum ? sum.split(/(?<=\.)\s/).slice(0, 3).join(' ') : 'No summary for this topic yet.';
+  const cards = allFlashcards().filter(f => f.sub === name);
+  tutorShowTopicSlide(name, short, [
+    { label: 'Drill this topic', run: () => { try{ startSubtopicDrill(key, i); }catch(e){} } },
+    cards.length ? { label: `Flashcards (${cards.length})`, run: () => { try{ startFlashcardSet(cards, 'learning'); }catch(e){} } } : null,
+    { label: 'Other topics in this domain', run: () => tutorDomainTopics(key) },
+  ]);
+}
+
 function tutorSuggestions(){
   const out = []; const add = (id, label, score, run, needsAi) => { if(needsAi && !aiFeaturesAvailable) return; out.push({ id, label, score, run }); };
   const st = computeStats(), answered = st.totalAnswered || 0, weak = st.weakestMeta, days = getDaysUntilExam();
@@ -34091,7 +34121,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000048';
+const BUILD_ID = '2026-10-28.00000050';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
