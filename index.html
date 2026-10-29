@@ -5016,7 +5016,7 @@
       <div class="tutor-chips" style="margin:10px 0 0;"><button type="button" class="chip" onclick="askTutorAbout('Look at where I am struggling and build me a custom tool or study routine that will most improve my chances of passing. Say what it is for first.')">Ask the tutor to build me a tool</button></div>
     </div>
 
-    <div class="dt-switch" id="dtSwitch" role="tablist" aria-label="Choose a decision tree"><button type="button" class="chip dt-switch-btn" data-dt="trust" onclick="dtSelectTree('trust')">Trust</button><button type="button" class="chip dt-switch-btn" data-dt="entity" onclick="dtSelectTree('entity')">Business entity</button><button type="button" class="chip dt-switch-btn" data-dt="ira" onclick="dtSelectTree('ira')">Traditional IRA</button><button type="button" class="chip dt-switch-btn" data-dt="roth" onclick="dtSelectTree('roth')">Roth IRA</button><button type="button" class="chip dt-switch-btn" data-dt="socialSecurity" onclick="dtSelectTree('socialSecurity')">Social Security</button><button type="button" class="chip dt-switch-btn" data-dt="college" onclick="dtSelectTree('college')">College funding</button></div>
+    <div class="dt-switch" id="dtSwitch" role="tablist" aria-label="Choose a decision tree"><button type="button" class="chip dt-switch-btn" data-dt="trust" onclick="dtSelectTree('trust')">Trust</button><button type="button" class="chip dt-switch-btn" data-dt="entity" onclick="dtSelectTree('entity')">Business entity</button><button type="button" class="chip dt-switch-btn" data-dt="ira" onclick="dtSelectTree('ira')">Traditional IRA</button><button type="button" class="chip dt-switch-btn" data-dt="roth" onclick="dtSelectTree('roth')">Roth IRA</button><button type="button" class="chip dt-switch-btn" data-dt="socialSecurity" onclick="dtSelectTree('socialSecurity')">Social Security</button><button type="button" class="chip dt-switch-btn" data-dt="college" onclick="dtSelectTree('college')">College funding</button><button type="button" class="chip dt-switch-btn" data-dt="invest" onclick="dtSelectTree('invest')">Investment choice</button></div>
     <div class="card dt-card" data-dt="trust">
       <div class="card-head"><h2>Which trust fits?</h2></div>
       <p class="hint">Revocable keeps control and avoids probate; irrevocable moves assets out of the estate and protects them.</p>
@@ -5053,6 +5053,13 @@
       <div id="tool-practice-roth"></div>
     </div>
 
+    <div class="card dt-card" data-dt="invest">
+      <div class="card-head"><h2>Which investment fits this goal?</h2></div>
+      <p class="hint">Start with when the money is needed, then how much risk the client can carry. The answer is a type of investment, not a specific product.</p>
+      <div id="dt-invest"></div>
+      <div id="dt-full-invest" hidden></div>
+      <div id="tool-practice-invest"></div>
+    </div>
     <div class="card dt-card" data-dt="socialSecurity">
       <div class="card-head"><h2>When should Social Security be claimed?</h2></div>
       <p class="hint">Weigh a larger lifetime benefit against needing the income sooner, health and marital status.</p>
@@ -11613,7 +11620,7 @@ function ctValidate(kind, inp){
       if(action === 'flashcards' && ['gaps','learning','due','new'].includes(s.focus)) r.focus = s.focus;
       if(action === 'formula' && typeof FD_NAMES !== 'undefined' && FD_NAMES.includes(s.formula)) r.formula = s.formula;
       if(action === 'calculator') r.mode = s.mode === 'cashflow' ? 'cashflow' : 'tvm';
-      if(action === 'tool'){ if(!['trust','entity','ira','roth','socialSecurity','college','optionsMatrix','qualifiedPlans'].includes(s.tool)) return; r.tool = s.tool; }
+      if(action === 'tool'){ if(!['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'].includes(s.tool)) return; r.tool = s.tool; }
       steps.push(r);
     });
     if(steps.length < 2) return 'Error: a routine needs at least 2 valid steps (actions: ' + Object.keys(CT_ROUTINE_ACTIONS).join(', ') + ').';
@@ -17575,7 +17582,34 @@ const DECISION_TREES = {
       r_fra: { result:true, title:"Claim at full retirement age",
         body:"With no urgent income need, no earnings-test conflict, no dependent survivor to plan around, and no strong longevity edge either way, full retirement age is the balanced middle ground — full benefit, no early-claim penalty, without betting on a longer-than-average life to make delaying worth it." },
     }
-  }
+  },
+  invest: {
+    start: 'i1',
+    nodes: {
+      i1: { question:"Will the client need this money within about three years?",
+        options: [ {label:"Yes", next:'r_cash'}, {label:"No", next:'i2'} ] },
+      r_cash: { result:true, title:"Keep it in cash and short, high-quality bonds",
+        body:"Money needed soon should not ride on stock prices. Money market funds, CDs, Treasury bills and short-term high-quality bonds keep the principal stable. The trade-off is a lower long-run return and some inflation risk." },
+      i2: { question:"Does the client need protection of principal or guaranteed income?",
+        options: [ {label:"Yes", next:'i3'}, {label:"No", next:'i4'} ] },
+      i3: { question:"Is the need income the client cannot outlive?",
+        options: [ {label:"Yes", next:'r_annuity'}, {label:"No", next:'r_bonds'} ] },
+      r_annuity: { result:true, title:"Consider an annuity for guaranteed lifetime income",
+        body:"A single-premium immediate annuity or a deferred income annuity turns part of the savings into income the client cannot outlive. Check surrender charges, fees and riders, and the insurer's financial strength, because the guarantee depends on it." },
+      r_bonds: { result:true, title:"Use high-quality bonds laddered to the need",
+        body:"Treasuries, TIPS or high-grade bonds held to maturity, laddered so that maturities arrive when the cash is needed. Long bonds carry interest-rate risk; the credit risk depends on the issuer." },
+      i4: { question:"Does the client have a horizon of ten years or more and can tolerate large short-term losses?",
+        options: [ {label:"No", next:'r_balanced'}, {label:"Yes", next:'i5'} ] },
+      r_balanced: { result:true, title:"Use a balanced mix weighted toward bonds",
+        body:"A shorter horizon or a limited tolerance for losses calls for a balanced allocation with more bonds and less equity. Rebalancing back to target keeps the risk at the level the client chose." },
+      i5: { question:"Does the client want returns from assets outside public stocks and bonds, and accept limited liquidity and higher costs?",
+        options: [ {label:"Yes", next:'r_alt'}, {label:"No", next:'r_equity'} ] },
+      r_alt: { result:true, title:"Add alternatives only after the core is in place",
+        body:"Private equity, real estate funds and similar assets can diversify a portfolio, but they add illiquidity, higher fees and uncertain valuations. Keep the allocation small and confirm the client can hold it through a downturn." },
+      r_equity: { result:true, title:"Use a diversified, low-cost equity allocation",
+        body:"For a long horizon and a tolerance for volatility, broadly diversified stock funds, often low-cost index funds, capture market returns without single-company risk. Hold the least tax-efficient assets in tax-deferred accounts where possible." }
+    }
+  },
 };
 
 DECISION_TREES.roth = {
@@ -17780,6 +17814,14 @@ const TREE_SCENARIOS = {
       why:["She does not need the income now.","She is retired, so no earnings test.","She is single, so there is no survivor to plan for.","Strong longevity makes the larger delayed benefit worth waiting for."] },
     { to:'r_fra', facts:"Carl, 66, is single and retired. He does not need the income right now, has no spouse, and has average health with no family history of unusual longevity.",
       why:["He does not need the income now.","He is retired, so no earnings test.","He has no spouse to protect.","No longevity edge either way makes full retirement age the balanced choice."] },
+  ],
+  invest: [
+    { to:'r_cash', facts:"Priya, 41, is buying a home in about two years and has $80,000 saved for the down payment. She is nervous about losing any of it.", why:["The money is needed within three years, so market swings could leave her short when she needs it.","Cash-like holdings keep the principal stable for a near-term goal."] },
+    { to:'r_annuity', facts:"Harold, 67, wants a steady income he cannot outlive. He has $600,000 in savings and his Social Security covers only part of his expenses.", why:["He needs protection of principal and income for life, which a guaranteed lifetime income product addresses.","Surrender charges and the insurer's strength matter, so the choice needs due diligence."] },
+    { to:'r_bonds', facts:"Ellen, 58, will need $150,000 for her daughter's tuition in five years. She wants the amount protected, not grown aggressively.", why:["She needs the principal protected for a known date, so a ladder of high-quality bonds matched to the tuition payments fits.","Laddering lets maturities arrive when the cash is due."] },
+    { to:'r_balanced', facts:"Tom, 62, plans to retire in six years. He lost sleep during the last downturn and wants a portfolio that limits large losses.", why:["His horizon is shorter and his tolerance for losses is limited, so an allocation weighted toward bonds fits.","A balanced mix still grows the savings while reducing the size of a drop."] },
+    { to:'r_alt', facts:"Ana, 45, has a $2M portfolio of stocks and bonds, a 20-year horizon and a high tolerance for risk. She wants to diversify beyond public markets and accepts that the money may be tied up.", why:["Her core is already in stocks and bonds, and she is looking for diversification beyond them.","She accepts illiquidity and higher fees, so a limited alternatives allocation is appropriate."] },
+    { to:'r_equity', facts:"Marcus, 33, is saving for retirement in 30 years. He can ride out large swings and wants growth with low costs.", why:["A long horizon and a tolerance for volatility favor equities for growth.","Broad, low-cost funds give market returns without single-company risk."] },
   ],
 };
 const dtwState = {}, dtModeMap = {};
@@ -18077,6 +18119,7 @@ function initToolsTab(){
   dtInit('socialSecurity');
   dtInit('roth');
   dtInit('college');
+  dtInit('invest');
   document.getElementById('dt-full-trust').innerHTML = sgTrustFlowchartSvg();
   document.getElementById('dt-full-entity').innerHTML = sgEntityFlowchartSvg();
   document.getElementById('dt-full-ira').innerHTML = sgIraFlowchartSvg();
@@ -18197,7 +18240,8 @@ const TREE_META = {
   ira: { name:'Traditional IRA deductibility', domain:'retirement' },
   roth: { name:'Roth IRA: direct, backdoor or none?', domain:'retirement', distinct:true },
   socialSecurity: { name:'When to claim Social Security', domain:'retirement' },
-  college: { name:'College funding: which vehicle?', domain:'general' }
+  college: { name:'College funding: which vehicle?', domain:'general' },
+  invest: { name:'Which investment fits this goal?', domain:'invest' }
 };
 function toolForQuestion(q){
   for(const key of Object.keys(TOOL_PRACTICE_SETS)){ if((TOOL_PRACTICE_SETS[key] || []).includes(q.id)) return key; }
@@ -30088,7 +30132,8 @@ const RESULT_TOOL_MATCH = [
   { key:'ira', name:'Traditional IRA deductibility', re:/\bdeduct\w*[^.?]{0,80}\bIRA\b|\bIRA\b[^.?]{0,80}\bdeduct\w*|active participant/i },
   { key:'socialSecurity', name:'When to claim Social Security', re:/social security[^.?]{0,120}\b(claim|delay|full retirement|FRA|spousal|early)\w*|\b(claim|delay)\w*[^.?]{0,80}social security/i },
   { key:'optionsMatrix', name:'Options matrix', re:/\b(long|short) (call|put)s?\b|\b(call|put) options?\b|covered call|protective put|\boption (buyer|seller|writer|premium|holder)|\bwrit(e|ing) (a )?(call|put)/i },
-  { key:'qualifiedPlans', name:'Qualified plan family tree', re:/\b(401\(k\)|403\(b\)|SIMPLE IRA|SEP[ -]IRA|profit[- ]sharing|defined benefit|cash balance|money purchase|ESOP|qualified plan)\b/i }
+  { key:'qualifiedPlans', name:'Qualified plan family tree', re:/\b(401\(k\)|403\(b\)|SIMPLE IRA|SEP[ -]IRA|profit[- ]sharing|defined benefit|cash balance|money purchase|ESOP|qualified plan)\b/i },
+  { key:'invest', name:'Which investment fits this goal?', re:/\bwhich (investment|vehicle|asset)\b[^.?]{0,60}\b(fits|suits|best|right)\b|\b(cash|bonds?|annuit\w*|alternatives?)\b[^.?]{0,40}\b(or|versus|vs\.?)\b[^.?]{0,40}\b(stocks?|equit\w*)\b/i },
 ];
 function renderResultTools(){
   const el = document.getElementById('resultTools');
@@ -32536,6 +32581,7 @@ const TUTOR_POINT_TARGETS = {
   tool_roth:      { tab:'tools', sel:'.card:has(#dt-full-roth)',           label:'Roth IRA: direct, backdoor or none?' },
   tool_ira:       { tab:'tools', sel:'.card:has(#dt-full-ira)',            label:'Is a traditional IRA contribution deductible?' },
   tool_college: { tab:'tools', sel:'.card:has(#dt-full-college)', label:'Which college funding choice fits?' },
+  tool_invest: { tab:'tools', sel:'.card:has(#dt-full-invest)', label:'Which investment fits this goal?' },
   tool_socialSecurity: { tab:'tools', sel:'.card:has(#dt-full-socialSecurity)', label:'When should Social Security be claimed?' },
   tool_optionsMatrix:  { tab:'tools', sel:'.card:has(#dt-full-optionsMatrix)',  label:'Options matrix' },
   tool_qualifiedPlans: { tab:'tools', sel:'.card:has(#dt-full-qualifiedPlans)', label:'Qualified plan family tree' },
@@ -32738,11 +32784,11 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'open_decision_tool',
-    description: "Open one of the app's eight interactive decision tools (Decision tools, under Study) and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
+    description: "Open one of the app's nine interactive decision tools (Decision tools, under Study) and scroll directly to it, rather than just switching to the tab and leaving the student to find it themselves. Use this whenever a student's question matches what one of these actually decides: 'trust' for which trust fits a given goal, 'entity' for which business entity fits, 'ira' for whether a traditional IRA contribution is deductible, 'socialSecurity' for when to claim Social Security, 'optionsMatrix' for comparing the four basic options positions, 'qualifiedPlans' for how specific retirement plan names relate to each other. Walking through the tool themselves is more effective than reading an explanation, so prefer this over explaining it in text alone when their question matches one of these directly.",
     input_schema: {
       type: 'object',
       properties: {
-        tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
+        tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'], description: 'Which decision tool to open.' },
         isolate: { type: 'boolean', description: 'True to pull this one tool into its own focus view with everything else hidden (works for all seven, with or without practice). Use it when you are walking the student through a step of today\'s plan with this tool, so nothing else competes for attention. They leave with Done or Back to chat, and get a note pointing to the next step.' },
         note: { type: 'string', description: 'With isolate: one short line (under 70 characters) shown at the top of the focus view saying what to do here, for example "Pick the trust that fits each client".' },
         scenarios: { type: 'integer', minimum: 1, maximum: 6, description: 'With practice true on trust, entity, ira, roth or socialSecurity: opens a focused run of exactly this many client scenarios, picked from the weakest and newest first, and prompts the student to move on when they are done. Use 2 to 4. Leave it out to show one scenario in the chat.' },
@@ -32866,7 +32912,7 @@ const TUTOR_TOOLS = [
       steps: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' } }, required: ['title'] }, description: 'Step-through: 3 to 12 steps.' },
       start: { type: 'string', description: 'Tree: id of the first node.' },
       nodes: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, question: { type: 'string' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, next: { type: 'string' } }, required: ['label','next'] } }, result: { type: 'boolean' }, title: { type: 'string' }, body: { type: 'string' } }, required: ['id'] } },
-      routine: { type: 'array', items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, label: { type: 'string' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, count: { type: 'integer' }, focus: { type: 'string', enum: ['gaps','learning','due','new'] }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string', enum: ['tvm','cashflow'] }, tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','optionsMatrix','qualifiedPlans'] } }, required: ['action'] } },
+      routine: { type: 'array', items: { type: 'object', properties: { action: { type: 'string', enum: ['quiz','flashcards','formula','calculator','tool'] }, label: { type: 'string' }, domain: { type: 'string', enum: DOMAINS.map(d => d.key) }, count: { type: 'integer' }, focus: { type: 'string', enum: ['gaps','learning','due','new'] }, formula: { type: 'string', enum: FD_NAMES }, mode: { type: 'string', enum: ['tvm','cashflow'] }, tool: { type: 'string', enum: ['trust','entity','ira','roth','socialSecurity','college','invest','optionsMatrix','qualifiedPlans'] } }, required: ['action'] } },
     }, required: ['kind','title','why'] },
   },
   {
@@ -33170,6 +33216,7 @@ async function executeTutorTool(toolName, toolInput){
         roth: { anchorId: 'dt-roth', label: 'Roth IRA: direct, backdoor or none?' },
         ira: { anchorId: 'dt-ira', label: 'Is a traditional IRA contribution deductible?' },
         socialSecurity: { anchorId: 'dt-socialSecurity', label: 'When should Social Security be claimed?' },
+        invest: { anchorId: 'dt-invest', label: 'Which investment fits this goal?' },
         college: { anchorId: 'dt-college', label: 'Which college funding choice fits?' },
         optionsMatrix: { anchorId: 'tc-optionsMatrix-host', label: 'Options matrix' },
         qualifiedPlans: { anchorId: 'tc-qualifiedPlans-host', label: 'Qualified plan family tree' },
@@ -34465,7 +34512,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000088';
+const BUILD_ID = '2026-10-29.00000089';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
