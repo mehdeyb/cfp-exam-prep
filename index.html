@@ -3843,11 +3843,12 @@
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{grid-column:1;grid-row:2 / 5;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{grid-column:1 / -1;grid-row:5;order:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]),
-    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]){grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;max-width:min(1100px,calc(100vw - 80px));}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]){grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto;max-width:min(1100px,calc(100vw - 80px));}
     body.flashcard-fullscreen .fc-fullscreen-inner > #fcRecap{grid-column:2;grid-row:2;margin:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-row{grid-column:2;grid-row:3;flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-self:center;gap:10px;margin-top:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-row .btn.ghost{width:100%;white-space:normal;min-height:46px;font-size:14px;}
-    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-box{grid-column:2;grid-row:4;margin-top:4px;font-size:15px;line-height:1.55;align-self:start;}
+    /* The worked example takes the room beside the card and shows all of its steps; it scrolls only if the screen is genuinely shorter than the text. */
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-mnemonic-box{grid-column:2;grid-row:4;margin-top:4px;font-size:15px;line-height:1.55;align-self:stretch;min-height:0;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
     /* The card and the two notes inside it read in one column here, because the card is narrower than a full-width one. */
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card,
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]) > .fc-card{display:flex;padding:28px 30px;min-height:clamp(300px,52vh,520px);}
@@ -34173,7 +34174,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000058';
+const BUILD_ID = '2026-10-28.00000059';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
