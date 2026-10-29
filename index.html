@@ -4417,6 +4417,18 @@
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-ring-wrap{grid-column:1 !important;grid-row:1 !important;}
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-meta{grid-column:1 !important;grid-row:2 !important;}
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-band{grid-column:2 !important;grid-row:1 / span 2 !important;}
+  /* Formula drills on a landscape iPad: use the width. The problem sits on the left, the answer and working on the right, with equal space either side. */
+  @media (min-width:900px) and (orientation:landscape){
+    #fdHost .dp-inner{max-width:1080px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);column-gap:40px;row-gap:0;align-items:start;}
+    #fdHost .dp-inner > .dp-header,#fdHost .dp-inner > p.hint:first-of-type{grid-column:1 / -1;}
+    #fdHost .dp-inner > label,#fdHost .dp-inner > .fd-select,#fdHost .dp-inner > .fd-tag,#fdHost .dp-inner > .fd-scenario,#fdHost .dp-inner > .fd-support{grid-column:1;}
+    #fdHost .dp-inner > .fd-answer-row,#fdHost .dp-inner > .fd-result,#fdHost .dp-inner > .fd-status{grid-column:2;}
+    #fdHost .dp-inner > .fd-answer-row{grid-row:6;}
+    #fdHost .dp-inner > .fd-result{grid-row:7;}
+    #fdHost .dp-inner > .fd-status{grid-row:8;}
+    #fdHost .dp-inner > .pp{grid-column:2;}
+    #fdHost .fd-answer-row{margin-top:14px;}
+  }
 </style>
 </head>
 <body>
@@ -34231,7 +34243,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000075';
+const BUILD_ID = '2026-10-28.00000076';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
