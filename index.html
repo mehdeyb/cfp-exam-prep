@@ -630,7 +630,10 @@
     animation:quizIn .32s var(--ease);
   }
   .fd-select{width:100%;margin:6px 0 12px;padding:10px 12px;border-radius:10px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);font:inherit;font-size:14px;}
-  .fd-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin:14px 0 6px;}
+  .fd-tag{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 8px;}
+  .fd-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:4px 9px;border-radius:999px;border:1px solid var(--hair);background:var(--surface2,transparent);line-height:1.3;}
+  .fd-chip-name{color:var(--gold);border-color:var(--gold);}
+  .fd-chip-lvl{color:var(--paper);text-transform:none;letter-spacing:0;font-family:'IBM Plex Sans',sans-serif;font-size:12px;}
   .fd-support{margin:8px 0 0;padding:9px 12px;border-left:2px solid var(--gold);background:var(--gold-soft);border-radius:0 8px 8px 0;font-size:13px;line-height:1.5;color:var(--paper);}
   .fd-support b{display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:2px;font-weight:600;}
   .fd-peek{font:inherit;font-size:13px;font-weight:600;color:var(--gold);background:none;border:0;padding:4px 0;cursor:pointer;min-height:32px;}
@@ -24224,7 +24227,8 @@ function fdNext(){
   fdRenderSupport();
   const f = FORMULAS.find(x => x.name === fd.name);
   const dm = f && DOMAINS.find(d => d.key === f.domain);
-  document.getElementById('fdTag').textContent = fdPosText() + ' · ' + fd.name + (dm ? ' · ' + dm.name : '') + ' · Level ' + fd.lvl + ' ' + FD_LEVEL_NAMES[fd.lvl];
+  // Four short chips that wrap cleanly, instead of one long line.
+  { const E = escapeHtml; document.getElementById('fdTag').innerHTML = '<span class="fd-chip">' + E(fdPosText()) + '</span><span class="fd-chip fd-chip-name">' + E(fd.name) + '</span>' + (dm ? '<span class="fd-chip">' + E(dm.name) + '</span>' : '') + '<span class="fd-chip fd-chip-lvl">Level ' + fd.lvl + ' · ' + E(FD_LEVEL_NAMES[fd.lvl]) + '</span>'; }
   document.getElementById('fdScenario').textContent = fd.prob.scenario;
   const inp = document.getElementById('fdInput');
   inp.value = ''; inp.disabled = false;
@@ -34227,7 +34231,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000074';
+const BUILD_ID = '2026-10-28.00000075';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
