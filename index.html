@@ -3191,9 +3191,10 @@
       /* The left column fills the screen height. Header, modes, how-to, problem and level take their natural height;
          the timeline row takes all the spare height, so the page has no empty band at the bottom. */
       min-height:calc((var(--vh-real, 100vh) - 56px) / var(--tvm-z, 1));
+      flex:0 0 auto;align-self:flex-start;height:auto;
       row-gap:10px;
       /* Rows in reading order: header, modes, plan strip, how-to, problem, level, timeline (flexible), chips, buttons. */
-      grid-template-rows:auto auto auto auto auto auto minmax(0,1fr) auto auto;
+      grid-template-rows:auto auto auto auto auto auto minmax(auto,1fr) auto auto auto;
     }
     #tvmHost .dp-inner > *{grid-column:1;}
     #tvmHost .dp-inner > *:not(.tvm-device):not(.tvm-actions){margin-top:0 !important;margin-bottom:0 !important;}
@@ -3207,7 +3208,7 @@
     #tvmHost .tvm-howto > *:not(summary){display:block !important;font-size:13px;line-height:1.4;margin:0 !important;}
     /* The calculator is a little smaller so the whole walkthrough is shorter; its two buttons move under the problem on the left. */
     /* The calculator fills the right column. contain:size keeps its height out of the left column's row sizing, so the timeline row gets the spare height; the keypad rows then share the calculator's height. */
-    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / -1;margin-bottom:0;position:sticky;top:0;align-self:stretch;contain:size;display:flex;flex-direction:column;min-height:0;}
+    #tvmHost .dp-inner > .tvm-device{grid-column:2;grid-row:1 / -1;margin-bottom:0;position:sticky;top:0;align-self:start;min-height:calc((var(--vh-real, 100vh) - 56px) / var(--tvm-z, 1));display:flex;flex-direction:column;zoom:1;}
     #tvmHost .tvm-device > .tvm-keypad{flex:1 1 auto;min-height:0;grid-auto-rows:minmax(0,1fr);margin-bottom:0;}
     #tvmHost .dp-inner > .tvm-actions{grid-column:1;grid-row:auto;align-self:start;margin:8px 0 0;}
     #tvmHost .dp-header{margin-bottom:0;}
@@ -3215,7 +3216,7 @@
     #tvmHost .tvm-howto, #tvmHost .tvm-status, #tvmHost .tvm-scenario, #tvmHost .tvm-level-badge{margin-top:0 !important;margin-bottom:4px !important;}
     #tvmHost .tvm-timeline-wrap{grid-row:auto;display:flex;flex-direction:column;min-height:0;margin:0 !important;}
     #tvmHost .tvm-timeline-label{display:none;}
-    #tvmHost #tvmTimeline{flex:1 1 auto;min-height:0;}
+    #tvmHost #tvmTimeline{flex:1 1 auto;min-height:170px;}
     #tvmHost .tvm-feedback{font-size:15px;line-height:1.4;min-height:22px;margin-bottom:10px;color:rgba(255,255,255,0.9);}
     #tvmHost #tvmTimeline svg{height:100%;width:100%;max-height:none;}
     /* Reading order on the left: the question first, then its timeline, then the progress chips and the buttons. The how-to text is a single line. */
@@ -3226,6 +3227,8 @@
     #tvmHost .dp-inner > .tvm-timeline-wrap{order:5;}
     #tvmHost .dp-inner > .tvm-status{order:6;}
     #tvmHost .dp-inner > .tvm-actions{order:7;}
+    /* The worked solution opens below the buttons. The calculator stays at screen height beside it, so the left column scrolls to the answer. */
+    #tvmHost .dp-inner > .tvm-solution{order:8;grid-column:1;margin:8px 0 0 !important;}
   }
   /* Scale the whole walkthrough a little on shorter iPad landscape screens, so the problem, timeline, calculator and keys all fit. */
   @media (orientation:landscape) and (min-width:900px) and (min-height:521px) and (max-height:840px){ body.tvm-active #tvmHost .dp-inner{zoom:.92;--tvm-z:.92;} }
@@ -25790,12 +25793,12 @@ function tvmCalculateAndShow(){
   const solEl = document.getElementById('tvmSolution');
   solEl.innerHTML = solutionHtml;
   solEl.style.display = 'block';
-  // Bring the worked solution into view so the answer and its explanation are never hidden below the keypad.
+  // Bring the worked solution into view so the answer and its explanation are never hidden below the keypad or the buttons, on every screen size.
   try{
     const host = document.getElementById('tvmHost');
-    if(host && document.body.classList.contains('tvm-active') && window.matchMedia && matchMedia('(max-width:640px) and (orientation:portrait)').matches){
+    if(host && document.body.classList.contains('tvm-active')){
       const top = solEl.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
-      host.scrollTo({ top: Math.max(0, top - Math.round(window.innerHeight*0.42)), behavior: 'smooth' });
+      host.scrollTo({ top: Math.max(0, top + solEl.getBoundingClientRect().height - window.innerHeight + 24), behavior:'smooth' });
     }
   }catch(e){}
   const feedback = document.getElementById('tvmFeedback');
@@ -26132,9 +26135,9 @@ function cfSolveAndShow(){
   solEl.style.display = 'block';
   try{
     const host = document.getElementById('tvmHost');
-    if(host && document.body.classList.contains('tvm-active') && window.matchMedia && matchMedia('(max-width:640px) and (orientation:portrait)').matches){
+    if(host && document.body.classList.contains('tvm-active')){
       const top = solEl.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
-      host.scrollTo({ top: Math.max(0, top - Math.round(window.innerHeight*0.42)), behavior:'smooth' });
+      host.scrollTo({ top: Math.max(0, top + solEl.getBoundingClientRect().height - window.innerHeight + 24), behavior: 'smooth' });
     }
   }catch(e){}
   const fb = document.getElementById('tvmFeedback'); fb.textContent = 'Solved. The worked solution is below.'; fb.className = 'tvm-feedback';
@@ -34820,7 +34823,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.0000011C';
+const BUILD_ID = '2026-10-29.0000011D';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
