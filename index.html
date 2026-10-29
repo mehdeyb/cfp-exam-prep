@@ -4370,6 +4370,10 @@
     .bp-value-pace{margin:2px 0 0;}
     .bp-value-trend{margin:2px 0 0;}
   }
+  /* Short landscape: the progress panel scrolls inside itself so its last lines are reachable (it was clipped with no way to reach them). */
+  @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
+    html body.os-one #tab-study.active #studyHub[data-view="progress"] > #blueprintCard{overflow-y:auto !important;overscroll-behavior:contain;touch-action:pan-y !important;-webkit-overflow-scrolling:touch;}
+  }
 </style>
 </head>
 <body>
@@ -33775,7 +33779,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000040';
+const BUILD_ID = '2026-10-28.00000041';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
