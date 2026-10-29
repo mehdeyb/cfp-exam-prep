@@ -2475,6 +2475,36 @@
   body.os-one #studyHub[data-view="progress"] #progressScrub{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;}
   body.os-one #studyHub[data-view="progress"] .progress-plot{flex:1 1 auto;height:auto !important;min-height:96px;}
   body.os-one #studyHub[data-view="progress"] .progress-svg{height:100% !important;}
+  /* The score's explanation folds away under its heading; the detail blocks sit under the domain list. */
+  .rb-how{margin:0;}
+  .rb-how > summary{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;list-style:none;padding:2px 0;}
+  .rb-how > summary::-webkit-details-marker{display:none;}
+  .rb-how > summary::after{content:' +';}
+  .rb-how[open] > summary::after{content:' \2212';}
+  .rb-how > p{margin:6px 0 0;}
+  .rb-how > .rb-foot-note{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--hair);}
+  #readinessSide:empty{display:none;}
+  #readinessSide{display:flex;flex-direction:column;gap:10px;}
+  /* Your progress on iPad landscape: the domain list and the detail blocks share the left column, and the headline and domain rows
+     share the right, so the whole page fits without scrolling. Text stays whole; only the spacing and the width split change. */
+  @media (min-width:900px) and (orientation:landscape){
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-cols{align-items:stretch;grid-template-columns:minmax(0,0.8fr) minmax(0,1.2fr) !important;column-gap:32px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colL{display:flex;flex-direction:column;gap:8px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colR{gap:8px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-value{margin:0;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{margin:0;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colL > .bp-legend{margin-top:0;row-gap:2px;}
+    body.os-one #studyHub[data-view="progress"] .bp-chip{padding:2px 10px;line-height:1.2;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown{margin:0;padding:12px 16px;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-head{margin:0;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:14px;align-content:start;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-name{font-size:12px;line-height:1.25;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-row{gap:8px;padding:5px 8px;min-height:0;}
+    body.os-one #studyHub[data-view="progress"] #readinessBreakdown .rb-foot-note{font-size:11.5px;color:var(--muted);line-height:1.5;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide{gap:4px;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{font-size:12px;line-height:1.45;padding:6px 10px;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est span{font-size:12px;}
+  }
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
   .pt-step.next .pt-go{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
@@ -4537,6 +4567,7 @@
       <div class="bp-plan" id="bpPlan" style="display:none !important;" hidden></div>
       <div class="bp-legend" id="bpLegend"></div>
       <div class="bp-next" id="bpNext"></div>
+      <div class="rb-side" id="readinessSide"></div>
       </div>
       <div class="bp-colR">
       <div class="bp-value" id="bpValue"></div>
@@ -10600,18 +10631,21 @@ function renderReadinessExtras(stats){
     if(stats.calibration.penalty >= 0.5) lines.push(`Overconfidence is costing ${stats.calibration.penalty.toFixed(1)} (see below).`);
     if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
   }catch(e){}
-  panel.innerHTML = `
-    <div class="rb-head">
-      <h3>Where your ${stats.readiness} comes from</h3>
-      <p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p>
-    </div>
+  const side = document.getElementById('readinessSide');
+  if(side) side.innerHTML = `
     ${moveBlock}
     ${estimateBlock}
     ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
+`;
+  panel.innerHTML = `
+    <div class="rb-head">
+      <h3>Where your ${stats.readiness} comes from</h3>
+      <details class="rb-how"><summary>How this score is built</summary><p>Each domain can contribute up to its exam weight. The score is how far above guessing you are likely to score, built from how you did the first time you met questions (balanced by how hard they were compared with what you haven't tried), how well they have stuck in review (and how long since you last saw them), your flashcards and formula drills, and your recent timed mock exams (newer ones count more). Little data pulls a domain toward guessing. Sorted by what's holding you back most.</p><p class="rb-foot-note">An estimate of readiness, not a pass prediction: nobody outside the exam knows where the cut score will fall. It moves whenever you answer, and it fades on its own if you stop reviewing, because forgotten material counts for less. Tap any row to drill that domain.</p></details>
+    </div>
     <div class="rb-rows">${rows}</div>
     ${penaltyRow}
-    <div class="rb-foot">An estimate of readiness, not a pass prediction: nobody outside the exam knows where the cut score will fall. It moves whenever you answer, and it fades on its own if you stop reviewing, because forgotten material counts for less. Tap any row to drill that domain.</div>`;
+    `;
 }
 
 // ---- Next best step ----
@@ -34249,7 +34283,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000077';
+const BUILD_ID = '2026-10-29.00000078';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
