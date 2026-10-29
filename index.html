@@ -24067,10 +24067,16 @@ function fdAccuracy(name){ const s = fdStats(name); return s.attempts ? s.correc
 // Level 1 shows the formula and uses a plain setup. Level 2 hides it behind a peek and wraps the problem in a client story with a
 // number that does not belong. Level 3 hides the formula and adds a what-if question about the idea, so you cannot get by on the wording.
 const FD_LEVEL_NAMES = ['', 'Foundation', 'Application', 'Exam level'];
+// Across all formulas: how often this student is getting drill problems right. A strong run starts a new formula one level up.
+function fdGlobalAcc(){
+  let a = 0, c = 0; FD_NAMES.forEach(n => { const st = fdStats(n); a += st.attempts || 0; c += st.correct || 0; });
+  return a >= 6 ? c / a : null;
+}
 function fdLevelOf(name){
   const s = fdStats(name);
   if(s.lvl >= 1 && s.lvl <= 3) return s.lvl;
   const f = FORMULAS.find(x => x.name === name);
+  if(f && f.formula && !s.attempts){ const g = fdGlobalAcc(); return g !== null && g >= 0.8 ? 2 : 1; }
   if(!f || !f.formula || !s.attempts) return 1;
   const stg = domainStageOf(f.domain), acc = s.correct / s.attempts;
   if(s.attempts >= (stg === 1 ? 7 : 5) && acc >= 0.75 && (s.streak || 0) >= 3) return 3; // an old save lands where its record says it belongs
@@ -34243,7 +34249,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000076';
+const BUILD_ID = '2026-10-28.00000077';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
