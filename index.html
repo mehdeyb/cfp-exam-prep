@@ -1176,6 +1176,8 @@
      the diagnosis on this page, so they step aside here; Today keeps them. */
   #tab-study:has(#studyHub[data-view="progress"]) #scoreRow .stat-strip{display:none !important;}
   .bp-value{margin:0 0 14px;}
+  .bp-value-cols{display:block;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #bpValue .bp-value-cols{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:24px;align-items:start;}
   .bp-value-head{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:8px;}
   .bp-value-list{list-style:none;margin:0;padding:0;}
   .bp-value-row{padding:6px 0;border-top:1px solid var(--hair);}
@@ -2814,6 +2816,31 @@
   /* Domain breakdown (read-only): topic states and answers for one domain, with a way back to all domains. It replaces the domain list in the "By domain" view. */
   #bpDetail[hidden]{display:none !important;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv] #bpLegend[hidden]{display:none !important;}
+  /* Domain view on iPad landscape: the estimate and the topic exposure sit side by side so the view fits without scrolling. */
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start;}
+  /* Shorter iPad landscape screens (768 high): tighter spacing so both views fit without scrolling. Content is unchanged. */
+  @media (min-width:900px) and (orientation:landscape) and (max-height:820px){
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-pv{min-height:0;margin:0 0 6px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-pv button{min-height:24px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-colL{gap:3px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{margin:6px 0 0;padding-top:6px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard{padding-bottom:4px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide .rb-est{padding:4px 10px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard #diagnosisCard{margin-top:2px !important;padding-top:2px !important;padding-bottom:2px !important;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown .rb-row{padding:2px 8px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown .rb-head{margin-bottom:2px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-value-row{padding:3px 0;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-value-act{margin-top:1px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{gap:5px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip{padding:1px 10px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip-meta-row{margin-top:0;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-snap-cell{padding:5px 8px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] .bp-value{margin:0;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="score"] #readinessBreakdown{padding:8px 12px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-snap{gap:6px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #bpLegend{row-gap:2px;}
+    body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-snap-cell{line-height:1.25;}
+  }
   .bp-detail{min-width:0;}
   .dd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
   .dd-back{background:none;border:none;color:var(--gold);font:inherit;font-size:13px;font-weight:600;padding:4px 0;cursor:pointer;}
@@ -6050,6 +6077,18 @@ const FORMULAS = [
   {name:"Coinsurance Recovery", domain:"risk", formula:"Recovery = (Insurance carried ÷ Insurance required) × Loss − Deductible", note:"A property policy with an 80% coinsurance clause pays proportionally less when the owner carries less than required. Payment never exceeds the limit."},
   {name:"Liquidity (Emergency Fund) Ratio", domain:"general", formula:"Liquid assets ÷ Monthly non-discretionary cash outflows", note:"Months of essential expenses covered by cash and equivalents. A common guideline is three to six months."},
   {name:"Debt Ratio", domain:"general", formula:"Total liabilities ÷ Total assets", note:"Share of assets financed by debt. Lower is stronger; a ratio above 50% means liabilities exceed half of assets."},
+  {name:"Expected Loss", domain:"risk", formula:"Expected loss = Probability of loss × Average loss", note:"The test for whether to insure or keep a risk. Insurance is worth buying for losses that are rare but severe, where a premium is far cheaper than the loss the client could not absorb; small, predictable losses are usually better retained."},
+  {name:"Insurer Pays After Deductible and Coinsurance", domain:"risk", formula:"Insurer pays = (Covered loss − Deductible) × (1 − Coinsurance %)", note:"With 20% coinsurance the insurer pays 80% of the loss above the deductible. The insured keeps the other 20%, until the out-of-pocket maximum is reached."},
+  {name:"Your Out-of-Pocket Cost (Health)", domain:"risk", formula:"Your cost = Deductible + Coinsurance % × (Covered loss − Deductible), capped at the out-of-pocket maximum", note:"The most the insured pays in a plan year for covered care. Above the cap the insurer pays the rest of covered costs."},
+  {name:"Life Insurance Needs (Needs Approach)", domain:"risk", formula:"Need = Income to replace + Debts + Final expenses + Education − Existing coverage and liquid assets", note:"Often remembered as DIME: Debts, Income, Mortgage, Education, plus final expenses. Subtract what the family already has, so the policy fills only the gap."},
+  {name:"Disability Income Gap", domain:"risk", formula:"Gap = Monthly income needed − (Disability benefit + Other income)", note:"What the client still lacks if they become disabled. Benefits are usually a percentage of earned income, so the gap is often larger than it first looks."},
+  {name:"Insurer Loss Ratio", domain:"risk", formula:"Loss ratio = Losses paid ÷ Premiums earned", note:"How much of the premium the insurer pays out in claims. A lower ratio means more of each premium is kept for expenses and profit; compare it across companies when choosing a carrier."},
+  {name:"Gross Estate", domain:"estate", formula:"Gross estate = Probate and trust assets owned at death + Life insurance owned by the decedent + Share of jointly held property", note:"Everything the decedent owned or controlled at death, at fair market value. Life insurance counts if the decedent owned the policy, even if someone else is the beneficiary."},
+  {name:"Taxable Estate", domain:"estate", formula:"Taxable estate = Gross estate − Debts and expenses − Marital deduction − Charitable deduction", note:"The amount the estate tax applies to, before the exclusion. Marital and charitable transfers reduce it dollar for dollar."},
+  {name:"Estate Tax Above the Exclusion", domain:"estate", formula:"Estate tax = Tax on (Taxable estate) − Unified credit", note:"Only value above the basic exclusion is taxed. The unified credit is the tax equivalent of the exclusion, so check the exclusion in force for the year of death."},
+  {name:"Taxable Gift After Annual Exclusion", domain:"estate", formula:"Taxable gift = Gift to each recipient − Annual exclusion (per recipient, per year)", note:"Gifts within the annual exclusion need no gift tax return. Larger gifts use part of the lifetime exclusion instead of being taxed immediately."},
+  {name:"Estate Liquidity Need", domain:"estate", formula:"Cash needed = Estate tax + Debts + Final expenses + Administration costs − Liquid assets", note:"Estates often hold illiquid assets such as a home or a business. This is the cash the executor must find without a forced sale; life insurance held in an ILIT is a common source."},
+  {name:"Basis at Death (Step-Up)", domain:"estate", formula:"Heir's basis = Fair market value on the date of death", note:"Inherited assets generally take a basis equal to value at death, so the built-in gain that accrued during the owner's life is not taxed to the heir."},
 ];
 
 const FLASHCARDS = [
@@ -10006,7 +10045,8 @@ function renderProgressValue(){
         }
       }catch(e){}
       let since = ''; try{ const la = DATA.lastAdjust; const dl = learnerProfileText().match(/difficulty: ([^.;]+)/); const lines = (la && la.lines ? la.lines.slice() : []); if(dl && dl[1] && !/not enough/.test(dl[1])) lines.push(dl[1].replace(/^recent accuracy is /, 'accuracy is ')); if(lines.length) since = `<p class="bp-since"><b>Since your last session:</b> ${escapeHtml(lines.join(' · '))}</p>`; }catch(e){}
-      html = `<div class="bp-value-head">Where the points are</div>${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}${trend}${since}${progressNumbersHtml()}${studyTimeHtml()}${pace}`;
+      // Two columns: what to fix on the left, how the work is going on the right. Stacked on narrow screens.
+      html = `<div class="bp-value-head">Where the points are</div><div class="bp-value-cols"><div class="bp-value-c1">${list ? `<ul class="bp-value-list">${list}</ul>` : '<p class="bp-value-empty">No topic is holding you back right now.</p>'}</div><div class="bp-value-c2">${trend}${since}${progressNumbersHtml()}${studyTimeHtml()}${pace}</div></div>`;
     }
   }catch(e){ html = ''; }
   el.innerHTML = html;
@@ -34425,7 +34465,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000087';
+const BUILD_ID = '2026-10-29.00000088';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
