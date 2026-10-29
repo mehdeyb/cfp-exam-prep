@@ -18965,6 +18965,21 @@ function fcAdvancePastRepeats(){
   }
 }
 
+// The deck has run out. Write new cards for the domains that are thinnest (when AI is connected), then build a fresh queue.
+async function fcRunOutRefill(){
+  let added = 0;
+  try{
+    if(aiFeaturesAvailable && !isGenerating && !genBackoffActive() && DATA.generatedFlashcards.length < FLASHCARD_CAP){
+      const before = DATA.generatedFlashcards.length;
+      setCoach('You have been through the deck. Writing new cards for your thinnest areas, one moment.', true);
+      await generateForDomains(flashcardLowestPoolDomains(2), {silent:true});
+      added = DATA.generatedFlashcards.length - before;
+    }
+  }catch(e){}
+  if(added > 0) setCoach(`Added ${added} new flashcard${added===1?'':'s'} for your thinnest areas.`, true);
+  else if(!aiFeaturesAvailable) setCoach('No new cards can be written without an AI connection, so cards you have seen before come back.', true);
+  rebuildFlashcardQueue();
+}
 function rebuildFlashcardQueue(){
   _fcCtx = null; fcCustomKind = null;
   try{ fcOptionsLabel(); }catch(e){}
@@ -19355,7 +19370,8 @@ function renderFlashcard(){
   // The queue has run out. Start a fresh one that leaves out cards already shown this session, rather than replaying the same list.
   if(fcIndex >= fcQueue.length && fcQueue.length && !window._fcRebuilding){
     window._fcRebuilding = true;
-    try{ fcCustomQueue = false; fcCustomKind = null; rebuildFlashcardQueue(); } finally { window._fcRebuilding = false; }
+    fcCustomQueue = false; fcCustomKind = null;
+    fcRunOutRefill().finally(() => { window._fcRebuilding = false; });
     return;
   }
   if(fcIndex >= fcQueue.length) fcIndex = 0;
@@ -33722,7 +33738,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000037';
+const BUILD_ID = '2026-10-28.00000038';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
