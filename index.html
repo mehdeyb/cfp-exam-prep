@@ -2787,6 +2787,17 @@
   .tv-steps li{counter-increment:tv;position:relative;padding-left:30px;font-size:13px;line-height:1.4;color:var(--paper);}
   .tv-steps li::before{content:counter(tv);position:absolute;left:0;top:0;width:21px;height:21px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
   .tv-steps li span{display:block;color:var(--muted);font-size:13px;margin-top:1px;}
+  .tv-steps .tv-step-row{padding:0;}
+  .tv-steps .tv-step-row::before{display:none;}
+  .tv-step-go{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:8px 10px 8px 34px;border-radius:10px;cursor:pointer;position:relative;}
+  .tv-step-go:hover{background:var(--gold-soft);}
+  .tv-step-go:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .tv-step-go::before{content:counter(tv);position:absolute;left:6px;top:10px;width:21px;height:21px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .tv-step-go .tv-step-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .tv-step-go .tv-step-txt > b{font-size:14px;color:var(--paper);}
+  .tv-step-go .tv-step-txt > span{font-size:13px;color:var(--muted);}
+  .tv-step-start{flex:none;font-size:13px;font-weight:600;padding:6px 14px;min-height:32px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);}
+  .tv-step-go:hover .tv-step-start{background:var(--gold);color:var(--ink);}
   .tv-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4;}
   .tutor-msg-bot{justify-content:flex-start;}
   .tutor-bubble{max-width:82%;padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.55;white-space:pre-wrap;}
@@ -13000,6 +13011,8 @@ function conductorMaybeStartFromTutor(){
 }
 
 let _planLaunchId = null, _planLaunchTimer = null;
+// A board step is tappable: it starts that plan step in its own clean environment, the same as the Today tab's Start.
+function tvRunStep(id){ try{ if(typeof runPlanStep === 'function') runPlanStep(id); }catch(e){} }
 function runPlanStep(id){
   if(id === 'listen' || id === 'tlesson') window._planLessonStep = id; // so finishing the lesson can close its step
   try{ const L0 = planDayLog(); if(!L0.started){ L0.started = true; persist(); } }catch(e){} // opening any part ends the pre-start re-planning for the day
@@ -16384,7 +16397,7 @@ function ttIdleBoard0(){
     const plan = buildStudyPlan(); const left = plan.steps.filter(x => !x.done).slice(0, (window.innerHeight < 900 || window.innerWidth < 500) ? 5 : 7);
     if(left.length){
       const head = [days !== null && days >= 0 ? (days === 0 ? 'Exam day' : days + (days === 1 ? ' day' : ' days') + ' to go') : '', (st.totalAnswered && st.weakestMeta) ? 'weakest: ' + tutorShort(st.weakestMeta.name, 24) : ''].filter(Boolean).join(' \u00b7 ');
-      const r = stageSlideFromTool({ kind:'steps', title: head || 'Today with your tutor', steps: left.map((x, i) => ({ title: stageClip((i === 0 ? 'Next: ' : '') + x.title, 80), detail: x.minutes + ' min' + (i === 0 && x.why ? ' \u00b7 ' + stageClip(x.why, 110) : '') })) });
+      const r = stageSlideFromTool({ kind:'steps', title: head || 'Today with your tutor', steps: left.map((x, i) => ({ title: stageClip((i === 0 ? 'Next: ' : '') + x.title, 80), detail: x.minutes + ' min' + (i === 0 && x.why ? ' \u00b7 ' + stageClip(x.why, 110) : ''), planId: x.id })) });
       if(!r.error){ r.slide.idle = true; r.slide.src = 'tutor'; if(!stageInlineVisible()) ttEnsureStage(); stageShow(r.slide, 'tutor'); return; }
     }
   }catch(e){}
@@ -32336,8 +32349,8 @@ function tutorVisualHtml(spec){
     const cols = (Array.isArray(spec.columns) ? spec.columns : []).slice(0, 4).map(c => clip(c, 24)), rows = (Array.isArray(spec.rows) ? spec.rows : []).slice(0, 8).map(r => (Array.isArray(r) ? r : []).slice(0, cols.length || 4).map(c => clip(c, 60)));
     if(cols.length && rows.length) body = `<div class="tv-scroll"><table class="tv-table"><thead><tr>${cols.map(c => `<th>${E(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map((_, i) => `<td>${E(r[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   } else if(kind === 'steps'){
-    const st = (Array.isArray(spec.steps) ? spec.steps : []).slice(0, 7).map(x => ({ t: clip(x && x.title, 60), d: clip(x && x.detail, 240) })).filter(x => x.t);
-    if(st.length) body = `<ol class="tv-steps">${st.map(x => `<li><b>${E(x.t)}</b>${x.d ? `<span>${E(x.d)}</span>` : ''}</li>`).join('')}</ol>`;
+    const st = (Array.isArray(spec.steps) ? spec.steps : []).slice(0, 7).map(x => ({ t: clip(x && x.title, 60), d: clip(x && x.detail, 240), id: String((x && x.planId) || '').replace(/[^\w-]/g, '').slice(0, 40) })).filter(x => x.t);
+    if(st.length) body = `<ol class="tv-steps">${st.map(x => x.id ? `<li class="tv-step-row"><button type="button" class="tv-step-go" onclick="tvRunStep('${x.id}')" aria-label="Start: ${E(x.t)}"><span class="tv-step-txt"><b>${E(x.t)}</b>${x.d ? `<span>${E(x.d)}</span>` : ''}</span><span class="tv-step-start">Start</span></button></li>` : `<li><b>${E(x.t)}</b>${x.d ? `<span>${E(x.d)}</span>` : ''}</li>`).join('')}</ol>`;
   }
   if(!body) return null;
   return { title, body, note };
@@ -34685,7 +34698,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000109';
+const BUILD_ID = '2026-10-29.00000110';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
