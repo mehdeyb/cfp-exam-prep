@@ -4381,6 +4381,15 @@
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-title{-webkit-line-clamp:1 !important;}
   html body.os-one #studyCols .pt-rows.pt-many{row-gap:2px !important;}
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step{padding-top:3px !important;padding-bottom:3px !important;}
+  /* Long plans (13+ steps) use four columns in iPad landscape. Done in CSS so it does not depend on the script that sets the counts. */
+  @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
+    html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows:has(> :nth-child(13)){grid-template-columns:repeat(4,minmax(0,1fr)) !important;grid-template-rows:repeat(5,minmax(0,1fr)) !important;}
+    html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows:has(> :nth-child(21)){grid-template-rows:repeat(6,minmax(0,1fr)) !important;}
+    html body.os-one #studyCols .pt-rows:has(> :nth-child(13)){row-gap:2px !important;}
+    html body.os-one #studyCols .pt-rows:has(> :nth-child(13)) > .pt-step{padding-top:3px !important;padding-bottom:3px !important;}
+    html body.os-one #studyCols .pt-rows:has(> :nth-child(13)) > .pt-step .pt-sub{display:none !important;}
+    html body.os-one #studyCols .pt-rows:has(> :nth-child(13)) > .pt-step .pt-title{-webkit-line-clamp:1 !important;}
+  }
 </style>
 </head>
 <body>
@@ -34082,7 +34091,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-28.00000046';
+const BUILD_ID = '2026-10-28.00000047';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
