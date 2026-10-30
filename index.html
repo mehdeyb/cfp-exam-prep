@@ -22893,6 +22893,23 @@ function startCase(id, o){
   if(!def) return;
   const qs = caseQuestions(id);
   if(!qs.length) return;
+  // Without AI, or when a fresh version could not be written, a worked case is not replayed with the same facts: a less-worked case that tests the same domains is used instead, so the idea carries over and the story does not.
+  if(!(o && o.rotated) && ((DATA.caseStats || {})[id] || {}).attempts && (!aiFeaturesAvailable || (o && o.replay))){
+    const mine = new Set(qs.map(q => q.domain));
+    const attemptsOf = c => ((DATA.caseStats || {})[c.id] || {}).attempts || 0;
+    const here = attemptsOf(def);
+    const alts = allCases().filter(c => c.id !== id && attemptsOf(c) < here && caseQuestions(c.id).length)
+      .map(c => ({ c, overlap: new Set(caseQuestions(c.id).map(q => q.domain).filter(d => mine.has(d))).size }))
+      .sort((a, b) => b.overlap - a.overlap || attemptsOf(a.c) - attemptsOf(b.c));
+    if(alts.length){
+      const pick = alts[0].c;
+      document.body.classList.remove('domain-picker-active');
+      try{ closeDomainPicker(); }catch(e){}
+      try{ setCoach('You have worked "' + def.title + '" already. "' + pick.title + '" tests the same ideas on different facts, so you work the concept rather than the story.', false); }catch(e){}
+      startCase(pick.id, { rotated: true });
+      return;
+    }
+  }
   // A case already worked is never replayed as it was: the AI writes a fresh version (new people, new figures, deciding facts changed) so the concept is what carries over, not the answers.
   if(!(o && o.replay) && ((DATA.caseStats || {})[id] || {}).attempts && aiFeaturesAvailable && !caseGenBusy){
     document.body.classList.remove('domain-picker-active');
@@ -34823,7 +34840,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.0000011D';
+const BUILD_ID = '2026-10-29.0000011E';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
