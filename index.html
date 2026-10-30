@@ -4611,6 +4611,9 @@
   .qrev-fix{background:var(--gold-soft);border-radius:10px;padding:10px 12px;}
   .qrev-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;align-items:center;}
   .qrev-foot .qrev-note{margin-right:auto;font-size:12px;color:var(--muted);}
+  .qrev-focus{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 10px;font-size:12px;color:var(--muted);}
+  .qrev-focus button{font:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;min-height:34px;}
+  .qrev-focus button.on{background:var(--gold);color:#1a1405;border-color:var(--gold);}
   .qrev-btn{font:inherit;font-size:14px;font-weight:600;padding:10px 16px;border-radius:10px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;min-height:44px;}
   .qrev-btn.primary{background:var(--gold);color:#1a1405;border-color:var(--gold);}
 </style>
@@ -8113,6 +8116,8 @@ async function clearApiKeyFromStorage(){
 let _reverifyRunning = false;
 async function reverifyBankOnce(){
   if(_reverifyRunning || !aiFeaturesAvailable || !DATA || !Array.isArray(DATA.generatedBank)) return;
+  // One-time: every saved item is checked again against current rules, including the currency check added later.
+  if(!DATA.currencyCheckV1){ DATA.generatedBank.forEach(q => { if(q) delete q.blindVerified; }); DATA.currencyCheckV1 = true; }
   const todo = DATA.generatedBank.filter(q => q && !q.blindVerified && !q.blindRejected).slice(0, 30);
   if(!todo.length) return;
   _reverifyRunning = true;
@@ -8817,6 +8822,7 @@ function mergeRetiredQuestionProgress(){
 }
 function pruneRetiredQuestionIds(){
   mergeRetiredQuestionProgress();
+  try{ if(Array.isArray(DATA.generatedBank)) DATA.generatedBank = DATA.generatedBank.filter(q => !staleBonusDepQ(q)); }catch(e){}
   try{
     const live = new Set(allQuestions().map(q => q.id));
     const isGen = id => String(id).startsWith('tvmq-');
@@ -9691,6 +9697,13 @@ function decodeGenEntities(v){
   if(v && typeof v === 'object'){ const o = {}; Object.keys(v).forEach(k => { o[k] = decodeGenEntities(v[k]); }); return o; }
   return v;
 }
+// Generated items that still apply the 2018 bonus-depreciation phase-down to 2026 property are out of date: 100% applies to property
+// acquired after January 19, 2025, under the 2025 tax law. Such items are kept out of practice and removed from the saved bank.
+function staleBonusDepQ(q){
+  if(!q || !q.q) return false;
+  const text = [q.q, q.scenario || '', ...(Array.isArray(q.choices) ? q.choices : []), ...(Array.isArray(q.rationale) ? q.rationale : [])].join(' ');
+  return /bonus depreciation/i.test(text) && /phase/i.test(text) && /2026/.test(text) && !/restored|permanent|superseded|no longer appl|january 19, 2025|one big beautiful|obbba|2025 tax law/i.test(text);
+}
 function allQuestions(){
   const g = DATA.generatedBank, m = _aqMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
@@ -9698,7 +9711,7 @@ function allQuestions(){
   const seen = new Set(), out = [];
   // Saved generated items: decode any entities once, in place, so older items show clean text too.
   (g || []).forEach((q, i) => { if(q && GEN_ENTITY_RE.test(JSON.stringify(q))){ const d = decodeGenEntities(q); Object.keys(d).forEach(k => { q[k] = d[k]; }); } });
-  QUESTIONS.concat(g || []).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
+  QUESTIONS.concat((g || []).filter(q => !staleBonusDepQ(q))).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
 }
@@ -20640,13 +20653,21 @@ function qrevQuestionText(q){
   if(Array.isArray(q.rationale)) lines.push('Stated explanations: ' + q.rationale.map((r, i) => L[i] + ': ' + r).join(' | '));
   return lines.join('\n');
 }
-function qrevPrompt(q){
-  return 'You are checking one multiple-choice question from a CFP® certification exam prep app. Check it strictly and independently.\n' +
+const QREV_FOCUS = {
+  wrong: 'The student thinks the marked answer is wrong. Pay special attention to whether the key is right.',
+  unclear: 'The student thinks the wording is unclear or the choices overlap. Pay special attention to the stem and the choices.',
+  outdated: 'The student thinks this question is outdated. Pay special attention to every figure, limit, rate, age, threshold and rule, and check each against the rules in force for 2026.'
+};
+function qrevPrompt(q, focus){
+  return 'You are checking one multiple-choice question from a CFP® certification exam prep app. Check it strictly and independently. Today is October 2026, so every figure and rule must match what applies in 2026.\n' +
+    (QREV_FOCUS[focus] ? 'The student flagged it. ' + QREV_FOCUS[focus] + '\n' : '') +
     '1. Solve it yourself first, using only the facts given, and state the letter you choose.\n' +
-    '2. Then check: does your letter match the marked correct answer? Is the stem clear and complete? Is exactly one choice correct under current US rules? Do the stated explanations match the choices? Are any figures, rules or wording outdated or ambiguous?\n' +
+    '2. Check that your letter matches the marked correct answer, that the stem is clear and complete, and that exactly one choice is correct under current US rules.\n' +
+    '3. Check for outdated content: any dollar limit, percentage, age, deadline, rate, threshold or rule that may not match 2026 law. Name each one. If you are not sure a figure is current, say so rather than guess.\n' +
+    '4. Check that the stated explanations match the choices.\n' +
     'Reply with ONLY a JSON object, no other text:\n' +
-    '{"your_answer":"A|B|C|D","answer_matches_key":true|false,"issues":["short specific problem"],"suggested_fix":"one or two sentences on exactly what to change, or empty string","confidence":"high|medium|low"}\n' +
-    'Use an empty issues array when the question is sound.\n\n' + qrevQuestionText(q);
+    '{"your_answer":"A|B|C|D","answer_matches_key":true|false,"issues":["short specific problem"],"outdated_items":["figure or rule that may be out of date, and what it should be for 2026"],"suggested_fix":"one or two sentences on exactly what to change, or empty string","confidence":"high|medium|low"}\n' +
+    'Use empty arrays when the question is sound.\n\n' + qrevQuestionText(q);
 }
 function qrevParse(raw){
   const m = String(raw || '').match(/\{[\s\S]*\}/);
@@ -20654,19 +20675,24 @@ function qrevParse(raw){
   try{ return JSON.parse(m[0]); }catch(e){ return null; }
 }
 function qrevVerdict(o){
-  const issues = Array.isArray(o.issues) ? o.issues.map(String).filter(Boolean).slice(0, 6) : [];
+  const issues = Array.isArray(o.issues) ? o.issues.map(String).filter(Boolean) : [];
+  const outdated = Array.isArray(o.outdated_items) ? o.outdated_items.map(String).filter(Boolean).slice(0, 6).map(x => 'Possibly outdated: ' + x) : [];
+  const all = issues.concat(outdated).slice(0, 8);
   const mismatch = o.answer_matches_key === false;
   const fix = String(o.suggested_fix || '').slice(0, 500);
   const your = String(o.your_answer || '').trim().toUpperCase().charAt(0);
-  if(!mismatch && issues.length === 0) return { status:'ok', issues, fix:'', your };
+  if(!mismatch && all.length === 0) return { status:'ok', issues:all, fix:'', your };
   const status = (mismatch || o.confidence === 'high') ? 'problem' : 'unsure';
-  return { status, issues, fix, your, mismatch };
+  return { status, issues:all, fix, your, mismatch };
 }
 function qrevRecord(q, r){
   try{
     const e = (DATA.flaggedQs || []).find(f => f.id === String(q.id));
-    if(e){ e.review = { status: r.status, issues: r.issues || [], fix: r.fix || '', at: Date.now() }; persist(); }
+    if(e){ e.review = { status: r.status, issues: r.issues || [], fix: r.fix || '', focus: r.focus || 'general', at: Date.now() }; persist(); }
   }catch(e){}
+}
+function qrevMarkFocus(focus){
+  document.querySelectorAll('#qrevHost .qrev-focus [data-f]').forEach(btn => { btn.classList.toggle('on', btn.getAttribute('data-f') === (focus || '')); });
 }
 function qrevKey(e){ if(e.key === 'Escape') closeQuestionReview(); }
 function closeQuestionReview(){
@@ -20683,15 +20709,18 @@ function openQuestionReview(q){
   host.innerHTML = '<div class="qrev-card">' +
     '<div class="qrev-head"><h3 id="qrevTitle">Checking this question</h3><button type="button" class="qrev-x" aria-label="Close">×</button></div>' +
     '<div class="qrev-q">' + escapeHtml(String(q.q || '').slice(0, 180)) + (String(q.q || '').length > 180 ? '…' : '') + '</div>' +
+    '<div class="qrev-focus" role="group" aria-label="Focus the check"><span>Focus the check on:</span>' +
+    '<button type="button" data-f="wrong">Wrong answer</button><button type="button" data-f="unclear">Unclear wording</button><button type="button" data-f="outdated">Outdated</button></div>' +
     '<div class="qrev-body" id="qrevBody" aria-live="polite"></div>' +
     '<div class="qrev-foot" id="qrevFoot"></div></div>';
   document.body.appendChild(host);
   host.addEventListener('click', e => { if(e.target === host) closeQuestionReview(); });
   host.querySelector('.qrev-x').onclick = closeQuestionReview;
+  host.querySelectorAll('.qrev-focus [data-f]').forEach(btn => { btn.onclick = () => qrevRun(q, btn.getAttribute('data-f')); });
   document.addEventListener('keydown', qrevKey);
   qrevRun(q);
 }
-async function qrevRun(q){
+async function qrevRun(q, focus){
   if(!document.getElementById('qrevBody')) return;
   const token = ++qrevToken;
   const body = document.getElementById('qrevBody');
@@ -20701,7 +20730,7 @@ async function qrevRun(q){
   let result;
   try{
     const raw = await Promise.race([
-      callClaude(qrevPrompt(q), 900),
+      callClaude(qrevPrompt(q, focus), 900),
       new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))
     ]);
     const o = qrevParse(raw);
@@ -20709,7 +20738,8 @@ async function qrevRun(q){
     result = qrevVerdict(o);
   }catch(e){ result = { status:'error' }; }
   if(token !== qrevToken || !document.getElementById('qrevBody')) return;
-  if(result.status !== 'error') qrevRecord(q, result);
+  if(result.status !== 'error'){ result.focus = focus || 'general'; qrevRecord(q, result); }
+  qrevMarkFocus(focus);
   qrevShow(result, q);
 }
 function qrevShow(r, q){
@@ -22511,8 +22541,20 @@ async function blindSolveResult(q){
     const raw = await anthropicMessagesRequest({ messages: [{ role: 'user', content: 'Solve this CFP exam multiple-choice question. Use only the figures given and work it out carefully before choosing. Reply with ONLY the letter of the correct choice.\n\n' + (q.scenario ? 'Client scenario: ' + q.scenario + '\n\n' : '') + q.q + '\n' + lines }], maxTokens: 400 });
     const m = String(raw || '').trim().match(/^\W*([ABCD])\b/i);
     if(!m) return 'error';
-    return 'ABCD'.indexOf(m[1].toUpperCase()) === q.correct ? 'ok' : 'mismatch';
+    if('ABCD'.indexOf(m[1].toUpperCase()) !== q.correct) return 'mismatch';
+    // The answer agrees, but a model can agree with an outdated rule. Every generated question also gets a currency check against 2026 law.
+    return (await currencyProblem(q)) ? 'mismatch' : 'ok';
   }catch(e){ return 'error'; }
+}
+// Checks a generated question against 2026 rules: any figure, limit or rule that is out of date, or a wrong keyed answer.
+async function currencyProblem(q){
+  try{
+    const raw = await callClaude(qrevPrompt(q, 'outdated'), 700);
+    const o = qrevParse(raw);
+    if(!o) return false;
+    const v = qrevVerdict(o);
+    return v.status === 'problem' && (v.mismatch || (Array.isArray(o.outdated_items) && o.outdated_items.length > 0));
+  }catch(e){ return false; }
 }
 async function blindSolveOk(q){ return (await blindSolveResult(q)) === 'ok'; }
 async function attemptGeneration(keys, hardMode){
@@ -35134,7 +35176,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000124';
+const BUILD_ID = '2026-10-29.00000125';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
