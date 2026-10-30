@@ -4555,6 +4555,29 @@
     #fdHost .fd-col-work .fd-result:empty{display:none;}
   }
 </style>
+<style>
+  /* Question review sheet (opened by the flag button) */
+  #qrevHost{position:fixed;inset:0;z-index:1300;background:rgba(8,14,24,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .qrev-card{width:100%;max-width:520px;max-height:86vh;overflow:auto;background:var(--surface);color:var(--paper);border:1px solid var(--hair-strong);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:18px 20px 16px;}
+  .qrev-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .qrev-head h3{margin:4px 0 0;font-size:17px;font-weight:600;}
+  .qrev-x{border:0;background:none;color:var(--muted);font-size:26px;line-height:1;cursor:pointer;min-width:44px;min-height:44px;margin:-8px -8px 0 0;}
+  .qrev-q{font-size:13px;color:var(--muted);margin:8px 0 12px;line-height:1.45;}
+  .qrev-status{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted);line-height:1.5;padding:10px 0;}
+  .qrev-spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--hair-strong);border-top-color:var(--gold);animation:qrevSpin .8s linear infinite;flex:0 0 auto;}
+  @keyframes qrevSpin{to{transform:rotate(360deg);}}
+  .qrev-verdict{font-weight:600;font-size:15px;margin:4px 0 6px;padding-left:12px;border-left:3px solid var(--muted);}
+  .qrev-verdict.ok{border-color:var(--correct);}
+  .qrev-verdict.bad{border-color:var(--incorrect);}
+  .qrev-verdict.warn{border-color:var(--gold);}
+  .qrev-body p{font-size:14px;line-height:1.55;margin:6px 0;}
+  .qrev-issues{margin:6px 0;padding-left:20px;font-size:14px;line-height:1.5;}
+  .qrev-fix{background:var(--gold-soft);border-radius:10px;padding:10px 12px;}
+  .qrev-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;align-items:center;}
+  .qrev-foot .qrev-note{margin-right:auto;font-size:12px;color:var(--muted);}
+  .qrev-btn{font:inherit;font-size:14px;font-weight:600;padding:10px 16px;border-radius:10px;border:1px solid var(--hair-strong);background:var(--surface2);color:var(--paper);cursor:pointer;min-height:44px;}
+  .qrev-btn.primary{background:var(--gold);color:#1a1405;border-color:var(--gold);}
+</style>
 </head>
 <body>
 <div id="eveningTint" aria-hidden="true"></div>
@@ -20554,19 +20577,139 @@ async function speakQuestionRationale(){
   return speakText(text, btn, 'qr-' + q.id, stillOnSameQuestion);
 }
 
-// Flag a question the student thinks is wrong, unclear or outdated. Kept as a short review list, so bad items can be fixed later.
+// Flag a question you think is wrong, unclear or outdated. It is saved for fixing, and the AI checks it straight away:
+// it solves the question from scratch, compares its answer with the marked key, and checks the wording and explanations.
+let qrevToken = 0, qrevCurrent = null;
 function flagQuestion(btn){
+  let q = null;
   try{
-    const q = session && session.queue ? session.queue[session.index] : null;
+    q = session && session.queue ? session.queue[session.index] : null;
     if(!q) return;
     if(!Array.isArray(DATA.flaggedQs)) DATA.flaggedQs = [];
-    if(!DATA.flaggedQs.some(f => f.id === q.id)){
+    if(!DATA.flaggedQs.some(f => f.id === String(q.id))){
       DATA.flaggedQs.push({ id: String(q.id), q: String(q.q || '').slice(0, 300), t: Date.now() });
       DATA.flaggedQs = DATA.flaggedQs.slice(-200);
       persist();
     }
     if(btn){ btn.disabled = true; btn.title = 'Flagged for review'; btn.classList.add('on'); }
   }catch(e){}
+  if(q) openQuestionReview(q);
+}
+function qrevQuestionText(q){
+  const L = 'ABCD', lines = [];
+  if(q.scenario) lines.push('Client scenario: ' + q.scenario);
+  lines.push('Question: ' + q.q);
+  (q.choices || []).forEach((c, i) => lines.push(L[i] + '. ' + c));
+  lines.push('Marked correct answer: ' + L[q.correct]);
+  if(Array.isArray(q.rationale)) lines.push('Stated explanations: ' + q.rationale.map((r, i) => L[i] + ': ' + r).join(' | '));
+  return lines.join('\n');
+}
+function qrevPrompt(q){
+  return 'You are checking one multiple-choice question from a CFP® certification exam prep app. Check it strictly and independently.\n' +
+    '1. Solve it yourself first, using only the facts given, and state the letter you choose.\n' +
+    '2. Then check: does your letter match the marked correct answer? Is the stem clear and complete? Is exactly one choice correct under current US rules? Do the stated explanations match the choices? Are any figures, rules or wording outdated or ambiguous?\n' +
+    'Reply with ONLY a JSON object, no other text:\n' +
+    '{"your_answer":"A|B|C|D","answer_matches_key":true|false,"issues":["short specific problem"],"suggested_fix":"one or two sentences on exactly what to change, or empty string","confidence":"high|medium|low"}\n' +
+    'Use an empty issues array when the question is sound.\n\n' + qrevQuestionText(q);
+}
+function qrevParse(raw){
+  const m = String(raw || '').match(/\{[\s\S]*\}/);
+  if(!m) return null;
+  try{ return JSON.parse(m[0]); }catch(e){ return null; }
+}
+function qrevVerdict(o){
+  const issues = Array.isArray(o.issues) ? o.issues.map(String).filter(Boolean).slice(0, 6) : [];
+  const mismatch = o.answer_matches_key === false;
+  const fix = String(o.suggested_fix || '').slice(0, 500);
+  const your = String(o.your_answer || '').trim().toUpperCase().charAt(0);
+  if(!mismatch && issues.length === 0) return { status:'ok', issues, fix:'', your };
+  const status = (mismatch || o.confidence === 'high') ? 'problem' : 'unsure';
+  return { status, issues, fix, your, mismatch };
+}
+function qrevRecord(q, r){
+  try{
+    const e = (DATA.flaggedQs || []).find(f => f.id === String(q.id));
+    if(e){ e.review = { status: r.status, issues: r.issues || [], fix: r.fix || '', at: Date.now() }; persist(); }
+  }catch(e){}
+}
+function qrevKey(e){ if(e.key === 'Escape') closeQuestionReview(); }
+function closeQuestionReview(){
+  const h = document.getElementById('qrevHost'); if(h) h.remove();
+  document.removeEventListener('keydown', qrevKey);
+  qrevToken++; qrevCurrent = null;
+}
+function openQuestionReview(q){
+  closeQuestionReview();
+  qrevCurrent = q;
+  const host = document.createElement('div');
+  host.id = 'qrevHost';
+  host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-labelledby', 'qrevTitle');
+  host.innerHTML = '<div class="qrev-card">' +
+    '<div class="qrev-head"><h3 id="qrevTitle">Checking this question</h3><button type="button" class="qrev-x" aria-label="Close">×</button></div>' +
+    '<div class="qrev-q">' + escapeHtml(String(q.q || '').slice(0, 180)) + (String(q.q || '').length > 180 ? '…' : '') + '</div>' +
+    '<div class="qrev-body" id="qrevBody" aria-live="polite"></div>' +
+    '<div class="qrev-foot" id="qrevFoot"></div></div>';
+  document.body.appendChild(host);
+  host.addEventListener('click', e => { if(e.target === host) closeQuestionReview(); });
+  host.querySelector('.qrev-x').onclick = closeQuestionReview;
+  document.addEventListener('keydown', qrevKey);
+  qrevRun(q);
+}
+async function qrevRun(q){
+  if(!document.getElementById('qrevBody')) return;
+  const token = ++qrevToken;
+  const body = document.getElementById('qrevBody');
+  document.getElementById('qrevFoot').innerHTML = '';
+  if(!aiFeaturesAvailable){ qrevShow('off', q); return; }
+  body.innerHTML = '<div class="qrev-status"><span class="qrev-spin" aria-hidden="true"></span><span>Solving the question from scratch and checking the key, the wording and the explanations…</span></div>';
+  let result;
+  try{
+    const raw = await Promise.race([
+      callClaude(qrevPrompt(q), 900),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))
+    ]);
+    const o = qrevParse(raw);
+    if(!o) throw new Error('unparsed');
+    result = qrevVerdict(o);
+  }catch(e){ result = { status:'error' }; }
+  if(token !== qrevToken || !document.getElementById('qrevBody')) return;
+  if(result.status !== 'error') qrevRecord(q, result);
+  qrevShow(result, q);
+}
+function qrevShow(r, q){
+  const body = document.getElementById('qrevBody'), foot = document.getElementById('qrevFoot');
+  if(!body || !foot) return;
+  const E = escapeHtml, L = 'ABCD', keyLetter = L[q.correct] || '?';
+  const title = document.querySelector('#qrevHost h3');
+  const again = '<button type="button" class="qrev-btn" onclick="qrevRun(qrevCurrent)">Check again</button>';
+  const done = '<button type="button" class="qrev-btn primary" onclick="closeQuestionReview()">Done</button>';
+  let html = '', ttl = 'Checked', note = '';
+  if(r === 'off'){
+    ttl = 'Flag saved';
+    html = '<div class="qrev-verdict">AI check is off on this device</div><p>The question is saved in your review list. Connect an AI key and every flag gets an instant check.</p>';
+    foot.innerHTML = done;
+  } else if(r.status === 'error'){
+    ttl = 'Flag saved';
+    html = '<div class="qrev-verdict">The check did not finish</div><p>Your flag is saved. You can run the check again.</p>';
+    foot.innerHTML = again + done;
+  } else {
+    const issues = r.issues && r.issues.length ? '<ul class="qrev-issues">' + r.issues.map(x => '<li>' + E(x) + '</li>').join('') + '</ul>' : '';
+    const fix = r.fix ? '<p class="qrev-fix"><b>Suggested fix:</b> ' + E(r.fix) + '</p>' : '';
+    if(r.status === 'ok'){
+      html = '<div class="qrev-verdict ok">No errors found</div><p>Solved independently, the AI reaches <b>' + E(keyLetter) + '</b>, the marked answer. The wording and explanations look sound.</p>';
+      note = 'Saved in your review list.';
+    } else if(r.status === 'unsure'){
+      html = '<div class="qrev-verdict warn">Possible issue, not certain</div>' + issues + fix;
+      note = 'Saved for a second look.';
+    } else {
+      html = '<div class="qrev-verdict bad">Possible error found</div>' +
+        (r.mismatch ? '<p>The AI solved it as <b>' + E(r.your || '?') + '</b>, but the marked answer is <b>' + E(keyLetter) + '</b>.</p>' : '') + issues + fix;
+      note = 'Saved for fixing.';
+    }
+    foot.innerHTML = '<span class="qrev-note">' + note + '</span>' + again + done;
+  }
+  if(title) title.textContent = ttl;
+  body.innerHTML = html;
 }
 // A checkpoint every FC_CHECKPOINT cards: say what went well, name the cards
 // that come back first, and re-sort the deck so they actually do.
@@ -34941,7 +35084,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.0000011F';
+const BUILD_ID = '2026-10-29.00000120';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
