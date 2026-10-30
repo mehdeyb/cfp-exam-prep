@@ -4577,6 +4577,18 @@
   body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{margin:4px 0 0;padding-top:4px;}
 </style>
 <style>
+  /* Progress hub, round 2: equal snapshot tiles, domain stat pills that never split their text, and no clipped cards. */
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap-cell{min-width:0;overflow:hidden;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip-meta-row{flex-wrap:wrap;gap:3px 5px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip-meta-row > *{white-space:nowrap;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip-time,
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] .bp-chip-cov{font-size:10px;padding:0 5px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-chip-main{min-width:0;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide,
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est{overflow:visible !important;}
+</style>
+<style>
   .qchat-retry{display:block;margin-top:8px;font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);cursor:pointer;min-height:36px;}
 </style>
 <style>
@@ -35122,7 +35134,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000123';
+const BUILD_ID = '2026-10-29.00000124';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
