@@ -1423,8 +1423,9 @@
   .mode-card .tag{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;}
   .mode-card h3{font-family:'Fraunces',serif;font-size:15px;margin:5px 0 4px;font-weight:600;}
   .mode-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.45;}
-  .adaptive-scope{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;color:var(--muted);}
-  .adaptive-scope select{font:inherit;font-size:12px;min-height:32px;max-width:100%;padding:4px 8px;border-radius:8px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);}
+  .adaptive-scope{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;color:var(--muted);width:100%;min-width:0;max-width:100%;}
+  .adaptive-scope span{flex:0 0 auto;}
+  .adaptive-scope select{font:inherit;font-size:12px;min-height:32px;width:100%;min-width:0;flex:1 1 auto;max-width:100%;text-overflow:ellipsis;padding:4px 8px;border-radius:8px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);}
   .mode-when{font-size:12px;color:var(--paper);opacity:.85;margin-top:7px;line-height:1.4;}
   .mode-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);margin-top:8px;letter-spacing:.2px;}
   .mode-meta:empty{display:none;}
@@ -35299,7 +35300,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000131';
+const BUILD_ID = '2026-10-29.00000132';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
