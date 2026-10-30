@@ -2837,10 +2837,10 @@
   #bpDetail[hidden]{display:none !important;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv] #bpLegend[hidden]{display:none !important;}
   /* Domain view on iPad landscape: the estimate and the topic exposure sit side by side so the view fits without scrolling. */
-  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch;}
-  /* Each row of the side panels is as tall as its tallest card, so no card leaves a gap beneath it; the review button sits at the foot of its card. */
-  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est{margin:0;height:100%;box-sizing:border-box;}
-  body.os-one #studyHub[data-view="progress"] #readinessSide .rb-move > .btn{margin-top:auto;align-self:flex-start;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{display:block;columns:2;column-gap:8px;}
+  /* Cards flow into two columns at their natural height: no card is stretched and no gap is left under a shorter card. */
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est{break-inside:avoid;margin:0 0 8px;width:100%;box-sizing:border-box;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide .rb-move > .btn{margin-top:8px;}
   /* Shorter iPad landscape screens (768 high): tighter spacing so both views fit without scrolling. Content is unchanged. */
   @media (min-width:900px) and (orientation:landscape) and (max-height:820px){
     body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-pv{min-height:0;margin:0 0 6px;}
@@ -4557,6 +4557,24 @@
     #fdHost .fd-col-work .fd-answer-row{margin-top:14px;}
     #fdHost .fd-col-work .fd-result:empty{display:none;}
   }
+</style>
+<style>
+  /* Progress hub: a compact, slim layout so the whole view fits the screen without wasted space. */
+  body.os-one #studyHub[data-view="progress"] #blueprintCard{padding:12px 14px !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard{height:auto !important;max-height:none !important;overflow:visible !important;flex:0 0 auto !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-cols{gap:8px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap{gap:4px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap-cell{padding:3px 7px !important;line-height:1.2;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap-v{font-size:14px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap-k{font-size:10px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-snap-s{font-size:10px;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide{column-gap:6px !important;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est{padding:6px 9px !important;margin:0 0 6px !important;gap:2px;font-size:11px;line-height:1.35;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est span{font-size:11px;line-height:1.35;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est b{font-size:10px;letter-spacing:.08em;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide .rb-move > .btn{min-height:30px !important;padding:4px 12px !important;margin:2px 0 0 !important;align-self:flex-start;font-size:12px;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard #diagnosisCard{margin-top:4px !important;padding:0 !important;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{margin:4px 0 0;padding-top:4px;}
 </style>
 <style>
   /* Question review sheet (opened by the flag button) */
@@ -35087,7 +35105,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000121';
+const BUILD_ID = '2026-10-29.00000122';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
