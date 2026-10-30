@@ -1423,6 +1423,8 @@
   .mode-card .tag{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;}
   .mode-card h3{font-family:'Fraunces',serif;font-size:15px;margin:5px 0 4px;font-weight:600;}
   .mode-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.45;}
+  .adaptive-scope{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;color:var(--muted);}
+  .adaptive-scope select{font:inherit;font-size:12px;min-height:32px;max-width:100%;padding:4px 8px;border-radius:8px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);}
   .mode-when{font-size:12px;color:var(--paper);opacity:.85;margin-top:7px;line-height:1.4;}
   .mode-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);margin-top:8px;letter-spacing:.2px;}
   .mode-meta:empty{display:none;}
@@ -5224,8 +5226,9 @@
 
       <div class="more-modes" id="moreModes">
       <div class="mode-grid">
-        <div class="mode-card" onclick="startAdaptive()" tabindex="0" role="button">
+        <div class="mode-card" onclick="startAdaptive({scoped:true})" tabindex="0" role="button">
           <h3>Adaptive session</h3>
+          <label class="adaptive-scope" onclick="event.stopPropagation()"><span>Focus</span><select id="adaptiveScope" aria-label="Focus the session on one domain" onclick="event.stopPropagation()" onchange="setAdaptiveScope(this.value)"></select></label>
           <div class="mode-when" data-mw="adaptive"><span data-dyn="adaptiveQ">15</span> mixed questions, tuned to your weak spots.</div>
           <div class="mode-meta" data-mm="adaptive"></div>
         </div>
@@ -13795,6 +13798,7 @@ function syncBankTiles(){
 }
 
 function renderFocusCard(){
+  try{ renderAdaptiveScope(); }catch(e){}
   const pillsBox = document.getElementById('focusPills');
   const rows = domainMasteryList().filter(d=>d.total>=2).sort((a,b)=>a.mastery-b.mastery);
   pillsBox.innerHTML = '';
@@ -21511,7 +21515,8 @@ function studyMinutesLogged(){
   }catch(e){ return +DATA.totalStudyMinutes || 0; }
 }
 function pickAdaptiveQueue(n){
-  const allRaw = allQuestions();
+  let allRaw = allQuestions();
+  if(_adaptiveScoped){ const f = allRaw.filter(adaptiveScopeFilter); if(f.length >= 4) allRaw = f; }
   const reasons = {}; // questionId -> short reason code, surfaced to the student as "why this now"
 
   // Exclude the most recently shown questions from the candidate pool
@@ -27370,8 +27375,26 @@ function showCardForQuestion(q, isCorrect){
   box.innerHTML = '<details class="qcl"><summary>Flashcard on this idea: <b>' + escapeHtml(c.term) + '</b></summary><div class="qcl-def">' + escapeHtml(c.def) + '</div>' + fcNumbersHtml(c) + '<div class="qcl-note">It is ranked up in your flashcards, so it comes back soon.</div></details>';
   box.style.display = 'block';
 }
-function startAdaptive(){
-  const picked = pickAdaptiveQueue(Math.min(tutorLengthOverride || ADAPTIVE_LENGTH, allQuestions().length));
+// The domain focus applies only when the Adaptive card starts the session. Too few questions in that domain falls back to all domains.
+function adaptiveScopeFilter(q){
+  const s = (DATA && DATA.adaptiveScope) || 'all';
+  if(s === 'all') return true;
+  const key = s === 'weak' ? (domainMasteryList().filter(d => d.total >= 2).sort((a, b) => a.mastery - b.mastery)[0] || {}).key : s;
+  return !!key && q.domain === key;
+}
+function setAdaptiveScope(v){ if(!DATA) return; DATA.adaptiveScope = v; try{ persist(); }catch(e){} }
+function renderAdaptiveScope(){
+  const sel = document.getElementById('adaptiveScope'); if(!sel) return;
+  if(!sel.options.length){
+    sel.add(new Option('All domains', 'all')); sel.add(new Option('Weakest domain', 'weak'));
+    DOMAINS.forEach(d => sel.add(new Option(d.name, d.key)));
+  }
+  sel.value = (DATA && DATA.adaptiveScope) || 'all';
+}
+let _adaptiveScoped = false;
+function startAdaptive(opts){
+  _adaptiveScoped = !!(opts && opts.scoped);
+  let picked; try{ picked = pickAdaptiveQueue(Math.min(tutorLengthOverride || ADAPTIVE_LENGTH, allQuestions().length)); } finally{ _adaptiveScoped = false; }
   const reasons = picked.reasons;
   const queue = adaptiveInterleave(tvmInjectIntoAdaptive(picked.queue, reasons), reasons);
   beginSession(queue, 'adaptive', null, reasons);
@@ -35256,7 +35279,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000128';
+const BUILD_ID = '2026-10-29.00000129';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
