@@ -2513,6 +2513,9 @@
     body.os-one #studyHub[data-view="progress"] #readinessSide{gap:4px;}
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{font-size:12px;line-height:1.45;padding:6px 10px;}
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est span{font-size:12px;}
+    /* The side column must grow with its cards. A fixed height made the columns overflow and clip on iPad. */
+    body.os-one #studyHub[data-view="progress"] #readinessSide{height:auto !important;max-height:none !important;flex:0 0 auto !important;align-self:flex-start;overflow:visible;}
+    body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{break-inside:avoid;-webkit-column-break-inside:avoid;}
   }
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
@@ -35247,7 +35250,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000126';
+const BUILD_ID = '2026-10-29.00000127';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
