@@ -9711,6 +9711,8 @@ function allQuestions(){
   const seen = new Set(), out = [];
   // Saved generated items: decode any entities once, in place, so older items show clean text too.
   (g || []).forEach((q, i) => { if(q && GEN_ENTITY_RE.test(JSON.stringify(q))){ const d = decodeGenEntities(q); Object.keys(d).forEach(k => { q[k] = d[k]; }); } });
+  // Corrections from flagged questions apply here, to built-in and generated questions alike.
+  { const fx = DATA.questionFixes || {}; QUESTIONS.concat(g || []).forEach(q => { const f = q && fx[String(q.id)]; if(f){ q.q = f.q; q.choices = f.choices; q.correct = f.correct; q.rationale = f.rationale; q.scenario = f.scenario || undefined; } }); }
   QUESTIONS.concat((g || []).filter(q => !staleBonusDepQ(q))).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
@@ -20688,11 +20690,68 @@ function qrevVerdict(o){
 function qrevRecord(q, r){
   try{
     const e = (DATA.flaggedQs || []).find(f => f.id === String(q.id));
-    if(e){ e.review = { status: r.status, issues: r.issues || [], fix: r.fix || '', focus: r.focus || 'general', at: Date.now() }; persist(); }
+    const hasFix = !!(DATA.questionFixes && DATA.questionFixes[String(q.id)]);
+    if(e){ e.review = { status: r.status, issues: r.issues || [], fix: r.fix || '', focus: r.focus || 'general', fixed: !!r.fixed || hasFix, at: Date.now() }; persist(); }
   }catch(e){}
 }
 function qrevMarkFocus(focus){
   document.querySelectorAll('#qrevHost .qrev-focus [data-f]').forEach(btn => { btn.classList.toggle('on', btn.getAttribute('data-f') === (focus || '')); });
+}
+// When a review finds a real problem, the question is corrected straight away. The corrected version must pass the solve and currency
+// checks before it replaces the question. Corrections are stored as overrides, so they apply on every load; Undo restores the original.
+function qrevFixPrompt(q, issues){
+  return 'You are correcting one multiple-choice question for a CFP® certification exam prep app. Today is October 2026. A reviewer found this problem: ' + issues + '.\n' +
+    'Rewrite the question so it is correct and current under the rules in force for 2026. Keep the same topic and client facts unless a fact is the problem. Make exactly one choice correct. Use four plausible choices of similar length with no absolute words (always, never, only, must, none). Start each explanation with "Correct —" for the right choice and "Wrong —" for the others, and state the rule in plain words.\n' +
+    'Reply with ONLY a JSON object, no other text:\n' +
+    '{"q":"the corrected question","choices":["A text","B text","C text","D text"],"correct":0,"rationale":["explanation for A","explanation for B","explanation for C","explanation for D"],"scenario":"client scenario or empty string","what_changed":"one sentence on what was wrong and what changed"}\n\n' +
+    'Original question:\n' + qrevQuestionText(q);
+}
+function qrevValidFix(o){
+  if(!o || typeof o.q !== 'string' || !Array.isArray(o.choices) || o.choices.length !== 4 || !Array.isArray(o.rationale) || o.rationale.length !== 4) return null;
+  const choices = o.choices.map(c => String(c).trim()), correct = Number(o.correct);
+  if(!Number.isInteger(correct) || correct < 0 || correct > 3) return null;
+  if(choices.some(c => !c) || new Set(choices).size !== 4) return null;
+  const rationale = o.rationale.map(x => String(x).trim());
+  if(!rationale[correct].startsWith('Correct')) return null;
+  if(rationale.some((x, i) => i !== correct && !x.startsWith('Wrong'))) return null;
+  const q = o.q.trim(); if(!q) return null;
+  const cand = { q, choices, correct, rationale, scenario: typeof o.scenario === 'string' ? o.scenario.trim() : '' };
+  let quality = true; try{ quality = passesDistractorQualityCheck(cand, true); }catch(e){}
+  if(!quality) return null;
+  return Object.assign(cand, { what: String(o.what_changed || '').slice(0, 300) });
+}
+function qrevApplyFix(q, fixed){
+  if(!DATA.questionFixes) DATA.questionFixes = {};
+  const id = String(q.id);
+  const prev = DATA.questionFixes[id] ? DATA.questionFixes[id].prev : { q: q.q, choices: q.choices.slice(), correct: q.correct, rationale: Array.isArray(q.rationale) ? q.rationale.slice() : null, scenario: q.scenario || '' };
+  DATA.questionFixes[id] = { q: fixed.q, choices: fixed.choices, correct: fixed.correct, rationale: fixed.rationale, scenario: fixed.scenario, what: fixed.what, prev, at: Date.now() };
+  Object.assign(q, { q: fixed.q, choices: fixed.choices, correct: fixed.correct, rationale: fixed.rationale, scenario: fixed.scenario || undefined });
+  _aqMemo = null;
+  persist();
+}
+async function qrevTryFix(q, r){
+  try{
+    const issues = (r.issues || []).join('; ') || 'the marked answer does not match 2026 rules';
+    const raw = await Promise.race([callClaude(qrevFixPrompt(q, issues), 1400), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))]);
+    const fixed = qrevValidFix(qrevParse(raw));
+    if(!fixed) return false;
+    if((await blindSolveResult(fixed)) !== 'ok') return false;
+    qrevApplyFix(q, fixed);
+    return fixed;
+  }catch(e){ return false; }
+}
+function qrevUndo(){
+  const q = qrevCurrent; if(!q || !DATA.questionFixes) return;
+  const id = String(q.id), f = DATA.questionFixes[id]; if(!f) return;
+  const p = f.prev || {};
+  Object.assign(q, { q: p.q, choices: p.choices, correct: p.correct, rationale: p.rationale, scenario: p.scenario || undefined });
+  delete DATA.questionFixes[id]; _aqMemo = null;
+  const rec = (DATA.flaggedQs || []).find(x => x.id === id); if(rec && rec.review) rec.review.fixed = false;
+  persist();
+  const qe = document.querySelector('#qrevHost .qrev-q'); if(qe) qe.textContent = String(q.q || '').slice(0, 180);
+  const body = document.getElementById('qrevBody'), foot = document.getElementById('qrevFoot');
+  if(body) body.innerHTML = '<div class="qrev-verdict">Fix undone</div><p>The original question is back.</p>';
+  if(foot) foot.innerHTML = '<button type="button" class="qrev-btn primary" onclick="closeQuestionReview()">Done</button>';
 }
 function qrevKey(e){ if(e.key === 'Escape') closeQuestionReview(); }
 function closeQuestionReview(){
@@ -20738,6 +20797,11 @@ async function qrevRun(q, focus){
     result = qrevVerdict(o);
   }catch(e){ result = { status:'error' }; }
   if(token !== qrevToken || !document.getElementById('qrevBody')) return;
+  if(result.status === 'problem'){
+    body.innerHTML = '<div class="qrev-status"><span class="qrev-spin" aria-hidden="true"></span><span>Problem found. Writing a corrected version and checking it against 2026 rules…</span></div>';
+    result.fixed = await qrevTryFix(q, result);
+    if(token !== qrevToken || !document.getElementById('qrevBody')) return;
+  }
   if(result.status !== 'error'){ result.focus = focus || 'general'; qrevRecord(q, result); }
   qrevMarkFocus(focus);
   qrevShow(result, q);
@@ -20762,20 +20826,27 @@ function qrevShow(r, q){
     const issues = r.issues && r.issues.length ? '<ul class="qrev-issues">' + r.issues.map(x => '<li>' + E(x) + '</li>').join('') + '</ul>' : '';
     const fix = r.fix ? '<p class="qrev-fix"><b>Suggested fix:</b> ' + E(r.fix) + '</p>' : '';
     if(r.status === 'ok'){
-      html = '<div class="qrev-verdict ok">No errors found</div><p>Solved independently, the AI reaches <b>' + E(keyLetter) + '</b>, the marked answer. The wording and explanations look sound.</p>';
+      const earlier = !!(DATA.questionFixes && DATA.questionFixes[String(q.id)]);
+      html = '<div class="qrev-verdict ok">No errors found</div><p>Solved independently, the AI reaches <b>' + E(keyLetter) + '</b>, the marked answer. The wording and explanations look sound.</p>' +
+        (earlier ? '<p class="qrev-note">This question was corrected earlier and now checks out.</p>' : '');
       note = 'Saved in your review list.';
     } else if(r.status === 'unsure'){
       html = '<div class="qrev-verdict warn">Possible issue, not certain</div>' + issues + fix;
       note = 'Saved for a second look.';
     } else {
-      html = '<div class="qrev-verdict bad">Possible error found</div>' +
+      html = '<div class="qrev-verdict bad">' + (r.fixed ? 'Error found and fixed' : 'Possible error found') + '</div>' +
         (r.mismatch ? '<p>The AI solved it as <b>' + E(r.your || '?') + '</b>, but the marked answer is <b>' + E(keyLetter) + '</b>.</p>' : '') + issues + fix;
       note = 'Saved for fixing.';
     }
-    foot.innerHTML = '<span class="qrev-note">' + note + '</span>' + again + done;
+    const hasFix = !!(DATA.questionFixes && DATA.questionFixes[String(q.id)]);
+    foot.innerHTML = '<span class="qrev-note">' + note + '</span>' + (r.fixed || hasFix ? '<button type="button" class="qrev-btn" onclick="qrevUndo()">Undo fix</button>' : '') + again + done;
   }
   if(title) title.textContent = ttl;
-  body.innerHTML = html;
+  const qe = document.querySelector('#qrevHost .qrev-q');
+  if(r && r.fixed && qe) qe.textContent = String(r.fixed.q || '').slice(0, 180);
+  const fixNote = r && r.fixed ? '<p class="qrev-fix"><b>Corrected:</b> ' + E(r.fixed.what || 'the question was rewritten.') + ' The correct answer is now <b>' + E(L[r.fixed.correct] || '?') + '</b>.</p>'
+    : (r && r.status === 'problem' && r.fixed === false ? '<p class="qrev-note">The corrected version did not pass its own check, so your flag stays in the review list.</p>' : '');
+  body.innerHTML = html + fixNote;
 }
 // A checkpoint every FC_CHECKPOINT cards: say what went well, name the cards
 // that come back first, and re-sort the deck so they actually do.
@@ -35176,7 +35247,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000125';
+const BUILD_ID = '2026-10-29.00000126';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
