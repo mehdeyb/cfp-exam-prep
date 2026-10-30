@@ -4543,17 +4543,16 @@
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-ring-wrap{grid-column:1 !important;grid-row:1 !important;}
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-meta{grid-column:1 !important;grid-row:2 !important;}
   html body.os-one #tab-study #scoreRow > .score-ring-block > .score-band{grid-column:2 !important;grid-row:1 / span 2 !important;}
-  /* Formula drills on a landscape iPad: use the width. The problem sits on the left, the answer and working on the right, with equal space either side. */
+  /* Formula drills: the body is two columns on a landscape iPad (problem left, answer and working right) and one column otherwise.
+     The status line and the plan strip always sit in a full-width footer, so the plan text is never squeezed or cut off. */
+  #fdHost .fd-body{display:block;}
+  #fdHost .fd-foot{margin-top:6px;padding-top:10px;border-top:1px solid var(--hair);display:flex;flex-direction:column;gap:6px;}
+  #fdHost .fd-foot .pp-txt .pp-t{white-space:normal;}
   @media (min-width:900px) and (orientation:landscape){
-    #fdHost .dp-inner{max-width:1080px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);column-gap:40px;row-gap:0;align-items:start;}
-    #fdHost .dp-inner > .dp-header,#fdHost .dp-inner > p.hint:first-of-type{grid-column:1 / -1;}
-    #fdHost .dp-inner > label,#fdHost .dp-inner > .fd-select,#fdHost .dp-inner > .fd-tag,#fdHost .dp-inner > .fd-scenario,#fdHost .dp-inner > .fd-support{grid-column:1;}
-    #fdHost .dp-inner > .fd-answer-row,#fdHost .dp-inner > .fd-result,#fdHost .dp-inner > .fd-status{grid-column:2;}
-    #fdHost .dp-inner > .fd-answer-row{grid-row:6;}
-    #fdHost .dp-inner > .fd-result{grid-row:7;}
-    #fdHost .dp-inner > .fd-status{grid-row:8;}
-    #fdHost .dp-inner > .pp{grid-column:2;}
-    #fdHost .fd-answer-row{margin-top:14px;}
+    #fdHost .dp-inner{max-width:1080px;}
+    #fdHost .fd-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:40px;align-items:start;}
+    #fdHost .fd-col-work .fd-answer-row{margin-top:14px;}
+    #fdHost .fd-col-work .fd-result:empty{display:none;}
   }
 </style>
 </head>
@@ -4803,19 +4802,29 @@
           </button>
         </div>
         <p class="hint" style="margin-top:0;">Fresh numbers every time. Work it out on your calculator, type the answer, and see the working. A wrong answer is checked against the slips people usually make.</p>
-        <label for="fdPick" class="hint" style="display:block;margin:10px 0 0;">Practise</label>
-        <select id="fdPick" class="fd-select" onchange="fdSetFilter(this.value)"></select>
-        <div class="fd-tag" id="fdTag"></div>
-        <div class="fd-scenario" id="fdScenario"></div>
-        <div class="fd-support" id="fdSupport" style="display:none;"></div>
-        <div class="fd-answer-row">
-          <div class="fd-field"><span id="fdUnitPre"></span><input id="fdInput" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer"><span id="fdUnitPost"></span></div>
-          <button class="btn" id="fdCheck" onclick="fdCheck()">Check</button>
-          <button class="btn" id="fdNextBtn" onclick="fdNext()" style="display:none;">Next problem</button>
+        <div class="fd-setup">
+          <label for="fdPick" class="hint" style="display:block;margin:10px 0 0;">Practise</label>
+          <select id="fdPick" class="fd-select" onchange="fdSetFilter(this.value)"></select>
         </div>
-        <div class="fd-result" id="fdResult" role="status" aria-live="polite"></div>
-        <div class="pp" data-pp="fd" style="display:none;"></div>
-        <div class="fd-status" id="fdStatus"></div>
+        <div class="fd-body">
+          <div class="fd-col-problem">
+            <div class="fd-tag" id="fdTag"></div>
+            <div class="fd-scenario" id="fdScenario"></div>
+            <div class="fd-support" id="fdSupport" style="display:none;"></div>
+          </div>
+          <div class="fd-col-work">
+            <div class="fd-answer-row">
+              <div class="fd-field"><span id="fdUnitPre"></span><input id="fdInput" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer"><span id="fdUnitPost"></span></div>
+              <button class="btn" id="fdCheck" onclick="fdCheck()">Check</button>
+              <button class="btn" id="fdNextBtn" onclick="fdNext()" style="display:none;">Next problem</button>
+            </div>
+            <div class="fd-result" id="fdResult" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="fd-foot">
+          <div class="fd-status" id="fdStatus"></div>
+          <div class="pp" data-pp="fd" style="display:none;"></div>
+        </div>
       </div>
     </div>
 
@@ -24039,11 +24048,11 @@ const FD_GENS = {
   },
   'Rule of 72': () => {
     if(Math.random() < 0.5){
-      const r = fdPick([2,3,4,5,6,8,9,10,12,15]), ans = 72/r;
-      return { scenario:`At a steady ${r}% annual return, about how many years does it take money to double? (Use the Rule of 72.)`, unit:'years', answer:ans, tol:0.05, keys:[`Enter 72, press [÷], enter ${r}, press [=] — the display shows ${fdNum(ans,0)} years.`], steps:[`Years to double ≈ 72 ÷ rate`, `72 ÷ ${r} = ${fdNum(ans,0)} years`] };
+      const r = fdPick([2,3,4,5,6,7,8,9,10,11,12,14,15,16,18]), ans = 72/r;
+      return { scenario:`At a steady ${r}% annual return, about how many years does it take money to double? (Use the Rule of 72.)`, unit:'years', answer:ans, tol:0.5, keys:[`Enter 72, press [÷], enter ${r}, press [=] — the display shows ${fdNum(ans,1)} years.`], steps:[`Years to double ≈ 72 ÷ rate`, `72 ÷ ${r} = ${fdNum(ans,1)} years`] };
     }
-    const n = fdPick([6,8,9,12,18,24]), ans = 72/n;
-    return { scenario:`A client wants an investment to double in about ${n} years. Roughly what annual return does that require? (Use the Rule of 72.)`, unit:'%', answer:ans, tol:0.05, keys:[`Enter 72, press [÷], enter ${n}, press [=] — the display shows ${fdNum(ans,0)}, so about ${fdNum(ans,0)}%.`], steps:[`Rate ≈ 72 ÷ years to double`, `72 ÷ ${n} = ${fdNum(ans,0)}%`] };
+    const n = fdPick([5,6,7,8,9,10,11,12,14,15,16,18,20,24]), ans = 72/n;
+    return { scenario:`A client wants an investment to double in about ${n} years. Roughly what annual return does that require? (Use the Rule of 72.)`, unit:'%', answer:ans, tol:0.5, keys:[`Enter 72, press [÷], enter ${n}, press [=] — the display shows ${fdNum(ans,1)}, so about ${fdNum(ans,1)}%.`], steps:[`Rate ≈ 72 ÷ years to double`, `72 ÷ ${n} = ${fdNum(ans,1)}%`] };
   },
   'Real Rate of Return': () => {
     const nom = fdPick([5,5.5,6,7,7.5,8,9]), inf = fdPick([2,2.5,3,3.5,4]);
@@ -24358,7 +24367,7 @@ Object.assign(FD_GENS, {
       trap: x => Math.abs(x - 0.4*(te - X)) < 5 && A ? 'That leaves out the adjusted taxable gifts. They are added back to the taxable estate before the exclusion is applied.' : null };
   },
   'Self-Employment Tax': () => {
-    const ne = fdPick([45000,60000,72000,80000,95000,100000,120000,135000,150000,175000]), base = ne*0.9235, ans = base*0.153;
+    const ne = fdPick([45000,50000,55000,60000,65000,70000,75000,80000,85000,90000,95000,100000,105000,110000,115000,120000,125000,130000,135000,140000,145000,150000,155000,160000,165000,170000,175000]), base = ne*0.9235, ans = base*0.153;
     return { scenario:`A sole proprietor has net profit of ${fdMoney(ne)} on Schedule C, well below the Social Security wage base. What is her self-employment tax?`, unit:'$', answer:ans, tol:2,
       keys:[`Enter ${ne}, press [×], enter 0.9235, press [=] — the display shows ${fdNum(base,2)} (net earnings subject to the tax).`, `Press [×], enter 0.153, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Net earnings subject to tax = ${fdMoney(ne)} × 92.35% = ${fdMoney(base)}`, `SE tax = ${fdMoney(base)} × 15.3% = ${fdMoney(ans)}`, `Half of it, ${fdMoney(ans/2)}, is deductible above the line.`],
       trap: x => Math.abs(x - ne*0.153) < 2 ? 'The 15.3% applies to 92.35% of net profit, not to the full amount.' : null };
@@ -24463,7 +24472,7 @@ Object.assign(FD_GENS, {
       trap: x => Math.abs(x - (gain - ex + sc)) < 2 && sc ? 'Selling costs reduce the amount realized, so they reduce the gain before the exclusion.' : null };
   },
   'SEP-IRA Contribution (Self-Employed)': () => {
-    const np = fdPick([60000,75000,80000,95000,100000,120000,135000,150000,175000]), se = np*0.9235*0.153, ans = 0.2*(np - se/2);
+    const np = fdPick([50000,55000,60000,65000,70000,75000,80000,85000,90000,95000,100000,105000,110000,115000,120000,125000,130000,135000,140000,145000,150000,155000,160000,165000,170000,175000]), se = np*0.9235*0.153, ans = 0.2*(np - se/2);
     return { scenario:`A self-employed consultant has net profit of ${fdMoney(np)} (before any retirement contribution) and well below the Social Security wage base. What is the maximum SEP-IRA contribution for her?`, unit:'$', answer:ans, tol:Math.max(3, ans*0.002),
       keys:[`SE tax: enter ${np}, press [×], enter 0.9235, press [×], enter 0.153, press [=] — the display shows ${fdNum(se,2)}.`, `Half of it: press [÷], enter 2, press [=] — ${fdNum(se/2,2)}. Net profit less that: ${np} − ${fdNum(se/2,2)} = ${fdNum(np-se/2,2)}.`, `Press [×], enter 0.2, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`SE tax = ${fdMoney(np)} × 92.35% × 15.3% = ${fdMoney(se)}`, `Net earnings for the plan = ${fdMoney(np)} − ${fdMoney(se/2)} = ${fdMoney(np - se/2)}`, `Contribution = 20% × ${fdMoney(np - se/2)} = ${fdMoney(ans)}`],
       trap: x => Math.abs(x - 0.25*np) < Math.max(3, ans*0.002) ? 'For a self-employed owner the effective rate is 20% of net earnings after the SE tax deduction, not 25% of net profit.' : null };
@@ -24620,6 +24629,91 @@ Object.assign(FD_GENS, {
     const inc = fdPick([60,85,110,140,190])*1000, rate = fdPick([13.5,15.5,17,19.5,21.5]), tax = Math.round(inc*rate/100), ans = tax/inc*100;
     return { scenario:`A client has taxable income of ${fdMoney(inc)} and total federal income tax of ${fdMoney(tax)}. What is the effective tax rate?`, unit:'%', answer:ans, tol:0.1,
       keys:[`Enter ${tax}, press [÷], enter ${inc}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Effective rate = total tax ÷ taxable income`, `${fdMoney(tax)} ÷ ${fdMoney(inc)} = ${fdNum(ans,2)}%`] };
+  },
+  'Expected Loss': () => {
+    const p = fdPick([0.5,1,2,3,5]), avg = fdPick([20000,40000,75000,120000,250000]), ans = p/100*avg;
+    return { scenario:`A client's home has a ${p}% chance of a fire loss in any year, and a typical fire costs ${fdMoney(avg)} to repair. What is the expected loss per year?`, unit:'$', answer:ans, tol:Math.max(2, ans*0.002),
+      keys:[`Enter ${p}, press [÷], enter 100, press [=] — the display shows ${fdK(p/100)}.`, `Press [×], enter ${avg}, press [=] — the display shows ${fdNum(ans,0)}.`], steps:[`Expected loss = probability × average loss`, `${p}% × ${fdMoney(avg)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - p*avg) < 2 ? `Convert ${p}% to a decimal (${fdK(p/100)}) before multiplying.` : null };
+  },
+  'Insurer Pays After Deductible and Coinsurance': () => {
+    const loss = fdPick([15000,20000,30000,40000,60000]), ded = fdPick([500,1000,2500,5000]), co = fdPick([10,20,30]), ans = (loss - ded)*(100 - co)/100;
+    return { scenario:`A client has a covered loss of ${fdMoney(loss)}. The policy has a ${fdMoney(ded)} deductible and ${co}% coinsurance, and the out-of-pocket maximum is not reached. How much does the insurer pay?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${loss}, press [−], enter ${ded}, press [=] — the display shows ${loss-ded}.`, `Press [×], enter ${100-co}, press [÷], enter 100, press [=] — the display shows ${fdNum(ans,0)}.`], steps:[`After the deductible: ${fdMoney(loss)} − ${fdMoney(ded)} = ${fdMoney(loss-ded)}`, `The insurer pays ${100-co}% of that: ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - loss*(100-co)/100) < 2 ? 'The deductible comes off first. Coinsurance applies only to the loss above it.' : null };
+  },
+  'Your Out-of-Pocket Cost (Health)': () => {
+    const loss = fdPick([8000,12000,20000,30000,45000]), ded = fdPick([1500,2500,3000]), co = fdPick([20,30]), cap = fdPick([6000,7000,8500]);
+    const share = (loss - ded)*co/100, raw = ded + share, ans = Math.min(raw, cap);
+    return { scenario:`A client has a covered medical bill of ${fdMoney(loss)} this plan year. The plan has a ${fdMoney(ded)} deductible, ${co}% coinsurance after the deductible, and an out-of-pocket maximum of ${fdMoney(cap)}. How much does the client pay?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${loss}, press [−], enter ${ded}, press [=] — the display shows ${loss-ded}.`, `Press [×], enter ${co}, press [÷], enter 100, press [+], enter ${ded}, press [=] — the display shows ${fdNum(raw,0)}, the cost before the cap.`, `The out-of-pocket maximum is ${fdMoney(cap)}. If the figure is above it, the client pays the maximum.`],
+      steps:[`Coinsurance after the deductible: (${fdMoney(loss)} − ${fdMoney(ded)}) × ${co}% = ${fdMoney(share)}`, `Add the deductible: ${fdMoney(raw)}`, `Cap at the out-of-pocket maximum: the client pays ${fdMoney(ans)}`],
+      trap: x => (raw > cap && Math.abs(x - raw) < 2) ? 'Above the out-of-pocket maximum the insurer pays the rest, so the client stops at the cap.' : null };
+  },
+  'Life Insurance Needs (Needs Approach)': () => {
+    const inc = fdPick([60000,80000,100000,120000]), yrs = fdPick([10,15,20]), debts = fdPick([150000,250000,400000]), fin = fdPick([15000,25000]), edu = fdPick([100000,150000,200000]), ex = fdPick([100000,200000,300000]), liq = fdPick([25000,50000,75000]);
+    const income = inc*yrs, gross = income + debts + fin + edu, ans = gross - ex - liq;
+    return { scenario:`A client earns ${fdMoney(inc)} a year and has ${yrs} years of income to replace. Debts total ${fdMoney(debts)}, final expenses ${fdMoney(fin)}, and education funding ${fdMoney(edu)}. The client has ${fdMoney(ex)} of existing life insurance and ${fdMoney(liq)} in liquid savings. Ignoring inflation and interest, how much new life insurance is needed?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${inc}, press [×], enter ${yrs}, press [+], enter ${debts}, press [+], enter ${fin}, press [+], enter ${edu}, press [−], enter ${ex}, press [−], enter ${liq}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Income to replace: ${fdMoney(inc)} × ${yrs} = ${fdMoney(income)}`, `Add debts, final expenses and education: ${fdMoney(gross)}`, `Subtract existing coverage and liquid savings: ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - (gross - ex + liq)) < 2 ? 'Liquid savings reduce the need as well, so subtract them too.' : null };
+  },
+  'Disability Income Gap': () => {
+    let need, earned, pct, other, ans, g = 0;
+    do { need = fdPick([6000,7500,8000,9000]); earned = fdPick([6000,8000,9000]); pct = fdPick([50,60,70]); other = fdPick([0,500,1000]); ans = need - (earned*pct/100 + other); g++; } while(ans <= 0 && g < 50);
+    const benefit = earned*pct/100;
+    return { scenario:`A client earns ${fdMoney(earned)} a month and wants ${fdMoney(need)} a month of income if disabled. A disability policy would pay ${pct}% of earned income, and the client has ${fdMoney(other)} a month of other income. What is the monthly income gap?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${need}, press [−], enter ${earned}, press [×], enter ${pct}, press [÷], enter 100, press [−], enter ${other}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Monthly benefit: ${fdMoney(earned)} × ${pct}% = ${fdMoney(benefit)}`, `Income covered: ${fdMoney(benefit + other)} (benefit plus other income)`, `Gap: ${fdMoney(need)} − ${fdMoney(benefit + other)} = ${fdMoney(ans)}`],
+      trap: x => (other > 0 && Math.abs(x - (need - benefit)) < 2) ? 'Other income also covers part of the need, so subtract it as well.' : null };
+  },
+  'Insurer Loss Ratio': () => {
+    const prem = fdPick([1,1.5,2,2.5,3,4,5,6,8,10,12,15,20])*1e6, pct = fdPick([52,55,58,62,66,70,74,78,82,85]), losses = prem*pct/100, ans = pct;
+    return { scenario:`An insurer earned ${fdMoney(prem)} in premiums this year and paid ${fdMoney(losses)} in claims. What is its loss ratio? (Percent.)`, unit:'%', answer:ans, tol:0.05,
+      keys:[`Enter ${losses}, press [÷], enter ${prem}, press [×], enter 100, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`Loss ratio = losses paid ÷ premiums earned`, `${fdMoney(losses)} ÷ ${fdMoney(prem)} = ${fdNum(ans,2)}%`],
+      trap: x => Math.abs(x - (100 - ans)) < 0.1 ? 'That is the share left after claims, not the loss ratio.' : null };
+  },
+  'Gross Estate': () => {
+    const prob = fdPick([400000,600000,900000,1200000]), life = fdPick([0,500000,1000000,2000000]), joint = fdPick([0,300000,800000,1200000]), ans = prob + life + joint/2;
+    return { scenario:`A decedent owned probate assets worth ${fdMoney(prob)} and a life insurance policy on his own life with a death benefit of ${fdMoney(life)}. He also owned a home jointly with his spouse, as joint tenants, worth ${fdMoney(joint)}. What is his gross estate?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${prob}, press [+], enter ${life}, press [+], enter ${joint}, press [÷], enter 2, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Probate assets: ${fdMoney(prob)}`, `Life insurance he owned: ${fdMoney(life)}`, `Half of the joint home (the spouse is the other owner): ${fdMoney(joint/2)}`, `Gross estate: ${fdMoney(ans)}`],
+      trap: x => (joint > 0 && Math.abs(x - (prob + life + joint)) < 2) ? 'Only half of jointly held property with a spouse is included in the gross estate, not the whole value.' : null };
+  },
+  'Taxable Estate': () => {
+    const G = fdPick([12,16,20,24])*1e6, d = fdPick([200000,350000,500000]), m = fdPick([0,1000000,2000000]), c = fdPick([0,100000,250000]), ans = G - d - m - c;
+    return { scenario:`A decedent's gross estate is ${fdMoney(G)}. Debts and administration expenses total ${fdMoney(d)}, the estate leaves ${fdMoney(m)} to the surviving spouse, and ${fdMoney(c)} goes to charity. What is the taxable estate?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${G}, press [−], enter ${d}, press [−], enter ${m}, press [−], enter ${c}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Gross estate − debts and expenses: ${fdMoney(G - d)}`, `Less marital deduction: ${fdMoney(G - d - m)}`, `Less charitable deduction: ${fdMoney(ans)}`],
+      trap: x => (m > 0 && Math.abs(x - (G - d - c)) < 2) ? 'The marital deduction reduces the taxable estate too. Subtract it.' : null };
+  },
+  'Estate Tax Above the Exclusion': () => {
+    const T = fdPick([16,17.5,19,21,23])*1e6, used = fdPick([1,2,3,4])*1e6, remaining = 15e6 - used, ans = 0.4*(T - remaining);
+    return { scenario:`A decedent's taxable estate is ${fdMoney(T)}. During life the decedent made taxable gifts that used ${fdMoney(used)} of the lifetime exclusion. Using the 2026 exclusion of $15,000,000 and a 40% rate on the excess, what is the estate tax? (Ignore state tax.)`, unit:'$', answer:ans, tol:5,
+      keys:[`Enter ${T}, press [−], enter ${remaining}, press [=] — the display shows ${T-remaining}, the amount above the remaining exclusion.`, `Press [×], enter 0.4, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Remaining exclusion: $15,000,000 − ${fdMoney(used)} = ${fdMoney(remaining)}`, `Excess over the remaining exclusion: ${fdMoney(T - remaining)}`, `Estate tax at 40%: ${fdMoney(ans)}`],
+      trap: x => (used > 0 && Math.abs(x - 0.4*(T - 15e6)) < 5) ? 'The lifetime gifts used part of the exclusion, so the remaining exclusion is smaller than $15,000,000.' : null };
+  },
+  'Taxable Gift After Annual Exclusion': () => {
+    const gift = fdPick([25000,30000,40000,60000,80000]), n = fdPick([2,3,4,5]), per = gift - 19000, ans = per*n;
+    return { scenario:`A client gives ${fdMoney(gift)} to each of ${n} grandchildren this year, and does not elect gift splitting. Using the 2026 annual exclusion of $19,000 per recipient, what is the total taxable gift?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${gift}, press [−], enter 19000, press [=] — the display shows ${per} for each recipient.`, `Press [×], enter ${n}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Taxable gift per grandchild: ${fdMoney(gift)} − $19,000 = ${fdMoney(per)}`, `× ${n} grandchildren = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - gift*n) < 2 ? 'Each recipient gets the annual exclusion first. Only the amount above it is a taxable gift.' : null };
+  },
+  'Estate Liquidity Need': () => {
+    const tax = fdPick([1200000,1800000,2400000,3600000]), debts = fdPick([100000,250000]), fin = fdPick([25000,50000]), adm = fdPick([30000,60000]), liq = fdPick([300000,600000,900000]), ans = tax + debts + fin + adm - liq;
+    return { scenario:`An estate owes ${fdMoney(tax)} of estate tax, ${fdMoney(debts)} of debts, ${fdMoney(fin)} of final expenses and ${fdMoney(adm)} of administration costs, all due within about nine months. The estate holds ${fdMoney(liq)} of cash and marketable securities. How much cash must the executor raise beyond those liquid assets?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${tax}, press [+], enter ${debts}, press [+], enter ${fin}, press [+], enter ${adm}, press [−], enter ${liq}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`Cash needs: ${fdMoney(tax + debts + fin + adm)}`, `Less liquid assets: ${fdMoney(ans)} must still be raised`],
+      trap: x => Math.abs(x - (tax + debts + fin + adm)) < 2 ? 'Liquid assets can pay part of these needs without a forced sale, so subtract them.' : null };
+  },
+  'Basis at Death (Step-Up)': () => {
+    const orig = fdPick([100000,150000,200000,250000,300000,350000,400000,500000]), fmv = fdPick([600000,700000,800000,900000,1000000,1200000,1300000,1500000,1800000]), ans = fmv - orig;
+    return { scenario:`A client bought stock for ${fdMoney(orig)}. At death it is worth ${fdMoney(fmv)}, and an heir inherits it. How much of the built-in gain is wiped out by the step-up in basis?`, unit:'$', answer:ans, tol:2,
+      keys:[`Enter ${fmv}, press [−], enter ${orig}, press [=] — the display shows ${fdNum(ans,0)}.`],
+      steps:[`The heir's basis becomes ${fdMoney(fmv)} (fair market value at death)`, `Built-in gain that disappears: ${fdMoney(fmv)} − ${fdMoney(orig)} = ${fdMoney(ans)}`],
+      trap: x => Math.abs(x - fmv) < 2 ? "That is the heir's new basis. The question asks for the gain that disappears, which is the new basis minus the original cost." : null };
   }
 });
 
@@ -24680,28 +24774,35 @@ const FD_DIR = {
   'Present Value': { out:'the amount needed today', v:[['the interest rate',-1,'a higher rate does more of the growing, so less is needed up front'],['the number of years',-1,'more time to grow means a smaller start is enough'],['the target amount',1,'a bigger goal needs a bigger start']] },
   'Rule of 72': { out:'the years to double', v:[['the annual return',-1,'a faster return doubles the money sooner']] },
   'Real Rate of Return': { out:'the real return', v:[['the nominal return',1,'a bigger nominal return leaves more after inflation'],['the inflation rate',-1,'inflation takes purchasing power away']] },
-  'Front-end (housing) ratio': { out:'the front-end ratio', v:[['the housing payment',1,'it is the top of the fraction'],['gross income',-1,'it is the bottom of the fraction']] },
-  'Back-end (total debt) ratio': { out:'the back-end ratio', v:[['other monthly debt payments',1,'they add to the top of the fraction'],['gross income',-1,'it is the bottom of the fraction']] },
+  'Front-end (housing) ratio': { out:'the front-end ratio', v:[['the housing payment',1,'a bigger one raises the ratio'],['gross income',-1,'a bigger one lowers the ratio']] },
+  'Back-end (total debt) ratio': { out:'the back-end ratio', v:[['other monthly debt payments',1,'they add to the top, so the ratio rises'],['gross income',-1,'a bigger one lowers the ratio']] },
   'CAPM — Expected Return': { out:'the required return', v:[['beta',1,'more market risk earns more of the market premium'],['the market return',1,'a bigger market premium is scaled up by beta']] },
   'Sharpe Ratio': { out:'the Sharpe ratio', v:[['the portfolio return',1,'more excess return per unit of risk'],['the standard deviation',-1,'more risk spreads the same excess return thinner'],['the risk-free rate',-1,'it shrinks the excess return']] },
   'Holding Period Return': { out:'the holding period return', v:[['the ending value',1,'a bigger ending value is more gain'],['the income received',1,'income is part of the total return'],['the beginning value',-1,'a bigger cost base makes the same gain a smaller percentage']] },
   'Coefficient of Variation': { out:'the coefficient of variation', v:[['the standard deviation',1,'more risk per unit of return'],['the average return',-1,'more return makes the same risk look smaller']] },
   'Taxable-Equivalent Yield': { out:'the taxable-equivalent yield', v:[['the tax-free yield',1,'it is the starting point'],['the marginal tax rate',1,'a higher bracket makes tax-free income worth more']] },
   'Effective Annual Rate': { out:'the effective annual rate', v:[['the stated rate',1,'it sets the base growth'],['the number of compounding periods',1,'more frequent compounding earns interest on interest sooner']] },
-  'Cap Rate': { out:'the cap rate', v:[['net operating income',1,'it is the top of the fraction'],['the property value',-1,'the same income on a higher price is a lower yield']] },
-  'Debt Ratio': { out:'the debt ratio', v:[['total liabilities',1,'they are the top of the fraction'],['total assets',-1,'more assets dilute the same debt']] },
+  'Cap Rate': { out:'the cap rate', v:[['net operating income',1,'a bigger one raises the ratio'],['the property value',-1,'the same income on a higher price is a lower yield']] },
+  'Debt Ratio': { out:'the debt ratio', v:[['total liabilities',1,'more of them raises the ratio'],['total assets',-1,'more assets dilute the same debt']] },
   'Loan-to-Value Ratio': { out:'the loan-to-value ratio', v:[['the loan amount',1,'more borrowed against the same property'],['the appraised value',-1,'a bigger value shrinks the share that is borrowed']] },
   'Payback Period': { out:'the payback period', v:[['the initial investment',1,'there is more to earn back'],['the annual cash flow',-1,'bigger cash flows repay it faster']] },
   'Profitability Index': { out:'the profitability index', v:[['the present value of inflows',1,'more value returned per dollar spent'],['the initial investment',-1,'more spent for the same inflows']] },
   'Price-to-Earnings Ratio': { out:'the P/E ratio', v:[['the share price',1,'you pay more per dollar of earnings'],['earnings per share',-1,'the same price buys more earnings']] },
   'Dividend Yield': { out:'the dividend yield', v:[['the annual dividend',1,'more income per share'],['the share price',-1,'the same dividend on a higher price is a lower yield']] },
   'Current Ratio': { out:'the current ratio', v:[['current assets',1,'more short-term resources'],['current liabilities',-1,'more short-term obligations']] },
-  'Savings Ratio': { out:'the savings ratio', v:[['the amount saved',1,'it is the top of the fraction'],['gross income',-1,'the same savings from a bigger income is a smaller share']] },
+  'Savings Ratio': { out:'the savings ratio', v:[['the amount saved',1,'a bigger one raises the ratio'],['gross income',-1,'the same savings from a bigger income is a smaller share']] },
   'Gordon Growth (Dividend Discount) Model': { out:'the stock value', v:[['the next dividend',1,'more cash flow to value'],['the required return',-1,'a higher required return discounts the cash flows harder'],['the growth rate',1,'faster growth makes the future dividends bigger']] },
   'Perpetuity (Present Value)': { out:'the present value', v:[['the annual payment',1,'more income is worth more'],['the discount rate',-1,'a higher rate discounts the stream harder']] },
   'Treynor Ratio': { out:'the Treynor ratio', v:[['the excess return',1,'more reward'],['beta',-1,'more market risk for the same reward']] },
   'Straight-Line Depreciation': { out:'the annual depreciation', v:[['the asset cost',1,'there is more to write off'],['the salvage value',-1,'less is left to depreciate'],['the useful life',-1,'the same amount is spread over more years']] },
-  'Effective Tax Rate': { out:'the effective tax rate', v:[['total tax paid',1,'it is the top of the fraction'],['taxable income',-1,'the same tax on a bigger base is a smaller rate']] },
+  'Expected Loss': { out:'the expected loss', v:[['the probability of loss',1,'a likelier loss raises the expected cost'],['the average loss',1,'a bigger loss raises the expected cost']] },
+  'Insurer Pays After Deductible and Coinsurance': { out:'the insurer payment', v:[['the covered loss',1,'a bigger loss means more is paid above the deductible'],['the deductible',-1,'more of the loss falls on the client first'],['the coinsurance percentage',-1,'the insured keeps a larger share']] },
+  'Life Insurance Needs (Needs Approach)': { out:'the life insurance needed', v:[['the existing life insurance',-1,'existing coverage fills part of the need'],['the years of income to replace',1,'more years of income to replace means a larger need']] },
+  'Disability Income Gap': { out:'the income gap', v:[['the disability benefit percentage',-1,'a bigger benefit covers more of the need'],['other income',-1,'other income covers part of the need']] },
+  'Insurer Loss Ratio': { out:'the loss ratio', v:[['the losses paid',1,'more claims paid raises the ratio'],['the premiums earned',-1,'the same claims over more premium is a lower ratio']] },
+  'Taxable Estate': { out:'the taxable estate', v:[['the debts and expenses',-1,'deductions reduce the taxable estate'],['the charitable gifts',-1,'charitable transfers reduce the taxable estate dollar for dollar']] },
+  'Estate Liquidity Need': { out:'the cash the executor must raise', v:[['the liquid assets',-1,'cash on hand pays part of the bills'],['the estate tax',1,'a bigger tax means more cash is needed']] },
+  'Effective Tax Rate': { out:'the effective tax rate', v:[['total tax paid',1,'a bigger one raises the ratio'],['taxable income',-1,'the same tax on a bigger base is a smaller rate']] },
   'Debt Service Coverage Ratio': { out:'the debt service coverage ratio', v:[['net operating income',1,'more income to cover the payments'],['the annual debt payments',-1,'bigger payments are harder to cover']] },
   'Refinance Break-Even': { out:'the break-even time', v:[['the closing costs',1,'there is more to earn back'],['the monthly savings',-1,'bigger savings pay it back sooner']] },
   'Liquidity (Emergency Fund) Ratio': { out:'the liquidity ratio', v:[['liquid assets',1,'more cash on hand'],['monthly expenses',-1,'the same cash covers fewer months']] },
@@ -34840,7 +34941,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.0000011E';
+const BUILD_ID = '2026-10-29.0000011F';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
