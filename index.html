@@ -13594,6 +13594,8 @@ function renderModeToday(){
   try{ const plan = buildStudyPlan(); steps = (plan && plan.steps) || []; }catch(e){ return; }
   const next = steps.find(s => !s.done && MODE_FOR_STEP[s.id]);
   steps.filter(s => s.done && MODE_FOR_STEP[s.id]).forEach(s => { if(!next || MODE_FOR_STEP[s.id] !== MODE_FOR_STEP[next.id]) put(MODE_FOR_STEP[s.id], '<span class="mt-done">Done today</span>'); });
+  // The Domain drill description says what today's plan will actually drill, not a separate ranking.
+  { const dr = steps.find(s => s.id === 'wkdrill' && !s.done); const el = document.querySelector('[data-mw="drill"]'); if(dr && el && (dr.title || dr.why)) el.innerHTML = escapeHtml(dr.why || dr.title); }
   if(next) put(MODE_FOR_STEP[next.id], '<span class="mt-next">Next in today\'s plan</span> ' + escapeHtml(next.title || ''));
   // Empty review modes explain their unlock condition.
   const misses = (DATA.missed || []).length;
@@ -35487,7 +35489,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000135';
+const BUILD_ID = '2026-10-30.00000136';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
