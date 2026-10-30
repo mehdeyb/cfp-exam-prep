@@ -2837,7 +2837,10 @@
   #bpDetail[hidden]{display:none !important;}
   body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv] #bpLegend[hidden]{display:none !important;}
   /* Domain view on iPad landscape: the estimate and the topic exposure sit side by side so the view fits without scrolling. */
-  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start;}
+  body.os-one #studyHub[data-view="progress"] #blueprintCard[data-pv="domains"] #readinessSide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch;}
+  /* Each row of the side panels is as tall as its tallest card, so no card leaves a gap beneath it; the review button sits at the foot of its card. */
+  body.os-one #studyHub[data-view="progress"] #readinessSide > .rb-est{margin:0;height:100%;box-sizing:border-box;}
+  body.os-one #studyHub[data-view="progress"] #readinessSide .rb-move > .btn{margin-top:auto;align-self:flex-start;}
   /* Shorter iPad landscape screens (768 high): tighter spacing so both views fit without scrolling. Content is unchanged. */
   @media (min-width:900px) and (orientation:landscape) and (max-height:820px){
     body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-pv{min-height:0;margin:0 0 6px;}
@@ -35084,7 +35087,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000120';
+const BUILD_ID = '2026-10-29.00000121';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
