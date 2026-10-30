@@ -2516,6 +2516,8 @@
     /* The side column must grow with its cards. A fixed height made the columns overflow and clip on iPad. */
     body.os-one #studyHub[data-view="progress"] #readinessSide{height:auto !important;max-height:none !important;flex:0 0 auto !important;align-self:flex-start;overflow:visible;}
     body.os-one #studyHub[data-view="progress"] #readinessSide .rb-est{break-inside:avoid;-webkit-column-break-inside:avoid;}
+    /* With a top priority shown in the side column, the same line under the panel is hidden. The breakdown toggle stays. */
+    body.os-one #studyHub[data-view="progress"] #blueprintCard #diagnosisSummary:has(> b){display:none !important;}
   }
   .pt-nextlabel{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--correct);margin-bottom:2px;}
   .pt-why{font-size:13px;line-height:1.4;color:var(--muted);margin:2px 0 4px;}
@@ -11036,12 +11038,16 @@ function renderReadinessExtras(stats){
     if(stats.calibration.penalty >= 0.5) lines.push(`Overconfidence is costing ${stats.calibration.penalty.toFixed(1)} (see below).`);
     if(lines.length) moveBlock = `<div class="rb-est rb-move"><b>Why it moves</b><span>${lines.join('</span><span>')}</span>${due ? `<button type="button" class="btn ghost" onclick="startAdaptive()">Review what is due</button>` : ''}</div>`;
   }catch(e){}
+  // The top priority sits in the side column, where there is room for it, instead of under the panel.
+  let priorityBlock = '';
+  try{ const f = diagnosisFindings().find(x => x.kind !== 'good'); if(f) priorityBlock = '<div class="rb-est rb-priority"><b>Top priority</b><span>' + escapeHtml(f.title) + '.</span></div>'; }catch(e){}
   const side = document.getElementById('readinessSide');
   if(side) side.innerHTML = `
     ${moveBlock}
     ${estimateBlock}
     ${speedBlock}
     ${(() => { try{ const e = exposureModel(), g = exposureGaps(3); const dl = getDaysUntilExam(); return `<div class="rb-est"><b>Topic exposure</b><span>${e.total - e.nNew} of ${e.total} official topics seen (${e.seenPct}% of the exam by weight). ${e.nSolid} solid, ${e.nShaky} shaky, ${e.nThin} barely tried, ${e.nNew} not yet seen.${g.length ? ' Next up: ' + g.map(t => escapeHtml(t.name)).join('; ') + '.' : ''}${dl !== null && dl > 0 && e.nNew + e.nThin > 0 ? ' Today\'s plan brings in new ground each day so every topic is met well before ' + (dl > 14 ? 'the final two weeks' : 'exam day') + '.' : ''}</span></div>`; }catch(err){ return ''; } })()}
+    ${priorityBlock}
 `;
   panel.innerHTML = `
     <div class="rb-head">
@@ -35250,7 +35256,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000127';
+const BUILD_ID = '2026-10-29.00000128';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
