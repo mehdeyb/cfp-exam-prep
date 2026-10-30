@@ -4577,6 +4577,9 @@
   body.os-one #studyHub[data-view="progress"] #blueprintCard .bp-focus{margin:4px 0 0;padding-top:4px;}
 </style>
 <style>
+  .qchat-retry{display:block;margin-top:8px;font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);cursor:pointer;min-height:36px;}
+</style>
+<style>
   /* Question review sheet (opened by the flag button) */
   #qrevHost{position:fixed;inset:0;z-index:1300;background:rgba(8,14,24,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;}
   .qrev-card{width:100%;max-width:520px;max-height:86vh;overflow:auto;background:var(--surface);color:var(--paper);border:1px solid var(--hair-strong);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:18px 20px 16px;}
@@ -30123,7 +30126,16 @@ function buildQuestionChatSystem(q){
   return ctx;
 }
 
-async function sendQuestionChat(presetText){
+// A rate-limited tutor request (Gemini's per-minute limit) usually clears within seconds, so try once more after a short pause.
+async function qChatTurnWithPause(history, q){
+  try{ return await qChatTurn(history, q); }
+  catch(e){
+    if(!(e && (e.status === 429 || /rate.?limit|429/i.test(String(e.message || ''))))) throw e;
+    await new Promise(r => setTimeout(r, 8000));
+    return qChatTurn(history, q);
+  }
+}
+async function sendQuestionChat(presetText, retryOpts){
   if(!session || qChat.busy) return;
   const q = session.queue[session.index]; if(!q) return;
   const inp = document.getElementById('qChatInput');
@@ -30131,7 +30143,7 @@ async function sendQuestionChat(presetText){
   if(!text) return;
   if(qChat.qid !== q.id) qChat = { qid:q.id, messages:[], busy:false, token:qChat.token };
   if(inp && presetText === undefined) inp.value = '';
-  qChatBubble('user', text);
+  if(!retryOpts) qChatBubble('user', text);
   if(!aiFeaturesAvailable){
     qChatBubble('bot', "I need an API key to chat. Add one in Settings and I'll be ready to talk through this question with you.");
     return;
@@ -30144,7 +30156,7 @@ async function sendQuestionChat(presetText){
     if(firstForQuestion) session.chatQids.push(q.id);
     if(!DATA.qChatStats) DATA.qChatStats = { messages:0, questions:0, lastAt:0, byDomain:{} };
     const cs = DATA.qChatStats;
-    cs.messages++; cs.lastAt = Date.now();
+    if(!retryOpts) cs.messages++; cs.lastAt = Date.now();
     if(firstForQuestion){ cs.questions++; cs.byDomain[q.domain] = (cs.byDomain[q.domain] || 0) + 1; }
     persist();
   }catch(e){}
@@ -30155,7 +30167,7 @@ async function sendQuestionChat(presetText){
   bubble.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
   try{
     const history = qChat.messages.slice(-12);
-    const turn = await qChatTurn(history, q);
+    const turn = await qChatTurnWithPause(history, q);
     const reply = String(turn.text || '').trim();
     if(qChat.token !== token || qChat.qid !== qid) return; // moved on to another question
     bubble.classList.remove('typing');
@@ -30168,6 +30180,11 @@ async function sendQuestionChat(presetText){
     qChat.messages.pop();
     bubble.classList.remove('typing'); bubble.classList.add('tutor-bubble-err');
     bubble.textContent = "Couldn't get a response. " + (d0 => d0.charAt(0).toUpperCase() + d0.slice(1))(describeAiError(e) || 'try again in a moment.');
+    // Keep the question so nothing has to be retyped: back in the box, and a Try again button on the message.
+    if(presetText === undefined && inp) inp.value = text;
+    const again = document.createElement('button'); again.type = 'button'; again.className = 'qchat-retry'; again.textContent = 'Try again';
+    again.onclick = () => { const row = bubble.parentElement; if(row) row.remove(); sendQuestionChat(text, { retry: true }); };
+    bubble.appendChild(again);
   }
   qChat.busy = false;
   if(send) send.disabled = false;
@@ -35105,7 +35122,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-29.00000122';
+const BUILD_ID = '2026-10-29.00000123';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
