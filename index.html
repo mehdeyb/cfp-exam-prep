@@ -2724,9 +2724,21 @@
 .key-skim-hook{font-size:14px;line-height:1.5;color:var(--paper);margin:0 0 6px;}
 .key-skim-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
 .key-skim-again{margin:6px 0 10px 18px;padding:0;font-size:14px;}
-.key-skim-overlay{position:fixed;inset:0;z-index:9999;display:block;color:var(--paper);background:var(--ink);overflow-y:auto;padding:20px 16px 40px;box-sizing:border-box;}
+.key-skim-overlay{position:fixed;inset:0;z-index:9999;display:block;color:var(--paper);background:var(--ink);overflow-y:auto;padding:0;box-sizing:border-box;}
 .key-skim-overlay .key-skim{max-width:640px;margin:0 auto;}
 .key-skim-close{float:right;margin-bottom:8px;}
+.key-skim-overlay .key-skim{max-width:none;width:100%;min-height:100%;margin:0;border-radius:0;box-sizing:border-box;padding:clamp(18px,3.5vw,44px);display:flex;flex-direction:column;gap:clamp(12px,2vw,20px);}
+.key-skim-close{align-self:flex-end;min-height:44px;padding:0 20px;font-size:15px;}
+.key-skim .key-skim-meta{font-size:13px;letter-spacing:.08em;}
+.key-skim .key-skim-label{font-size:clamp(22px,3.2vw,36px);line-height:1.25;margin:4px 0 0;max-width:1100px;}
+.key-skim h3{font-size:clamp(24px,3vw,34px);margin:8px 0 0;}
+.key-skim .hint{font-size:clamp(14px,1.6vw,17px);margin:0;}
+.key-skim-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(10px,1.6vw,18px);align-items:stretch;flex-direction:initial;}
+.key-skim-actions button{min-height:clamp(72px,9vh,104px);font-size:clamp(17px,2.1vw,24px);font-weight:600;padding:18px 22px;border-radius:18px;text-align:center;justify-content:center;}
+.key-skim-hook{font-size:clamp(16px,1.9vw,21px);line-height:1.5;max-width:1000px;margin:6px 0 0;min-height:0;}
+.key-skim-concept{font-size:clamp(16px,1.8vw,20px);max-width:1000px;}
+.key-skim > .btn:not(.ghost):not(.key-skim-close){align-self:flex-start;min-height:56px;font-size:18px;padding:0 32px;}
+.key-skim-again{font-size:clamp(15px,1.7vw,18px);}
 .key-skim-actions{flex-direction:column;align-items:stretch;}
 .key-skim-actions button{text-align:left;white-space:normal;line-height:1.35;}
 .key-skim-actions button.on{border-color:var(--correct);color:var(--correct);}
@@ -12477,7 +12489,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000225).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000227).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -40670,7 +40682,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000225';
+const BUILD_ID = '2026-10-31.00000227';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
