@@ -10313,12 +10313,7 @@ function renderAll(boot){
     ? `${DATA.missed.length} to revisit.`
     : `None yet.`;
   { const wb = document.getElementById('missedWalkBtn'); if(wb) wb.style.display = DATA.missed.length >= 2 ? '' : 'none'; }
-  const caseCardEl = document.getElementById('caseCardText');
-  if(caseCardEl){
-    const total = CASE_STUDIES.filter(c => caseQuestions(c.id).length).length;
-    const tried = CASE_STUDIES.filter(c => (DATA.caseStats || {})[c.id] && DATA.caseStats[c.id].attempts).length;
-    caseCardEl.textContent = tried ? `${tried} of ${total} cases tried.` : `${total} client cases, several questions each.`;
-  }
+  // The case and calculator card lines are set by renderModeToday, so only one renderer owns them.
   refreshHeaderStats();
 
   renderExamCountdownCard();
@@ -13597,6 +13592,15 @@ function renderModeToday(){
   // The Domain drill description says what today's plan will actually drill, not a separate ranking.
   { const dr = steps.find(s => s.id === 'wkdrill' && !s.done); const el = document.querySelector('[data-mw="drill"]'); if(dr && el && (dr.title || dr.why)) el.innerHTML = escapeHtml(dr.why || dr.title); }
   if(next) put(MODE_FOR_STEP[next.id], '<span class="mt-next">Next in today\'s plan</span> ' + escapeHtml(next.title || ''));
+  // Case studies: the card names the case that fits you best next, and how many you have tried.
+  { const el = document.getElementById('caseCardText');
+    if(el){ const total = CASE_STUDIES.filter(c => caseQuestions(c.id).length).length;
+      const tried = CASE_STUDIES.filter(c => (DATA.caseStats || {})[c.id] && DATA.caseStats[c.id].attempts).length;
+      let nx = null; try{ nx = nextCaseToTry(null); }catch(e){}
+      el.textContent = nx ? `Next fit: ${nx.title} · ${caseFit(nx.id).tag}. ${tried} of ${total} tried.` : (tried ? `${tried} of ${total} cases tried.` : `${total} client cases, several questions each.`); } }
+  // Calculator practice: the card names the formula you are shakiest on.
+  { const el = document.querySelector('#fdModeCard .mode-when'); let w = null; try{ w = fdWeakest(); }catch(e){}
+    if(el) el.textContent = w ? `Shakiest: ${w}. Drill it, then the HP 10bII+ steps.` : 'Practise the HP 10bII+ steps and formulas.'; }
   // Empty review modes explain their unlock condition.
   const misses = (DATA.missed || []).length;
   let pat = null; try{ pat = patternDrillPlan(); }catch(e){}
@@ -35489,7 +35493,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000136';
+const BUILD_ID = '2026-10-30.00000137';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
