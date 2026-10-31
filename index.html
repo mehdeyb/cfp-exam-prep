@@ -38937,8 +38937,12 @@ function osFitStudy(extra){
       if(document.querySelector('#studyHub[data-view="progress"]')){
         c.style.zoom = ''; c.style.setProperty('height', 'auto', 'important'); c.style.flex = '0 0 auto'; c.style.overflow = 'visible';
         [...c.children].forEach(x => { x.style.flexShrink = '0'; });
-        const top = c.getBoundingClientRect().top + (window.scrollY || 0);
-        const need = c.scrollHeight, avail = innerHeight - top - 10;
+        // Measure the real bottom of the content (not the box), against the visible screen height, with a small margin for the last line.
+        const top = c.getBoundingClientRect().top;
+        const bottomOf = el => el.getBoundingClientRect().bottom;
+        const kids = [...c.querySelectorAll('*')].filter(e => e.offsetParent && e.getBoundingClientRect().height > 0);
+        const need = Math.max(c.scrollHeight, kids.reduce((m, e) => Math.max(m, bottomOf(e) - top), 0)) + 4;
+        const avail = vpHeight() - top - 22;
         if(need > avail && avail > 120) c.style.zoom = (avail / need).toFixed(3);
         return;
       }
@@ -41696,7 +41700,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000280';
+const BUILD_ID = '2026-10-31.00000281';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
