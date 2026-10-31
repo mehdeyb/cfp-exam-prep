@@ -30627,6 +30627,18 @@ function gateAnalogy(text){
   if(t.length < 25 || ANALOGY_STOCK_RE.test(t)) return '';
   return t;
 }
+// True when a "trap" text presents the correct answer as the mistake: it names the correct letter as the pick, or quotes its wording.
+function trapNamesCorrectAnswer(trap, q){
+  if(!trap || !q || !Array.isArray(q.choices)) return false;
+  const t = String(trap).replace(/\s+/g, ' ');
+  const L = ['A','B','C','D'][q.correct];
+  if(!L) return false;
+  if(new RegExp('\\b(pick|picks|picking|picked|choose|chooses|choosing|chose|select|selects|selecting|answer|option|choice)\\s+(?:option\\s+|choice\\s+|answer\\s+)?' + L + '\\b', 'i').test(t)) return true;
+  if(new RegExp('\\b' + L + '\\s+(is|would be|looks)\\s+(tempting|the trap|wrong|the mistake)', 'i').test(t)) return true;
+  if(new RegExp('\\bthe\\s+' + L + '\\s+(answer|choice|option)\\b', 'i').test(t)) return true;
+  const ct = String(q.choices[q.correct] || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return ct.length >= 8 && t.toLowerCase().includes(ct);
+}
 function parseSimpleExplanation(raw){
   try{
     const m = String(raw || '').match(/\{[\s\S]*\}/); if(!m) return null;
@@ -30712,7 +30724,7 @@ async function requestSimplerExplanation(){
   const isRetry = btn.textContent === 'Try a different explanation';
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[q.id];
   if(!isRetry && cached){
-    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy) }) : cached, true);
+    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy), trap: trapNamesCorrectAnswer(cached.trap, q) ? '' : cached.trap }) : cached, true);
     btn.textContent = 'Try a different explanation';
     return;
   }
@@ -30754,13 +30766,15 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section the most common way people get this type of question wrong."}\nReturn ONLY a JSON object, no other text, with these string fields, each short: {"idea": "the rule or core idea in one plain sentence", "why": "two short sentences on why the correct answer is right, using the question's own facts", "analogy": "a comparison from an ordinary household's life that maps the question's own term onto it in one sentence, then says where the comparison breaks in one more sentence (pattern: \"[the question's term] works like [an everyday thing] because [the matching part]; unlike that thing, [where it differs]\"). Do not use phone plans, price tiers, pizza, restaurants, sports, games or subscriptions. Use an empty string if no comparison maps cleanly onto this question's facts", "spot": "the clue in a question like this that signals this idea, in one sentence", "trap": "the specific mistake to avoid, in one sentence"}. Keep the whole object under 110 words. Use only the facts in the question; do not invent figures.`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section describe a mistake that leads to one of the wrong answers (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), naming that letter and why it fails."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields, each short: {"idea": "the rule or core idea in one plain sentence", "why": "two short sentences on why the correct answer is right, using the question's own facts", "analogy": "a comparison from an ordinary household's life that maps the question's own term onto it in one sentence, then says where the comparison breaks in one more sentence (pattern: \"[the question's term] works like [an everyday thing] because [the matching part]; unlike that thing, [where it differs]\"). Do not use phone plans, price tiers, pizza, restaurants, sports, games or subscriptions. Use an empty string if no comparison maps cleanly onto this question's facts", "spot": "the clue in a question like this that signals this idea, in one sentence", "trap": "the specific mistake to avoid, in one sentence"}. Keep the whole object under 110 words. Use only the facts in the question; do not invent figures.`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
     let reply = parseSimpleExplanation(rawSimple)
       || trimToSentence(rawSimple)
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
+    // The trap is about a wrong answer. If the model named the correct one, drop the trap rather than teach the wrong lesson.
+    if(reply && typeof reply === 'object' && trapNamesCorrectAnswer(reply.trap, q)) reply = Object.assign({}, reply, { trap: '' });
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(typeof reply === 'string' ? reply : [reply.idea, reply.why, reply.analogy, reply.spot, reply.trap].join(' '));
     if(hitCalcConventionGuard){
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
@@ -35578,7 +35592,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000147';
+const BUILD_ID = '2026-10-31.00000148';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
