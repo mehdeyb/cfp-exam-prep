@@ -20486,7 +20486,9 @@ function fcRetellLocal(card, lp){
   const n = Math.max(0, (lp && lp.n ? lp.n : 2) - 2);
   const opts = [];
   if(ctx.mix) opts.push({ w: 2 + (ctx.mix.n || 1), label:'The look-alike to watch', text:'Often confused with ' + ctx.mix.other + '. Ask which of the two the question describes: the concept or the wording.' });
-  ctx.picks.forEach(p => opts.push({ w: 2 + (p.n || 1), label:'Where you slipped before', text:'On “' + p.stem + '” you chose “' + p.wrong + '”. The answer is “' + p.right + '”, because it is the concept, not the wording, that matters here.' }));
+  // A related question the learner missed: short clean excerpts, labelled as a different question so it does not read as this card.
+  const clipAt = (s, n) => { s = String(s).replace(/\s+/g, ' ').trim(); if(s.length <= n) return s; const c = s.slice(0, n); return c.slice(0, c.lastIndexOf(' ') > n * 0.6 ? c.lastIndexOf(' ') : n).replace(/[,;:\s]+$/, '') + '…'; };
+  ctx.picks.forEach(p => opts.push({ w: 2 + (p.n || 1), label:'A related question you missed', text:'On “' + clipAt(p.stem, 80) + '” you picked “' + clipAt(p.wrong, 80) + '”. Correct: “' + clipAt(p.right, 80) + '”.' }));
   const ex = fcExampleFor(card, n);
   if(ex) opts.push({ w: 1.5, label:'How it is tested', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
   try{
@@ -35523,7 +35525,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000141';
+const BUILD_ID = '2026-10-30.00000142';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
