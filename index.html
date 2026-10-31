@@ -7952,7 +7952,7 @@ const FLASHCARDS = [
 {id:'f-cv23-1588',domain:'general',sub:"Education needs analysis",term:"Years to enrollment",def:"The number of years until the student begins college; this determines how long savings have to grow before the funds are needed."},
 {id:'f-cv23-1589',domain:'tax',sub:"Tax reduction/management techniques",term:"Tax deferral",def:"Postponing income tax on earnings to a later date, as with qualified retirement plans and deferred annuities."},
 {id:'f-cv23-1590',domain:'tax',sub:"Tax reduction/management techniques",term:"Tax-loss harvesting",def:"Selling securities at a loss to offset capital gains, and up to $3,000 of ordinary income a year. The wash-sale rule disallows the loss if a substantially identical security is bought within 30 days before or after the sale."},
-{id:'f-cv23-1591',domain:'tax',sub:"Tax reduction/management techniques",term:"Asset location",def:"Holding tax-inefficient assets, such as taxable bonds, in tax-deferred accounts and tax-efficient assets, such as broad index stocks, in taxable accounts."},,
+{id:'f-cv23-1591',domain:'tax',sub:"Tax reduction/management techniques",term:"Asset location",def:"Holding tax-inefficient assets, such as taxable bonds, in tax-deferred accounts and tax-efficient assets, such as broad index stocks, in taxable accounts."},
   {"id": "eg01f", "domain": "estate", "sub": "Property titling and beneficiary designations", "term": "Totten trust", "def": "A revocable bank account held in trust for a beneficiary. The owner keeps control during life, and the balance passes outside probate at death."},
   {"id": "eg02f", "domain": "estate", "sub": "Gift, estate, and GST tax compliance and calculation", "term": "§2033 gross estate inclusion", "def": "All property the decedent owned at death is in the gross estate, whether it passes through probate or not, including half of community property."},
   {"id": "eg03f", "domain": "estate", "sub": "Gift, estate, and GST tax compliance and calculation", "term": "§2035 three-year rule", "def": "Life insurance transferred within three years of death, and any gift tax paid on gifts within three years, are pulled back into the gross estate. Most other completed gifts are not."},
@@ -17456,9 +17456,12 @@ Describe a brief, concrete scenario (a client situation, a number, or a specific
 let keyTermPattern = null; // built once, reused across every reveal rather than rebuilt per call
 function buildKeyTermPattern(){
   if(keyTermPattern) return keyTermPattern;
-  const terms = FLASHCARDS.map(f => f.term).sort((a,b) => b.length - a.length);
+  // Terms are matched on letter/number edges rather than \b, so a term that ends in ")" or "%" still matches. Empty or
+  // one-word fragments are skipped so they can never turn into blank, unclickable highlights.
+  const terms = [...new Set(FLASHCARDS.filter(f => f && typeof f.term === 'string').map(f => f.term.trim()).filter(t => t.length >= 3))]
+    .sort((a,b) => b.length - a.length);
   const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  keyTermPattern = new RegExp('\\b(' + terms.map(escapeRegex).join('|') + ')\\b', 'gi');
+  keyTermPattern = new RegExp('(^|[^A-Za-z0-9])(' + terms.map(escapeRegex).join('|') + ')(?![A-Za-z0-9])', 'gi');
   return keyTermPattern;
 }
 
@@ -17482,11 +17485,12 @@ function highlightKeyTermsInText(text){
   const raw = decodeGenEntities(String(text));
   const pattern = buildKeyTermPattern();
   let out = '', last = 0;
-  raw.replace(pattern, (match, _g, offset) => {
-    out += escapeHtml(raw.slice(last, offset))
+  raw.replace(pattern, (whole, pre, match, offset) => {
+    const start = offset + pre.length;
+    out += escapeHtml(raw.slice(last, start))
       + `<span class="key-term" role="button" tabindex="0" onclick="jumpToGlossaryTerm(${escapeHtml(JSON.stringify(match))})">${escapeHtml(match)}</span>`;
-    last = offset + match.length;
-    return match;
+    last = start + match.length;
+    return whole;
   });
   return out + escapeHtml(raw.slice(last));
 }
@@ -17509,7 +17513,7 @@ document.addEventListener('keydown', function(e){
   }
 });
 function jumpToGlossaryTerm(term){
-  const card = FLASHCARDS.find(f => f.term.toLowerCase() === term.toLowerCase());
+  const card = FLASHCARDS.find(f => f && String(f.term || '').toLowerCase() === String(term || '').toLowerCase());
   if(!card) return;
   keyTermModalReturnFocus = document.activeElement;
   document.getElementById('keyTermModalTerm').textContent = card.term;
@@ -35784,7 +35788,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000153';
+const BUILD_ID = '2026-10-31.00000154';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
