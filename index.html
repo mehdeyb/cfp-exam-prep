@@ -16860,6 +16860,8 @@ function ppRefresh(){
 function planLogAnswer(mode){
   try{
     if(session && session.stmtDrill) mode = 'stmts';
+    // A catch-up round is an adaptive-mode sitting, but it has its own step: its answers must not also count toward the mixed rounds.
+    if(session && session.catchup) mode = 'catchup';
     const L = planDayLog();
     L.modes[mode] = (L.modes[mode] || 0) + 1;
     if(mode === 'drill' && session && session.drillTopic) L.drill[session.drillTopic] = (L.drill[session.drillTopic] || 0) + 1;
@@ -41664,7 +41666,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000274';
+const BUILD_ID = '2026-10-31.00000275';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
