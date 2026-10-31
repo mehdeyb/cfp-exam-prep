@@ -35423,7 +35423,7 @@ async function requestSimplerExplanation(){
 
   const isRetry = btn.textContent === 'Try a different explanation';
   // The key carries a version, so explanations written with the older, thinner prompt are not shown again.
-  const simpKey = 'v2:' + q.id;
+  const simpKey = 'v3:' + q.id;
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[simpKey];
   if(!isRetry && cached){
     renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy), trap: trapNamesCorrectAnswer(cached.trap, q) ? '' : cached.trap }) : cached, true);
@@ -35468,7 +35468,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section about exactly why that pick fails." : "The student got it right. Make the 'trap' section describe a mistake that leads to one of the wrong answers (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), naming that letter and why it fails."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "analogy": "one comparison in this shape: the rule works like [something most people already do at home or at work, such as a paycheck, a bill, a bank statement, a car service or a school grade] because [the part that matches]. Unlike that, [where it breaks]. Each part of the rule should map onto a part of the comparison. Do not use phone plans, price tiers, pizza, restaurants, sports, games or subscriptions. Use an empty string if nothing maps cleanly onto this question", "spot": "start with Look for, then name the exact pattern in the question's wording that signals this idea, quoting a few words from the stem when you can, in one sentence. A student should be able to find it in the next question", "trap": "name the wrong letter, the mistake that leads to it, and the test that tells it apart from the right answer, in one or two sentences, for example: Choosing D fails because it does X, which only applies when the question asks Y. Never name the correct letter."}`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap section a specific mistake a candidate would make: the assumption behind the pick, then the one fact or rule that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), state the assumption that makes it look right, then the one fact or rule that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "analogy": "one comparison in this shape: the rule works like [something most people already do at home or at work, such as a paycheck, a bill, a bank statement, a car service or a school grade] because [the part that matches]. Unlike that, [where it breaks]. Each part of the rule should map onto a part of the comparison. Do not use phone plans, price tiers, pizza, restaurants, sports, games or subscriptions. Use an empty string if nothing maps cleanly onto this question", "spot": "start with Look for, then name the exact pattern in the question's wording that signals this idea, quoting a few words from the stem when you can, in one sentence. A student should be able to find it in the next question", "trap": "name the wrong letter, the mistake that leads to it, and the test that tells it apart from the right answer, in one or two sentences, for example: Choosing D fails because it does X, which only applies when the question asks Y. Never name the correct letter."}`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -35482,7 +35482,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
     } else if(!q.isVariant){
       if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
-      DATA.simplifiedExplanations['v2:' + q.id] = decodeGenEntities(reply);
+      DATA.simplifiedExplanations['v3:' + q.id] = decodeGenEntities(reply);
       persist();
     }
     if(!stillOnSameQuestion()) return;
@@ -40492,7 +40492,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000214';
+const BUILD_ID = '2026-10-31.00000215';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
