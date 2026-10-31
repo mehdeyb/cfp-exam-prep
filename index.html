@@ -2161,6 +2161,9 @@
       body.os-one #tab-study.active #studyCols{overflow:hidden !important;touch-action:none;}
       /* The fade and reserved gap at the foot of a fitted pane were covering the last rows and the This week banner on iPad landscape. */
       body.os-one #tab-study .os-fit{-webkit-mask-image:none !important;mask-image:none !important;padding-bottom:0 !important;}
+      /* Your progress on iPad landscape: the cards can be taller than the fixed block, so the block scrolls instead of cutting off the bottom. */
+      body.os-one #tab-study.active:has(#studyHub[data-view="progress"]) #studyCols{overflow-y:auto !important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y !important;padding-bottom:18px;}
+      body.os-one #tab-study.active:has(#studyHub[data-view="progress"]) #studyCols > *{flex:0 0 auto;}
       /* Done today starts its own column, so the heading and the finished steps it counts sit together. */
       body.os-one #todayPlanCard .pt-donehead{break-before:column;-webkit-column-break-before:always;break-after:avoid;margin-top:0;}
       body.os-one #todayPlanCard .pt-step{padding-top:4px !important;padding-bottom:4px !important;}
@@ -41647,7 +41650,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000272';
+const BUILD_ID = '2026-10-31.00000273';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
