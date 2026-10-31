@@ -36606,7 +36606,7 @@ async function requestSimplerExplanation(){
   const simpKey = 'v5:' + q.id;
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[simpKey];
   if(!isRetry && cached){
-    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy), trap: cleanTrap(cached.trap, q) }) : cached, true);
+    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy), trap: (session && session.lastSelectedIndex === q.correct) ? '' : cleanTrap(cached.trap, q) }) : cached, true);
     btn.textContent = 'Try a different explanation';
     return;
   }
@@ -36656,7 +36656,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       || trimToSentence(rawSimple)
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     // The trap is about a wrong answer. If the model named the correct one, drop the trap rather than teach the wrong lesson.
-    if(reply && typeof reply === 'object') reply = Object.assign({}, reply, { trap: cleanTrap(reply.trap, q) });
+    if(reply && typeof reply === 'object') reply = Object.assign({}, reply, { trap: wasCorrect ? '' : cleanTrap(reply.trap, q) });
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(typeof reply === 'string' ? reply : [reply.idea, reply.why, reply.analogy, reply.spot, reply.trap].join(' '));
     if(hitCalcConventionGuard){
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
@@ -41696,7 +41696,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000279';
+const BUILD_ID = '2026-10-31.00000280';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
