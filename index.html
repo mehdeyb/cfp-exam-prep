@@ -16862,6 +16862,8 @@ function planLogAnswer(mode){
     if(session && session.stmtDrill) mode = 'stmts';
     // A catch-up round is an adaptive-mode sitting, but it has its own step: its answers must not also count toward the mixed rounds.
     if(session && session.catchup) mode = 'catchup';
+    // A timed mock or full exam counts toward today's plan only when it is finished: a sitting that is left part-way is discarded, so its answers must not tick off the checkpoint.
+    if(session && (session.mode === 'mock' || session.mode === 'fullexam')){ session.planAnswered = (session.planAnswered || 0) + 1; return; }
     const L = planDayLog();
     L.modes[mode] = (L.modes[mode] || 0) + 1;
     if(mode === 'drill' && session && session.drillTopic) L.drill[session.drillTopic] = (L.drill[session.drillTopic] || 0) + 1;
@@ -36764,6 +36766,7 @@ function finishSession(){
   paceRecord();
   catchupNote(session);
   clearInProgressSession();
+  try{ if((session.mode === 'mock' || session.mode === 'fullexam') && session.planAnswered){ const L = planDayLog(); L.modes[session.mode] = (L.modes[session.mode] || 0) + session.planAnswered; } }catch(e){}
   try{ if(session.treeDrill) planMarkManualDone('tool'); }catch(e){} // finishing a decision-tree drill counts as today's decision-tool step
   if(session.mode==='fullexam' || session.mode==='mock') restoreNormalTheme();
 
@@ -41677,7 +41680,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000276';
+const BUILD_ID = '2026-10-31.00000277';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
