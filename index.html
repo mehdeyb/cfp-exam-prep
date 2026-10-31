@@ -13634,6 +13634,10 @@ function renderModeToday(){
   if(rv){ const t = misses ? '' : 'Unlocks after your first miss. Every wrong answer lands here.'; const mm = rv.querySelector('[data-mm="review"]'); if(mm && t) mm.textContent = t; }
   const pv = cardOf('pattern');
   if(pv){ const mm = pv.querySelector('[data-mm="pattern"]'); if(mm) mm.textContent = pat && pat.open && pat.open.length ? pat.open.length + ' open questions share your most common miss.' : 'Unlocks once a few misses share one cause.'; }
+  // Fix my mistake pattern: names the miss type it will drill, once there is one.
+  { const pv = document.querySelector('[data-mm="pattern"]') && document.querySelector('[data-mm="pattern"]').closest('.mode-card');
+    const mr = pv && pv.querySelector('.mode-when');
+    if(mr && pat && pat.kind && MISS_TYPES[pat.kind]) mr.textContent = `Your most common miss: ${MISS_TYPES[pat.kind].label.toLowerCase()}. ${MISS_TYPES[pat.kind].tip}`; }
 }
 function diagActionsHtml(){
   let dm; try{ dm = diagnosisModel(); }catch(e){ return ''; }
@@ -35519,7 +35523,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000140';
+const BUILD_ID = '2026-10-30.00000141';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
