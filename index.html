@@ -12489,7 +12489,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000227).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000228).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -17158,7 +17158,7 @@ function buildStudyPlanCore(minutes){
       const focusTxt = (wkD && kn.length) ? ` Start with the ${kn.length} for ${wkD.name}, your weakest area.` : '';
       const sk = figPick(skimCount()), skDom = sk.length ? (DOMAINS.find(d => d.key === sk[0].domain) || {}).name : '';
       return { id:'keys', title: sk.length ? `Skim ${sk.length} key numbers${skDom ? ': ' + skDom : ''}` : 'Skim the key numbers', minutes: Math.max(5, Math.round(sk.length * 1.1)),
-      why:'Answer each figure from memory before the right one is shown. Misses come back in your figure drills first. ' + (sk.length ? `${sk.length} figures, about ${Math.max(5, Math.round(sk.length * 1.1))} minutes.` : ''),
+      why:'Answer each figure from memory before the right one is shown. Misses come back in your figure drills first. ' + (keySkimResumeWhy() ? keySkimResumeWhy() + ' ' : '') + (sk.length ? `${sk.length} figures, about ${Math.max(5, Math.round(sk.length * 1.1))} minutes.` : ''),
       manual:true, run: () => { openKeySkim(); } }; }
   };
   const order = {
@@ -26334,34 +26334,48 @@ async function fcConceptFor(item, note, box){
     }
   }catch(e){ /* quiet: the hook still shows */ }
 }
-// The skim opens as its own full-screen card, independent of the tabs and focus mode, so it always shows.
-// Done closes it and marks the plan step done once you have answered at least one figure.
+// The skim keeps its own session for today: where you are, what you have got right, and what is still to come.
+// You can leave at any point and come back to finish. It is complete only when every figure has been answered.
+function keySkimToday(){ const S = DATA.keySkim; return (S && S.day === localDayKey()) ? S : null; }
+function keySkimSave(sess){ try{ DATA.keySkim = sess; persist(); }catch(e){} }
+function keySkimResumeWhy(){
+  const sess = keySkimToday();
+  if(!sess) return '';
+  if(sess.done) return 'Done for today.';
+  return sess.i > 0 ? `Resume: ${sess.i} of ${sess.ids.length} done.` : '';
+}
 function openKeySkim(){
-  // Clear any leftover focus mode from an earlier step, so the app's header and widgets are not hidden behind the skim.
-  try{ if(typeof _focus !== 'undefined' && _focus){ _focus = null; } }catch(e){}
   try{ document.body.classList.remove('focus-mode'); document.querySelectorAll('.focus-bar').forEach(x => x.remove()); document.querySelectorAll('.focus-path,.focus-target').forEach(x => { x.classList.remove('focus-path'); x.classList.remove('focus-target'); }); }catch(e){}
   const old = document.getElementById('keySkimOverlay'); if(old) old.remove();
-  const picks = figPick(skimCount());
+  let sess = keySkimToday();
+  let queue, i = 0, right = 0, missed = [], tried = new Set();
+  if(sess && !sess.done){
+    queue = sess.ids.map(l => KEY_NUMBERS.find(k => k.label === l)).filter(Boolean);
+    i = Math.min(sess.i || 0, queue.length); right = sess.right || 0; missed = (sess.missed || []).slice(); tried = new Set(sess.tried || []);
+  } else if(!sess){
+    queue = figPick(skimCount());
+    sess = { day: localDayKey(), ids: queue.map(k => k.label), i: 0, right: 0, missed: [], tried: [], done: false, at: Date.now() };
+    keySkimSave(sess);
+  } else queue = [];
+  const picks = queue.slice();
   const overlay = document.createElement('div'); overlay.id = 'keySkimOverlay'; overlay.className = 'key-skim-overlay';
   const box = document.createElement('div'); box.id = 'keySkim'; box.className = 'card key-skim';
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   const el = (tag, cls, text) => { const x = document.createElement(tag); if(cls) x.className = cls; if(text !== undefined) x.textContent = text; return x; };
-  const doneBtn = el('button', 'btn ghost key-skim-close', 'Done');
-  doneBtn.type = 'button';
-  let answered = 0;
-  const close = () => {
-    if(answered > 0){ try{ planDayLog().manual['keys'] = true; persist(); }catch(e){} }
-    overlay.remove();
-    try{ renderTodayPlan(); }catch(e){}
-  };
-  doneBtn.onclick = close;
-  overlay.addEventListener('keydown', e => { if(e.key === 'Escape') close(); });
-  let i = 0, right = 0;
-  const queue = picks.slice(); const tried = new Set(); const missed = [];
+  const closeBtn = el('button', 'btn ghost key-skim-close', 'Done');
+  closeBtn.type = 'button';
+  const save = () => keySkimSave({ day: localDayKey(), ids: queue.map(k => k.label), i, right, missed: missed.slice(), tried: Array.from(tried), done: false, at: Date.now() });
+  const leave = () => { if(!(sess && sess.done)) save(); overlay.remove(); try{ renderTodayPlan(); }catch(e){} };
+  closeBtn.onclick = leave;
+  overlay.addEventListener('keydown', e => { if(e.key === 'Escape') leave(); });
+  function finish(){
+    keySkimSave({ day: localDayKey(), ids: queue.map(k => k.label), i, right, missed: missed.slice(), tried: Array.from(tried), done: true, at: Date.now() });
+    try{ planDayLog().manual['keys'] = true; persist(); }catch(e){}
+  }
   function render(){
     box.innerHTML = '';
-    box.appendChild(doneBtn);
+    box.appendChild(closeBtn);
     if(!picks.length){ box.appendChild(el('p', 'hint', 'Nothing is due for a skim right now. The figure drills will bring the next ones.')); return; }
     if(i >= queue.length){
       box.appendChild(el('h3', '', `${right} of ${picks.length} right on the first try`));
@@ -26384,20 +26398,21 @@ function openKeySkim(){
         opts.querySelectorAll('button').forEach(x => x.disabled = true);
         const ok = idx === q.correct;
         if(ok){ b.classList.add('on'); } else { const cb = opts.querySelectorAll('button')[q.correct]; if(cb) cb.classList.add('on'); }
-        answered++;
         if(!retry){ tried.add(item.label); if(ok) right++; else { missed.push(item.label); queue.push(item); } try{ figRecordOutcome(q, ok); }catch(e){} }
+        i++;
         note.textContent = q.rationale[idx] || '';
         fcConceptFor(item, note, box);
-        const nx = el('button', 'btn', i + 1 < queue.length ? 'Next' : 'See result'); nx.type = 'button';
-        nx.onclick = () => { i++; render(); };
+        if(i >= queue.length) finish(); else save();
+        const nx = el('button', 'btn', i < queue.length ? 'Next' : 'See result'); nx.type = 'button';
+        nx.onclick = () => { render(); };
         box.appendChild(nx);
       };
       opts.appendChild(b);
     });
     box.appendChild(opts); box.appendChild(note);
   }
+  if(i >= queue.length && queue.length){ finish(); }
   render();
-  try{ persist(); }catch(e){}
   return true;
 }
 function startFigureDrill(n){
@@ -40682,7 +40697,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000227';
+const BUILD_ID = '2026-10-31.00000228';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
