@@ -2728,6 +2728,7 @@
 .key-skim-actions button{text-align:left;white-space:normal;line-height:1.35;}
 .key-skim-actions button.on{border-color:var(--correct);color:var(--correct);}
 .key-skim-hook{min-height:1em;}
+.key-skim-concept{margin-top:8px;font-size:14px;line-height:1.5;color:var(--paper);border-left:2px solid var(--teal);padding-left:10px;}
   .fc-contrast b{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
   .fc-card .fc-back{font-size:14px;color:var(--paper);line-height:1.6;display:none;}
   .fc-card .fc-hint{margin-top:18px;font-size:12px;color:var(--muted-dim);font-family:'IBM Plex Mono',monospace;}
@@ -12420,7 +12421,7 @@ const COVERAGE_B1_FLASHCARDS = [
 {id:"tvm-f08",domain:"general",sub:"Time value of money concepts and calculations",term:"Discount Rate",def:"The rate of return used to convert future cash flows into present value. It reflects the return available on alternatives of similar risk."}
 ];
 FLASHCARDS.push(...COVERAGE_B1_FLASHCARDS);
-// Coverage batch: fiduciary standard and life insurance (added build 2026-10-31.00000217).
+// Coverage batch: fiduciary standard and life insurance (added build 2026-10-31.00000219).
 const COVERAGE_B2_QUESTIONS = [
 {id:"fid-q01",domain:"conduct",sub:"Fiduciary standard and application",q:"A CFP professional recommends a proprietary fund that pays the firm more, without telling the client about the extra payment. Which duty is most directly at risk?",choices:["No duty, because the fund performs well","Only the suitability standard, because the fund fits the client","The duty of loyalty, if the conflict is not disclosed and managed","Only a duty owed by fee-based advisers"],correct:2,rationale:["Wrong — Good performance does not cure an undisclosed conflict. The duty applies to how the advice was given.","Wrong — Suitability can be part of the analysis, but the undisclosed payment is a conflict of interest problem first.","Correct — The duty of loyalty requires putting the client's interest first. An undisclosed payment that influences the recommendation breaches it unless the conflict is disclosed and managed.","Wrong — The fiduciary duty applies to CFP professionals giving financial advice, regardless of how they are paid."]},
 {id:"fid-q02",domain:"conduct",sub:"Fiduciary standard and application",q:"Which activity best reflects the duty of care owed to a client?",choices:["Guaranteeing investment returns to build trust","Recommending the lowest-cost product regardless of fit","Gathering relevant facts and analyzing them before making a recommendation","Skipping written documentation to save time"],correct:2,rationale:["Wrong — Guaranteeing returns is a misrepresentation. It is not a way to meet the duty of care.","Wrong — Cost matters, but a product that does not fit the client's goals is not prudent advice.","Correct — The duty of care requires reasonable diligence: gathering facts, analyzing them and reaching a reasoned recommendation.","Wrong — Documentation supports the duty of care. Skipping it weakens the planner's ability to show the advice was prudent."]},
@@ -26242,6 +26243,22 @@ function skimWhy(item){
   const t = figTier(item);
   return t === 0 ? 'Missed in a recent drill, so it comes back first.' : t === 1 ? 'Not drilled yet.' : 'Due for a recheck.';
 }
+// Why the figure is what it is: a short concept note, written once per figure and kept, so the number comes with its reason.
+async function fcConceptFor(item, note, box){
+  try{
+    if(!DATA.figConcept || typeof DATA.figConcept !== 'object') DATA.figConcept = {};
+    const cached = DATA.figConcept[item.label];
+    const show = t => { if(note && box && box.contains(note) && t){ const line = document.createElement('div'); line.className = 'key-skim-concept'; line.textContent = t; note.appendChild(line); } };
+    if(cached){ show(cached); return; }
+    if(!aiFeaturesAvailable) return;
+    const prompt = `A CFP exam candidate is learning this 2026 figure: "${item.label}" = ${item.value}.\nUsed hook: ${item.hook || '(none)'}\nIn two plain sentences, explain the concept behind this figure: what rule or purpose sets it, and what makes it easy to confuse with a nearby figure. Do not introduce any other numbers. Plain text, no preamble. If unsure of the reason, stay general.`;
+    const text = trimToSentence(await anthropicMessagesRequest({ messages:[{ role:'user', content: prompt }], maxTokens: 220 })).replace(/\s+/g, ' ').trim();
+    if(text && text.length >= 30 && text.length <= 400 && /[.!?]$/.test(text)){
+      DATA.figConcept[item.label] = text; try{ persist(); }catch(e){}
+      show(text);
+    }
+  }catch(e){ /* quiet: the hook still shows */ }
+}
 function openKeySkim(){
   const tab = document.getElementById('tab-reference'); if(!tab) return false;
   const picks = figPick(skimCount());
@@ -26250,12 +26267,13 @@ function openKeySkim(){
   tab.insertBefore(box, tab.firstChild);
   try{ focusEnter({ tab:'reference', el:box, title:'Skim the key numbers', stepId:'keys' }); }catch(e){}
   const el = (tag, cls, text) => { const x = document.createElement(tag); if(cls) x.className = cls; if(text !== undefined) x.textContent = text; return x; };
-  let i = 0, right = 0; const missed = [];
+  // Retrieval with delay: a figure missed on first try returns once more at the end of the skim. Only the first try is recorded.
+  const queue = picks.slice(); const tried = new Set(); let i = 0, right = 0; const missed = [];
   function render(){
     box.innerHTML = '';
     if(!picks.length){ box.appendChild(el('p', 'hint', 'Nothing is due for a skim right now. The figure drills will bring the next ones.')); return; }
-    if(i >= picks.length){
-      box.appendChild(el('h3', '', `${right} of ${picks.length} right`));
+    if(i >= queue.length){
+      box.appendChild(el('h3', '', `${right} of ${picks.length} right on the first try`));
       if(missed.length){
         box.appendChild(el('p', 'hint', 'These come back first in your figure drills:'));
         const ul = el('ul', 'key-skim-again'); missed.forEach(l => ul.appendChild(el('li', '', l))); box.appendChild(ul);
@@ -26263,10 +26281,10 @@ function openKeySkim(){
       try{ persist(); }catch(e){}
       return;
     }
-    const item = picks[i];
+    const item = queue[i], retry = tried.has(item.label);
     const q = figBuildQuestion(item);
     const dom = (DOMAINS.find(d => d.key === item.domain) || {}).name || '';
-    box.appendChild(el('div', 'key-skim-meta', `${i + 1} of ${picks.length} · ${dom}`));
+    box.appendChild(el('div', 'key-skim-meta', `${i + 1} of ${queue.length} · ${dom}${retry ? ' · again' : ''}`));
     box.appendChild(el('div', 'key-skim-label', q.q));
     box.appendChild(el('p', 'hint', skimWhy(item)));
     const opts = el('div', 'key-skim-actions'); const note = el('div', 'key-skim-hook');
@@ -26275,10 +26293,11 @@ function openKeySkim(){
       b.onclick = () => {
         opts.querySelectorAll('button').forEach(x => x.disabled = true);
         const ok = idx === q.correct;
-        if(ok){ right++; b.classList.add('on'); } else { missed.push(item.label); const cb = opts.querySelectorAll('button')[q.correct]; if(cb) cb.classList.add('on'); }
-        try{ figRecordOutcome(q, ok); }catch(e){}
+        if(ok){ b.classList.add('on'); } else { const cb = opts.querySelectorAll('button')[q.correct]; if(cb) cb.classList.add('on'); }
+        if(!retry){ tried.add(item.label); if(ok) right++; else { missed.push(item.label); queue.push(item); } try{ figRecordOutcome(q, ok); }catch(e){} }
         note.textContent = q.rationale[idx === q.correct ? q.correct : idx] || '';
-        const nx = el('button', 'btn', i + 1 < picks.length ? 'Next' : 'See result'); nx.type = 'button';
+        fcConceptFor(item, note, box);
+        const nx = el('button', 'btn', i + 1 < queue.length ? 'Next' : 'See result'); nx.type = 'button';
         nx.onclick = () => { i++; render(); };
         box.appendChild(nx);
       };
@@ -40571,7 +40590,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000217';
+const BUILD_ID = '2026-10-31.00000219';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
