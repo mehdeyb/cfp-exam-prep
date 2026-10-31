@@ -12894,7 +12894,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000241).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000242).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -17512,8 +17512,10 @@ function buildStudyPlanCore(minutes){
     const name = planTarget(pin, (idx === 0 && wf) ? wf : (byUse.find(n => n !== L.targets.calcFormula) || byUse[0]));
     if(!name) return null;
     const weak = (id === 'calc' && wf === name);
+    const fsN = fdStats(name), fsLvl = fdLevelOf(name), fsAcc = fsN.attempts ? Math.round(fsN.correct / fsN.attempts * 100) : null;
+    const fsTxt = fsN.attempts ? `Level ${fsLvl}${fsAcc !== null ? ', ' + fsAcc + '% right so far' : ''}.` : 'First time with this one.';
     return { id, title:`Formula practice: ${name}`, minutes:8, need:4, have: Math.min(4, act.formula), unit:'problems',
-      why: weak ? 'A handful of fresh problems on a formula you keep missing usually settles it.' : 'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.',
+      why: (weak ? 'A handful of fresh problems on a formula you keep missing usually settles it.' : 'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.') + ' ' + fsTxt,
       how: ['Read the formula and what each letter stands for.','Work the problem with the numbers shown, on the calculator or on paper.','Enter your answer, then read the explanation, including when you were right.','Do four problems; each one has new numbers.'],
       run: () => { showTab('study'); openFormulaDrill(name); } };
   };
@@ -30184,7 +30186,15 @@ let tvmOpenedOverQuiz = false;
    the Reference list both read.
 =========================================================== */
 const fdRi = (a,b) => a + Math.floor(Math.random()*(b-a+1));
-const fdPick = arr => arr[Math.floor(Math.random()*arr.length)];
+// While a drill problem is being built, money inputs at Exam level are not round numbers, so the arithmetic is harder to do in your head.
+let fdGenActive = false;
+const fdPick = arr => {
+  const v = arr[Math.floor(Math.random()*arr.length)];
+  if(fdGenActive && typeof fd !== 'undefined' && fd && fd.lvl === 3 && typeof v === 'number' && v >= 1000 && arr.every(x => typeof x === 'number' && x >= 1000)){
+    return Math.max(1000, Math.round(v * (0.92 + Math.random() * 0.16) / 10) * 10);
+  }
+  return v;
+};
 const fdMoney = n => '$' + Math.round(n).toLocaleString('en-US');
 const fdNum = (n, d) => Number(n).toFixed(d);
 
@@ -31061,7 +31071,8 @@ function fdChooseName(){
     const acc = fdAccuracy(n), st = fdStats(n);
     const age = st.lastAt ? Math.min(2, (Date.now() - st.lastAt) / (3 * 86400000)) : 0; // formulas you have not touched in days come back
     const base = acc === null ? 4 : 1 + 3*(1 - acc);
-    return base * (1 + age * 0.5) * (fdLevelOf(n) === 3 && acc !== null && acc >= 0.85 ? 0.6 : 1); // a formula you own at the top level appears less
+    const recentMiss = (st.missRun || 0) > 0 ? 1.5 : 1; // a miss on the last try brings it back sooner
+    return base * (1 + age * 0.5) * recentMiss * (fdLevelOf(n) === 3 && acc !== null && acc >= 0.85 ? 0.6 : 1); // a formula you own at the top level appears less
   });
   let r = Math.random() * weights.reduce((a,b)=>a+b,0);
   for(let i = 0; i < weights.length; i++){ r -= weights[i]; if(r <= 0) return FD_NAMES[i]; }
@@ -31115,7 +31126,14 @@ function fdSetFilter(v){ fd.filter = v; fdNext(); }
 function fdNext(){
   fd.name = fdChooseName();
   fd.last = fd.name;
-  { const seenT = fd.recentTexts || (fd.recentTexts = []); fd.lvl = fdLevelOf(fd.name); let pr = FD_GENS[fd.name](), tries = 0; while(tries++ < 8 && pr && seenT.indexOf(pr.scenario) >= 0) pr = FD_GENS[fd.name](); pr = fdLevelize(pr, fd.lvl); fd.prob = pr; fd.concept = null; seenT.push(pr.scenario); if(seenT.length > 12) seenT.shift(); }
+  // A formula you have not touched for a week steps back one level, so it is refreshed before it is pushed further.
+  fd.carryNote = '';
+  { const sx = (DATA.formulaStats || {})[fd.name];
+    if(sx && sx.lvl > 1 && sx.lastAt && Date.now() - sx.lastAt > 7 * 86400000){ const days = Math.floor((Date.now() - sx.lastAt) / 86400000); sx.lvl = sx.lvl - 1; sx.lvlRun = 0; sx.lvlMiss = 0; fd.carryNote = `It has been ${days} days, so this one steps back to Level ${sx.lvl} to refresh it. `; persist(); } }
+  { const seenT = fd.recentTexts || (fd.recentTexts = []); fd.lvl = fdLevelOf(fd.name); let pr = null, tries = 0;
+    fdGenActive = true;
+    try{ pr = FD_GENS[fd.name](); while(tries++ < 8 && pr && seenT.indexOf(pr.scenario) >= 0) pr = FD_GENS[fd.name](); } finally { fdGenActive = false; }
+    pr = fdLevelize(pr, fd.lvl); fd.prob = pr; fd.concept = null; seenT.push(pr.scenario); if(seenT.length > 12) seenT.shift(); }
   fd.answered = false;
   fd.level = fdSupportLevel(fd.name); fd.peeked = false;
   fdRenderSupport();
@@ -31153,7 +31171,8 @@ function fdCheck(){
   const p = fd.prob, ok = Math.abs(x - p.answer) <= p.tol;
   const s = fdStats(fd.name);
   s.attempts++; if(ok){ s.correct++; if(!fd.peeked) s.streak = (s.streak||0) + 1; s.missRun = 0; } else { s.streak = 0; s.missRun = (s.missRun||0) + 1; } s.lastAt = Date.now();
-  fd.levelNote = ''; try{ fd.levelNote = fdMoveLevel(s, ok, fd.peeked); }catch(e){}
+  const carry = fd.carryNote || ''; fd.carryNote = ''; fd.levelNote = carry;
+  try{ const mv = fdMoveLevel(s, ok, fd.peeked); fd.levelNote = [carry, mv].filter(Boolean).join(' '); }catch(e){}
   DATA.formulaStats[fd.name] = s;
   DATA.formulaDrillCount = (DATA.formulaDrillCount || 0) + 1; DATA.formulaDrillLastAt = Date.now(); logActivity('formula', 1);
   try{ planDayLog().formula++; }catch(e){}
@@ -31249,7 +31268,7 @@ function fdRenderStatus(){
   const s = fdStats(fd.name);
   const acc = s.attempts ? Math.round(s.correct/s.attempts*100) + '% right over ' + s.attempts + (s.attempts===1?' try':' tries') : 'first time with this one';
   const t = fd.tally.n ? `<b>This sitting:</b> ${fd.tally.ok} of ${fd.tally.n}` : '<b>This sitting:</b> just started';
-  const lv = (fd.lvl ? ' · Level ' + fd.lvl : '') + (fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula behind a peek' : ' · unaided');
+  const lv = (fd.lvl ? ' · Level ' + fd.lvl + ' (' + FD_LEVEL_NAMES[fd.lvl] + ')' : '') + (fd.level === 'guided' ? ' · formula shown' : fd.level === 'try' ? ' · formula behind a peek' : ' · unaided');
   let plan = '';
   try{
     const pl = buildStudyPlan(), st = pl.steps.find(x => (x.id === 'calc' || x.id === 'calc2') && !x.manual && x.unit === 'problems');
@@ -31261,6 +31280,18 @@ function fdRenderStatus(){
     }
   }catch(e){}
   el.innerHTML = `<span>${t}</span><span><b>This formula:</b> ${escapeHtml(acc)}${s.streak >= 3 ? ' · ' + s.streak + ' in a row' : ''}${lv}</span>${plan}`;
+}
+// One plain summary of formula drill progress, shared by the tutor prompt and the plan.
+function fdTutorSummary(){
+  const seen = FD_NAMES.filter(n => fdStats(n).attempts > 0);
+  if(!seen.length) return 'not started yet.';
+  const shaky = FD_NAMES.filter(n => fdStats(n).attempts >= 3 && fdAccuracy(n) < 0.6).sort((a, b) => fdAccuracy(a) - fdAccuracy(b)).slice(0, 3);
+  const exam = FD_NAMES.filter(n => fdStats(n).attempts && fdLevelOf(n) === 3).length;
+  const idle = FD_NAMES.filter(n => fdStats(n).attempts && fdStats(n).lastAt && Date.now() - fdStats(n).lastAt > 7 * 86400000).length;
+  let a = 0, c = 0; FD_NAMES.forEach(n => { const st = fdStats(n); a += st.attempts || 0; c += st.correct || 0; });
+  return `${seen.length} of ${FD_NAMES.length} formulas practised, ${a ? Math.round(c / a * 100) : 0}% right overall, ${exam} at Exam level` +
+    (shaky.length ? `; shakiest: ${shaky.map(n => `${n} (${Math.round(fdAccuracy(n) * 100)}%)`).join(', ')}` : '') +
+    (idle ? `; ${idle} not touched in a week` : '') + '.';
 }
 function fdWeakest(){
   const rows = FD_NAMES.map(n => ({ n, s: fdStats(n) })).filter(r => r.s.attempts >= 3);
@@ -38488,6 +38519,11 @@ function buildTutorSystemPrompt(){
     }catch(e){}
   }
 
+  let formulaContext = '';
+  try{
+    const fl = fdTutorSummary();
+    if(fl) formulaContext = ` Formula drills: ${fl} Use this to pick what to explain next; mention it only when formulas or calculator work come up.`;
+  }catch(e){}
   let skimContext = '';
   try{
     const sk = keySkimToday();
@@ -38524,7 +38560,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${skimContext}${teachContext}${foundationContext}${stageSummaryForTutor()}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${skimContext}${formulaContext}${teachContext}${foundationContext}${stageSummaryForTutor()}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
@@ -41495,7 +41531,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000241';
+const BUILD_ID = '2026-10-31.00000242';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
