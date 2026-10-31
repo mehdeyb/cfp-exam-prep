@@ -33528,18 +33528,32 @@ function isStudyMode(){ return !!session && STUDY_MODES.includes(session.mode); 
 // and completes by itself once its questions are answered. Nothing is marked by hand.
 let _catchupLaunch = false;
 function catchupToday(){
-  const r = DATA.catchupRun; if(!r || r.day !== localDayKey()) return null;
+  const r = DATA.catchupRun; if(!r) return null;
+  // An unfinished round carries over to the next day with its progress; a finished one only lasts its day.
+  if(r.day !== localDayKey()){
+    if(r.done) return null;
+    r.day = localDayKey(); try{ persist(); }catch(e){}
+  }
   return r;
 }
 function catchupNote(sess){
   const r = DATA.catchupRun; if(!sess || !sess.catchup || !r) return;
-  r.answered = Math.min(r.n, (sess.answerLog || []).length);
+  // base = what was already answered before this sitting began (a round can be picked up across sittings).
+  r.answered = Math.min(r.n, (r.base || 0) + (sess.answerLog || []).length);
   if(r.answered >= r.n) r.done = true;
 }
 function startCatchupRun(n){
   const cur = catchupToday();
   if(cur && DATA.inProgressSession && DATA.inProgressSession.catchup && !cur.done){ resumeInProgressSession(); return; }
-  DATA.catchupRun = { day: localDayKey(), n, answered: 0, done: false }; persist();
+  if(cur && !cur.done){
+    // Unfinished round with no saved sitting (it was dismissed or cleared): keep what was answered and ask only for the rest.
+    cur.base = cur.answered || 0; try{ persist(); }catch(e){}
+    const remaining = Math.max(1, cur.n - cur.base);
+    _catchupLaunch = true;
+    try{ tutorLengthOverride = remaining; showTab('study'); startAdaptive(); } finally { tutorLengthOverride = null; _catchupLaunch = false; }
+    return;
+  }
+  DATA.catchupRun = { day: localDayKey(), n, answered: 0, base: 0, done: false }; persist();
   _catchupLaunch = true;
   try{ tutorLengthOverride = n; showTab('study'); startAdaptive(); } finally { tutorLengthOverride = null; _catchupLaunch = false; }
 }
@@ -41650,7 +41664,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000273';
+const BUILD_ID = '2026-10-31.00000274';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
