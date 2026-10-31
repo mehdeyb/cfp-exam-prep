@@ -1689,19 +1689,20 @@
   .cue-toggle:hover{border-color:var(--gold);}
   .cue-toggle:active{transform:scale(.96);}
   .cue-toggle[aria-pressed="true"]{color:var(--gold);border-color:var(--gold);}
-  .cs-sent{border-radius:4px;padding:1px 2px;cursor:pointer;transition:background var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+  .cs-sent{position:relative;border-radius:4px;padding:1px 2px 1px 6px;cursor:pointer;transition:background var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);-webkit-box-decoration-break:clone;box-decoration-break:clone;}
   .cs-sent:hover{background:rgba(128,128,128,.12);}
   .cs-sent.flagged{box-shadow:inset 0 -2px 0 var(--gold);background:rgba(201,162,39,.12);}
   .cs-revealed .cs-sent{cursor:default;}
   .cs-revealed .cs-sent:hover{background:none;}
   .cs-revealed .cue{background:transparent;}
-  .cs-sent.key{box-shadow:inset 3px 0 0 var(--gold);background:rgba(201,162,39,.12);padding-left:6px;}
+  .cs-sent.key{box-shadow:inset 3px 0 0 var(--gold);background:rgba(201,162,39,.12);}
   .cs-sent.key.hit{box-shadow:inset 3px 0 0 var(--correct);}
   .cs-sent.key.miss{box-shadow:inset 3px 0 0 var(--incorrect);}
   .cs-sent.extra{opacity:.75;}
   .cs-ev{font-weight:700;text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:3px;}
   .cs-noise{text-decoration:line-through;text-decoration-style:dotted;opacity:.7;}
-  .cs-badge{font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:8px;border:1px solid var(--hair);color:var(--muted);white-space:nowrap;}
+  /* The verdict tag sits outside the text flow, so revealing an answer never moves the words. */
+  .cs-badge{position:absolute;right:4px;top:-9px;font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:8px;border:1px solid var(--hair);background:var(--surface2);color:var(--muted);white-space:nowrap;line-height:1.4;}
   .cs-sent.hit .cs-badge{color:var(--correct);border-color:var(--correct);}
   .cs-sent.miss .cs-badge{color:var(--incorrect);border-color:var(--incorrect);}
   .cue-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45;}
@@ -28878,7 +28879,11 @@ function paintScenario(q, revealed){
   const ranges = reserved.concat(auto).sort((a, b) => a.s - b.s);
   if(study){
     // The legend and switch only appear when this scenario actually has something highlighted, so there is never a key for colours that are not there.
-    const present = Object.keys(CUE_LABELS).filter(k => ranges.some(r => r.k === k));
+    // Legend keys come from the same cues before and after the answer, so the bar does not appear or change height on reveal.
+    const kinds = new Set(ranges.map(r => r.k));
+    if(cue){ cueFindRanges(text, cue.ev, 'ev').forEach(r => kinds.add(r.k)); cueFindRanges(text, cue.noise, 'noise').forEach(r => kinds.add(r.k)); }
+    if(on) cueAutoRanges(text, []).forEach(r => kinds.add(r.k));
+    const present = Object.keys(CUE_LABELS).filter(k => kinds.has(k));
     if(!on || present.length){
       const bar = document.createElement('div'); bar.className = 'cue-bar';
       if(on) bar.innerHTML = present.map(k => `<span class="cue-chip cue-${k}">${CUE_LABELS[k]}</span>`).join('');
@@ -35788,7 +35793,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000154';
+const BUILD_ID = '2026-10-31.00000155';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
