@@ -12489,7 +12489,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000230).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000231).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -17159,6 +17159,7 @@ function buildStudyPlanCore(minutes){
       const sk = figPick(skimCount()), skDom = sk.length ? (DOMAINS.find(d => d.key === sk[0].domain) || {}).name : '';
       return { id:'keys', title: sk.length ? `Skim ${sk.length} key numbers${skDom ? ': ' + skDom : ''}` : 'Skim the key numbers', minutes: Math.max(5, Math.round(sk.length * 1.1)),
       why:'Answer each figure from memory before the right one is shown. Misses come back in your figure drills first. ' + (keySkimResumeWhy() ? keySkimResumeWhy() + ' ' : '') + (sk.length ? `${sk.length} figures, about ${Math.max(5, Math.round(sk.length * 1.1))} minutes.` : ''),
+      need: (keySkimToday() && keySkimToday().ids.length) || sk.length, have: (() => { const ks = keySkimToday(); if(!ks) return 0; return ks.done ? ks.ids.length : (ks.i || 0); })(),
       manual:true, run: () => { openKeySkim(); } }; }
   };
   const order = {
@@ -18057,13 +18058,13 @@ function _renderTodayPlanInner(){
     const resumeIt = isNext && !st.manual && st.id === 'adaptive' && !!(DATA.inProgressSession && DATA.inProgressSession.mode === 'adaptive' && (DATA.inProgressSession.answerLog || []).length > 0 && DATA.inProgressSession.index < (DATA.inProgressSession.queue || []).length);
     const pct = st.need > 0 ? Math.round(100 * Math.min(1, (st.have || 0) / st.need)) : 0;
     const pr = progTxt(st);
-    const btn = st.done ? '' : (st.manual
+    const btn = st.done ? '' : st.id === 'keys' ? `<button type="button" class="pt-go" aria-label="${partial ? 'Continue' : 'Start'}: ${escapeHtml(st.title)}" title="${partial ? escapeHtml((st.have || 0) + ' of ' + st.need + ' done so far') : ''}" onclick="runPlanStep('keys')">${partial ? 'Continue' : 'Start'}</button>` : (st.manual
       ? `<span class="pt-actions"><button type="button" class="pt-go" onclick="runPlanStep('${st.id}')">Open</button>${st.id === 'keys' ? '' : `<button type="button" class="pt-mark" onclick="planMarkManualDone('${st.id}')">Mark done</button>`}</span>`
       : `<button type="button" class="pt-go" aria-label="${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}: ${escapeHtml(st.title)}" title="${partial ? escapeHtml((st.have || 0) + ' of ' + st.need + ' done so far') : ''}" onclick="${resumeIt ? 'resumeInProgressSession()' : `runPlanStep('${st.id}')`}">${resumeIt ? 'Resume' : partial ? 'Continue' : 'Start'}</button>`);
     const rowGo = (!st.manual && !st.done) ?` role="button" tabindex="0" onclick="runPlanStep('${st.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();runPlanStep('${st.id}')}"` : '';
     return `<div${rowGo} class="pt-step${st.done ? ' done' : ''}${partial ? ' partial' : ''}${isNext ? ' next' : ''}">
       <div class="pt-num">${st.done ? '✓' : seqNo[i]}</div>
-      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${(!st.manual && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}<div class="pt-why">${escapeHtml(planStepLabel(st))}</div></div>
+      <div class="pt-body">${isNext ? '<div class="pt-nextlabel">Next</div>' : ''}<div class="pt-title" title="${escapeHtml(st.why || '')}">${escapeHtml(st.title)}</div>${((!st.manual || st.id === 'keys') && st.need > 0) ? `<div class="pt-meter${partial ? ' live' : ''}" role="img" aria-label="${escapeHtml(pr || (st.done ? 'Done' : 'Not started'))}"><i style="transform:scaleX(${st.done ? 1 : Math.max(0.03, pct / 100).toFixed(3)})"></i></div>${pr && !st.done ? `<div class="pt-prog">${escapeHtml(pr)}</div>` : ''}` : ''}<div class="pt-why">${escapeHtml(planStepLabel(st))}</div></div>
       ${btn}
     </div>` + (plan.breakAfter === st.id ? `<div class="pt-break" role="note"><b>Break, ${plan.minutes >= 300 ? 15 : 10} min</b> ${plan.minutes >= 300 ? 'Like the real exam\'s mid-exam break: stand up, water, a snack, no screen, then restart at full focus. Practicing the break and the restart is part of the training.' : 'Stand up, water, no screen. The second half sticks better after it.'}</div>` : ''); });
   // A long day is a long list. Show where you are and the next several steps, and let the rest unfold on a tap.
@@ -40705,7 +40706,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000230';
+const BUILD_ID = '2026-10-31.00000231';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
