@@ -26530,6 +26530,14 @@ async function qrevRun(q, focus){
     if(token !== qrevToken || !document.getElementById('qrevBody')) return;
   }
   if(result.status !== 'error'){ result.focus = focus || 'general'; qrevRecord(q, result); }
+  // A generated question whose error could not be fixed to a version that passes the check is not worth keeping: remove it from the bank.
+  try{
+    if(result.status === 'problem' && result.fixed === false && Array.isArray(DATA.generatedBank) && DATA.generatedBank.some(x => x && String(x.id) === String(q.id))){
+      DATA.generatedBank = DATA.generatedBank.filter(x => !(x && String(x.id) === String(q.id)));
+      result.removed = true;
+      persist();
+    }
+  }catch(e){}
   qrevMarkFocus(focus);
   qrevShow(result, q);
 }
@@ -26572,7 +26580,7 @@ function qrevShow(r, q){
   const qe = document.querySelector('#qrevHost .qrev-q');
   if(r && r.fixed && qe) qe.textContent = String(r.fixed.q || '').slice(0, 180);
   const fixNote = r && r.fixed ? '<p class="qrev-fix"><b>Corrected:</b> ' + E(r.fixed.what || 'the question was rewritten.') + ' The correct answer is now <b>' + E(L[r.fixed.correct] || '?') + '</b>.</p>'
-    : (r && r.status === 'problem' && r.fixed === false ? '<p class="qrev-note">The corrected version did not pass its own check, so your flag stays in the review list.</p>' : '');
+    : (r && r.status === 'problem' && r.fixed === false ? '<p class="qrev-note">' + (r.removed ? 'The corrected version did not pass its own check, so this question has been removed from the bank.' : 'The corrected version did not pass its own check, so your flag stays in the review list.') + '</p>' : '');
   body.innerHTML = html + fixNote;
 }
 // A checkpoint every FC_CHECKPOINT cards: say what went well, name the cards
@@ -41747,7 +41755,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000305';
+const BUILD_ID = '2026-10-31.00000306';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
