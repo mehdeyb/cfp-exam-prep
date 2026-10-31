@@ -14976,7 +14976,7 @@ function allQuestions(){
   // Saved generated items: decode any entities once, in place, so older items show clean text too.
   (g || []).forEach((q, i) => { if(q && GEN_ENTITY_RE.test(JSON.stringify(q))){ const d = decodeGenEntities(q); Object.keys(d).forEach(k => { q[k] = d[k]; }); } });
   // Corrections from flagged questions apply here, to built-in and generated questions alike.
-  { const fx = DATA.questionFixes || {}; QUESTIONS.concat(g || []).forEach(q => { const f = q && fx[String(q.id)]; if(f){ q.q = f.q; q.choices = f.choices; q.correct = f.correct; q.rationale = f.rationale; q.scenario = f.scenario || undefined; } }); }
+  { const fx = DATA.questionFixes || {}; const sameAsBank = (pv, q) => !!pv && pv.q === q.q && JSON.stringify(pv.choices) === JSON.stringify(q.choices) && pv.correct === q.correct && JSON.stringify(pv.rationale || null) === JSON.stringify(q.rationale || null); QUESTIONS.concat(g || []).forEach(q => { const f = q && fx[String(q.id)]; if(f && (!f.prev || sameAsBank(f.prev, q))){ q.q = f.q; q.choices = f.choices; q.correct = f.correct; q.rationale = f.rationale; q.scenario = f.scenario || undefined; } }); }
   QUESTIONS.concat((g || []).filter(q => !staleBonusDepQ(q))).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
@@ -41654,7 +41654,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000269';
+const BUILD_ID = '2026-10-31.00000270';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
