@@ -13615,6 +13615,18 @@ function renderModeToday(){
         pick = rows[0] || null;
       }catch(e){}
       el.textContent = pick ? `Next: ${pick.name} · ${(DOMAINS.find(d => d.key === pick.dom) || {}).code || ''}${pick.misses ? `, ${pick.misses} missed before` : ''}.` : 'Practise which choice fits a scenario.'; } }
+  // Practice exam: recommends a full run when none has happened in two weeks, otherwise a mock, and says how long until the exam.
+  { const el = document.querySelector('[data-mm="exam"]') && document.querySelector('[data-mm="exam"]').closest('.mode-card');
+    const mr = el && el.querySelector('.mode-when');
+    if(mr){ const ss = DATA.sessions || []; let lastFull = 0, lastMock = 0;
+      ss.forEach(s => { const ts = new Date(s.date).getTime() || 0; if(s.mode === 'fullexam') lastFull = Math.max(lastFull, ts); if(s.mode === 'mock') lastMock = Math.max(lastMock, ts); });
+      const FULL = DOMAINS.reduce((a, d) => a + (d.fullExamCount || 0), 0);
+      let days = null; try{ days = getDaysUntilExam(); }catch(e){}
+      const dtxt = days != null && days >= 0 ? ` · ${days} day${days === 1 ? '' : 's'} to the exam` : '';
+      const sinceFull = lastFull ? (Date.now() - lastFull) / 86400000 : Infinity;
+      mr.innerHTML = sinceFull > 14
+        ? `Next: a full ${FULL}-question run${dtxt}. Timed, like the real exam.`
+        : `Next: a ${MOCK_QUESTION_COUNT}-question timed mock${dtxt}. Your last full run was ${Math.floor(sinceFull)} days ago.`; } }
   // Empty review modes explain their unlock condition.
   const misses = (DATA.missed || []).length;
   let pat = null; try{ pat = patternDrillPlan(); }catch(e){}
@@ -35507,7 +35519,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000139';
+const BUILD_ID = '2026-10-30.00000140';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
