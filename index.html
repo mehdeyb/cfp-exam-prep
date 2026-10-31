@@ -4063,6 +4063,14 @@
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:static;background:none;margin-top:14px;padding:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{min-height:clamp(300px,52vh,520px);}
     /* The explanation takes the card's right half, beside the term and definition, so the whole card reads without scrolling. */
+    /* Worked example open: helper buttons run as one row under the progress bar, the card sits left and the example fills the right column to the action bar, so no space is wasted beside the card. */
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]){grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-progress{grid-column:1 / -1;grid-row:1;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-row{grid-column:1 / -1;grid-row:2;flex-direction:row;flex-wrap:nowrap;align-items:stretch;align-self:stretch;gap:8px;margin-top:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-row .btn.ghost{flex:1 1 0;min-width:0;width:auto;white-space:normal;min-height:42px;padding:6px 8px;font-size:13px;line-height:1.25;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card{grid-column:1;grid-row:3;min-height:0;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box{grid-column:2;grid-row:3;margin-top:0;align-self:stretch;min-height:0;max-height:none;overflow-y:auto;font-size:13px;line-height:1.4;padding:10px 12px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-actions{grid-column:1 / -1;grid-row:4;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card:has(> #fcApply[style*="block"]){position:relative;display:block;text-align:center;min-height:clamp(300px,74vh,600px) !important;padding:24px 28px 24px 28px;padding-right:calc(50% + 12px);}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply{position:absolute;top:24px;bottom:24px;right:24px;width:calc(50% - 36px);box-sizing:border-box;margin:0;padding:14px 16px;text-align:left;font-size:clamp(12px,1.6vh,14px);line-height:1.4;overflow:hidden;border-radius:10px;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply p{margin:0 0 6px;}
@@ -41756,7 +41764,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000308';
+const BUILD_ID = '2026-10-31.00000310';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
