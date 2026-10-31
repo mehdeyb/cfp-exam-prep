@@ -2724,6 +2724,10 @@
 .key-skim-hook{font-size:14px;line-height:1.5;color:var(--paper);margin:0 0 6px;}
 .key-skim-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
 .key-skim-again{margin:6px 0 10px 18px;padding:0;font-size:14px;}
+.key-skim-actions{flex-direction:column;align-items:stretch;}
+.key-skim-actions button{text-align:left;white-space:normal;line-height:1.35;}
+.key-skim-actions button.on{border-color:var(--correct);color:var(--correct);}
+.key-skim-hook{min-height:1em;}
   .fc-contrast b{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600;}
   .fc-card .fc-back{font-size:14px;color:var(--paper);line-height:1.6;display:none;}
   .fc-card .fc-hint{margin-top:18px;font-size:12px;color:var(--muted-dim);font-family:'IBM Plex Mono',monospace;}
@@ -12416,7 +12420,7 @@ const COVERAGE_B1_FLASHCARDS = [
 {id:"tvm-f08",domain:"general",sub:"Time value of money concepts and calculations",term:"Discount Rate",def:"The rate of return used to convert future cash flows into present value. It reflects the return available on alternatives of similar risk."}
 ];
 FLASHCARDS.push(...COVERAGE_B1_FLASHCARDS);
-// Coverage batch: fiduciary standard and life insurance (added build 2026-10-31.00000216).
+// Coverage batch: fiduciary standard and life insurance (added build 2026-10-31.00000217).
 const COVERAGE_B2_QUESTIONS = [
 {id:"fid-q01",domain:"conduct",sub:"Fiduciary standard and application",q:"A CFP professional recommends a proprietary fund that pays the firm more, without telling the client about the extra payment. Which duty is most directly at risk?",choices:["No duty, because the fund performs well","Only the suitability standard, because the fund fits the client","The duty of loyalty, if the conflict is not disclosed and managed","Only a duty owed by fee-based advisers"],correct:2,rationale:["Wrong — Good performance does not cure an undisclosed conflict. The duty applies to how the advice was given.","Wrong — Suitability can be part of the analysis, but the undisclosed payment is a conflict of interest problem first.","Correct — The duty of loyalty requires putting the client's interest first. An undisclosed payment that influences the recommendation breaches it unless the conflict is disclosed and managed.","Wrong — The fiduciary duty applies to CFP professionals giving financial advice, regardless of how they are paid."]},
 {id:"fid-q02",domain:"conduct",sub:"Fiduciary standard and application",q:"Which activity best reflects the duty of care owed to a client?",choices:["Guaranteeing investment returns to build trust","Recommending the lowest-cost product regardless of fit","Gathering relevant facts and analyzing them before making a recommendation","Skipping written documentation to save time"],correct:2,rationale:["Wrong — Guaranteeing returns is a misrepresentation. It is not a way to meet the duty of care.","Wrong — Cost matters, but a product that does not fit the client's goals is not prudent advice.","Correct — The duty of care requires reasonable diligence: gathering facts, analyzing them and reaching a reasoned recommendation.","Wrong — Documentation supports the duty of care. Skipping it weakens the planner's ability to show the advice was prudent."]},
@@ -17076,9 +17080,9 @@ function buildStudyPlanCore(minutes){
       const wkD = (() => { try{ return weakestDrillTarget(stats); }catch(e){ return null; } })();
       const kn = wkD ? (KEY_NUMBERS || []).filter(k => k.domain === wkD.key) : [];
       const focusTxt = (wkD && kn.length) ? ` Start with the ${kn.length} for ${wkD.name}, your weakest area.` : '';
-      const sk = skimPicks(12), skDom = sk.length ? (DOMAINS.find(d => d.key === sk[0].domain) || {}).name : '';
-      return { id:'keys', title: sk.length ? `Skim ${sk.length} key numbers${skDom ? ': ' + skDom : ''}` : 'Skim the key numbers', minutes: Math.max(5, Math.round(sk.length * 0.75)),
-      why:'These are the figures most worth a look right now: ones you missed, your weakest areas, and ones due for a recheck. ' + (sk.length ? `Start with ${sk.length} figures; you can mark each one as known or look again.` : ''),
+      const sk = figPick(skimCount()), skDom = sk.length ? (DOMAINS.find(d => d.key === sk[0].domain) || {}).name : '';
+      return { id:'keys', title: sk.length ? `Skim ${sk.length} key numbers${skDom ? ': ' + skDom : ''}` : 'Skim the key numbers', minutes: Math.max(5, Math.round(sk.length * 1.1)),
+      why:'Answer each figure from memory before the right one is shown. Misses come back in your figure drills first. ' + (sk.length ? `${sk.length} figures, about ${Math.max(5, Math.round(sk.length * 1.1))} minutes.` : ''),
       manual:true, run: () => { openKeySkim(); } }; }
   };
   const order = {
@@ -26225,69 +26229,62 @@ function figWhy(picks, goal){
   const more = picks.length > 4 ? `, and ${picks.length - 4} more` : '';
   return names.length ? `Today's picks: ${names.join('; ')}${more}. Order: missed figures first, then ones never drilled, then ones whose recall interval has run out. Nothing you drilled today or in the last 20 hours is repeated.` : `No figures are due, so this round is the next ${goal} by how long ago each was drilled.`;
 }
-// ---- Skim the key numbers: a short, purpose-built pass over the figures that matter most right now ----
-// Picks: figures you missed in a drill first, then the ones in your weakest areas, then the ones not skimmed lately.
-// A figure you knew comes back after three days; one you asked to look at again comes back first.
-function skimState(){ DATA.figSkim = DATA.figSkim || {}; return DATA.figSkim; }
-function skimPicks(n){
-  n = Math.max(4, Math.min(15, n || 12));
-  const S = skimState(), now = Date.now();
-  const order = (() => { try{ return allDomainsWeakestFirst(); }catch(e){ return []; } })();
-  const domRank = d => { const i = order.indexOf(d); return i < 0 ? 99 : i; };
-  const cand = KEY_NUMBERS.filter(k => { const s = S[k.label]; if(!s) return true; return (now - s.last) / ONE_DAY_MS >= (s.knew ? 3 : 0); });
-  cand.sort((a, b) => {
-    const sa = S[a.label], sb = S[b.label];
-    const la = sa && sa.knew === false ? 0 : 1, lb = sb && sb.knew === false ? 0 : 1; if(la !== lb) return la - lb;
-    const ma = figTier(a) === 0 ? 0 : 1, mb = figTier(b) === 0 ? 0 : 1; if(ma !== mb) return ma - mb;
-    if(domRank(a.domain) !== domRank(b.domain)) return domRank(a.domain) - domRank(b.domain);
-    return (sa ? sa.last : 0) - (sb ? sb.last : 0);
-  });
-  const cap = Math.ceil(n * 0.6), picks = [], per = {};
-  cand.forEach(k => { if(picks.length < n && (per[k.domain] || 0) < cap){ picks.push(k); per[k.domain] = (per[k.domain] || 0) + 1; } });
-  if(picks.length < n) cand.forEach(k => { if(picks.length < n && !picks.includes(k)) picks.push(k); });
-  return picks;
+// ---- Skim the key numbers: a short, orchestrated pass that uses the figure drill engine ----
+// Same picks as the figure drill (missed first, then never drilled, then due, nothing repeated from the last 20 hours),
+// so the skim, the figure step and the drills never fight each other. Each figure is a real four-choice question: you
+// answer before anything is revealed, the right answer and its hook come after, and the result goes into the same
+// recall record the drills use, so a miss comes back soon and a hit spaces out.
+function skimCount(){
+  let mins = 0; try{ mins = planMinutesChosen ? (planMinutesChosen() || 0) : 0; }catch(e){}
+  return mins >= 240 ? 12 : mins >= 120 ? 10 : 8;
 }
-function skimWhy(k){
-  const s = skimState()[k.label];
-  if(s && s.knew === false) return 'You asked to look at this again.';
-  if(figTier(k) === 0) return 'You missed this in a recent drill.';
-  if(figTier(k) === 1) return 'Not drilled yet.';
-  return 'Due for a quick recheck.';
+function skimWhy(item){
+  const t = figTier(item);
+  return t === 0 ? 'Missed in a recent drill, so it comes back first.' : t === 1 ? 'Not drilled yet.' : 'Due for a recheck.';
 }
 function openKeySkim(){
   const tab = document.getElementById('tab-reference'); if(!tab) return false;
-  const picks = skimPicks(12);
+  const picks = figPick(skimCount());
   const old = document.getElementById('keySkim'); if(old) old.remove();
   const box = document.createElement('div'); box.id = 'keySkim'; box.className = 'card key-skim';
   tab.insertBefore(box, tab.firstChild);
   try{ focusEnter({ tab:'reference', el:box, title:'Skim the key numbers', stepId:'keys' }); }catch(e){}
-  const S = skimState(); let i = 0; const knew = [], again = [];
   const el = (tag, cls, text) => { const x = document.createElement(tag); if(cls) x.className = cls; if(text !== undefined) x.textContent = text; return x; };
+  let i = 0, right = 0; const missed = [];
   function render(){
     box.innerHTML = '';
-    if(!picks.length){ box.appendChild(el('p', 'hint', 'No key numbers to skim right now.')); return; }
+    if(!picks.length){ box.appendChild(el('p', 'hint', 'Nothing is due for a skim right now. The figure drills will bring the next ones.')); return; }
     if(i >= picks.length){
-      box.appendChild(el('h3', '', 'Skim done'));
-      box.appendChild(el('p', 'hint', `You knew ${knew.length} of ${picks.length}.${again.length ? ' Looking again next time:' : ''}`));
-      if(again.length){ const ul = el('ul', 'key-skim-again'); again.forEach(l => ul.appendChild(el('li', '', l))); box.appendChild(ul); }
-      box.appendChild(el('p', 'hint', 'Figures you knew come back in three days. The ones you flagged come back first.'));
+      box.appendChild(el('h3', '', `${right} of ${picks.length} right`));
+      if(missed.length){
+        box.appendChild(el('p', 'hint', 'These come back first in your figure drills:'));
+        const ul = el('ul', 'key-skim-again'); missed.forEach(l => ul.appendChild(el('li', '', l))); box.appendChild(ul);
+      } else box.appendChild(el('p', 'hint', 'All solid. Each of these spaces out before it returns.'));
       try{ persist(); }catch(e){}
       return;
     }
-    const k = picks[i], dom = (DOMAINS.find(d => d.key === k.domain) || {}).name || '';
+    const item = picks[i];
+    const q = figBuildQuestion(item);
+    const dom = (DOMAINS.find(d => d.key === item.domain) || {}).name || '';
     box.appendChild(el('div', 'key-skim-meta', `${i + 1} of ${picks.length} · ${dom}`));
-    box.appendChild(el('div', 'key-skim-label', k.label));
-    box.appendChild(el('div', 'key-skim-value', k.value));
-    if(k.hook) box.appendChild(el('p', 'key-skim-hook', k.hook));
-    box.appendChild(el('p', 'hint', skimWhy(k)));
-    const row = el('div', 'key-skim-actions');
-    const b1 = el('button', 'btn', 'Knew it'), b2 = el('button', 'btn ghost', 'Look again');
-    const answer = ok => {
-      S[k.label] = { last: Date.now(), knew: ok };
-      (ok ? knew : again).push(k.label); i++; render();
-    };
-    b1.onclick = () => answer(true); b2.onclick = () => answer(false);
-    row.appendChild(b1); row.appendChild(b2); box.appendChild(row);
+    box.appendChild(el('div', 'key-skim-label', q.q));
+    box.appendChild(el('p', 'hint', skimWhy(item)));
+    const opts = el('div', 'key-skim-actions'); const note = el('div', 'key-skim-hook');
+    q.choices.forEach((c, idx) => {
+      const b = el('button', 'btn ghost', c); b.type = 'button';
+      b.onclick = () => {
+        opts.querySelectorAll('button').forEach(x => x.disabled = true);
+        const ok = idx === q.correct;
+        if(ok){ right++; b.classList.add('on'); } else { missed.push(item.label); const cb = opts.querySelectorAll('button')[q.correct]; if(cb) cb.classList.add('on'); }
+        try{ figRecordOutcome(q, ok); }catch(e){}
+        note.textContent = q.rationale[idx === q.correct ? q.correct : idx] || '';
+        const nx = el('button', 'btn', i + 1 < picks.length ? 'Next' : 'See result'); nx.type = 'button';
+        nx.onclick = () => { i++; render(); };
+        box.appendChild(nx);
+      };
+      opts.appendChild(b);
+    });
+    box.appendChild(opts); box.appendChild(note);
   }
   render();
   return true;
@@ -40574,7 +40571,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000216';
+const BUILD_ID = '2026-10-31.00000217';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
