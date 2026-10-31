@@ -4056,6 +4056,16 @@
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcRecap[style*="block"]) > .fc-card{display:flex;padding:28px 30px;min-height:clamp(300px,52vh,520px);}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:static;background:none;margin-top:14px;padding:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{min-height:clamp(300px,52vh,520px);}
+    /* The explanation takes the card's right half, beside the term and definition, so the whole card reads without scrolling. */
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card:has(> #fcApply[style*="block"]){position:relative;display:block;text-align:center;min-height:clamp(300px,74vh,600px) !important;padding:24px 28px 24px 28px;padding-right:calc(50% + 12px);}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply{position:absolute;top:24px;bottom:24px;right:24px;width:calc(50% - 36px);box-sizing:border-box;margin:0;padding:14px 16px;text-align:left;font-size:clamp(12px,1.6vh,14px);line-height:1.4;overflow:hidden;border-radius:10px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply p{margin:0 0 6px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply .simplify-label{margin-top:6px;}
+    /* Term and definition scale with the screen height, so the answer bar stays on screen under the card. */
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcFront{font-size:clamp(28px,4.4vh,40px);line-height:1.15;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcBack{font-size:clamp(15px,2.5vh,21px);line-height:1.4;margin-top:8px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > .fc-hint,
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcHintBtn{justify-self:center;}
     body.flashcard-fullscreen #flashcardFullscreenHost{padding-bottom:max(28px,env(safe-area-inset-bottom,0px));}
   }
 
@@ -41718,7 +41728,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000301';
+const BUILD_ID = '2026-10-31.00000302';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
