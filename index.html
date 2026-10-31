@@ -12895,7 +12895,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000245).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000246).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -30190,14 +30190,23 @@ let tvmOpenedOverQuiz = false;
    the Reference list both read.
 =========================================================== */
 const fdRi = (a,b) => a + Math.floor(Math.random()*(b-a+1));
-// While a drill problem is being built, money inputs at Exam level are not round numbers, so the arithmetic is harder to do in your head.
+// While a drill problem is being built, inputs stretch with the level so the problems get harder to do in your head.
+// Application (level 2) moves inputs a little off the textbook values; Exam level (level 3) moves them further, into the
+// odd rates, lengths and amounts a real exam uses. Money at Exam level is rounded to the nearest 10 so it is never a tidy figure.
+// Probabilities and fractions (all values 1 or less) are left alone, so they stay valid.
 let fdGenActive = false;
 const fdPick = arr => {
   const v = arr[Math.floor(Math.random()*arr.length)];
-  if(fdGenActive && typeof fd !== 'undefined' && fd && fd.lvl === 3 && typeof v === 'number' && v >= 1000 && arr.every(x => typeof x === 'number' && x >= 1000)){
-    return Math.max(1000, Math.round(v * (0.92 + Math.random() * 0.16) / 10) * 10);
-  }
-  return v;
+  if(!fdGenActive || typeof fd === 'undefined' || !fd || typeof v !== 'number' || !arr.every(x => typeof x === 'number')) return v;
+  const lvl = fd.lvl;
+  if(lvl === 3 && v >= 1000 && arr.every(x => x >= 1000)) return Math.max(1000, Math.round(v * (0.92 + Math.random() * 0.16) / 10) * 10);
+  if(!(lvl >= 2) || arr.every(x => x <= 1)) return v;
+  const stretch = lvl === 3 ? 0.7 : 0.35;
+  if(Math.random() >= stretch) return v;
+  const lo = lvl === 3 ? 0.6 : 0.85, hi = lvl === 3 ? 1.5 : 1.15;
+  const s = v * (lo + Math.random() * (hi - lo));
+  const out = Number.isInteger(v) ? Math.max(1, Math.round(s)) : Math.round(s * 10) / 10;
+  return out > 0 ? out : v;
 };
 const fdMoney = n => '$' + Math.round(n).toLocaleString('en-US');
 const fdNum = (n, d) => Number(n).toFixed(d);
@@ -30272,7 +30281,7 @@ const FD_GENS = {
       trap: x => Math.abs(x - (end-begin)/begin*100) < 0.1 && inc ? 'That leaves out the dividends. Holding period return counts income as well as the price change.' : null };
   },
   'Gordon Growth (Dividend Discount) Model': () => {
-    const d1 = fdPick([1.5,2,2.4,3,3.2]), r = fdPick([8,9,10,11]), g = fdPick([3,4,5]);
+    const d1 = fdPick([1.5,2,2.4,3,3.2]), g = fdPick([3,4,5]), r = Math.max(fdPick([8,9,10,11]), g + 2); // the required return must stay above growth
     const ans = d1/((r-g)/100);
     return { scenario:`A stock is expected to pay a dividend of $${fdNum(d1,2)} next year, which should grow ${g}% a year indefinitely. If investors require a ${r}% return, what is the stock worth today?`, unit:'$', answer:ans, tol:0.06,
       keys:[`Work out the spread first: ${r} − ${g} = ${r-g} (this is the rate gap in percent).`, `Enter ${fdNum(d1,2)}, press [×], enter 100, press [÷], enter ${r-g}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`P₀ = D₁ ÷ (r − g)`, `Spread: ${r}% − ${g}% = ${r-g}% = ${fdNum((r-g)/100,2)}`, `$${fdNum(d1,2)} ÷ ${fdNum((r-g)/100,2)} = $${fdNum(ans,2)}`],
@@ -30293,7 +30302,7 @@ const FD_GENS = {
       trap: x => Math.abs(x - y*(1 - t/100)) < 0.03 ? 'That moves the wrong way. A taxable bond must yield MORE than the muni to match it after tax, so you divide by (1 − rate).' : null };
   },
   'Required Minimum Distribution': () => {
-    const bal = fdRi(40,240)*5000, age = fdPick([73,74,75,77,80]), fac = {73:26.5,74:25.5,75:24.6,77:22.9,80:20.2}[age];
+    const ai = fdRi(0,4), bal = fdRi(40,240)*5000, age = [73,74,75,77,80][ai], fac = [26.5,25.5,24.6,22.9,20.2][ai]; // the age and its table factor are picked together
     const ans = bal/fac;
     return { scenario:`A retiree turns ${age} this year. Her IRA was worth ${fdMoney(bal)} at the end of last year, and the IRS Uniform Lifetime Table factor for age ${age} is ${fac}. What is her required minimum distribution?`, unit:'$', answer:ans, tol:Math.max(2, ans*0.002),
       keys:[`Enter ${bal}, press [÷], enter ${fac}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`RMD = prior year-end balance ÷ life expectancy factor`, `${fdMoney(bal)} ÷ ${fac} = ${fdMoney(ans)}`, `The balance used is the one at the end of the PRIOR year, not today's.`],
@@ -30458,7 +30467,7 @@ Object.assign(FD_GENS, {
   },
   'Retirement Nest Egg (Inflation-Adjusted)': () => {
     const need = fdPick([50000,60000,72000,80000,90000]), g = fdPick([2.5,3,3.5]), yrs = fdPick([10,15,20,25]), N = fdPick([25,30]), r = fdPick([6,7,8]);
-    const first = need*Math.pow(1+g/100,yrs), ir = (1+r/100)/(1+g/100)-1, ans = first*(1-Math.pow(1+ir,-N))/ir*(1+ir);
+    const first = need*Math.pow(1+g/100,yrs), ir = (1+r/100)/(1+g/100)-1, ans = Math.abs(ir) < 1e-9 ? first*N : first*(1-Math.pow(1+ir,-N))/ir*(1+ir); // a zero real rate is just N withdrawals
     return { scenario:`A client wants ${fdMoney(need)} a year in today's dollars, beginning in ${yrs} years and lasting ${N} years, with each withdrawal at the start of the year. Inflation is ${g}% and the portfolio earns ${r}% in retirement. How much must she have at retirement?`, unit:'$', answer:ans, tol:Math.max(5, ans*0.004),
       keys:[...fdTvmStart(), `Step 1, the first year's need: enter ${yrs}, press [N]. Enter ${g}, press [I/YR]. Enter ${need}, press [+/−], then [PV]. Enter 0, press [PMT]. Press [FV] — the display shows ${fdNum(first,2)}.`, `Step 2, the real rate: enter ${fdK(1+r/100)}, press [÷], enter ${fdK(1+g/100)}, press [=], press [−], enter 1, press [=], press [×], enter 100, press [=] — the display shows ${fdNum(ir*100,4)}. Press [I/YR] now to store it.`, `Step 3: turn BEGIN on (orange Shift, then [BEG/END]). Enter ${N}, press [N]. Enter ${fdNum(first,2)}, press [PMT]. Enter 0, press [FV]. Press [PV] — the display shows −${fdNum(ans,2)}; the sign only shows direction. Turn BEGIN off afterwards.`],
       steps:[`First-year need = ${fdMoney(need)} × (1 + ${g/100})^${yrs} = ${fdMoney(first)}`, `Real rate = (1 + ${r/100}) ÷ (1 + ${g/100}) − 1 = ${fdNum(ir*100,4)}%`, `PV of ${N} annuity-due payments of ${fdMoney(first)} at ${fdNum(ir*100,4)}% = ${fdMoney(ans)}`],
@@ -30554,7 +30563,7 @@ Object.assign(FD_GENS, {
       keys:[`Enter ${noi}, press [÷], enter ${ads}, press [=] — the display shows ${fdNum(ans,4)}, or ${fdNum(ans,2)}.`], steps:[`DSCR = NOI ÷ annual debt service`, `${fdMoney(noi)} ÷ ${fdMoney(ads)} = ${fdNum(ans,2)}`, ans >= 1.25 ? `Above the usual 1.25 lender minimum.` : `Below the usual 1.25 lender minimum.`] };
   },
   'Loan-to-Value Ratio': () => {
-    const val = fdPick([300000,350000,400000,450000,500000,550000,650000,750000,900000]), pct = fdPick([65,70,75,80,85,90,95]), loan = val*pct/100;
+    const val = fdPick([300000,350000,400000,450000,500000,550000,650000,750000,900000]), pct = Math.min(97, Math.max(50, fdPick([65,70,75,80,85,90,95]))), loan = val*pct/100;
     return { scenario:`A buyer borrows ${fdMoney(loan)} on a home appraised at ${fdMoney(val)}. What is the loan-to-value ratio? (Percent.)`, unit:'%', answer:pct, tol:0.15,
       keys:[`Enter ${loan}, press [÷], enter ${val}, press [×], enter 100, press [=] — the display shows ${pct}.`], steps:[`LTV = loan ÷ appraised value`, `${fdMoney(loan)} ÷ ${fdMoney(val)} = ${pct}%`, pct > 80 ? `Above 80%, so private mortgage insurance is usually required.` : `At or below 80%: no PMI is usually required.`] };
   },
@@ -41577,7 +41586,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000245';
+const BUILD_ID = '2026-10-31.00000246';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
