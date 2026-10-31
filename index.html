@@ -13560,7 +13560,8 @@ function renderModeMeta(){
       const mw = (key, html) => document.querySelectorAll('[data-mw="' + key + '"]').forEach(el => { if(el._mwDefault === undefined) el._mwDefault = el.innerHTML; el.innerHTML = html == null ? el._mwDefault : html; });
       const low2 = DOMAINS.filter(d => ((DATA.domainStats[d.key] || {}).total || 0) > 0).sort((a, b) => domainStageOf(a.key) - domainStageOf(b.key) || b.weight - a.weight)[0];
       mw('drill', low2 ? 'Next up: ' + escapeHtml(low2.name) + '.' : null);
-      mw('adaptive', low2 ? '<span data-dyn="adaptiveQ">' + (document.querySelector('[data-dyn="adaptiveQ"]') || {textContent:'15'}).textContent + '</span> mixed questions, weighted to ' + escapeHtml(low2.code) + '.' : null);
+      // Describes what the queue really does: every domain gets a slot, extra goes to the weakest, and missed items are capped at about a third.
+      mw('adaptive', '<span data-dyn="adaptiveQ">' + ((document.querySelector('[data-dyn="adaptiveQ"]') || {textContent:'15'}).textContent) + '</span> mixed questions. Every domain gets a slot' + (low2 ? ', with extra on ' + escapeHtml(low2.code) : '') + (DATA.missed.length ? ', and up to a third from your ' + DATA.missed.length + ' missed' : '') + '.');
       const fp2 = computeFlashcardProgress(); mw('flashcards', fp2.dueCount ? fp2.dueCount + ' card' + (fp2.dueCount === 1 ? '' : 's') + ' due now.' : null);
     }catch(e){}
     { const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
@@ -35506,7 +35507,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000138';
+const BUILD_ID = '2026-10-30.00000139';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
