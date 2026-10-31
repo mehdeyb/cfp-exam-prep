@@ -12895,7 +12895,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000246).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000247).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -29413,7 +29413,7 @@ const TVM_MULTISTAGE_PROBLEMS = [
              solveFor:'PMT', known:{ n:15, iy:6, fv:0 }, carryInto:'pv', carrySignFlip:true } },
 ];
 const TVM_LEVEL_NAMES = { 1:'Level 1 · lump sum basics', 2:'Level 2 · annuities', 3:'Level 3 · advanced (monthly compounding & annuity due)', 4:'Level 4 · exam-style (bonds, loan balances, solving for rate or time)' };
-const TVM_TEMPLATE_LABELS = { 'cf-npv-later-outlay':'NPV with a later outlay','cf-irr-salvage':'IRR with salvage value','ear-lump':'effective annual rate with monthly compounding','real-cost-fv':'inflation-adjusted future cost','aftertax-lump':'after-tax growth','lump-plus-annuity':'lump sum plus yearly deposits','fv-lump':'lump-sum growth','pv-lump':'lump-sum present value','n-lump':'time to a goal (lump sum)','iy-lump':'rate of return (lump sum)','fv-annuity':'annuity future value','pmt-goal':'savings needed for a goal','pv-annuity':'annuity present value','n-annuity':'time to a goal (annuity)','fv-monthly-lump':'monthly compounding','pv-monthly-annuity':'monthly withdrawals','pmt-loan':'loan payments','pv-annuity-due':'annuity due (BEGIN)','pmt-lease-begin':'lease payments (BEGIN)','bond-price':'bond prices','bond-ytm':'bond yield to maturity','balance-after-k':'loan balance after k years','fv-annuity-due':'saving at the start of each year','iy-annuity':'rate of return (annuity)','quarterly-lump':'quarterly compounding','pmt-savings-monthly':'monthly savings for a goal','n-loan':'months to pay off a loan','cf-npv':'NPV of uneven flows','cf-npv-repeat':'NPV with repeated flows','cf-irr':'IRR','cf-irr-repeat':'IRR with repeated flows','cf-npv-gap':'NPV with a gap year','cf-npv-mixed':'NPV with a later outlay' };
+const TVM_TEMPLATE_LABELS = { 'cf-npv-later-outlay':'NPV with a later outlay','cf-irr-salvage':'IRR with salvage value','ear-lump':'effective annual rate with monthly compounding','real-cost-fv':'inflation-adjusted future cost','aftertax-lump':'after-tax growth','lump-plus-annuity':'lump sum plus yearly deposits','fv-lump':'lump-sum growth','pv-lump':'lump-sum present value','n-lump':'time to a goal (lump sum)','iy-lump':'rate of return (lump sum)','fv-annuity':'annuity future value','pmt-goal':'savings needed for a goal','pv-annuity':'annuity present value','n-annuity':'time to a goal (annuity)','fv-monthly-lump':'monthly compounding','pv-monthly-annuity':'monthly withdrawals','pmt-loan':'loan payments','pv-annuity-due':'annuity due (BEGIN)','pmt-lease-begin':'lease payments (BEGIN)','bond-price':'bond prices','bond-ytm':'bond yield to maturity','balance-after-k':'loan balance after k years','fv-annuity-due':'saving at the start of each year','iy-annuity':'rate of return (annuity)','quarterly-lump':'quarterly compounding','pmt-savings-monthly':'monthly savings for a goal','n-loan':'months to pay off a loan','cf-npv':'NPV of uneven flows','cf-npv-repeat':'NPV with repeated flows','cf-irr':'IRR','cf-irr-repeat':'IRR with repeated flows','cf-npv-gap':'NPV with a gap year','cf-npv-mixed':'NPV with a later outlay','cf-npv-exam-uneven':'NPV of six uneven years with a gap','cf-irr-exam-growing':'IRR of a growing stream','cf-npv-after-tax':'after-tax NPV with depreciation','cf-npv-working-capital':'NPV with working capital recovered','cf-irr-mixed-repeats':'IRR with two runs and a gap' };
 function tvmNoteTemplate(key, ok){ try{ if(!key) return; if(!DATA.tvmTemplateStats) DATA.tvmTemplateStats = {}; const t = DATA.tvmTemplateStats[key] || { a:0, c:0, lastAt:0 }; t.a++; if(ok) t.c++; t.lastAt = Date.now(); DATA.tvmTemplateStats[key] = t; }catch(e){} }
 function tvmTemplateAcc(key){ const t = DATA.tvmTemplateStats && DATA.tvmTemplateStats[key]; return t && t.a ? t.c / t.a : null; }
 const TVM_MISTAKE_LABELS = {
@@ -29823,7 +29823,7 @@ function tvmInjectIntoAdaptive(queue, reasons){
         if(!why || why === 'fresh' || why === 'due') candidates.push(i);
       });
       if(!candidates.length) break;
-      const cfT = Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1);
+      const cfT = Math.min(4, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1);
       const tq = (tier0 >= 2 && Math.random() < 0.3 ? cfGenerateQuizQuestion(cfT) : null) || tvmGenerateQuizQuestion(tier0 >= 4 && Math.random() < 0.4 ? 3 : tier0);
       if(!tq) break;
       const at = candidates[Math.floor(Math.random()*candidates.length)];
@@ -29846,7 +29846,7 @@ function tvmRecordQuizOutcome(q, chosenIndex, isCorrect){
     s.lastAt = Date.now();
     if(!DATA.tvmProgress) DATA.tvmProgress = { currentTier:1, correctStreak:0 };
     if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
-    const prog = q.tvmCf ? DATA.cfProgress : DATA.tvmProgress, topTier = q.tvmCf ? 3 : 4;
+    const prog = q.tvmCf ? DATA.cfProgress : DATA.tvmProgress, topTier = 4;
     if(isCorrect){
       prog.quizMissRun = 0;
       prog.correctStreak = (prog.correctStreak || 0) + 1;
@@ -31459,7 +31459,7 @@ function calcPickProblemForKindOnce(kind){
     if(!kind) return null;
     if(kind.indexOf('cf-') === 0){
       const want = kind === 'cf-irr' ? 'IRR' : 'NPV';
-      const tier = Math.max(1, Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1));
+      const tier = Math.max(1, Math.min(4, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1));
       let keys = Object.keys(CF_GEN_TEMPLATES).filter(k => (want === 'IRR') === /irr/.test(k));
       const ok = keys.filter(k => CF_GEN_TEMPLATES[k].level <= tier); if(ok.length) keys = ok;
       keys.sort((a, b) => CF_GEN_TEMPLATES[a].level - CF_GEN_TEMPLATES[b].level);
@@ -31830,8 +31830,8 @@ function tvmRenderStatusCore(){
   if(!el) return;
   if(tvmMode === 'cf'){
     const cp = DATA.cfProgress || { currentTier:1, correctStreak:0 }, ct = cp.currentTier || 1, cc = [];
-    if(ct < 3){ const need = 2 - (cp.correctStreak || 0); cc.push(`<span class="tvm-chip tvm-chip-main"><b>${CF_LEVEL_NAMES[ct].split(' · ')[0]}</b> · ${need} clean solve${need===1?'':'s'} to Level ${ct+1}</span>`); }
-    else cc.push(`<span class="tvm-chip tvm-chip-main"><b>Level 3</b> · top level</span>`);
+    if(ct < 4){ const need = 2 - (cp.correctStreak || 0); cc.push(`<span class="tvm-chip tvm-chip-main"><b>${CF_LEVEL_NAMES[ct].split(' · ')[0]}</b> · ${need} clean solve${need===1?'':'s'} to Level ${ct+1}</span>`); }
+    else cc.push(`<span class="tvm-chip tvm-chip-main"><b>Level 4</b> · top level</span>`);
     const ck = Object.keys(CF_GEN_TEMPLATES), tried = ck.filter(k => tvmTemplateAcc(k) !== null).length;
     if(tried) cc.push(`<span class="tvm-chip">${tried} of ${ck.length} cash-flow types tried</span>`);
     const cats = DATA.tvmMistakeCategories || {}, top = ['cashFlowOutlay','cashFlowTiming','cashFlowRepeat','cashFlowClear'].sort((a,b)=>(cats[b]||0)-(cats[a]||0))[0];
@@ -32257,7 +32257,7 @@ function tvmCalculateAndShow(){
 let tvmMode = 'tvm';
 let cfState = { flows:[], rate:null, stale:false };
 let cfLeftover = null; // flows left on the worksheet by the last solved problem, like a real calculator
-const CF_LEVEL_NAMES = { 1:'Level 1 · uneven cash flows (NPV)', 2:'Level 2 · repeated flows and IRR', 3:'Level 3 · exam-style (gap years, later outlays, repeats)' };
+const CF_LEVEL_NAMES = { 1:'Level 1 · uneven cash flows (NPV)', 2:'Level 2 · repeated flows and IRR', 3:'Level 3 · exam-style (gap years, later outlays, repeats)', 4:'Level 4 · exam level (uneven, growing, after-tax, working capital)' };
 
 function cfExpand(flows){ const a = []; flows.forEach(f => { for(let i = 0; i < (f.n || 1); i++) a.push(f.amt); }); return a; }
 function cfNpv(rate, flows){ const i = rate/100; return cfExpand(flows).reduce((s, a, t) => s + a/Math.pow(1+i, t), 0); }
@@ -32376,7 +32376,65 @@ const CF_GEN_TEMPLATES = {
         { cat:'cashFlowOutlay', why:`enters the year 2 investment as a positive number, treating money paid out as money received.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:extra,n:1},{amt:b,n:1},{amt:c,n:1}]) },
         { cat:'cashFlowTiming', why:`ignores the year 2 investment altogether.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:0,n:1},{amt:b,n:1},{amt:c,n:1}]) },
         { cat:'cashFlowTiming', why:`drops the year 2 flow instead of entering it, so years 3 and 4 slide one year earlier.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:a,n:1},{amt:b,n:1},{amt:c,n:1}]) },
-        { cat:'generic', why:`adds the flows without discounting.`, v:()=>a - extra + b + c - I0 } ] }; } }
+        { cat:'generic', why:`adds the flows without discounting.`, v:()=>a - extra + b + c - I0 } ] }; } },
+  'cf-npv-exam-uneven': { level:4, quiz:true, make(){
+    const I0 = tvmGPick([80000,120000,150000,200000]), r = tvmGPick([7.5,9.5,11,12.5]);
+    const fl = Array.from({length:6}, (_, t) => t === 2 ? 0 : cfRound(I0*tvmGPick([0.12,0.16,0.2,0.24,0.28,0.32]), 500));
+    const flows = [{amt:-I0,n:1}].concat(fl.map(a => ({amt:a, n:1})));
+    const pvIn = cfNpv(r, flows) + I0, total = fl.reduce((s,a) => s + a, 0);
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A client is evaluating a project that costs ${tvmGMoney(I0)} today. Its cash flows are ${cfList(fl.map((a,t) => tvmGMoney(a) + ' in year ' + (t+1)))}. Discounting at ${r}%, what is the project's NPV?`,
+      concept:'Every year gets its own CFj, including a year with nothing, so later flows keep their timing. Discount the whole stream at the required rate and subtract the outlay.',
+      mist:[
+        { cat:'cashFlowTiming', why:`skips the zero in year 3, so the later flows slide one year earlier and are discounted too little.`, v:()=>cfNpv(r, [{amt:-I0,n:1}].concat(fl.filter(a => a !== 0).map(a => ({amt:a,n:1})))) },
+        { cat:'cashFlowOutlay', why:`enters the cost as a positive number, so it is added to the inflows.`, v:()=>pvIn + I0 },
+        { cat:'cashFlowTiming', why:`discounts every flow as if it arrived in year 1.`, v:()=>total/(1+r/100) - I0 },
+        { cat:'generic', why:`adds the flows without discounting and subtracts the cost.`, v:()=>total - I0 } ] }; } },
+  'cf-irr-exam-growing': { level:4, quiz:true, make(){
+    const I0 = tvmGPick([60000,75000,90000,120000]), g = tvmGPick([5,8,10]), hurdle = tvmGPick([8,10,12]);
+    const first = cfRound(I0*tvmGPick([0.2,0.24,0.28]), 500), n = 5;
+    const fl = Array.from({length:n}, (_, t) => cfRound(first*Math.pow(1+g/100, t), 100));
+    const flows = [{amt:-I0,n:1}].concat(fl.map(a => ({amt:a, n:1})));
+    return { solveFor:'IRR', hurdle, flows, domain:'general',
+      scenario:`A project costs ${tvmGMoney(I0)} today. Its cash flows grow ${g}% a year: ${cfList(fl.map(tvmGMoney))} at the end of years 1 to ${n}. The client requires ${hurdle}%. What is the project's IRR?`,
+      concept:'When the flows grow, each year is still its own entry, because no single repeat fits a growing stream. Enter every year, then solve for IRR.',
+      mist:[
+        { cat:'cashFlowRepeat', why:`enters the first year's flow ${n} times in a row, which ignores the growth.`, v:()=>cfIrr([{amt:-I0,n:1},{amt:fl[0],n:n}]) },
+        { cat:'cashFlowTiming', why:`leaves out the year ${n} flow, so the project looks weaker than it is.`, v:()=>cfIrr(flows.slice(0, -1)) },
+        { cat:'generic', why:`is just the ${hurdle}% required return, not the rate the flows earn.`, v:()=>hurdle } ] }; } },
+  'cf-npv-after-tax': { level:4, quiz:true, make(){
+    const I0 = tvmGPick([100000,120000,150000]), t = tvmGPick([24,32])/100, r = tvmGPick([8.5,9.5,10.5]), n = 4;
+    const pre = cfRound(I0*tvmGPick([0.3,0.35]), 500), dep = I0/n;
+    const aft = cfRound(pre*(1-t) + dep*t, 100);
+    const flows = [{amt:-I0,n:1},{amt:aft,n:n}];
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A client buys equipment for ${tvmGMoney(I0)} today. It brings in ${tvmGMoney(pre)} of cash before tax each year for ${n} years. The equipment is depreciated straight-line to zero over those years, and the client pays ${Math.round(t*100)}% tax on income after depreciation. At a ${r}% discount rate, what is the after-tax NPV?`,
+      concept:'After tax, each year is the pre-tax cash less the tax on income after depreciation. Depreciation is not cash, but its tax shield is, so it adds back the tax saved on it.',
+      mist:[
+        { cat:'generic', why:`uses the pre-tax cash flows and ignores the tax altogether.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:pre,n:n}]) },
+        { cat:'generic', why:`leaves out the depreciation tax shield, so the full cash flow is taxed.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:pre*(1-t),n:n}]) },
+        { cat:'cashFlowOutlay', why:`enters the cost as a positive number.`, v:()=>cfNpv(r, [{amt:I0,n:1},{amt:aft,n:n}]) },
+        { cat:'cashFlowRepeat', why:`counts the after-tax flow once instead of each of the ${n} years.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:aft,n:1}]) } ] }; } },
+  'cf-npv-working-capital': { level:4, quiz:true, make(){
+    const I0 = tvmGPick([100000,150000,200000]), r = tvmGPick([9,10,11.5]), cash = cfRound(I0*tvmGPick([0.28,0.32,0.36]), 500), wc = cfRound(I0*0.1, 500), n = 5;
+    const flows = [{amt:-(I0+wc),n:1},{amt:cash,n:n-1},{amt:cash+wc,n:1}];
+    return { solveFor:'NPV', rate:r, flows, domain:'general', hurdle:r,
+      scenario:`A client invests ${tvmGMoney(I0)} in equipment and ${tvmGMoney(wc)} in working capital today. The project earns ${tvmGMoney(cash)} a year for ${n} years. The working capital is fully recovered at the end of year ${n}. At ${r}%, what is the NPV?`,
+      concept:'Working capital is an outlay when it goes in and an inflow when it comes back. Both belong in the flows, in their own years.',
+      mist:[
+        { cat:'cashFlowOutlay', why:`leaves out the ${tvmGMoney(wc)} working capital, so the outlay is understated.`, v:()=>cfNpv(r, [{amt:-I0,n:1},{amt:cash,n:n}]) },
+        { cat:'generic', why:`treats the working capital as spent and never recovered.`, v:()=>cfNpv(r, [{amt:-(I0+wc),n:1},{amt:cash,n:n}]) },
+        { cat:'cashFlowTiming', why:`recovers the working capital in year ${n-1} instead of year ${n}.`, v:()=>cfNpv(r, [{amt:-(I0+wc),n:1},{amt:cash,n:n-2},{amt:cash+wc,n:1},{amt:cash,n:1}]) } ] }; } },
+  'cf-irr-mixed-repeats': { level:4, quiz:true, make(){
+    const I0 = tvmGPick([50000,60000,80000,100000]), A = cfRound(I0*tvmGPick([0.18,0.2,0.22,0.24]), 500), B = cfRound(I0*tvmGPick([0.3,0.35,0.4]), 500);
+    const flows = [{amt:-I0,n:1},{amt:A,n:2},{amt:0,n:1},{amt:B,n:3}];
+    return { solveFor:'IRR', hurdle:tvmGPick([8,10,12]), flows, domain:'general',
+      scenario:`A project costs ${tvmGMoney(I0)} today. It pays ${tvmGMoney(A)} at the end of years 1 and 2, nothing in year 3, then ${tvmGMoney(B)} at the end of each of years 4, 5 and 6. What is its IRR?`,
+      concept:'Use Nj for each run of identical flows, and enter the empty year on its own so the later flows keep their timing.',
+      mist:[
+        { cat:'cashFlowRepeat', why:`skips the zero in year 3, so the year 4 to 6 flows arrive a year early.`, v:()=>cfIrr([{amt:-I0,n:1},{amt:A,n:2},{amt:B,n:3}]) },
+        { cat:'cashFlowRepeat', why:`repeats the year 4 to 6 flow one time too few, so the last year is missing.`, v:()=>cfIrr([{amt:-I0,n:1},{amt:A,n:2},{amt:0,n:1},{amt:B,n:2}]) },
+        { cat:'generic', why:`is the average yearly gain on the cost, which ignores when each flow arrives.`, v:()=>((2*A + 3*B)/I0 - 1)/6*100 } ] }; } }
 };
 
 function cfKeySteps(P, resultText){
@@ -32418,7 +32476,7 @@ function cfGenerateProblem(level, templateKey){
 function cfPickProblem(){
   if(tvmKindFocus && tvmKindFocus.indexOf('cf-') === 0){ const fp = calcPickProblemForKind(tvmKindFocus); if(fp){ DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1; return fp; } }
   if(!DATA.cfProgress) DATA.cfProgress = { currentTier:1, correctStreak:0 };
-  const p = cfGenerateProblem(Math.min(3, DATA.cfProgress.currentTier || 1));
+  const p = cfGenerateProblem(Math.min(4, DATA.cfProgress.currentTier || 1));
   DATA.tvmPickCounter = (DATA.tvmPickCounter || 0) + 1;
   return p;
 }
@@ -32595,7 +32653,7 @@ function cfRecordOutcome(clean){
   try{ planDayLog().tvm++; }catch(e){}
   calcNoteKind(clean);
   try{ if(tvmCurrent && tvmCurrent.template) tvmNoteTemplate(tvmCurrent.template, clean); }catch(e){}
-  calcAdaptTier(prog, !!clean, 3);
+  calcAdaptTier(prog, !!clean, 4);
   persist();
   tvmRenderStatus();
 }
@@ -40171,7 +40229,7 @@ async function executeTutorTool(toolName, toolInput){
     }
     if(toolName === 'open_tvm_calculator'){
       showTab('study');
-      if(toolInput && toolInput.mode === 'cashflow'){ openTvmTool(cfGenerateProblem(Math.min(3, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1))); return `Opened the cash-flow calculator (CFj, Nj, NPV, IRR) with a fresh problem.`; }
+      if(toolInput && toolInput.mode === 'cashflow'){ openTvmTool(cfGenerateProblem(Math.min(4, (DATA.cfProgress && DATA.cfProgress.currentTier) || 1))); return `Opened the cash-flow calculator (CFj, Nj, NPV, IRR) with a fresh problem.`; }
       tvmMode = 'tvm';
       openTvmTool();
       return `Opened the TVM calculator tool.`;
@@ -41586,7 +41644,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000246';
+const BUILD_ID = '2026-10-31.00000247';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
