@@ -5848,6 +5848,13 @@
         </div>
 
         <div class="settings-section">
+          <h3>AI accuracy check</h3>
+          <p class="hint" style="margin-top:0;">The AI works through the bank in batches and checks each question's marked answer, wording, explanations and 2026 figures. A confirmed error is corrected only after the corrected version solves to the same answer, and every change can be undone. Unsure items are listed for a second look and left unchanged. It runs only when you press the button, and each question uses one AI request.</p>
+          <div id="qaControls" class="backup-actions"></div>
+          <div id="qaResult" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="settings-section">
           <h3>Syllabus coverage check</h3>
           <p class="hint" style="margin-top:0;">Estimates how many questions cover each of the 70 official CFP Board subtopics and lists the thinnest first. Most questions aren't tagged by subtopic yet, so the counts come from matching key terms and are rough. A low number is a pointer, not proof of a gap.</p>
           <div id="syllabusCoverageResult" style="display:none;margin-top:14px;"></div>
@@ -23604,6 +23611,7 @@ function openSettings(){
   // every time Settings opens instead of waiting to be asked.
   try{ runContentIntegrityCheck(); }catch(e){}
   try{ runSyllabusCoverageCheck(); }catch(e){}
+  try{ qaRender(); }catch(e){}
 }
 
 // Opens Settings and takes the person straight to the API key field with
@@ -31557,6 +31565,123 @@ function rationaleMathProblems(q){
   });
   return out;
 }
+// AI accuracy check: works through the bank in batches with the same solve-and-verify steps as the flag review. A confirmed error is
+// corrected only when the corrected version passes the blind solve (qrevTryFix), and every change is stored with its original so Undo works.
+// Questions the check cannot finish are left unmarked and retried next time. It runs only when the person presses the button.
+let qaRunning = false, qaStopRequested = false;
+function qaStore(){
+  if(!DATA.qualityAudit) DATA.qualityAudit = { checked: {}, findings: {}, runs: 0, last: null };
+  return DATA.qualityAudit;
+}
+function qaCounts(){
+  const st = qaStore(), all = allQuestions();
+  const checked = all.filter(q => st.checked[String(q.id)]).length;
+  const f = Object.values(st.findings);
+  return {
+    total: all.length, checked, remaining: all.length - checked,
+    fixed: f.filter(x => x.status === 'fixed').length,
+    unsure: f.filter(x => x.status === 'unsure').length,
+    open: f.filter(x => x.status === 'problem').length
+  };
+}
+// Audit prompt: the key, the wording, the 2026 figures, and each explanation on its own (the "Correct —" one and every "Wrong —" one).
+function qaPrompt(q){
+  return 'You are auditing one multiple-choice question for a CFP® certification exam prep app. Today is October 2026. Check three things strictly:\n' +
+    '(a) The marked correct answer is right under the rules in force for 2026. Solve it yourself first.\n' +
+    '(b) Each explanation is accurate. The "Correct —" explanation must state a true reason the key is right. Each "Wrong —" explanation must state a true reason that choice is wrong, with figures that match the question. Flag any explanation that gives a wrong rule, wrong figure, wrong arithmetic, calls a wrong choice right, calls the right choice wrong, or does not match its choice.\n' +
+    '(c) Any figure, limit, rate, age, threshold or rule that may be out of date for 2026. Name each one and say what it should be.\n' +
+    'Reply with ONLY a JSON object, no other text:\n' +
+    '{"your_answer":"A|B|C|D","answer_matches_key":true|false,"explanation_errors":["letter: what is wrong in that explanation"],"issues":["other problem with the stem or choices"],"outdated_items":["figure or rule that may be out of date, and what it should be for 2026"],"suggested_fix":"one or two sentences on exactly what to change, or empty string","confidence":"high|medium|low"}\n' +
+    'Use empty arrays when the question and its explanations are sound. If you are not sure, say so with confidence "low" rather than guess.\n\n' + qrevQuestionText(q);
+}
+function qaUndoOne(id){
+  const f = DATA.questionFixes && DATA.questionFixes[id]; if(!f) return;
+  const q = allQuestions().find(x => String(x.id) === id); if(!q) return;
+  const p = f.prev || {};
+  Object.assign(q, { q: p.q, choices: p.choices, correct: p.correct, rationale: p.rationale, scenario: p.scenario || undefined });
+  delete DATA.questionFixes[id]; _aqMemo = null;
+  const st = qaStore(); if(st.findings[id]) st.findings[id].status = 'undone';
+  persist(); qaRender();
+}
+async function qaRun(batchSize){
+  if(qaRunning) return;
+  if(!aiFeaturesAvailable){ qaRender('AI check is off on this device. Connect an AI key to run it.'); return; }
+  const st = qaStore();
+  const todo = allQuestions().filter(q => !st.checked[String(q.id)]).slice(0, batchSize || 50);
+  if(!todo.length){ qaRender('Every question has been checked.'); return; }
+  qaRunning = true; qaStopRequested = false; st.runs = (st.runs || 0) + 1; st.last = Date.now();
+  let i = 0;
+  try{
+    for(const q of todo){
+      if(qaStopRequested) break;
+      i++;
+      qaRender('Checking question ' + i + ' of ' + todo.length + ' in this batch…');
+      const id = String(q.id);
+      let o = null;
+      try{
+        const raw = await Promise.race([
+          callClaude(qaPrompt(q), 1000),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 60000))
+        ]);
+        o = qrevParse(raw);
+      }catch(e){ o = null; }
+      if(!o) continue; // not marked as checked, so a later run retries it
+      // A wrong explanation counts as a real problem at medium or high confidence, so it gets corrected rather than left as a second look.
+      const explErr = Array.isArray(o.explanation_errors) ? o.explanation_errors.map(String).filter(Boolean) : [];
+      const v = qrevVerdict(Object.assign({}, o, { issues: explErr.map(x => 'Explanation: ' + x).concat(Array.isArray(o.issues) ? o.issues : []) }));
+      if(explErr.length && o.confidence !== 'low' && v.status === 'unsure') v.status = 'problem';
+      if(v.status === 'ok'){
+        st.checked[id] = Date.now(); delete st.findings[id];
+      } else if(v.status === 'problem'){
+        const fixed = await qrevTryFix(q, v);
+        st.checked[id] = Date.now();
+        st.findings[id] = fixed
+          ? { status: 'fixed', issues: v.issues, what: fixed.what || '', at: Date.now() }
+          : { status: 'problem', issues: v.issues, fix: v.fix, at: Date.now() };
+      } else {
+        st.checked[id] = Date.now();
+        st.findings[id] = { status: 'unsure', issues: v.issues, fix: v.fix, at: Date.now() };
+      }
+      persist();
+      qaRender();
+    }
+  } finally {
+    qaRunning = false; qaStopRequested = false;
+    persist(); qaRender();
+  }
+}
+function qaStop(){ qaStopRequested = true; qaRender(); }
+function qaReset(){
+  if(qaRunning) return;
+  if(!confirm('Start the check over from the beginning? Fixes already made stay in place.')) return;
+  qaStore().checked = {}; persist(); qaRender();
+}
+function qaRender(msg){
+  const el = document.getElementById('qaResult'), ctl = document.getElementById('qaControls');
+  if(!el || !ctl) return;
+  const E = escapeHtml, c = qaCounts(), st = qaStore();
+  if(qaRunning){
+    ctl.innerHTML = '<button type="button" class="btn ghost" ' + (qaStopRequested ? 'disabled ' : '') + 'onclick="qaStop()">' + (qaStopRequested ? 'Stopping after this question…' : 'Stop') + '</button>';
+  } else {
+    const canRun = aiFeaturesAvailable && c.remaining > 0;
+    ctl.innerHTML = '<button type="button" class="btn" ' + (canRun ? '' : 'disabled ') + 'onclick="qaRun(50)">' + (c.checked ? 'Check next 50' : 'Start AI check') + '</button>' +
+      (c.checked ? ' <button type="button" class="btn ghost" onclick="qaReset()">Start over</button>' : '');
+  }
+  const byId = new Map(allQuestions().map(q => [String(q.id), q]));
+  const rows = Object.entries(st.findings).sort((a, b) => (b[1].at || 0) - (a[1].at || 0));
+  const items = rows.slice(0, 40).map(([id, f]) => {
+    const q = byId.get(id); if(!q) return '';
+    const label = { fixed: 'Fixed', unsure: 'Second look', problem: 'Not fixed', undone: 'Undone' }[f.status] || 'Checked';
+    const detail = f.status === 'fixed' ? (f.what || '') : ((f.issues || []).join('; ') || f.fix || '');
+    const undo = f.status === 'fixed' ? ' <button type="button" class="btn ghost" onclick="qaUndoOne(\'' + E(id) + '\')">Undo</button>' : '';
+    return '<li><b>' + label + ':</b> ' + E(String(q.q || '').slice(0, 140)) + '<br><span class="hint">' + E(String(detail).slice(0, 300)) + '</span>' + undo + '</li>';
+  }).join('');
+  el.innerHTML = '<p class="hint" style="margin:0 0 8px;">' + (msg ? E(msg) + ' ' : '') +
+    'Checked ' + c.checked + ' of ' + c.total + ' questions. Fixed ' + c.fixed + ', second look ' + c.unsure + ', not fixed ' + c.open + '.' +
+    (st.last ? ' Last run ' + new Date(st.last).toLocaleDateString() + '.' : '') + '</p>' +
+    (items ? '<ul class="integrity-issues">' + items + '</ul>' : '');
+}
+
 function runContentIntegrityCheck(){
   const allQs = allQuestions();
   const allFcs = allFlashcards();
@@ -35592,7 +35717,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000150';
+const BUILD_ID = '2026-10-31.00000151';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
