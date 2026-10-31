@@ -16167,6 +16167,8 @@ function setBpView(v){
   const card = document.getElementById('blueprintCard'); if(!card) return;
   card.dataset.pv = v === 'score' ? 'score' : 'domains';
   card.querySelectorAll('#bpPv button').forEach(btn => { const on = btn.dataset.pv === card.dataset.pv; btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  // Switching between "By domain" and "How the score is built" changes the height, so the progress page is fitted again straight away.
+  try{ osFitRefresh(); }catch(e){}
 }
 function openDomainBreakdown(key){
   window._domainOpen = key;
@@ -41728,7 +41730,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000302';
+const BUILD_ID = '2026-10-31.00000303';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
