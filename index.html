@@ -614,6 +614,32 @@
   .integrity-issues{background:var(--surface2);border:1px solid var(--incorrect);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--paper);}
   .integrity-issues ul{margin:8px 0 0;padding-left:20px;}
   .integrity-issues li{margin-bottom:4px;}
+  .qa-panel{display:flex;flex-direction:column;gap:12px;}
+  .qa-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;font-size:13px;font-weight:600;color:var(--paper);}
+  .qa-live{font-weight:400;color:var(--muted);font-size:12px;}
+  .qa-progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden;}
+  .qa-progress span{display:block;height:100%;background:var(--correct);border-radius:999px;transition:width .3s ease;}
+  .qa-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;}
+  .qa-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid transparent;background:var(--surface2);color:var(--paper);cursor:pointer;text-align:left;font:inherit;min-height:44px;}
+  .qa-chip b{font-size:20px;line-height:1;font-variant-numeric:tabular-nums;}
+  .qa-chip span{font-size:12px;color:var(--muted);}
+  .qa-chip.on{border-color:var(--paper);}
+  .qa-chip.good b{color:var(--correct);}
+  .qa-chip.warn b{color:var(--gold);}
+  .qa-chip.bad b{color:var(--incorrect);}
+  .qa-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .qa-row{background:var(--surface2);border-radius:12px;padding:12px 14px;}
+  .qa-pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid currentColor;}
+  .qa-pill.fixed{color:var(--correct);}
+  .qa-pill.unsure{color:var(--gold);}
+  .qa-pill.problem{color:var(--incorrect);}
+  .qa-pill.undone{color:var(--muted);}
+  .qa-q{margin:8px 0 0;font-size:13px;line-height:1.45;color:var(--paper);}
+  .qa-detail{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--muted);}
+  .qa-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .qa-act{font:inherit;font-size:12px;padding:6px 14px;border-radius:999px;border:1px solid var(--muted);background:transparent;color:var(--paper);cursor:pointer;min-height:36px;}
+  .qa-note,.qa-empty{margin:0;font-size:12px;color:var(--muted);line-height:1.5;}
+  @media (prefers-reduced-motion: reduce){ .qa-progress span{transition:none;} }
   .settings-section:first-of-type{padding-top:0;margin-top:16px;border-top:none;}
   .settings-section h3{margin:0 0 10px;font-size:15px;}
   .api-key-nudge{display:flex;flex-direction:column;gap:10px;align-items:flex-start;background:var(--gold-tint);border:1px solid var(--gold);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--paper);}
@@ -31579,7 +31605,7 @@ function qaCounts(){
   const f = Object.values(st.findings);
   return {
     total: all.length, checked, remaining: all.length - checked,
-    fixed: f.filter(x => x.status === 'fixed').length,
+    fixed: Object.entries(st.findings).filter(([id, x]) => x.status === 'fixed' && DATA.questionFixes && DATA.questionFixes[id]).length,
     unsure: f.filter(x => x.status === 'unsure').length,
     open: f.filter(x => x.status === 'problem').length
   };
@@ -31611,11 +31637,13 @@ async function qaRun(batchSize){
   if(!todo.length){ qaRender('Every question has been checked.'); return; }
   qaRunning = true; qaStopRequested = false; st.runs = (st.runs || 0) + 1; st.last = Date.now();
   let i = 0;
+  qaBatch = { current: 0, total: todo.length, phase: null };
   try{
     for(const q of todo){
       if(qaStopRequested) break;
       i++;
-      qaRender('Checking question ' + i + ' of ' + todo.length + ' in this batch…');
+      qaBatch.current = i; qaBatch.phase = null;
+      qaRender();
       const id = String(q.id);
       let o = null;
       try{
@@ -31633,6 +31661,7 @@ async function qaRun(batchSize){
       if(v.status === 'ok'){
         st.checked[id] = Date.now(); delete st.findings[id];
       } else if(v.status === 'problem'){
+        if(qaBatch){ qaBatch.phase = 'fixing'; qaRender(); }
         const fixed = await qrevTryFix(q, v);
         st.checked[id] = Date.now();
         st.findings[id] = fixed
@@ -31646,7 +31675,7 @@ async function qaRun(batchSize){
       qaRender();
     }
   } finally {
-    qaRunning = false; qaStopRequested = false;
+    qaRunning = false; qaStopRequested = false; qaBatch = null;
     persist(); qaRender();
   }
 }
@@ -31656,30 +31685,66 @@ function qaReset(){
   if(!confirm('Start the check over from the beginning? Fixes already made stay in place.')) return;
   qaStore().checked = {}; persist(); qaRender();
 }
+// Panel state: which status the list is filtered to, and live progress for the batch that is running.
+let qaFilter = 'all', qaBatch = null;
+// A fix that was undone (from the panel or the list) shows as Undone, whichever screen it was undone on.
+function qaRowStatus(id, f){
+  if(f.status === 'fixed' && !(DATA.questionFixes && DATA.questionFixes[id])) return 'undone';
+  return f.status;
+}
+function qaSetFilter(k){ qaFilter = k; qaRender(); }
+function qaReview(id){
+  const q = allQuestions().find(x => String(x.id) === id);
+  if(q) openQuestionReview(q);
+}
 function qaRender(msg){
   const el = document.getElementById('qaResult'), ctl = document.getElementById('qaControls');
   if(!el || !ctl) return;
   const E = escapeHtml, c = qaCounts(), st = qaStore();
+  const btn = (cls, attrs, label) => '<button type="button" class="btn' + (cls ? ' ' + cls : '') + '"' + attrs + '>' + label + '</button>';
   if(qaRunning){
-    ctl.innerHTML = '<button type="button" class="btn ghost" ' + (qaStopRequested ? 'disabled ' : '') + 'onclick="qaStop()">' + (qaStopRequested ? 'Stopping after this question…' : 'Stop') + '</button>';
+    ctl.innerHTML = btn('ghost', qaStopRequested ? ' disabled' : ' onclick="qaStop()"', qaStopRequested ? 'Stopping after this question…' : 'Stop');
   } else {
     const canRun = aiFeaturesAvailable && c.remaining > 0;
-    ctl.innerHTML = '<button type="button" class="btn" ' + (canRun ? '' : 'disabled ') + 'onclick="qaRun(50)">' + (c.checked ? 'Check next 50' : 'Start AI check') + '</button>' +
-      (c.checked ? ' <button type="button" class="btn ghost" onclick="qaReset()">Start over</button>' : '');
+    ctl.innerHTML = btn('', canRun ? ' onclick="qaRun(50)"' : ' disabled', c.checked ? 'Check next ' + Math.min(50, c.remaining) : 'Start AI check') +
+      (c.checked ? btn('ghost', ' onclick="qaReset()"', 'Start over') : '');
   }
+  const live = qaRunning && qaBatch
+    ? 'Checking ' + qaBatch.current + ' of ' + qaBatch.total + (qaBatch.phase === 'fixing' ? ' · correcting an error' : '')
+    : (st.last ? 'Last run ' + new Date(st.last).toLocaleDateString() : 'Not run yet');
+  const pct = qaRunning && qaBatch && qaBatch.total
+    ? Math.round((qaBatch.current - (qaBatch.phase === 'fixing' ? 0 : 1)) / qaBatch.total * 100)
+    : (c.total ? Math.round(c.checked / c.total * 100) : 0);
+  const chip = (key, n, label, tone) => '<button type="button" class="qa-chip ' + tone + (qaFilter === key ? ' on' : '') + '" aria-pressed="' + (qaFilter === key) + '" onclick="qaSetFilter(\'' + key + '\')"><b>' + n + '</b><span>' + label + '</span></button>';
+  const stats = '<div class="qa-stats">' + chip('all', c.checked, 'checked', 'neutral') + chip('fixed', c.fixed, 'fixed', 'good') + chip('unsure', c.unsure, 'second look', 'warn') + chip('problem', c.open, 'not fixed', 'bad') + '</div>';
   const byId = new Map(allQuestions().map(q => [String(q.id), q]));
-  const rows = Object.entries(st.findings).sort((a, b) => (b[1].at || 0) - (a[1].at || 0));
-  const items = rows.slice(0, 40).map(([id, f]) => {
-    const q = byId.get(id); if(!q) return '';
-    const label = { fixed: 'Fixed', unsure: 'Second look', problem: 'Not fixed', undone: 'Undone' }[f.status] || 'Checked';
-    const detail = f.status === 'fixed' ? (f.what || '') : ((f.issues || []).join('; ') || f.fix || '');
-    const undo = f.status === 'fixed' ? ' <button type="button" class="btn ghost" onclick="qaUndoOne(\'' + E(id) + '\')">Undo</button>' : '';
-    return '<li><b>' + label + ':</b> ' + E(String(q.q || '').slice(0, 140)) + '<br><span class="hint">' + E(String(detail).slice(0, 300)) + '</span>' + undo + '</li>';
+  const LABEL = { fixed: 'Fixed', unsure: 'Second look', problem: 'Not fixed', undone: 'Undone' };
+  const rows = Object.entries(st.findings)
+    .filter(([id]) => byId.has(id))
+    .map(([id, f]) => [id, f, qaRowStatus(id, f)])
+    .filter(([, , s]) => qaFilter === 'all' || s === qaFilter)
+    .sort((a, b) => (b[1].at || 0) - (a[1].at || 0));
+  const items = rows.slice(0, 60).map(([id, f, s]) => {
+    const q = byId.get(id);
+    const detail = s === 'fixed' ? (f.what || '') : ((f.issues || []).join('; ') || f.fix || '');
+    const acts = '<button type="button" class="qa-act" onclick="qaReview(\'' + E(id) + '\')">Review</button>' +
+      (s === 'fixed' ? '<button type="button" class="qa-act" onclick="qaUndoOne(\'' + E(id) + '\')">Undo fix</button>' : '');
+    return '<li class="qa-row"><span class="qa-pill ' + s + '">' + LABEL[s] + '</span>' +
+      '<p class="qa-q">' + E(String(q.q || '').slice(0, 160)) + (String(q.q || '').length > 160 ? '…' : '') + '</p>' +
+      (detail ? '<p class="qa-detail">' + E(String(detail).slice(0, 320)) + '</p>' : '') +
+      '<div class="qa-acts">' + acts + '</div></li>';
   }).join('');
-  el.innerHTML = '<p class="hint" style="margin:0 0 8px;">' + (msg ? E(msg) + ' ' : '') +
-    'Checked ' + c.checked + ' of ' + c.total + ' questions. Fixed ' + c.fixed + ', second look ' + c.unsure + ', not fixed ' + c.open + '.' +
-    (st.last ? ' Last run ' + new Date(st.last).toLocaleDateString() + '.' : '') + '</p>' +
-    (items ? '<ul class="integrity-issues">' + items + '</ul>' : '');
+  const empty = !c.checked
+    ? 'Press Start AI check to begin. Each question appears here as soon as it is checked.'
+    : 'Nothing in this view.';
+  el.innerHTML = '<div class="qa-panel">' +
+    (msg ? '<p class="qa-note">' + E(msg) + '</p>' : '') +
+    '<div class="qa-head"><span>' + E(c.checked) + ' of ' + E(c.total) + ' questions checked</span><span class="qa-live">' + E(live) + '</span></div>' +
+    '<div class="qa-progress" role="progressbar" aria-label="Bank checked" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><span style="width:' + pct + '%"></span></div>' +
+    stats +
+    (items ? '<ul class="qa-list">' + items + '</ul>' : '<p class="qa-empty">' + empty + '</p>') +
+    (rows.length > 60 ? '<p class="qa-empty">Showing the 60 most recent of ' + rows.length + '.</p>' : '') +
+    '</div>';
 }
 
 function runContentIntegrityCheck(){
@@ -35717,7 +35782,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000151';
+const BUILD_ID = '2026-10-31.00000152';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
