@@ -12895,7 +12895,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000248).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000249).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -27308,6 +27308,7 @@ function difficultyTilt(){
   recent.forEach((s, i) => { const wt = Math.pow(0.8, recent.length - 1 - i); num += accOf(s) * wt; den += wt; });
   const weighted = num / den;
   const last3 = recent.slice(-3).reduce((a, s) => a + accOf(s), 0) / 3;
+  if(weighted >= 0.9 && last3 >= 0.9 && recent.length >= 5) return 'exam'; // consistently strong: work at exam level
   if(weighted >= 0.85 && last3 >= 0.8) return 'up';
   if(weighted < 0.55 && last3 < 0.6) return 'down';
   return null;
@@ -27317,9 +27318,12 @@ function difficultyTilt(){
 // normal mix. If that would leave too few questions to fill the session, the full pool is used instead.
 function tiltedPool(cands, need){
   try{
-    const t = difficultyTilt(); if(t !== 'up' || !cands || !cands.length) return cands;
+    const t = difficultyTilt(); if((t !== 'up' && t !== 'exam') || !cands || !cands.length) return cands;
+    const need6 = Math.max(need || 0, 6);
+    // Exam level keeps only the applied items when there are enough of them; otherwise it steps down to the middle tier.
+    if(t === 'exam'){ const top = cands.filter(q => questionDifficulty(q) >= 3); if(top.length >= need6) return top; }
     const f = cands.filter(q => questionDifficulty(q) >= 2);
-    return f.length >= Math.max(need || 0, 6) ? f : cands;
+    return f.length >= need6 ? f : cands;
   }catch(e){ return cands; }
 }
 // Study time from the running total and from the saved sessions, whichever is larger, so the hours shown in the plan,
@@ -27357,8 +27361,10 @@ function pickAdaptiveQueue(n){
   const resting = [];
   // Difficulty follows recent results when there are enough questions at that level to fill the session.
   const tilt = difficultyTilt();
-  const tiltPool = tilt ? all.filter(q => tilt === 'up' ? questionDifficulty(q) >= 2 : questionDifficulty(q) <= 2) : all;
-  const basePool = tiltPool.length >= 12 ? tiltPool : all;
+  const tiltPool = tilt ? all.filter(q => tilt === 'down' ? questionDifficulty(q) <= 2 : questionDifficulty(q) >= (tilt === 'exam' ? 3 : 2)) : all;
+  // A thin pool steps down a level (exam to applied) before it falls back to the whole mix.
+  const stepDown = tilt === 'exam' ? all.filter(q => questionDifficulty(q) >= 2) : null;
+  const basePool = tiltPool.length >= 12 ? tiltPool : (stepDown && stepDown.length >= 12 ? stepDown : all);
   basePool.forEach(q=>{
     const stat = getSpacedStat(DATA.questionStats, q.id);
     (isDue(stat) ? eligible : resting).push(q);
@@ -31904,7 +31910,7 @@ function startTvmMultiStage(){
     const want = difficultyTilt();
     for(let k = 0; k < 8; k++){
       problem = tvmMakeMultiStage();
-      if(want !== 'up' || !problem) break;
+      if((want !== 'up' && want !== 'exam') || !problem) break;
       if(tvmMsStages(problem).length >= 3) break;
     }
   }catch(e){}
@@ -41644,7 +41650,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000248';
+const BUILD_ID = '2026-10-31.00000249';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
