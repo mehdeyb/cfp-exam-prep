@@ -25291,9 +25291,24 @@ function fcJitter(id){
    a missed card returns next time, not minutes later. The queue mixes unseen cards in with the review ones (about 4 in 10, fewer when
    reviews are piling up or the exam is close), and similar cards are spread apart so two of them never sit close together.
 =========================================================== */
-const _fcSess = { at:0, seen:new Set(), near:new Set() };
+const _fcSess = { at:0, seen:new Set(), near:new Set(), loaded:false };
 const _fcTok = {};
-function fcSessTouch(){ const now = Date.now(); if(now - _fcSess.at > 45 * 60000){ _fcSess.seen = new Set(); _fcSess.near = new Set(); } _fcSess.at = now; }
+// The session's memory of what you have rated is saved with your data, so a reload or coming back later still knows it.
+function fcSessHydrate(){
+  if(_fcSess.loaded) return; _fcSess.loaded = true;
+  try{
+    const s = DATA && DATA.fcSess;
+    if(s && Array.isArray(s.seen) && Date.now() - (s.at || 0) <= 45 * 60000){
+      _fcSess.at = s.at; _fcSess.seen = new Set(s.seen);
+      const all = allFlashcards(), byId = {}; all.forEach(c => { byId[c.id] = c; });
+      _fcSess.seen.forEach(id => { const c = byId[id]; if(c) all.forEach(o => { if(o.id !== id && fcSimilar(c, o)) _fcSess.near.add(o.id); }); });
+    }
+  }catch(e){}
+}
+function fcSessSave(){
+  try{ if(DATA) DATA.fcSess = { at:_fcSess.at, seen:Array.from(_fcSess.seen) }; }catch(e){}
+}
+function fcSessTouch(){ fcSessHydrate(); const now = Date.now(); if(now - _fcSess.at > 45 * 60000){ _fcSess.seen = new Set(); _fcSess.near = new Set(); } _fcSess.at = now; }
 function fcTok(c){ return _fcTok[c.id] || (_fcTok[c.id] = { t: fcWordSet(c.term), d: fcWordSet(c.def) }); }
 function fcSimilar(a, b){
   if(a.id === b.id) return true;
@@ -25309,6 +25324,7 @@ function fcSessNote(card){
   fcSessTouch();
   _fcSess.seen.add(card.id);
   allFlashcards().forEach(c => { if(c.id !== card.id && fcSimilar(card, c)) _fcSess.near.add(c.id); });
+  fcSessSave();
 }
 function fcSessBlocked(c){ return _fcSess.seen.has(c.id) || _fcSess.near.has(c.id); }
 function fcCompose(pool, filtered){
@@ -41765,7 +41781,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000313';
+const BUILD_ID = '2026-10-31.00000314';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
