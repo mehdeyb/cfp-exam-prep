@@ -3441,8 +3441,13 @@
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-left{grid-column:1;grid-row:1;position:static;max-height:none;overflow:visible;}
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > #qChoices{grid-column:2;grid-row:1 / span 30;}
     body.quiz-active:not(.exam-sim-mode) .q-card > .q-right > :not(#qChoices){grid-column:1;}
-    /* A client scenario or case study keeps the facts on the left, full height; the question, how sure, the choices and then the explanation stack on the right, so neither column sits empty. */
-    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-left{display:contents;}
+    /* Without a client scenario, the answer column is one stack: the choices, then the key figures for the question. The figures used to fall
+       under the verdict on the left, which pushed the left column past the screen while the right column sat empty. */
+    body.quiz-active:not(.exam-sim-mode) .q-card:not(:has(#qScenario:not([style*="none"]))) > .q-right{display:flex;flex-direction:column;gap:8px;grid-column:2;grid-row:1;min-width:0;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:not(:has(#qScenario:not([style*="none"]))) > .q-right > #qFigures{margin:0;}
+    /* A client scenario or case study keeps the facts and the verdict on the left; the question, how sure, the choices and the key figures stack on the right. Both are stacks, so neither column runs past the screen while the other sits empty. */
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-left{display:flex;flex-direction:column;gap:12px;grid-column:1;grid-row:1;position:static;max-height:none;overflow:visible;min-width:0;}
+    body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) > .q-right{display:flex;flex-direction:column;gap:8px;grid-column:2;grid-row:1;min-width:0;}
     body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-domain{grid-column:1;grid-row:1;}
     body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-scenario{grid-column:1;grid-row:2 / span 40;margin:0;}
     body.quiz-active:not(.exam-sim-mode) .q-card:has(#qScenario:not([style*="none"])) .q-text{grid-column:2;grid-row:1 / span 2;margin:0 0 10px;}
@@ -28295,6 +28300,8 @@ function generatedItemIsSound(q){
   try{
     if(!q || typeof q.q !== 'string') return false;
     if(/unsecured personal credit line/i.test(q.q) && /110,000/.test(q.q) && /125,000/.test(q.q)) return false; // the reported insolvency item, whatever its wording
+    // An explanation that argues with itself ("wait, recalculating", "let's fix the numbers") is scratch work, not a rationale. Reject it, so a student never reads a key that was reworked mid-explanation.
+    if(Array.isArray(q.rationale) && q.rationale.some(r => /\b(wait|let me|let's|let us|ah,|hmm|actually,|recalculat|check the math|oops|fix numbers)\b/i.test(String(r)))) return false;
     if(Array.isArray(q.choices) && q.choices.length === 4){
       const numOf = s => { const m = String(s).match(/-?\d[\d,]*\.?\d*/g); return m ? parseFloat(m[m.length - 1].replace(/,/g, '')) : NaN; };
       const dollarChoices = q.choices.some(c => /\$\s?\d/.test(String(c)));
@@ -34933,6 +34940,18 @@ function placeAnswerTools(){
       const el = document.getElementById(id); if(!el) return;
       if(!el._home) el._home = { parent: el.parentElement, next: el.nextElementSibling };
       if(wide){ if(el.parentElement !== L) L.appendChild(el); }
+      else if(el.parentElement !== el._home.parent){
+        const nx = el._home.next && el._home.next.parentElement === el._home.parent ? el._home.next : null;
+        el._home.parent.insertBefore(el, nx);
+      }
+    });
+    // With a client scenario, the question and "how sure" sit on the right, just above the choices, so the facts and verdict fill the left.
+    const scn = document.getElementById('qScenario'), ch = document.getElementById('qChoices');
+    const hasScn = !!scn && scn.style.display !== 'none';
+    if(ch) ['qText','confidenceRow'].forEach(id => {
+      const el = document.getElementById(id); if(!el) return;
+      if(!el._home) el._home = { parent: el.parentElement, next: el.nextElementSibling };
+      if(wide && hasScn){ if(el.parentElement !== R || el.nextElementSibling !== ch) R.insertBefore(el, ch); }
       else if(el.parentElement !== el._home.parent){
         const nx = el._home.next && el._home.next.parentElement === el._home.parent ? el._home.next : null;
         el._home.parent.insertBefore(el, nx);
@@ -41728,7 +41747,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000304';
+const BUILD_ID = '2026-10-31.00000305';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
