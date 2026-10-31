@@ -614,7 +614,9 @@
   .integrity-issues{background:var(--surface2);border:1px solid var(--incorrect);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--paper);}
   .integrity-issues ul{margin:8px 0 0;padding-left:20px;}
   .integrity-issues li{margin-bottom:4px;}
-  .qa-panel{display:flex;flex-direction:column;gap:12px;}
+  /* The panel stays inside its own section: it establishes its own stacking context and never sets its own height, so nothing it shows can overlap the next section. */
+  .qa-panel{display:flex;flex-direction:column;gap:12px;position:relative;isolation:isolate;min-width:0;clear:both;}
+  .qa-panel > *{min-width:0;}
   .qa-head{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;font-size:13px;font-weight:600;color:var(--paper);}
   .qa-live{font-weight:400;color:var(--muted);font-size:12px;}
   .qa-progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden;}
@@ -23606,7 +23608,7 @@ const SETTINGS_GROUPS = [
   { id:'study', label:'Study', h:['Exam date','Display','Voice','Tutor notes'] },
   { id:'ai', label:'AI', h:['AI connection','AI token usage','AI-written library'] },
   { id:'data', label:'Data', h:['Sync across devices','Backup & restore','Reset'] },
-  { id:'app', label:'App', h:['App version','About this version','Content quality check','Syllabus coverage check'] }
+  { id:'app', label:'App', h:['App version','About this version','Content quality check','AI accuracy check','Syllabus coverage check'] }
 ];
 function settingsShowGroup(g, noPersist){
   const host = document.getElementById('settingsHost'); if(!host) return;
@@ -31712,6 +31714,8 @@ function qaRender(msg){
   const el = document.getElementById('qaResult'), ctl = document.getElementById('qaControls');
   if(!el || !ctl) return;
   const E = escapeHtml, c = qaCounts(), st = qaStore();
+  // Say why the button is off, instead of leaving a greyed-out control with no explanation.
+  if(!msg && !aiFeaturesAvailable && !qaRunning) msg = 'Connect an AI key in Settings, under the AI tab, to run this check.';
   const btn = (cls, attrs, label) => '<button type="button" class="btn' + (cls ? ' ' + cls : '') + '"' + attrs + '>' + label + '</button>';
   if(qaRunning){
     ctl.innerHTML = btn('ghost', qaStopRequested ? ' disabled' : ' onclick="qaStop()"', qaStopRequested ? 'Stopping after this question…' : 'Stop');
@@ -35793,7 +35797,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000155';
+const BUILD_ID = '2026-10-31.00000156';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
