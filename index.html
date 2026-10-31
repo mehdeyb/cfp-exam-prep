@@ -18590,7 +18590,7 @@ function openTreeRun(key, o){
   o = o || {};
   const avail = dtwList(key).length; if(!avail) return false;
   dtwRun = { key, goal: Math.max(1, Math.min(o.goal || 3, 6)), n: 0, seen: [], stepId: o.stepId || null };
-  showTab('tools'); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
+  showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
   if(!card) return false;
@@ -18601,7 +18601,7 @@ function openTreeRun(key, o){
 function dtwRunDone(){ const r = dtwRun; dtwRun = null; focusExit({ done:true }); return r; }
 function openTreeWalk(key){
   dtwRun = null;
-  showTab('tools'); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
+  showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
   if(card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -34920,6 +34920,7 @@ function tutorPoint(key, note, isolate){
   if(!t) return false;
   clearTutorPoint();
   showTab(t.tab);
+  if(key.indexOf('tool_') === 0) dtSelectTree(key.slice(5)); // the tree card is hidden unless it is the selected one
   if(key === 'ref_calc_keys') renderCalcKeysCard();
   let el = document.querySelector(t.sel);
   try{ hubRevealEl(el); }catch(e){}
@@ -35526,7 +35527,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000145';
+const BUILD_ID = '2026-10-30.00000146';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
