@@ -12895,7 +12895,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000243).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000244).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -17515,8 +17515,11 @@ function buildStudyPlanCore(minutes){
     const weak = (id === 'calc' && wf === name);
     const fsN = fdStats(name), fsLvl = fdLevelOf(name), fsAcc = fsN.attempts ? Math.round(fsN.correct / fsN.attempts * 100) : null;
     const fsTxt = fsN.attempts ? `Level ${fsLvl}${fsAcc !== null ? ', ' + fsAcc + '% right so far' : ''}.` : 'First time with this one.';
+    // Last sitting in the drill (within 3 days) so the plan shows where the last session left off.
+    const ls = (DATA && DATA.lastFormulaSitting) || null;
+    const lsTxt = (ls && ls.n && Date.now() - ls.at < 3 * 86400000) ? ` Last sitting: ${ls.ok} of ${ls.n} right${ls.next ? ', and ' + ls.next + ' was flagged next' : ''}.` : '';
     return { id, title:`Formula practice: ${name}`, minutes:8, need:4, have: Math.min(4, act.formula), unit:'problems',
-      why: (weak ? 'A handful of fresh problems on a formula you keep missing usually settles it.' : 'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.') + ' ' + fsTxt,
+      why: (weak ? 'A handful of fresh problems on a formula you keep missing usually settles it.' : 'Short, regular practice keeps the exam formulas automatic, and the numbers change every time so it is real recall.') + ' ' + fsTxt + lsTxt,
       how: ['Read the formula and what each letter stands for.','Work the problem with the numbers shown, on the calculator or on paper.','Enter your answer, then read the explanation, including when you were right.','Do four problems; each one has new numbers.'],
       run: () => { showTab('study'); openFormulaDrill(name); } };
   };
@@ -41568,7 +41571,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000243';
+const BUILD_ID = '2026-10-31.00000244';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
