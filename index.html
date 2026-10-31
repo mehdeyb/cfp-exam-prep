@@ -1531,6 +1531,8 @@
   .simple-more > .simple-sec{margin-top:8px;}
   .simple-analogy{border-left-color:var(--gold);}
   .simple-analogy .simple-sec-title{color:var(--gold);}
+  .simple-remember{border-left-color:var(--gold);}
+  .simple-remember .simple-sec-title{color:var(--gold);}
   .simple-spot{border-left-color:var(--teal);}
   .simple-trap{border-left-color:var(--incorrect);}
   .simple-trap .simple-sec-title{color:var(--incorrect);}
@@ -36492,13 +36494,13 @@ function parseSimpleExplanation(raw){
     const m = String(raw || '').match(/\{[\s\S]*\}/); if(!m) return null;
     const o = JSON.parse(m[0]);
     const pick = k => String(o[k] || '').replace(/\s+/g, ' ').trim().slice(0, 400);
-    const out = { idea: pick('idea'), why: pick('why'), analogy: gateAnalogy(pick('analogy')), spot: pick('spot'), trap: pick('trap') };
+    const out = { idea: pick('idea'), why: pick('why'), remember: pick('remember'), trap: pick('trap') };
     return out.idea && out.why ? out : null;
   }catch(e){ return null; }
 }
 function simpleExplanationSpeech(reply){
   if(typeof reply === 'string') return reply;
-  return [reply.idea, reply.why, reply.analogy, reply.spot ? 'To spot it next time: ' + reply.spot : '', reply.trap ? 'Watch out: ' + reply.trap : ''].filter(Boolean).join(' ');
+  return [reply.idea, reply.why, reply.remember ? 'Remember: ' + reply.remember : '', reply.trap ? 'Watch out: ' + reply.trap : ''].filter(Boolean).join(' ');
 }
 function renderSimplifiedExplanation(box, reply, fromCache){
   box.className = 'simplified-explanation';
@@ -36532,17 +36534,8 @@ function renderSimplifiedExplanation(box, reply, fromCache){
     idea.textContent = reply.idea;
     body.appendChild(idea);
     addSection('Why', reply.why);
-    addSection('Think of it like', reply.analogy, 'simple-analogy');
-    addSection('Spot it next time', reply.spot, 'simple-spot');
+    addSection('Remember it', reply.remember, 'simple-remember');
     addSection('The trap', reply.trap, 'simple-trap');
-    // The plain-language idea stays up front; the supporting sections fold away so the answered question fits on one screen.
-    const more = document.createElement('details');
-    more.className = 'simple-more';
-    const moreSum = document.createElement('summary');
-    moreSum.textContent = 'Why, an analogy and the trap';
-    more.appendChild(moreSum);
-    [...body.children].slice(1).forEach(n => more.appendChild(n));
-    if(more.children.length > 1) body.appendChild(more);
   }
   box.appendChild(body);
   if(hasSpeechSupport()){
@@ -36616,7 +36609,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap a specific mistake: the tempting word in the stem that pulls toward the pick, then the one fact or test that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), the tempting word in the stem that pulls toward it, then the one fact or test that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "analogy": "one comparison that makes the rule intuitive. Choose a situation a student has likely lived through (a family budget, a shared bill, a loan, a home sale, inherited property, a small business partnership, a tax refund, a school grade) and map each moving part of the rule onto it: who does what, what is being valued, and what the tax or legal effect is. The comparison must explain WHY the rule produces the answer in this question, not just restate the idea. Then say where it breaks, in one sentence, naming the point where the real rule differs. Example of the shape for a different rule: \"A Roth conversion works like paying the tax on seed before planting it: you owe tax on the value once, now, so the growth afterward is never taxed again. Unlike that, the tax is due on the full converted amount even if the market falls afterward.\" Do not use phone plans, price tiers, pizza, restaurants, sports, games, subscriptions, garage sales or trading cards. Use an empty string if no situation maps cleanly onto the mechanism of this question", "spot": "start with Look for, then name the exact pattern in the question's wording that signals this idea, quoting a few words from the stem when you can, in one sentence. A student should be able to find it in the next question", "trap": "one specific mistake a candidate would really make, in two short sentences. First sentence: the wrong letter and the tempting word or phrase in the question stem that pulls a candidate toward it. Second sentence: the one fact or test that shows why it fails and which part of the question decides it. Example shape: Choosing D is tempting because the stem says the taxes are about family wealth, but D describes the opposite effect, and the question asks what the structure achieves. Never name the correct letter, and do not restate the rationale""}`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap a specific mistake: the tempting word in the stem that pulls toward the pick, then the one fact or test that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), the tempting word in the stem that pulls toward it, then the one fact or test that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "the wrong letter most candidates pick, the exact word or phrase in the stem that pulls them toward it, and the specific fact, figure or rule that rules it out, in two short sentences. Example shape: Choosing D is tempting because the stem says the policy is paid by the employer, but D treats the premiums as a personal medical cost. The question asks which rule applies, and that rule decides it. Never name the correct letter, and do not restate the rationale"}`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -41654,7 +41647,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000271';
+const BUILD_ID = '2026-10-31.00000272';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
