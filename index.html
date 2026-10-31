@@ -790,7 +790,7 @@
   }
   .tvm-ppy-annunciator{position:absolute;left:72px;bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--calc-screen-text);opacity:0.7;pointer-events:none;}
   .hk{display:flex;flex-direction:column;min-width:0;}
-  .hk-o{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--calc-orange);text-align:center;height:13px;line-height:13px;white-space:nowrap;overflow:hidden;border-radius:4px;}
+  .hk-o{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--calc-orange);text-align:center;height:13px;line-height:13px;margin-top:3px;white-space:nowrap;overflow:hidden;border-radius:4px;}
   .tvm-keypad.hp-shift .hk-o{background:var(--calc-orange);color:#1d1d1d;}
   .hk .tvm-key-orange{background:var(--calc-orange);border-color:var(--calc-orange);color:#1d1d1d;}
   .hk .tvm-key-orange.on{box-shadow:0 0 0 2px #fff inset;}
@@ -12895,7 +12895,7 @@ const COVERAGE_B3_QUESTIONS = [
 {id:"ptb-q11",domain:"estate",sub:"Property titling and beneficiary designations",q:"A client names minor children directly as life insurance beneficiaries. What is the most likely problem?",choices:["A court-supervised guardianship may be needed to manage the money for them","Immediate income tax on the death benefit","Loss of the policy","A reduction in estate tax"],correct:0,rationale:["Correct — Minors generally cannot receive property outright. A guardian or court-supervised arrangement may be needed until they reach adulthood.","Wrong — Death benefits are generally not subject to income tax for the beneficiary.","Wrong — Naming children does not cause the policy to be lost.","Wrong — Naming beneficiaries does not reduce estate tax by itself."]}
 ];
 QUESTIONS.push(...COVERAGE_B3_QUESTIONS);
-// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000247).
+// Coverage batch: non-qualified plans, eldercare and special needs, business plan selection (added build 2026-10-31.00000248).
 const COVERAGE_B4_QUESTIONS = [
 {id:"ncq-q01",domain:"retirement",sub:"Non-qualified plan rules and options",q:"An executive defers salary under a non-qualified plan. Which feature is generally required to keep the deferral from being taxed currently?",choices:["The deferred amount must be held in a separate trust that the executive controls","The executive must have a substantial risk of forfeiture on the deferred amount","The plan must cover all employees equally","The deferred amount must be invested only in company stock"],correct:1,rationale:["Wrong — Control of a funded trust by the executive generally makes the amount currently taxable, so it defeats the deferral.","Correct — A substantial risk of forfeiture, such as a condition of continued service, generally lets the deferral avoid current taxation.","Wrong — Broad coverage is a qualified plan requirement. Non-qualified plans are usually offered to selected executives.","Wrong — Investment in company stock does not decide the timing of taxation for a non-qualified plan."]},
 {id:"ncq-q02",domain:"retirement",sub:"Non-qualified plan rules and options",q:"A non-qualified deferred compensation plan must meet a timing rule for elections and payouts. Which code section governs most of these requirements?",choices:["Section 401(a)","Section 409A","Section 1031","Section 170"],correct:1,rationale:["Wrong — Section 401(a) sets qualified plan requirements. Non-qualified plans are generally outside it.","Correct — Section 409A governs the timing of deferral elections and distributions for most non-qualified deferred compensation.","Wrong — Section 1031 covers like-kind exchanges of property, not deferred compensation.","Wrong — Section 170 covers charitable deductions, which is unrelated to deferred compensation timing."]},
@@ -29938,7 +29938,7 @@ function hpBuildKeypad(){
   kp.innerHTML = HP_ROWS.map(row => row.map(([id, lab, org, cls]) => {
     const c = 'tvm-key' + (cls === 'var' ? ' tvm-key-var' : cls === 'orange' ? ' tvm-key-orange' : cls === 'blue' ? ' tvm-key-blue' : cls === 'op' ? ' tvm-key-op' : cls === 'sm' ? ' tvm-key-fn tvm-key-small' : '');
     const bid = id === 'mar' ? ' id="tvmBeginEndBtn"' : id === 'orange' ? ' id="tvmOrangeKey"' : '';
-    return `<div class="hk"><div class="hk-o">${org}</div><button class="${c}"${bid} onclick="hpKey('${id}')"${id === 'bs' ? ' aria-label="Backspace"' : ''}>${lab}</button></div>`;
+    return `<div class="hk"><button class="${c}"${bid} onclick="hpKey('${id}')"${id === 'bs' ? ' aria-label="Backspace"' : ''}>${lab}</button><div class="hk-o">${org}</div></div>`;
   }).join('')).join('');
 }
 function hpSay(t, ok){
@@ -41644,7 +41644,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000247';
+const BUILD_ID = '2026-10-31.00000248';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
