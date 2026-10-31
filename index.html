@@ -13601,6 +13601,19 @@ function renderModeToday(){
   // Calculator practice: the card names the formula you are shakiest on.
   { const el = document.querySelector('#fdModeCard .mode-when'); let w = null; try{ w = fdWeakest(); }catch(e){}
     if(el) el.textContent = w ? `Shakiest: ${w}. Drill it, then the HP 10bII+ steps.` : 'Practise the HP 10bII+ steps and formulas.'; }
+  // Decision tools: the card names the tree to practise next, from the weakest domain, misses first.
+  { const el = document.querySelector('#toolsModeCard .mode-when');
+    if(el){ let pick = null;
+      try{
+        const ts = DATA.treeStats || {};
+        const rows = Object.keys(TREE_META).map(k => { const m = TREE_META[k]; const qs = treeQuestions(k) || [];
+          const misses = qs.reduce((a, q) => a + ((ts[q.id] || {}).miss || 0), 0);
+          const seen = qs.reduce((a, q) => a + ((ts[q.id] || {}).correct || 0) + ((ts[q.id] || {}).miss || 0), 0);
+          return { k, name: m.name, dom: m.domain, stage: domainStageOf(m.domain), misses, seen }; });
+        rows.sort((a, b) => (b.misses > 0) - (a.misses > 0) || a.stage - b.stage || b.misses - a.misses || a.seen - b.seen);
+        pick = rows[0] || null;
+      }catch(e){}
+      el.textContent = pick ? `Next: ${pick.name} · ${(DOMAINS.find(d => d.key === pick.dom) || {}).code || ''}${pick.misses ? `, ${pick.misses} missed before` : ''}.` : 'Practise which choice fits a scenario.'; } }
   // Empty review modes explain their unlock condition.
   const misses = (DATA.missed || []).length;
   let pat = null; try{ pat = patternDrillPlan(); }catch(e){}
@@ -35493,7 +35506,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-30.00000137';
+const BUILD_ID = '2026-10-30.00000138';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
