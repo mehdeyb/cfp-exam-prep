@@ -25028,7 +25028,6 @@ function fcRetellLocal(card, lp){
   if(ctx.mix) opts.push({ w: 2 + (ctx.mix.n || 1), label:'The look-alike to watch', text:'Often confused with ' + ctx.mix.other + '. Ask which of the two the question describes: the concept or the wording.' });
   // A related question the learner missed: short clean excerpts, labelled as a different question so it does not read as this card.
   const clipAt = (s, n) => { s = String(s).replace(/\s+/g, ' ').trim(); if(s.length <= n) return s; const c = s.slice(0, n); return c.slice(0, c.lastIndexOf(' ') > n * 0.6 ? c.lastIndexOf(' ') : n).replace(/[,;:\s]+$/, '') + '…'; };
-  ctx.picks.forEach(p => opts.push({ w: 2 + (p.n || 1), label:'A related question you missed', text:'On “' + clipAt(p.stem, 80) + '” you picked “' + clipAt(p.wrong, 80) + '”. Correct: “' + clipAt(p.right, 80) + '”.' }));
   const ex = fcExampleFor(card, n);
   if(ex) opts.push({ w: 1.5, label:'How it is tested', text:'“' + ex.stem + '” → ' + ex.answer + (ex.why ? '. ' + ex.why : '') });
   try{
@@ -25061,7 +25060,7 @@ function fcPaintRetell(){
   const p = fcRetellPick(card);
   if(!p){ box.style.display = 'none'; return; }
   box.innerHTML = '';
-  const lapses = fcLapseN(card); const l = document.createElement('b'); l.textContent = p.label + (lapses ? ' · still learning ' + lapses + '×' : ' · back for the ' + ordinalWord(fcSeenN(card)) + ' time'); box.appendChild(l);
+  const lapses = fcLapseN(card); const l = document.createElement('b'); l.textContent = p.label; box.appendChild(l);
   box.appendChild(document.createTextNode(p.text));
   box.style.display = 'block';
 }
@@ -37378,6 +37377,15 @@ function buildTutorSystemPrompt(){
     const bits = Object.keys(TREE_META).map(k => { const st = treeDrillStats(k); return st.tried ? `${TREE_META[k].name} ${st.solved} of ${st.total} routes solved${st.weak ? ' (' + st.weak + ' to revisit)' : ''}` : ''; }).filter(Boolean);
     if(bits.length) teachContext += ' In the decision-tree drills: ' + bits.join('; ') + '.';
   }catch(e){}
+  const fcProgress = computeFlashcardProgress();
+  if(fcProgress.knownCount + fcProgress.learningCount > 0){
+    flashcardContext = ` They've also been using the app's flashcards: ${fcProgress.knownCount} of ${fcProgress.total} marked as known, ${fcProgress.learningCount} marked "Still learning", and ${fcProgress.dueCount} currently due for review.`;
+    try{
+      const fl = allFlashcards().filter(c => { const st = (DATA.flashcardStats || {})[c.id]; return st && st.seen > 0 && st.known === false; }).sort((a, b) => ((DATA.flashcardStats[b.id] || {}).lastSeenAt || 0) - ((DATA.flashcardStats[a.id] || {}).lastSeenAt || 0));
+      if(fl.length) flashcardContext += ' "Still learning" is their own judgement that there is more to learn on a card, so treat those as real gaps even where their question scores look fine; most recent: ' + fl.slice(0, 6).map(c => c.term).join('; ') + '.';
+    }catch(e){}
+  }
+
   let foundationContext = '';
   const foundationDomains = DOMAINS.filter(d => DATA.domainFoundationMode && DATA.domainFoundationMode[d.key]);
   if(foundationDomains.length){
@@ -37406,7 +37414,7 @@ function buildTutorSystemPrompt(){
 
   return `You are a knowledgeable, encouraging CFP® exam tutor embedded inside a study app called "The Blueprint." The student is preparing for the CFP certification exam.
 
-Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${teachContext}${foundationContext}${stageSummaryForTutor()}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
+Their current state in the app:${conductorContextLine()} overall readiness ${stats.readiness}/100, ${stats.totalAnswered} practice questions answered at ${stats.accuracy===null?'no data yet':stats.accuracy+'%'} accuracy, weakest domain is "${weakName}" (${weakPct}). Full breakdown by domain: ${domainBreakdownText}.${weakTopicText}${cueText}${timeContext}${calibrationContext}${missContext}${readinessContext}${tvmContext}${flashcardContext}${teachContext}${foundationContext}${stageSummaryForTutor()}${unreviewedTopicsText} Recently missed questions: ${missedText}${recurringMistakesText}
 
 Guidelines:
 - Answer at CFP-exam depth: precise, technically accurate, correct terminology, and current 2026 U.S. tax/retirement/estate figures where relevant.
@@ -37427,6 +37435,7 @@ Guidelines:
 - When you recommend something concrete (a next step, cards that are due, where to set the exam date), you can use point_to to take the student there and highlight it. It leaves the chat, so use it when they ask to be shown, or once you have finished explaining; otherwise just describe where it is. Add isolate:true (also available on show_progress) when it is something to read or work through (key numbers, the study guide, a decision tool, the topic notes): it opens alone with the rest of the app hidden and a Done button, so they stay on it; leave it off when they only need to see where something is. Plan steps that are reading or checking (key numbers, topic notes, exam-day plan) already open this way. When you take the student to a decision tool as part of working through today's plan, use open_decision_tool with isolate:true and a short note (add practice:true and scenarios:2 to 4 for a counted run of client scenarios): it opens that one tool alone, and when they finish you can offer the next plan step.
 - The full per-domain breakdown above is there to shape how you teach, not to recite. If a student asks about a specific domain, or a question in the conversation touches one, let their actual standing there inform the depth and starting point of your answer -- more foundational framing for a domain they're weak or untested in, more direct and less basic for one they've already shown strength in -- without necessarily stating the number back to them unless they ask how they're doing in that area specifically.
 - If asked about their timeline or how to prioritize remaining study time, use the exam date, hours logged, and the per-domain breakdown above if given — but don't bring any of it up unprompted if the student didn't ask about pacing, timing, or where to focus.
+- Same restraint applies to the flashcard progress above — useful if they ask what to review next or how their flashcard studying is going, not something to lead with unprompted.
 - Same restraint applies to the confidence calibration data above — it's there to use if they ask how they're doing or seem to be second-guessing themselves, not to lead with unprompted.
 - When a tool takes them to another screen, your reply appears on that screen as a short note with a way back to the chat. So write it for where they now are: one line on what they are looking at, then one clear next action, in two or three short sentences. Do not stack several moves in one turn.\n- Official exam facts (CFP Board Candidate Handbook, October 2026; the Exam Day tab has them too, so point there for the full list): 170 multiple-choice questions in two 3-hour sections, each split into two subsections (43 and 42 questions) that share one timer; a free optional break between subsections (the clock keeps running) and a 40-minute break between sections that can be skipped with Resume Test; once a subsection is submitted it cannot be reopened, and if time is left only the last subsection can be reviewed. Items are stand-alone questions, short scenarios (about 3 questions) and case histories (about 8 to 12 questions). Arrive 30 minutes early with an unexpired government photo ID whose name matches the registration. Approved calculators include the HP 10BII+; memory must be cleared by the student before each section, and any notes on the calculator covered with tape. Only a clear unlabeled water bottle is allowed; no food, notes, phones or watches in the room. Scoring is pass or fail against a standard the Board does not publish, so never quote a pass mark. The October 2026 window tests 2026 tax law. A retake needs the whole exam in a later window, with at most three attempts in 24 months. The official CFP Board Practice Exam comes free with registration and reports results by domain. Per CFP Board, four new tax-law items still need more guidance before being tested: mortgage interest and PMI, tips, overtime and car-loan interest, so do not spend their time on them.\n- You choose how long things are: set the length of a podcast episode and the number of questions or cards in a set to fit the time they have said they have, how tired or rushed they sound, and how much there is to cover (short and light when pressed, deeper when they have time and the topic is big). Say your choice in a few words. Do not ask them to pick a number unless they want to.\n- You can write and play a spoken episode with the play_podcast tool: use it when they want to listen, or when you judge a short briefing on their weak spots would do more than a chat answer. Say in one line what you picked.
 - The calculator walkthrough also has a cash-flow mode (clear with C ALL, CFj for each flow, Nj for repeats, then orange Shift and NPV or IRR); open it with the open_tvm_calculator tool and mode 'cashflow' when they want NPV, IRR or uneven-cash-flow practice. Its Level 4 time-value problems cover bond prices and yields, loan balances, and solving for rate or time.
@@ -38575,7 +38584,7 @@ const TUTOR_TOOLS = [
   },
   {
     name: 'play_podcast',
-    description: "Write and play a spoken study episode for the student. Use type 'tutor_pick' (default) to blend what you judge they most need to hear from their own weak topics and missed questions; or 'overview', 'formulas' or 'mistakes' for one domain. Put anything they asked to hear, or anything you want stressed, in 'request' (for example 'the difference between a Roth conversion and a recharacterization, with a worked example'). The episode is written from their real data, saved, and starts playing.",
+    description: "Write and play a spoken study episode for the student. Use type 'tutor_pick' (default) to blend what you judge they most need to hear from their own weak topics, missed questions and failing flashcards; or 'overview', 'formulas' or 'mistakes' for one domain. Put anything they asked to hear, or anything you want stressed, in 'request' (for example 'the difference between a Roth conversion and a recharacterization, with a worked example'). The episode is written from their real data, saved, and starts playing.",
     input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['tutor_pick','overview','formulas','mistakes'] }, domain: { type: 'string', description: 'Domain key for the non-tutor_pick types; omit to use their weakest.' }, request: { type: 'string', description: 'What to emphasize or what they asked to hear.' }, length: { type: 'string', enum: ['short','standard','deep'], description: "How long: 'short' (~2 min) for one idea or a tired student, 'standard' (~4 min), 'deep' (~7 min) for a full topic or when they have time. You choose to fit the time they have and how much there is to cover; omit to match their plan." } } },
   },
   {
@@ -40376,7 +40385,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000211';
+const BUILD_ID = '2026-10-31.00000212';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
