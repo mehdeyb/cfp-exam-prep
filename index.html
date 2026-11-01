@@ -29878,6 +29878,20 @@ function buildStudyPlanCore(minutes){
         curated++;
       }
     }
+    // Fill to the pace: while the day is still short of the pace target, add more of the app's own work in order of value.
+    // Each step comes from its own activity and is sized by what is left to do; nothing is added just to pad the day.
+    if(!['rest','exam','after'].includes(phase.key) && answered >= 20){
+      const padOrder = ['weak3','adaptive2','case2','calc2','figures2','weak4','checkpoint2','stmts','listen','read','cards2','tutor2','keys','refresh','newcards'];
+      for(const k of padOrder){
+        if(used >= minutes * 0.92) break;
+        if(steps.some(x => x.id === k) || !mk[k]) continue;
+        const st = finish(k, mk[k]());
+        if(!st || st.done || !(st.minutes > 0)) continue;
+        if(used + st.minutes > minutes * 1.1) continue;
+        st.curated = true; st.why = (st.why ? st.why + ' ' : '') + 'Added to fill the time you planned for today.';
+        steps.push(st); used += st.minutes; curated++;
+      }
+    }
   }
   // Readiness needs: what the results say you still need for the exam is added even when it goes past the time you picked.
   // Each one says why, sits near the top, and the extra minutes are shown so the choice stays yours.
