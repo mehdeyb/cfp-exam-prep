@@ -35047,26 +35047,35 @@ function showConceptSheet(kicker, title, items, onGo, recall){
     const dd = document.createElement('dd'); dd.textContent = it.def;
     dd.style.cssText = 'margin:3px 0 0;font-size:14px;line-height:1.45;color:var(--muted);';
     if(!recall || !it.id){ list.append(dt, dd); return; }
-    // Recall first: the student says the definition to themselves, then reveals it and rates it. Ratings go to the flashcard schedule.
+    // Say it back, in a fixed format: pick the definition that matches the term from three curated options. The answer rates the term.
     dd.style.display = 'none';
-    const row = document.createElement('div'); row.style.cssText = 'margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
-    const reveal = document.createElement('button'); reveal.type = 'button'; reveal.textContent = 'Reveal';
-    reveal.style.cssText = 'min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);';
+    const qrow = document.createElement('div'); qrow.style.cssText = 'margin-top:10px;';
+    const ask = document.createElement('div'); ask.textContent = 'Which definition matches?';
+    ask.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:6px;';
+    const opts = document.createElement('div'); opts.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     const rate = (knew) => {
       const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew);
       if(!knew) ns.dueAt = Date.now() + FC_STILL_RETURN_MS;
       DATA.flashcardStats[it.id] = ns;
       try{ persist(); }catch(e){}
-      row.textContent = knew ? 'Knew it' : 'Not yet: back in your flashcards today';
-      row.style.color = knew ? 'var(--muted)' : 'var(--gold)';
+      qrow.textContent = knew ? 'Right: knew it' : 'Not quite: back in your flashcards today';
+      qrow.style.color = knew ? 'var(--muted)' : 'var(--gold)';
     };
-    const ya = document.createElement('button'); ya.type = 'button'; ya.textContent = 'Knew it';
-    const na = document.createElement('button'); na.type = 'button'; na.textContent = 'Not yet';
-    [ya, na].forEach(b => { b.style.cssText = 'min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);'; });
-    ya.onclick = () => rate(true); na.onclick = () => rate(false);
-    reveal.onclick = () => { dd.style.display = ''; reveal.remove(); row.append(ya, na); };
-    row.append(reveal);
-    list.append(dt, dd, row);
+    shuffle([it.def].concat((it.pool || []).slice(0, 2))).forEach(o => {
+      const ob = document.createElement('button'); ob.type = 'button'; ob.textContent = o;
+      ob.style.cssText = 'text-align:left;min-height:40px;padding:8px 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);font-size:13px;line-height:1.4;';
+      ob.onclick = () => {
+        const right = o === it.def;
+        opts.querySelectorAll('button').forEach(x => { x.disabled = true; x.style.opacity = x.textContent === it.def ? '1' : '.5'; });
+        dd.style.display = '';
+        ob.style.borderColor = right ? 'var(--gold)' : 'var(--hair)';
+        setTimeout(() => rate(right), 900);
+      };
+      opts.append(ob);
+    });
+    qrow.append(ask, opts);
+    list.append(dt, qrow, dd);
+    return;
   });
   const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
   const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Close';
@@ -35081,11 +35090,20 @@ function showConceptSheet(kicker, title, items, onGo, recall){
   go.focus();
   return true;
 }
+// Wrong options for "say it back": other definitions from the same domain, so the choice is about this idea, not a stray one.
+function pickDistractors(card, domainKey){
+  const seen = new Set([card.def]);
+  const out = [];
+  for(const c of shuffle(allFlashcards().filter(x => x.domain === domainKey && x.id !== card.id && x.def))){
+    if(seen.has(c.def)) continue; seen.add(c.def); out.push(c.def); if(out.length === 2) break;
+  }
+  return out;
+}
 function showSubtopicConcept(domainKey, idx){
   const key = domainKey + '-' + idx, name = (SUBTOPICS[domainKey] || [])[idx] || key;
   const byId = new Map(allFlashcards().map(c => [c.id, c]));
   const cards = (covTopicCards()[key] || []).map(id => byId.get(id)).filter(c => c && c.term && c.def).slice(0, 4);
-  return showConceptSheet('Learn these first', name, cards.map(c => ({ id: c.id, term: c.term, def: c.def })), () => startSubtopicDrill(domainKey, idx, true), true);
+  return showConceptSheet('Learn these first', name, cards.map(c => ({ id: c.id, term: c.term, def: c.def, pool: pickDistractors(c, domainKey) })), () => startSubtopicDrill(domainKey, idx, true), true);
 }
 function startSubtopicDrill(domainKey, idx, skipConcept){
   const pool = tiltedPool(subtopicPool(domainKey, idx), SUBTOPIC_DRILL_LENGTH);
@@ -53716,7 +53734,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000369';
+const BUILD_ID = '2026-11-01.00000370';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
