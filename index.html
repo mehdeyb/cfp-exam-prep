@@ -39192,9 +39192,12 @@ function exposureModel(){
 // The next topics to put in front of the student: heaviest never-seen first, then barely-tried, skipping any with too few questions to drill.
 function exposureGaps(n, skipKeys){
   const m = exposureModel(), skip = new Set(skipKeys || []);
-  const rank = { new: 0, thin: 1 };
-  return m.topics.filter(t => (t.state === 'new' || t.state === 'thin') && t.size >= 3 && !skip.has(t.key))
-    .sort((a, b) => rank[a.state] - rank[b.state] || b.w - a.w).slice(0, n || 3);
+  const rank = { new: 0, thin: 1, due: 1 }; // a due return competes with thin topics, so retention is not left behind every new topic
+  const now = Date.now(), ret = DATA.topicReturn || {};
+  // A solid topic whose return day has come is offered again, alongside the thin ones.
+  const stateOf = t => (t.state === 'new' || t.state === 'thin') ? t.state : (t.state === 'solid' && ret[t.key] && ret[t.key].dueAt <= now ? 'due' : null);
+  return m.topics.filter(t => stateOf(t) && t.size >= 3 && !skip.has(t.key))
+    .map(t => ({ t, st: stateOf(t) })).sort((a, b) => rank[a.st] - rank[b.st] || b.t.w - a.t.w).map(x => x.t).slice(0, n || 3);
 }
 let _covMemo = null, _covCards = null;
 function covTopicCards(){
@@ -48866,11 +48869,26 @@ function startSection2(){
   renderQuestion();
 }
 
+// Solid topics come back on a schedule: after a strong topic drill (80% or better) the topic returns in 3 days, then 7, then 14.
+// A weaker drill clears the schedule, so the topic goes back to normal gap priority.
+const TOPIC_RETURN_DAYS = [3, 7, 14];
+function scheduleTopicReturn(key, correct, total){
+  try{
+    if(!key || !total || total < 3) return;
+    DATA.topicReturn = DATA.topicReturn || {};
+    if(correct / total >= 0.8){
+      const prev = DATA.topicReturn[key], step = prev && prev.step ? prev.step : 0;
+      const days = TOPIC_RETURN_DAYS[Math.min(step, TOPIC_RETURN_DAYS.length - 1)];
+      DATA.topicReturn[key] = { step: step + 1, dueAt: Date.now() + days * ONE_DAY_MS };
+    } else delete DATA.topicReturn[key];
+  }catch(e){}
+}
 function finishSession(){
   window._boardRun = false;
   { const cd = document.getElementById('tutorCard'); if(cd) cd.classList.remove('tt-qboard'); }
   if(session.timerHandle) clearInterval(session.timerHandle);
   paceRecord();
+  if(session.drillTopic && session.mode === 'drill') scheduleTopicReturn(session.drillTopic, session.correct, session.queue.length);
   catchupNote(session);
   clearInProgressSession();
   try{ if((session.mode === 'mock' || session.mode === 'fullexam') && session.planAnswered){ const L = planDayLog(); L.modes[session.mode] = (L.modes[session.mode] || 0) + session.planAnswered; } }catch(e){}
@@ -53805,7 +53823,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000375';
+const BUILD_ID = '2026-11-01.00000376';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
