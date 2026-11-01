@@ -24989,7 +24989,27 @@ function fcCardSignals(card){
   const leech = st.seen >= 4 && misses >= 3 && st.box <= 1;
   return (ctx.cardMemo[card.id] = { gap, hyper, weakSub, leech, misses, stat: st });
 }
-function flashcardPriority(card){
+// Exam weighting: each domain's pick chance is pulled toward its share of the exam, so the plan draws
+// in proportion to the exam, not to how many cards the deck happens to hold for that domain.
+let _fcDomFactorCache = null;
+function fcDomainFactor(domainKey){
+  try{
+    const all = allFlashcards();
+    if(!_fcDomFactorCache || _fcDomFactorCache.n !== all.length){
+      const count = {}; all.forEach(c => { count[c.domain] = (count[c.domain] || 0) + 1; });
+      const total = all.length || 1, f = {};
+      DOMAINS.forEach(d => {
+        const actual = (count[d.key] || 0) / total, target = d.weight / 100;
+        // picks are weighted by priority^1.5, so the factor is taken to the 1/1.5 power to land each domain on its share
+        f[d.key] = actual > 0 ? Math.max(0.6, Math.min(1.4, Math.pow(target / actual, 1 / 1.5))) : 1;
+      });
+      _fcDomFactorCache = { n: all.length, f };
+    }
+    return _fcDomFactorCache.f[domainKey] || 1;
+  }catch(e){ return 1; }
+}
+function flashcardPriority(card){ return flashcardPriorityBase(card) * fcDomainFactor(card.domain); }
+function flashcardPriorityBase(card){
   const sig = fcCardSignals(card);
   const stat = sig.stat;
   const days = getDaysUntilExam();
@@ -41807,7 +41827,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000316';
+const BUILD_ID = '2026-10-31.00000318';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
