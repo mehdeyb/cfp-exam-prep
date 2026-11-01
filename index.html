@@ -35335,7 +35335,7 @@ function fcCompose(pool, filtered){
   // Strict rank would open on the same cards every visit: new cards are drawn by weighted chance, and tricky ones are held to two per twenty.
   if(!filtered){
     _fcPri = new Map(open.map(c => [c.id, flashcardPriority(c)]));
-    if(fresh.length > 1){ const f2 = fcWeightedPick(fresh.slice(0, 400), Math.min(400, fresh.length), 1.5); fresh.splice(0, f2.length, ...f2); }
+    if(fresh.length > 1){ const f2 = fcWeightedPick(fresh, fresh.length, 1.5); fresh.splice(0, fresh.length, ...f2); } // weighted order over every new card, so no domain or subtopic is cut off by a priority window
     let tricky = 0; const keep = [], hold = [];
     review.forEach((c, idx) => { if(fcCardSignals(c).leech && tricky >= 2 && idx < 20) hold.push(c); else { if(fcCardSignals(c).leech) tricky++; keep.push(c); } });
     review.length = 0; keep.slice(0, 20).concat(hold, keep.slice(20)).forEach(c => review.push(c));
@@ -51880,7 +51880,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000354';
+const BUILD_ID = '2026-11-01.00000355';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
