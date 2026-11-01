@@ -26998,9 +26998,12 @@ const FIGURE_SOURCES = {
   IRS_PUB_15B_2026: { label: "IRS Publication 15-B (2026)", url: "https://www.irs.gov/pub/irs-pdf/p15b.pdf" },
   IRS_CATCHUP_TOPIC: { label: "IRS retirement topics: catch-up contributions", url: "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-catch-up-contributions" },
   CMS_PART_D_2026: { label: "CMS 2026 Part D redesign program instructions", url: "https://www.cms.gov/newsroom/fact-sheets/final-cy-2026-part-d-redesign-program-instructions" },
-  ARC_ABLE_2026: { label: "The Arc, ABLE 2026 (secondary)", url: "https://thearc.org/blog/able-accounts-2026-updates-how-to-open/" }
+  ARC_ABLE_2026: { label: "The Arc, ABLE 2026 (secondary)", url: "https://thearc.org/blog/able-accounts-2026-updates-how-to-open/" },
+  IRS_PUB_523: { label: "IRS Publication 523 (home sale exclusion)", url: "https://www.irs.gov/publications/p523" },
+  IRS_NIIT: { label: "IRS net investment income tax thresholds", url: "https://www.irs.gov/individuals/net-investment-income-tax" },
+  IRS_TC409: { label: "IRS Tax Topic 409: capital gains and losses", url: "https://www.irs.gov/taxtopics/tc409" }
 };
-const FIGURE_CHECKED_ON = "2026-10-31";
+const FIGURE_CHECKED_ON = "2026-11-01";
 const FIGURE_STALE_DAYS = 90;
 // item id -> [tax year the figure applies to, source key]
 const FIGURE_REGISTRY = {
@@ -27037,7 +27040,8 @@ const FIGURE_REGISTRY = {
   f1095: [2026, "ARC_ABLE_2026"],
   "ft-01": [2026, "IRS_RP_2025_32"], "ft-02": [2026, "IRS_RP_2025_32"], "ft-03": [2026, "IRS_RP_2025_32"],
   "ft-04": [2026, "IRS_RP_2025_32"], "ft-05": [2026, "IRS_IR_2025_111"], "ft-06": [2026, "IRS_IR_2025_111"],
-  "ft-07": [2026, "IRS_IR_2025_111"], "ft-08": [2026, "IRS_RP_2025_32"]
+  "ft-07": [2026, "IRS_IR_2025_111"], "ft-08": [2026, "IRS_RP_2025_32"],
+  "xt-05": [2026, "IRS_PUB_523"], "xt-10": [2026, "IRS_NIIT"], "tax-24": [2026, "IRS_NIIT"], "tax-03": [2026, "IRS_TC409"]
 };
 const FIGURE_TEXT_RE = /\$[\d,]+|\d+(\.\d+)?%|\b(19|20)\d{2}\b/;
 function figureAuditRows(){
@@ -50638,7 +50642,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000350';
+const BUILD_ID = '2026-10-31.00000351';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
