@@ -45426,7 +45426,7 @@ function mwReason(k){
 }
 async function mwFetchNote(it){
   const q = it.q, key = q.id + ':' + it.pick + ':' + (it.reason || '');
-  const LAB = [['TRAP','Why it is tempting'],['RULE','The rule that decides it'],['TELL','How to spot it next time'],['HOOK','Memory hook']];
+  const LAB = [['TRAP','The point to get right'],['RULE','The rule that decides it'],['TELL','How to spot it next time'],['HOOK','Memory hook']];
   const render = txt => {
     const got = []; LAB.forEach(([k, h]) => { const m = txt.match(new RegExp('(?:^|\\n)[\\s*#-]*' + k + '\\**\\s*[:\\u2013-]\\s*\\**\\s*([^\\n]+)', 'i')); if(m && m[1].trim().length > 8) got.push([h, m[1].trim().replace(/\*+/g, '')]); });
     return got.length >= 2 ? got.map(([h, t]) => `<p><b class="mw-sub">${h}</b>${escapeHtml(t)}</p>`).join('') : '';
@@ -45435,8 +45435,8 @@ async function mwFetchNote(it){
     if(!html){ el.remove(); return; } el.className = 'mw-note'; el.innerHTML = '<b>From your tutor</b>' + html; };
   if(mw.notes[key]){ show(mw.notes[key]); return; }
   const r = MW_REASONS.find(x => x.k === it.reason);
-  const prompt = `A CFP exam student missed this practice question. Coach them in four labeled lines, plain language, at most 30 words per line, no other text.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
-    + `\n\nCorrect answer: ${mwLetter(q.correct)}. The student chose ${mwLetter(it.pick)}.${r && r.k === 'guess' ? ' They were guessing; do not comment on guessing.' : r ? ' They say it looked right because: ' + r.label.toLowerCase() + '.' : ''}\n\nWrite exactly these lines:\nTRAP: why ${mwLetter(it.pick)} is tempting, naming the exact thought that leads there.\nRULE: the one rule or fact that separates ${mwLetter(it.pick)} from ${mwLetter(q.correct)}.\nTELL: the clue in a question like this that points to ${mwLetter(q.correct)}.\nHOOK: a short memory hook.\nDo not repeat the question or the choices word for word.`;
+  const prompt = `A CFP exam student missed this practice question. Teach them the right answer in four labeled lines, plain language, at most 30 words per line, no other text. Focus on understanding the correct answer. Do not defend, excuse or explain the student's wrong choice.\n\nQuestion: ${q.q}\n` + q.choices.map((c, k) => mwLetter(k) + '. ' + c).join('\n')
+    + `\n\nCorrect answer: ${mwLetter(q.correct)}.\n\nWrite exactly these lines:\nTRAP: the key fact about ${mwLetter(q.correct)} that the student needs to hold, stated as a correct rule about the right answer. Do not mention why any other choice seemed reasonable.\nRULE: the one rule or fact that makes ${mwLetter(q.correct)} right and separates it from the others.\nTELL: the clue in a question like this that points to ${mwLetter(q.correct)}.\nHOOK: a short memory hook for the right answer.\nDo not repeat the question or the choices word for word.`;
   try{
     const html = render(String(await anthropicMessagesRequest({ messages: [{ role:'user', content: prompt }], maxTokens: 420 }) || ''));
     if(html && mw) mw.notes[key] = html;
@@ -53973,7 +53973,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000404';
+const BUILD_ID = '2026-11-01.00000405';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
