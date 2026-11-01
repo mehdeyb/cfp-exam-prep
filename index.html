@@ -28102,7 +28102,7 @@ function computeNextStepRaw(stats){
   if(!step && daysLeft !== null && daysLeft >= 0 && daysLeft <= 10){
     const lastFull = (DATA.sessions || []).filter(s=>s.mode==='fullexam').pop();
     const daysSinceFull = lastFull ? (Date.now() - new Date(lastFull.date).getTime())/ONE_DAY_MS : Infinity;
-    if(daysLeft >= 5 && daysSinceFull > 5){ // leave several days afterwards to actually review what the run exposes
+    if(daysLeft >= 4 && daysSinceFull > 5){ // leave several days afterwards to actually review what the run exposes
       step = { kicker:`${daysLeft} day${daysLeft===1?'':'s'} to go`, title:`Run a full ${FULL_EXAM_QUESTION_COUNT}-question simulation`,
         why:'This close to exam day, stamina and pacing matter as much as content. A full run shows you exactly where time and focus slip.',
         cta:'Start simulation', meta:`${FULL_EXAM_QUESTION_COUNT} questions · two sections`, run: () => startFullExam() };
@@ -29680,6 +29680,9 @@ function buildStudyPlanCore(minutes){
     exam:       ['logistics','keys'],
     after:      []
   }[phase.key];
+  // The last four days: no new ground or new cards, only consolidation and timed work.
+  const finalStretch = phase.key === 'sharpen' && days !== null && days <= 4;
+  if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2', 'newcards'].includes(k)));
   // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
   let focus = null;
   if(!['taper','rest','exam','after'].includes(phase.key)){
@@ -29726,6 +29729,7 @@ function buildStudyPlanCore(minutes){
   order.forEach(k => place(k));
   if(!['taper','rest','exam','after'].includes(phase.key)){
     ['gap2','weak2','adaptive2','weak3'].forEach(k => {
+      if(finalStretch && k === 'gap2') return;
       const st = finish(k, mk[k]()); if(!st) return;
       const worked = st.done || (st.have || 0) > 0;
       if(!worked && used + st.minutes > minutes) return;
@@ -29791,7 +29795,7 @@ function buildStudyPlanCore(minutes){
     const famOf = k => ({ missed:'review', stuck:'review', tool:'tools', case:'exam', case2:'exam', case3:'exam', checkpoint:'exam', checkpoint2:'exam', adaptive2:'drill', weak2:'drill', weak3:'drill', weak4:'drill', weak5:'drill', weak6:'drill', listen:'lesson', tutor:'lesson', tutor2:'lesson', read:'lesson', stmts:'drill', cards2:'cards', newcards:'cards', calc2:'calc', keys:'calc', figures2:'figures', refresh:'figures' })[k] || k;
     const famUsed = {};
     const fillOrder = phase.key === 'taper' ? ['tool','checkpoint','case','tutor','cards2','missed','figures2'] : ['tool','case','checkpoint','weak2','adaptive2','cards2','tutor','read','case2','calc2','checkpoint2','weak3','figures2','tutor2','weak4','missed','stmts','listen','newcards','keys','refresh'];
-    const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
+    const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1 && !(finalStretch && k === 'newcards')).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
     let curated = 0;
     ranked.forEach(k => {
       if(curated >= 6 || used >= minutes * 0.92 || steps.some(x => x.id === k) || !mk[k]) return;
@@ -29900,11 +29904,11 @@ function buildStudyPlanCore(minutes){
       if(ovD.moveTop){ const j = steps.findIndex(st => hit(st, ovD.moveTop)); if(j > 0){ const [mv] = steps.splice(j, 1); steps.unshift(mv); } }
     } }
   const blocks = [];
-  if(phase.key === 'sharpen' && days !== null && days >= 5){
+  if(phase.key === 'sharpen' && days !== null && days >= 4){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
     const since = lastFull ? (Date.now() - new Date(lastFull.date).getTime()) / ONE_DAY_MS : Infinity;
     if(since > 5) blocks.push({ id:'fullexam', title:'Full 170-question simulation', minutes:360,
-      why:'Sitting the whole exam once shows where stamina and pacing slip. Pick a day with six free hours, then spend the next day on what it exposed.',
+      why: days <= 4 ? 'This is the last chance for a full run before the exam. Sit it today or tomorrow, then use the next day on what it exposes. It shows where stamina and pacing slip.' : 'Sitting the whole exam once shows where stamina and pacing slip. Pick a day with six free hours, then spend the next day on what it exposed.',
       run: () => { showTab('study'); startFullExam(); } });
   }
   try{
@@ -53823,7 +53827,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000378';
+const BUILD_ID = '2026-11-01.00000379';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
