@@ -17190,12 +17190,11 @@ async function handleSaveGemini2Key(){
   if(!/^[A-Za-z0-9_.\-]{30,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza" or "AQ.").'; status.classList.add('err'); return; }
   if(key === geminiKey){ status.textContent = 'That is the same key as your first one. Paste a different key.'; status.classList.add('err'); return; }
   status.textContent = 'Checking the key…'; status.classList.remove('err');
-  const prev = geminiKey; geminiKey = key;
-  try{ await geminiRequestOnceCore({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
+  try{ await geminiRequestOnceCore({ key, messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
   catch(e){
     const busy = e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500);
-    if(!busy){ geminiKey = prev; status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
-  } finally{ geminiKey = prev; }
+    if(!busy){ status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
+  }
   try{ let val = key; try{ val = await sealSecret(key); }catch(e){} await storageSet(GEMINI_KEY2_STORAGE, val); }catch(e){}
   geminiKey2 = key; if(input) input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
@@ -17205,13 +17204,12 @@ async function testGemini2Connection(){
   const el = document.getElementById('gemini2HealthText');
   if(!geminiKey2 || !el) return;
   el.textContent = 'Testing the second key…';
-  const prev = geminiKey; geminiKey = geminiKey2;
   try{
-    const r = await geminiRequestOnceCore({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 });
+    const r = await geminiRequestOnceCore({ key: geminiKey2, messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 });
     el.textContent = /\S/.test(String(r)) ? '✓ Second key works.' : 'Second key answered with nothing. Try again in a moment.';
   }catch(e){
     el.textContent = 'Second key: ' + describeAiError(e);
-  }finally{ geminiKey = prev; }
+  }
 }
 async function handleClearGemini2Key(){
   if(!confirm('Remove the second Gemini key? The first key keeps working.')) return;
@@ -31580,20 +31578,21 @@ async function runAppAudit(mode){
 // A second key covers the first when Google reports a used-up quota. A per-minute limit clears by itself, so it does not switch keys.
 let geminiKey2 = null, _gemPrimarySkipUntil = 0;
 async function geminiRequestOnce(args){
-  if(!geminiKey2 || geminiKey2 === geminiKey) return geminiRequestOnceCore(args);
   const primary = geminiKey, second = geminiKey2;
-  if(Date.now() < _gemPrimarySkipUntil){ geminiKey = second; try{ return await geminiRequestOnceCore(args); } finally{ geminiKey = primary; } }
-  try{ return await geminiRequestOnceCore(args); }
+  if(!second || second === primary) return geminiRequestOnceCore(args);
+  if(Date.now() < _gemPrimarySkipUntil) return geminiRequestOnceCore(Object.assign({}, args, { key: second }));
+  try{ return await geminiRequestOnceCore(Object.assign({}, args, { key: primary })); }
   catch(e){
     if(!(e && e.provider === 'gemini' && e.status === 429)) throw e;
     if(/per.?minute|requests per minute|too many requests/i.test((_geminiDiag || []).join(' '))) throw e;
     _gemPrimarySkipUntil = Date.now() + 15 * 60000;
-    geminiKey = second; try{ return await geminiRequestOnceCore(args); } finally{ geminiKey = primary; }
+    return geminiRequestOnceCore(Object.assign({}, args, { key: second }));
   }
 }
-async function geminiRequestOnceCore({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg }){
+async function geminiRequestOnceCore({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg, key }){
   deg = deg || 0;
-  if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
+  const apiKey = key || geminiKey;
+  if(!apiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
   body.systemInstruction = { parts: [{ text: (system ? system + '\n\n' : '') + HP_CALC_NOTE }] };
   if(tools && tools.length) body.tools = [{ functionDeclarations: tools.map(t => { const d = { name: t.name, description: String(t.description || '').slice(0, 1800) }; const ps = geminiSchema(t.input_schema); if(ps && ps.properties) d.parameters = ps; return d; }) }];
@@ -31604,7 +31603,7 @@ async function geminiRequestOnceCore({ system, messages, maxTokens, tools, grown
     else body.contents.unshift({ role:'user', parts:[{ text: si }] });
   }
   let response;
-  if(!_geminiHostOrder || _geminiHostOrder.key !== geminiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = ['studio', 'vertex']; _geminiHostOrder = { key: geminiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved] : base }; }
+  if(!_geminiHostOrder || _geminiHostOrder.key !== apiKey){ let saved = null; try{ saved = localStorage.getItem('cfp-gemini-host'); }catch(e){} const base = ['studio', 'vertex']; _geminiHostOrder = { key: apiKey, hosts: (saved === 'studio' || saved === 'vertex') ? [saved] : base }; }
   const total = timeoutMs || Math.min(120000, Math.max(45000, (maxTokens || 1000) * 20));
   let lastErr = null;
   for(let hi = 0; hi < _geminiHostOrder.hosts.length; hi++){
@@ -31614,7 +31613,7 @@ async function geminiRequestOnceCore({ system, messages, maxTokens, tools, grown
     const timeoutId = setTimeout(() => controller.abort(), last ? attemptMs : Math.round(attemptMs * 0.4));
     try{
       response = await fetch(geminiUrl(_geminiHostOrder.hosts[0], GEMINI_MODELS[Math.min(modelIdx != null ? modelIdx : geminiModelIdx, GEMINI_MODELS.length - 1)]), {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: JSON.stringify(body), signal: controller.signal });
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(body), signal: controller.signal });
     }catch(err){
       const e = err && err.name === 'AbortError' ? Object.assign(new Error('The request took too long and timed out.'), { code: 'TIMEOUT' }) : Object.assign(new Error('Could not reach the AI service'), { code: 'NETWORK' });
       e.provider = 'gemini'; lastErr = e;
@@ -45540,7 +45539,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000336';
+const BUILD_ID = '2026-10-31.00000337';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
