@@ -32338,6 +32338,14 @@ function startCase(id, o){
   if(!def) return;
   const qs = caseQuestions(id);
   if(!qs.length) return;
+  // A case still open when the student goes back to it (for example from today's plan) is parked as its draft first,
+  // so the resume path below picks it up at the question they were on, with their answers, instead of starting over.
+  try{
+    if(session && session.mode === 'case' && (session.answerLog || []).length && session.index < session.queue.length && !(o && o.fresh)){
+      saveInProgressSession();
+      session = null;
+    }
+  }catch(e){}
   try{
     const dr = (DATA.caseDrafts || {})[id];
     if(dr && !session && !(o && o.fresh) && (dr.answerLog || []).length && dr.index < dr.queue.length){
@@ -45010,7 +45018,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000330';
+const BUILD_ID = '2026-10-31.00000331';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
