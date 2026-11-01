@@ -29506,7 +29506,7 @@ function buildStudyPlanCore(minutes){
         const n = pin.length, still = pin.filter(id => (DATA.missed || []).includes(id));
         return { id:'listen', missWalk:true, title:`Walk through ${n} missed question${n === 1 ? '' : 's'} in ${dn}`, minutes: Math.max(5, Math.round(n * 1.6)), need:n, have: n - still.length, unit:'questions',
           why:`Each question you missed in ${dn} comes back with what you picked, why it looked right, and the fix. It counts off once you answer it correctly.`,
-          run: () => { mwOpen(still.length || n, still.length ? still : pin); } };
+          run: () => { mwOpen(pin.length, pin); } };
       }
       const first = b && b.focus.length ? b.focus[0].label : weakDom.name;
       const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.label).join(' and ') : weakDom.name;
@@ -29631,7 +29631,7 @@ function buildStudyPlanCore(minutes){
       if(!w.pin.length) return null;
       return { id:'tutor2', missWalk:true, title:`Walk through ${w.pin.length} more of your misses`, minutes: 8, need: w.pin.length, have: w.have, unit:'questions',
         why:'A second pass at the end of a long day, when the same mistakes tend to show up again, shows which reasoning slips are habits.',
-        run: () => { mwOpen(w.still.length || w.pin.length, w.still.length ? w.still : w.pin); } };
+        run: () => { mwOpen(w.pin.length, w.pin); } };
     },
     weak6: () => { const t = wkAt(5); if(!t) return null;
       return { id:'weak6', topic:t.key + '-' + t.idx, title:`Drill: ${t.name}`, minutes:18, need: needFor(t), have: Math.min(haveFor(t), needFor(t)), unit:'questions', why:`Sixth on your list of weak topics (${accTxt(t)}).`,
@@ -29724,7 +29724,7 @@ function buildStudyPlanCore(minutes){
       if(!w.pin.length) return null;
       return { id:'tutor', missWalk:true, title:`Walk through ${w.pin.length} of your misses`, minutes: 8, need: w.pin.length, have: w.have, unit:'questions',
         why:'One miss at a time: say why the wrong answer looked right, see the fix, then try a similar question. Understanding the pull of the wrong answer fixes the reasoning, not just the answer.',
-        run: () => { mwOpen(w.still.length || w.pin.length, w.still.length ? w.still : w.pin); } };
+        run: () => { mwOpen(w.pin.length, w.pin); } };
     },
     logistics: () => {
       let when = ''; try{ if(DATA.examDate){ const p = String(DATA.examDate).split('-').map(Number); when = new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); } }catch(e){}
@@ -53973,7 +53973,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000405';
+const BUILD_ID = '2026-11-01.00000406';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
