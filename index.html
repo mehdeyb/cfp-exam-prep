@@ -6234,6 +6234,108 @@ const FLASHCARDS_EXTRA = [
   "def": "Clients who retire before age 65 need coverage until Medicare starts, which can be costly. Planners budget for it separately, usually with COBRA, marketplace plans or retiree coverage."
  }
 ];
+
+// Added content: investment and tax depth (batch 1).
+const FLASHCARDS_EXTRA2 = [
+ {
+  "id": "xi-01",
+  "domain": "invest",
+  "sub": "Market cycles",
+  "term": "Bear market",
+  "def": "A decline of about 20% or more from a recent peak. A bull market is a sustained rise from a trough."
+ },
+ {
+  "id": "xi-02",
+  "domain": "invest",
+  "sub": "Market cycles",
+  "term": "Market leads the economy",
+  "def": "Stock prices often fall before a recession starts and tend to recover before the economy does, so timing from economic news alone is unreliable."
+ },
+ {
+  "id": "xi-03",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "term": "Strategic asset allocation",
+  "def": "A long-term target mix of asset classes set from the client's goals, risk tolerance and time horizon, rebalanced back to target periodically."
+ },
+ {
+  "id": "xi-04",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "term": "Tactical asset allocation",
+  "def": "Short-term shifts away from the strategic mix to take advantage of perceived market conditions, with the strategic mix kept as the anchor."
+ },
+ {
+  "id": "xi-05",
+  "domain": "invest",
+  "sub": "Portfolio development and analysis",
+  "term": "Investment policy statement",
+  "def": "A written document setting the client's objectives, constraints, risk tolerance and rebalancing rules for managing the portfolio."
+ },
+ {
+  "id": "xi-06",
+  "domain": "invest",
+  "sub": "Portfolio development and analysis",
+  "term": "Efficient frontier",
+  "def": "The set of portfolios offering the highest expected return for each level of risk. A portfolio below it can be improved without taking more risk."
+ },
+ {
+  "id": "xi-07",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "term": "Liquidity risk",
+  "def": "The risk of not being able to sell an investment quickly without accepting a significant price cut, common in private partnerships and some real estate."
+ },
+ {
+  "id": "xi-08",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "term": "Accredited investor",
+  "def": "A person who meets income or net worth tests that allow purchase of certain private offerings. Net worth excludes the primary residence."
+ },
+ {
+  "id": "xi-09",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "term": "Complex trust",
+  "def": "A trust that may accumulate income rather than distribute all of it each year. Income retained is taxed to the trust."
+ },
+ {
+  "id": "xi-10",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "term": "Compressed trust brackets",
+  "def": "Trusts reach the top federal income tax rate at a very low income level, so retained income is often taxed much more heavily than it would be for an individual."
+ },
+ {
+  "id": "xi-11",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "term": "Tax-loss harvesting",
+  "def": "Selling investments at a loss to offset capital gains, subject to the wash-sale rule for substantially identical securities."
+ },
+ {
+  "id": "xi-12",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "term": "Wash-sale rule",
+  "def": "A loss is disallowed when substantially identical securities are bought within 30 days before or after the sale. The disallowed loss is added to the basis of the new shares."
+ },
+ {
+  "id": "xi-13",
+  "domain": "tax",
+  "sub": "Tax implications of special circumstances",
+  "term": "Kiddie tax",
+  "def": "A child's unearned income above a threshold is taxed at the parent's marginal rate, with the threshold indexed each year."
+ },
+ {
+  "id": "xi-14",
+  "domain": "tax",
+  "sub": "Fundamental and current tax law",
+  "term": "Alternative minimum tax",
+  "def": "A parallel tax computed with fewer deductions and a higher exemption. The taxpayer pays the greater of regular tax or the AMT."
+ }
+];
 const FLASHCARD_CAP = 100;
 
 // Official CFP Board Principal Knowledge Topics, verbatim from cfp.net's
@@ -9172,6 +9274,162 @@ const COVERAGE_RT2_QUESTIONS = [
  }
 ];
 QUESTIONS.push(...COVERAGE_RT2_QUESTIONS);
+// Added content: investment and tax question depth (batch 1).
+const COVERAGE_IT_QUESTIONS = [
+ {
+  "id": "xi2-01",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "q": "A client sells stock at a loss on March 1 and buys the same stock again on March 20. The loss is:",
+  "choices": [
+   "fully deductible in the current year",
+   "disallowed, and added to the basis of the newly bought shares",
+   "deductible only against ordinary income",
+   "carried forward as an ordinary loss"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the wash-sale rule applies here, so the loss cannot be deducted in the current year.",
+   "Correct — the loss is disallowed for now and added to the basis of the new shares.",
+   "Wrong — the loss is not limited to ordinary income; it is disallowed under the wash-sale rule.",
+   "Wrong — the disallowed loss is not carried forward as an ordinary loss; it adjusts basis."
+  ]
+ },
+ {
+  "id": "xi2-02",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "q": "A person has $180,000 of income and $900,000 of net worth excluding the primary residence. The person is:",
+  "choices": [
+   "an accredited investor, because net worth includes the residence",
+   "not an accredited investor on these facts",
+   "an accredited investor, because income is above $100,000",
+   "an accredited investor only if the income test is met for three years"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the primary residence is excluded from the net worth test.",
+   "Correct — net worth excluding the residence is below $1 million, and income is below $200,000, so the tests are not met.",
+   "Wrong — the $100,000 figure is not the accredited investor income test.",
+   "Wrong — the test is not based on three years of income."
+  ]
+ },
+ {
+  "id": "xi2-03",
+  "domain": "invest",
+  "sub": "Portfolio development and analysis",
+  "q": "A portfolio lies below the efficient frontier. It can be improved by:",
+  "choices": [
+   "accepting less return for the same risk",
+   "moving to a portfolio that offers more return for the same risk or less risk for the same return",
+   "holding more cash",
+   "reducing the number of holdings"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — accepting less return is the opposite of an improvement.",
+   "Correct — a portfolio below the frontier can move to one with better return for the same risk.",
+   "Wrong — cash may lower risk but does not by itself move the portfolio onto the frontier.",
+   "Wrong — the number of holdings is not what places a portfolio on the frontier."
+  ]
+ },
+ {
+  "id": "xi2-04",
+  "domain": "invest",
+  "sub": "Market cycles",
+  "q": "A market decline of about what percentage from a recent peak is generally called a bear market?",
+  "choices": [
+   "5%",
+   "10%",
+   "20%",
+   "30%"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — a 5% decline is ordinary volatility, not a bear market.",
+   "Wrong — 10% is a correction, not the usual bear market threshold.",
+   "Correct — a decline of about 20% or more from a recent peak is generally a bear market.",
+   "Wrong — 30% is a deep bear market, but the usual threshold is about 20%."
+  ]
+ },
+ {
+  "id": "xi2-05",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "q": "A trust that retains income is generally taxed on the undistributed income at:",
+  "choices": [
+   "the grantor's individual rates",
+   "the beneficiaries' individual rates",
+   "compressed trust brackets that reach the top rate at low income",
+   "a flat rate set by the trustee"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — a non-grantor trust is taxed on its own, not at the grantor's rates.",
+   "Wrong — the beneficiaries are taxed only on income actually distributed to them.",
+   "Correct — undistributed income is taxed at compressed trust brackets, which reach the top rate quickly.",
+   "Wrong — the tax rate is set by statute, not by the trustee."
+  ]
+ },
+ {
+  "id": "xi2-06",
+  "domain": "tax",
+  "sub": "Tax implications of special circumstances",
+  "q": "Under the kiddie tax, a child's unearned income above the threshold is taxed at:",
+  "choices": [
+   "the child's own bracket",
+   "the parent's marginal rate",
+   "a flat 37% rate",
+   "the capital gains rate for all income"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the child's own bracket applies to income below the threshold, not above it.",
+   "Correct — income above the threshold is taxed at the parent's marginal rate.",
+   "Wrong — the rate is not a fixed 37%.",
+   "Wrong — the capital gains rate does not apply to all of the child's income."
+  ]
+ },
+ {
+  "id": "xi2-07",
+  "domain": "tax",
+  "sub": "Fundamental and current tax law",
+  "q": "The alternative minimum tax works by:",
+  "choices": [
+   "replacing regular tax with a flat rate on all income",
+   "computing a parallel tax with fewer deductions and a higher exemption, and paying the greater amount",
+   "allowing a credit for all prior-year tax",
+   "taxing only capital gains"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the AMT is not a flat rate replacing the regular tax.",
+   "Correct — the taxpayer pays the greater of regular tax or the parallel AMT.",
+   "Wrong — prior-year credits are a separate item, not how the AMT works.",
+   "Wrong — the AMT applies to more than capital gains."
+  ]
+ },
+ {
+  "id": "xi2-08",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Tactical asset allocation differs from strategic allocation in that tactical allocation:",
+  "choices": [
+   "sets a fixed long-term mix that is never changed",
+   "makes short-term shifts away from the long-term mix to take advantage of market conditions",
+   "removes the need for rebalancing",
+   "applies only to bonds"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a fixed long-term mix describes strategic allocation, not tactical.",
+   "Correct — tactical allocation makes short-term shifts around a strategic anchor.",
+   "Wrong — tactical allocation still needs rebalancing, and it can increase trading.",
+   "Wrong — tactical allocation applies across asset classes, not only bonds."
+  ]
+ }
+];
+QUESTIONS.push(...COVERAGE_IT_QUESTIONS);
 const COVERAGE_LT_QUESTIONS = [
   {
     id: "lt-01",
@@ -15413,7 +15671,7 @@ let _afMemo = null;
 function allFlashcards(){
   const g = DATA.generatedFlashcards, m = _afMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
-  const out = FLASHCARDS.concat(typeof FLASHCARDS_EXTRA !== 'undefined' ? FLASHCARDS_EXTRA : [], g || []).filter(c => c && c.id);  // a damaged saved card must not break every screen that reads the deck
+  const out = FLASHCARDS.concat(typeof FLASHCARDS_EXTRA !== 'undefined' ? FLASHCARDS_EXTRA : [], typeof FLASHCARDS_EXTRA2 !== 'undefined' ? FLASHCARDS_EXTRA2 : [], g || []).filter(c => c && c.id);  // a damaged saved card must not break every screen that reads the deck
   _afMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
   return out;
 }
@@ -42203,7 +42461,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000320';
+const BUILD_ID = '2026-10-31.00000321';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
