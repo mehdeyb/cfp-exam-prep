@@ -29885,8 +29885,11 @@ function buildStudyPlanCore(minutes){
     }
     // Fill to the pace: while the day is still short of the pace target, add more of the app's own work in order of value.
     // Each step comes from its own activity and is sized by what is left to do; nothing is added just to pad the day.
-    if(!['rest','exam','after'].includes(phase.key) && answered >= 20){
-      const padOrder = ['weak3','adaptive2','case2','calc2','figures2','adaptive3','weak4','checkpoint2','case3','weak5','adaptive4','weak6','stmts','listen','read','cards2','tutor2','keys','refresh','newcards'];
+    // A new student with little or no history still gets a full day: the steps that need no past answers fill it first.
+    if(!['rest','exam','after'].includes(phase.key)){
+      const padOrder = answered >= 20
+        ? ['weak3','adaptive2','case2','calc2','figures2','adaptive3','weak4','checkpoint2','case3','weak5','adaptive4','weak6','stmts','listen','read','cards2','tutor2','keys','refresh','newcards']
+        : ['read','newcards','cards2','figures2','keys','calc2','refresh','adaptive','tutor2','stmts'];
       for(const k of padOrder){
         if(used >= minutes * 0.92) break;
         if(steps.some(x => x.id === k) || !mk[k]) continue;
@@ -53944,7 +53947,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000399';
+const BUILD_ID = '2026-11-01.00000400';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
