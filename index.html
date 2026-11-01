@@ -4683,6 +4683,22 @@
 .mode-today{font-size:13px;line-height:1.4;margin:4px 0 6px;}
 .mode-today .mt-next{font-weight:600;color:var(--accent,#0a84ff);}
 .mode-today .mt-done{color:var(--muted,#8a8a8e);}
+  /* ---------- The day before (exam-day walkthrough) ---------- */
+  .dbw-progress{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px;}
+  .dbw-progress button{flex:1 1 0;min-width:34px;height:34px;border-radius:999px;border:1px solid var(--line, rgba(128,128,128,.35));background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;}
+  .dbw-progress button[aria-current="step"]{background:var(--gold, #c9a227);color:#1b1b1b;border-color:transparent;}
+  .dbw-progress button.dbw-done{color:var(--paper, inherit);border-color:var(--gold, #c9a227);}
+  .dbw-title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:4px 0 6px;}
+  .dbw-intro{font-size:14px;line-height:1.5;margin:0 0 10px;}
+  .dbw-list{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:8px;}
+  .dbw-list li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;}
+  .dbw-list input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex:0 0 18px;}
+  .dbw-plain{font-size:14px;line-height:1.5;margin:0 0 8px 0;padding-left:0;}
+  .dbw-field{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 10px;font-size:14px;}
+  .dbw-field input[type=time]{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line, rgba(128,128,128,.35));background:transparent;color:inherit;}
+  .dbw-answer{font-size:14px;color:var(--gold, #c9a227);margin:0 0 10px;}
+  .dbw-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;}
+  .dbw-count{font-size:13px;color:var(--muted);text-align:center;flex:1;}
 </style>
 <style>
   /* Progress hub: a compact, slim layout so the whole view fits the screen without wasted space. */
@@ -5582,6 +5598,17 @@
       <p class="hint" style="margin-top:10px;">The full list of approved models is on cfp.net.</p>
       <p class="hint" style="margin-top:14px;">You clear your calculator's memory yourself before each section (staff inspect it first, but don't clear it for you), then reset your settings. On the HP 10bII+ that means checking P/YR (the default is 12) and END mode. Cover any printed formulas or notes on the calculator with solid tape.</p>
       <button type="button" class="ck-link" onclick="openCalcKeys()">Review your calculator keystrokes</button>
+    </div>
+    <div class="card" id="dbwCard">
+      <div class="card-head"><h2>The day before</h2><div class="note">walk through exam day, one step at a time</div></div>
+      <p class="hint">Seven short steps for tomorrow. Tick things off as you go; your ticks and your appointment time stay on this device.</p>
+      <div class="dbw-progress" id="dbwProgress" role="group" aria-label="Walkthrough steps"></div>
+      <div class="dbw-body" id="dbwBody" aria-live="polite"></div>
+      <div class="dbw-nav">
+        <button type="button" class="btn ghost" id="dbwBack">Back</button>
+        <span class="dbw-count" id="dbwCount"></span>
+        <button type="button" class="btn" id="dbwNext">Next</button>
+      </div>
     </div>
     <div class="card" id="edChecklistCard">
       <div class="card-head"><h2>Exam-week checklist</h2><div class="note" id="edChecklistNote"></div></div>
@@ -24969,6 +24996,62 @@ const COVERAGE_TYPES_FLASHCARDS = [{"id": "cxf-01", "domain": "risk", "sub": "Qu
 FLASHCARDS.push(...COVERAGE_TYPES_FLASHCARDS);
 const COVERAGE_TRUST_FLASHCARDS = [{"id": "trf-01", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Revocable living trust", "def": "Grantor keeps the power to change or end it. Avoids probate for assets titled in it. Assets stay in the grantor's taxable estate and are generally reachable by the grantor's creditors."}, {"id": "trf-02", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Irrevocable trust", "def": "Grantor gives up control. Assets can leave the taxable estate if no retained powers pull them back. Usually a separate taxpayer on Form 1041."}, {"id": "trf-03", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Testamentary trust", "def": "Created by a will and takes effect at death. Does not avoid probate, because the will must go through probate first."}, {"id": "trf-04", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Grantor trust", "def": "A trust whose income the grantor reports on the grantor's own return, typically because of a retained power such as substitution (Section 675). Assets can still be outside the estate."}, {"id": "trf-05", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Non-grantor (complex) trust", "def": "A separate taxpayer that files Form 1041. Undistributed income is taxed at compressed trust brackets. Distributions carry out DNI to beneficiaries."}, {"id": "trf-06", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Simple trust", "def": "Must distribute all income each year, may not accumulate or make charitable gifts. Distributed income is deducted by the trust and taxed to the beneficiaries."}, {"id": "trf-07", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "QSST (qualified subchapter S trust)", "def": "Holds S corporation stock for one income beneficiary who receives all income annually and elects to be taxed on it."}, {"id": "trf-08", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "ESBT (electing small business trust)", "def": "Holds S corporation stock and can have several beneficiaries. The S portion is taxed at the highest trust rate, with no beneficiary election."}, {"id": "trf-09", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Credit shelter (bypass) trust", "def": "Funded at the first death up to the exemption amount. Keeps those assets out of the surviving spouse's estate, so the first spouse's exemption is used."}, {"id": "trf-10", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "QTIP trust", "def": "Qualifies for the marital deduction at the first death. The surviving spouse receives all income for life, no one else may get principal during life, and an election is made. Included in the survivor's estate."}, {"id": "trf-11", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "QDOT", "def": "Qualified domestic trust for a non-citizen surviving spouse. Needs a U.S. trustee and security so the marital deduction is allowed."}, {"id": "trf-12", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "GRAT (grantor retained annuity trust)", "def": "Grantor receives a fixed annuity for a term of years. The remainder is a gift at creation. Included in the estate if the grantor dies during the term. A zeroed-out GRAT leaves a near-zero taxable gift."}, {"id": "trf-13", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "GRUT (grantor retained unitrust)", "def": "Grantor receives a fixed percentage of the trust value, revalued each year, for a term. The remainder is a gift at creation."}, {"id": "trf-14", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "QPRT (qualified personal residence trust)", "def": "Grantor keeps the home for a term. If the grantor survives the term, the home passes outside the estate, and the gift was discounted for the retained term."}, {"id": "trf-15", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "CRAT vs. CRUT", "def": "CRAT pays a fixed dollar annuity and takes no later contributions. CRUT pays a fixed percentage of annual value and may accept additional contributions."}, {"id": "trf-16", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "10 percent test (charitable remainder trust)", "def": "The present value of the charity's remainder must be at least 10 percent of the trust's initial value."}, {"id": "trf-17", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "CLAT vs. CLUT", "def": "CLAT pays charity a fixed annuity for a term; the remainder goes to family. CLUT pays charity a fixed percentage of annual value. Grantor CLATs can give an upfront income tax deduction."}, {"id": "trf-18", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "ILIT (irrevocable life insurance trust)", "def": "Holds life insurance outside the insured's estate. The insured must hold no incidents of ownership and survive three years after any transfer of an existing policy, unless the trust bought it."}, {"id": "trf-19", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Crummey power", "def": "A temporary beneficiary right to withdraw a gift. It makes the gift a present interest, which qualifies for the annual exclusion, if the beneficiary does not exercise it."}, {"id": "trf-20", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "SLAT (spousal lifetime access trust)", "def": "Created by one spouse for the other. Removes future growth from the estates. Beware the reciprocal trust doctrine if the two trusts mirror each other."}, {"id": "trf-21", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "IDGT (intentionally defective grantor trust)", "def": "Grantor trust for income tax but outside the estate. A sale to it is generally not a taxable event; the note interest at the AFR keeps growth above that rate in the trust."}, {"id": "trf-22", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Dynasty trust", "def": "Multigenerational trust funded with GST exemption allocated to it, so growth and distributions can avoid GST tax at each generation."}, {"id": "trf-23", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Direct skip / taxable termination / taxable distribution", "def": "The three GST transfers. A direct skip goes straight to a skip person; a taxable termination ends a trust interest with only skip persons left; a taxable distribution pays a skip person while the trust continues."}, {"id": "trf-24", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Third-party SNT vs. first-party (d4A) SNT", "def": "Third-party trust is funded by someone else, with no state payback. First-party trust is funded with the beneficiary's own assets and must repay Medicaid at death."}, {"id": "trf-25", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Spendthrift clause", "def": "Stops a beneficiary from assigning the interest and generally keeps creditors from reaching undistributed trust assets."}, {"id": "trf-26", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Pour-over will", "def": "Sends assets left in the probate estate into the revocable trust at death. Those assets still go through probate first."}, {"id": "trf-27", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Totten trust", "def": "A revocable bank account held in the depositor's name as trustee for a beneficiary. It passes outside probate at death, with no separate trust document."}, {"id": "trf-28", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Trust protector", "def": "An independent party in an irrevocable trust who can replace trustees and adjust administrative terms within limits."}, {"id": "trf-29", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Land trust", "def": "The trustee holds legal title and the beneficiary holds a private beneficial interest, keeping the owner's name off the public record."}, {"id": "trf-30", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Qualified disability trust", "def": "A non-grantor trust for a disabled beneficiary that gets a larger income exemption than most non-grantor trusts."}, {"id": "trf-31", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "ING (incomplete gift non-grantor) trust", "def": "Keeps the gift incomplete for gift tax and makes the trust a non-grantor trust, which can help with state income tax."}, {"id": "trf-32", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "GRIT and Section 2702", "def": "A grantor retained income trust for family members is largely limited by Section 2702, which values the retained interest at zero."}, {"id": "trf-33", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Voting trust", "def": "Shareholders give voting rights to a trustee for a limited term and keep their economic ownership of the shares."}, {"id": "trf-34", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Clifford trust", "def": "Once allowed a short-term income shift to a beneficiary. Trusts created after the rule change are generally taxed to the grantor."}, {"id": "trf-35", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "65-day rule", "def": "Lets the trustee treat distributions made in the first 65 days of a year as made in the prior year, to carry out that year's DNI."}, {"id": "trf-36", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "DNI (distributable net income)", "def": "Caps the trust's distribution deduction and sets the income beneficiaries report."}, {"id": "trf-37", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Section 2503(c) minor's trust", "def": "Qualifies for the annual exclusion if the assets may be used for the minor and are distributed by age 21. Unlike a UTMA custodianship, it is a trust."}, {"id": "trf-38", "domain": "estate", "sub": "Types, features, and taxation of trusts", "term": "Section 645 election", "def": "Lets a qualified revocable trust be treated as part of the probate estate for income tax purposes, which can simplify filing."}];
 FLASHCARDS.push(...COVERAGE_TRUST_FLASHCARDS);
+
+// Coverage batch (build 409): gap terms from the term check (conduct, risk, invest, tax, estate, psych).
+const COVERAGE_V409_QUESTIONS = [
+{"id":"v9-q01","domain":"conduct","sub":"Financial services regulations and requirements","q":"An investment adviser wants to sell a bond from its own account to a client's account. What must the adviser do before the trade?","choices":["Nothing, as long as the price matches the current market price","Notify the SEC after the trade settles","Disclose the principal role in writing and get the client's consent first","Obtain the client's consent once per calendar year, covering every trade that follows"],"correct":2,"rationale":["Wrong — a fair market price does not remove the conflict of acting as principal on the other side of the trade.","Wrong — the rule requires disclosure and consent before the trade, not an SEC notice after settlement.","Correct — when an adviser acts as principal, it must disclose that capacity and obtain the client's consent before completing the transaction.","Wrong — a single annual consent does not cover individual principal transactions."]},
+{"id":"v9-q02","domain":"conduct","sub":"Financial services regulations and requirements","q":"An adviser moves securities from one client's account into another client's account. What is required?","choices":["Nothing, if both accounts share the same investment objective and the same custodian","SEC approval before each individual trade","Consent only from the client who is selling the securities","Disclosure to both clients and their consent, with a fair trade for both"],"correct":3,"rationale":["Wrong — having the same objective does not remove the conflict of trading between clients.","Wrong — the SEC does not approve individual cross trades in advance.","Wrong — the buying client's interests are affected too, so consent is needed from both clients.","Correct — a cross trade between advisory clients needs disclosure and consent from both sides, and the price and terms must be fair to each client."]},
+{"id":"v9-q03","domain":"conduct","sub":"Financial services regulations and requirements","q":"A representative is registered as both a broker-dealer representative and an investment adviser representative. When recommending a product, what must the representative do?","choices":["Disclose the capacity in which he is acting for each recommendation","Act only as a broker-dealer for all clients, whatever their accounts","Charge the advisory fee schedule on every product sold","Avoid recommending any product that pays a commission"],"correct":0,"rationale":["Correct — a dual registrant must make clear whether it is acting as a broker-dealer or an adviser for each recommendation, because the standards and compensation differ.","Wrong — the representative chooses the capacity for each recommendation and must disclose it, rather than defaulting to one role for every client.","Wrong — the fee structure must match the capacity in which the product is recommended, not a single schedule for everything.","Wrong — commission products are not banned for dual registrants; the conflict must be disclosed and managed."]},
+{"id":"v9-q04","domain":"conduct","sub":"Fiduciary standard and application","q":"Before making a recommendation, an adviser gathers information about the client's finances, goals, and experience. Which obligation does this step serve?","choices":["Pay to play","Know your client","Principal trading","Cross trade"],"correct":1,"rationale":["Wrong — pay to play concerns political contributions to officials who select advisers for government business.","Correct — know your client requires the adviser to learn the essential facts about the client's situation, goals, and needs before recommending anything.","Wrong — principal trading concerns the adviser trading as the counterparty for its own account.","Wrong — a cross trade is a transaction between two client accounts, not a fact-gathering step."]},
+{"id":"v9-q05","domain":"risk","sub":"Health insurance and health care cost management (individual and group)","q":"A client wants a policy that pays a fixed amount for each day spent in the hospital, regardless of the actual charges. Which policy is this?","choices":["Basic hospital expense insurance","Major medical insurance","A health savings account","Hospital indemnity insurance"],"correct":3,"rationale":["Wrong — basic hospital expense insurance reimburses actual charges up to a limit rather than paying a fixed amount.","Wrong — major medical insurance is comprehensive coverage that pays a share of covered costs, not a fixed daily amount.","Wrong — a health savings account is a savings vehicle for medical costs, not an insurance policy.","Correct — hospital indemnity pays a set benefit per day or per admission, whatever the actual bill, so it works as a supplement."]},
+{"id":"v9-q06","domain":"risk","sub":"Long-term care insurance and long-term care planning (individual and group)","q":"A long-term care policy has a 90-day elimination period. What does this mean?","choices":["The insurer pays benefits from the first day of care, but only for 90 days","The policy ends after 90 days of benefit payments","Benefits start after 90 days of covered care that the insured pays for","The insurer refunds premiums paid during the first 90 days"],"correct":2,"rationale":["Wrong — an elimination period is a waiting period before benefits begin, so payments do not start on day one.","Wrong — the elimination period comes before benefits, not after them, and the policy does not end.","Correct — the elimination period is a waiting period of covered care that the insured pays for, and benefits start after it ends.","Wrong — the elimination period does not refund premiums."]},
+{"id":"v9-q07","domain":"risk","sub":"Insurance policy and company selection","q":"A client wants to replace an existing life insurance policy with a new one from a different insurer. Which concern matters most?","choices":["The new policy automatically takes over the old policy's cash value","A new contestability period starts, and the client may be harder to insure now","The old policy's surrender charges are waived for the replacement","Replacement is always cheaper for the client, so a side-by-side comparison is unnecessary"],"correct":1,"rationale":["Wrong — the cash value of the old policy does not transfer to the new one automatically.","Correct — a new policy generally starts a new contestability period, and health changes may make the client harder or more costly to insure now.","Wrong — surrender charges on the old policy usually still apply unless the old policy's terms say otherwise.","Wrong — replacement is not always cheaper, so the two policies must be compared."]},
+{"id":"v9-q08","domain":"invest","sub":"Asset allocation and portfolio diversification","q":"In a constant proportion portfolio insurance (CPPI) strategy, the exposure to the risky asset is set as a multiple of what?","choices":["The cushion, which is the portfolio value minus the floor","The total portfolio value, regardless of the floor","The floor value alone, so the exposure stays fixed at the starting level","The risk-free rate multiplied by the portfolio's beta"],"correct":0,"rationale":["Correct — CPPI sets risky exposure equal to a multiple of the cushion, the amount by which the portfolio exceeds the protected floor.","Wrong — exposure based on total value ignores the floor, which is the feature that defines CPPI.","Wrong — a fixed floor would not reduce exposure as the portfolio falls, so it is not CPPI.","Wrong — the risk-free rate and beta do not set exposure in a CPPI strategy."]},
+{"id":"v9-q09","domain":"invest","sub":"Characteristics, uses and taxation of investment vehicles","q":"An investor buys a put bond that can be sold back to the issuer at par on specified dates. Which risk does this feature help protect against?","choices":["Default by the issuer on any coupon payment during the bond's life","Reinvestment risk on the coupon payments","Rising interest rates that lower the bond's market price","Inflation that reduces the bond's real yield"],"correct":2,"rationale":["Wrong — a put does not protect against default, since the investor could be left with an issuer that cannot pay the par value.","Wrong — reinvestment risk concerns the rate at which coupons are reinvested, which the put does not address.","Correct — the investor can sell the bond back at par, which limits the loss if rates rise and the market price falls.","Wrong — inflation affects real yield, and the put feature does not protect against it."]},
+{"id":"v9-q10","domain":"invest","sub":"Bond and stock valuation concepts","q":"What does a bond's duration measure?","choices":["The number of years until the bond's coupon payments stop","The total interest paid over the life of the bond","The credit rating assigned by a rating agency to reflect the issuer's default risk","Price sensitivity to changes in interest rates, expressed in years"],"correct":3,"rationale":["Wrong — duration is not the point when coupons stop; coupons can continue until maturity.","Wrong — total interest paid is a different calculation and does not measure price sensitivity.","Wrong — credit ratings measure default risk, not sensitivity to rate changes.","Correct — duration estimates how much a bond's price moves for a change in rates, and a longer duration means greater sensitivity."]},
+{"id":"v9-q11","domain":"tax","sub":"Characteristics and income taxation of business entities","q":"Which business entity is a passthrough entity for federal income tax purposes?","choices":["A C corporation","An S corporation","A corporation that pays tax at the corporate rate on all earnings","A tax-exempt nonprofit organization"],"correct":1,"rationale":["Wrong — a C corporation pays its own income tax, so its earnings are taxed at the entity level first.","Correct — an S corporation passes its income, losses, and deductions through to the owners' personal returns.","Wrong — a corporation that pays tax on its earnings is taxed at the entity level, so it is not a passthrough.","Wrong — a tax-exempt nonprofit does not pass taxable income through to owners."]},
+{"id":"v9-q12","domain":"tax","sub":"Tax reduction/management techniques","q":"A business buys a commercial building and uses a cost segregation study. What is the main benefit?","choices":["Parts of the building move to shorter depreciation lives, speeding up deductions","The building's basis is raised to its appraised value, which increases the annual depreciation deduction","The land value is depreciated over 27.5 years","The building is treated as tax-exempt property"],"correct":0,"rationale":["Correct — a cost segregation study moves components such as certain fixtures to 5-, 7-, or 15-year property, so more depreciation is taken early.","Wrong — a cost segregation study does not change the basis to appraised value; the basis is still the cost.","Wrong — land is not depreciated at all, so this statement is incorrect.","Wrong — a commercial building is not tax-exempt because of a cost segregation study."]},
+{"id":"v9-q13","domain":"estate","sub":"Property titling and beneficiary designations","q":"A brokerage account is registered as transfer on death to a daughter. What happens to the account when the owner dies?","choices":["It becomes part of the probate estate and is distributed under the will","It passes to the spouse first and then to the daughter","It is frozen until a court appoints an administrator","It passes directly to the daughter outside probate"],"correct":3,"rationale":["Wrong — a valid TOD registration overrides the will for that account, so it does not go through probate.","Wrong — the account is not routed through a spouse unless the registration says so.","Wrong — a TOD account does not need an administrator, so it is not frozen by a court process.","Correct — a transfer on death registration names a beneficiary who receives the account directly, outside probate."]},
+{"id":"v9-q14","domain":"estate","sub":"Gift, estate, and GST tax compliance and calculation","q":"An executor may elect alternate valuation of the gross estate. When is this election available?","choices":["Always, regardless of its effect on estate tax","Only for estates that contain no real estate","Only if it reduces both the gross estate and the estate tax owed","Only if the executor files a separate election within 30 days after the date of death"],"correct":2,"rationale":["Wrong — the election is not available just because the executor wants it; it must reduce both measures.","Wrong — real estate can be valued under the alternate date, so this limit does not exist.","Correct — alternate valuation is allowed only when it lowers both the gross estate and the estate tax, which is why it is used when values fall after death.","Wrong — the election is made within a timeframe tied to the return, not 30 days after death."]},
+{"id":"v9-q15","domain":"estate","sub":"Estate and incapacity planning documents","q":"A client wants to guide trustees on how to use trust distributions for a grandchild's education. Which document fits best?","choices":["A codicil, which changes the trust's legal terms","A letter of wishes, which is non-binding guidance for the trustee","A durable power of attorney for property","A certificate of trust, which lists the trustee's powers and the trust's basic terms"],"correct":1,"rationale":["Wrong — a codicil amends a will, not a trust, and it changes legal terms rather than giving guidance.","Correct — a letter of wishes gives the trustee the client's intentions without changing the trust's legal terms, and it is not binding.","Wrong — a durable power of attorney lets an agent act for the principal, so it does not guide trust distributions.","Wrong — a certificate of trust summarizes who the trustee is and what the trustee can do, but it does not give distribution guidance."]}
+];
+
+const COVERAGE_V409_FLASHCARDS = [
+{"id":"v9f-01","domain":"conduct","sub":"Financial services regulations and requirements","term":"Know Your Client (KYC)","def":"The duty to learn the essential facts about a client's financial situation, goals, experience, and needs before recommending anything, and to keep them current."},
+{"id":"v9f-02","domain":"conduct","sub":"Financial services regulations and requirements","term":"Principal Trading","def":"An adviser buys from or sells to a client from its own account. It requires written disclosure of the principal capacity and the client's consent before the transaction."},
+{"id":"v9f-03","domain":"conduct","sub":"Financial services regulations and requirements","term":"Cross Trade","def":"A trade between two of the adviser's client accounts. It requires disclosure and consent from both clients, and the price and terms must be fair to each."},
+{"id":"v9f-04","domain":"conduct","sub":"Financial services regulations and requirements","term":"Pay to Play","def":"Rules that restrict an adviser from receiving compensation for government advisory work after political contributions to officials who can influence the selection. A timeout generally applies after the contribution."},
+{"id":"v9f-05","domain":"conduct","sub":"Financial services regulations and requirements","term":"Dual Registration","def":"Being registered as both a broker-dealer representative and an investment adviser representative. The representative must disclose the capacity in which each recommendation is made."},
+{"id":"v9f-06","domain":"general","sub":"Financing strategies and debt management","term":"Installment Loan","def":"A loan repaid in equal scheduled payments that cover both interest and principal, such as an auto loan. Each payment reduces the balance until it reaches zero."},
+{"id":"v9f-07","domain":"general","sub":"Education savings vehicles","term":"Qualified Tuition Program (529 Plan)","def":"A state-sponsored education savings plan. Earnings grow tax-deferred, and qualified withdrawals for education are federally tax-free."},
+{"id":"v9f-08","domain":"risk","sub":"Health insurance and health care cost management (individual and group)","term":"Hospital Indemnity Insurance","def":"A supplemental policy that pays a fixed benefit per day or per admission, regardless of the actual charges. It does not replace major medical coverage."},
+{"id":"v9f-09","domain":"risk","sub":"Long-term care insurance and long-term care planning (individual and group)","term":"Elimination Period (Long-Term Care)","def":"A waiting period, often 30 to 90 days, of covered care that the insured pays before benefits begin. A longer period lowers the premium."},
+{"id":"v9f-10","domain":"risk","sub":"Life insurance (individual and group)","term":"Split-Dollar Life Insurance","def":"An arrangement in which an employer and employee share the policy's premiums and death benefit. The economic benefit the employee receives is generally taxable."},
+{"id":"v9f-11","domain":"risk","sub":"Insurance policy and company selection","term":"Replacement of Coverage","def":"Replacing an existing policy with a new one. The client should compare both, since a new contestability period starts and health changes may affect insurability."},
+{"id":"v9f-12","domain":"invest","sub":"Asset allocation and portfolio diversification","term":"Constant Proportion Portfolio Insurance (CPPI)","def":"A strategy that sets risky-asset exposure as a multiple of the cushion, which is portfolio value minus a protected floor. Exposure shrinks as the cushion falls."},
+{"id":"v9f-13","domain":"invest","sub":"Characteristics, uses and taxation of investment vehicles","term":"Put Bond","def":"A bond the holder may sell back to the issuer at par on set dates. It protects against rising rates, but not against issuer default."},
+{"id":"v9f-14","domain":"invest","sub":"Bond and stock valuation concepts","term":"Bond Duration","def":"A measure, in years, of a bond's price sensitivity to interest rate changes. A bond with a longer duration moves more in price for the same rate change."},
+{"id":"v9f-15","domain":"invest","sub":"Asset allocation and portfolio diversification","term":"Lifecycle Investing","def":"An age-based approach that gradually reduces equity exposure and increases bonds and cash as the investor approaches the goal, often through a glide path."},
+{"id":"v9f-16","domain":"invest","sub":"Portfolio development and analysis","term":"Sustainable Investing","def":"Investing that considers environmental, social, and governance (ESG) factors through screening, integration, impact goals, or themes."},
+{"id":"v9f-17","domain":"tax","sub":"Characteristics and income taxation of business entities","term":"Passthrough Entity","def":"A business whose income, losses, and deductions pass through to the owners' personal returns, such as an S corporation, partnership, or LLC taxed as one."},
+{"id":"v9f-18","domain":"tax","sub":"Tax reduction/management techniques","term":"Cost Segregation","def":"A study that reclassifies parts of a building, such as certain fixtures and equipment, into shorter depreciation lives of 5, 7, or 15 years to accelerate deductions."},
+{"id":"v9f-19","domain":"estate","sub":"Property titling and beneficiary designations","term":"Transfer on Death (TOD) Registration","def":"A registration on an account, such as a brokerage account, that names a beneficiary who receives it directly at death, outside probate."},
+{"id":"v9f-20","domain":"estate","sub":"Property titling and beneficiary designations","term":"Payable on Death (POD) Account","def":"A bank account with a named beneficiary who receives the funds at the owner's death, outside probate. The owner keeps full control during life."},
+{"id":"v9f-21","domain":"estate","sub":"Postmortem estate planning techniques","term":"Intestate Succession","def":"How property is distributed when a person dies without a valid will, under the state's intestate succession laws. The rules vary by state."},
+{"id":"v9f-22","domain":"estate","sub":"Postmortem estate planning techniques","term":"Section 2032 Alternate Valuation","def":"An executor's election to value the gross estate six months after death. It is allowed only if it lowers both the gross estate and the estate tax."},
+{"id":"v9f-23","domain":"estate","sub":"Postmortem estate planning techniques","term":"Step-Up in Basis at Death","def":"Inherited property generally takes a basis equal to its fair market value on the date of death, which can eliminate the built-in gain."},
+{"id":"v9f-24","domain":"estate","sub":"Gift, estate, and GST tax compliance and calculation","term":"Unified Transfer Tax","def":"The combined federal estate and gift tax system. It uses one unified credit that applies to both lifetime gifts and transfers at death."},
+{"id":"v9f-25","domain":"estate","sub":"Estate and incapacity planning documents","term":"Letter of Wishes","def":"A non-binding memo that tells trustees or executors what the client intends and why. It guides decisions but does not change the legal terms."},
+{"id":"v9f-26","domain":"estate","sub":"Estate and incapacity planning documents","term":"Digital Assets (Estate Planning)","def":"Online accounts, files, and records. Under state laws based on the Revised Uniform Fiduciary Access to Digital Assets Act, a fiduciary's access depends on the user's directions and the provider's terms."},
+{"id":"v9f-27","domain":"psych","sub":"Client and planner attitudes, values, biases","term":"Financial Anxiety","def":"Persistent worry about money that can drive avoidance or overspending. Planners help by breaking decisions into small, concrete steps and separating emotion from the numbers."},
+{"id":"v9f-28","domain":"psych","sub":"Crisis events with severe consequences","term":"Problem Gambling (Warning Signs)","def":"Signs include chasing losses, hiding gambling, borrowing to gamble, and damage to relationships or work. The planner should refer the client to specialized help."},
+{"id":"v9f-29","domain":"psych","sub":"Client and planner attitudes, values, biases","term":"Debt Stress","def":"Anxiety caused by the level of debt or the payments it requires. A prioritized repayment plan reduces both the financial and the emotional load."},
+{"id":"v9f-30","domain":"psych","sub":"Client and planner attitudes, values, biases","term":"Client Risk Profile","def":"Three parts: risk tolerance (emotional willingness to accept losses), risk capacity (financial ability to absorb them), and risk need (return required to reach goals). The portfolio should respect the most restrictive of the three."},
+{"id":"v9f-31","domain":"psych","sub":"General principles of effective communication","term":"Open-Ended Questions","def":"Questions that cannot be answered with yes or no, such as \"What worries you most about retirement?\" They draw out goals, values, and concerns."},
+{"id":"v9f-32","domain":"psych","sub":"Sources of money conflict","term":"Couples and Money Conflict","def":"Partners often differ in spending, saving, and risk attitudes. The planner helps them surface their values, set shared goals, and agree on decision rules."}
+];
+QUESTIONS.push(...COVERAGE_V409_QUESTIONS);
+FLASHCARDS.push(...COVERAGE_V409_FLASHCARDS);
 /* A quick second tap on the same answer is treated as part of the first tap, so it never zooms the page or re-picks the answer. */
 document.addEventListener('touchend', function(e){
   var t = e.target && e.target.closest ? e.target.closest('.choice') : null;
@@ -51098,6 +51181,7 @@ const OS_TABS = {
     { label:'Test day',h: /^After you start/i },
     { label:'Calculator',h: /^Calculator policy/i },
     { label:'Bring',h: /^What to bring/i },
+    { label:'Day before',    test: c => c.id === 'dbwCard' },
     { label:'Checklist',     test: c => c.id === 'edChecklistCard' }
   ]
 };
@@ -52069,6 +52153,7 @@ const TUTOR_POINT_TARGETS = {
   exam_standing:  { tab:'study',      sel:'#edStandingCard',  label:'Where you stand for exam day' },
   exam_pacing:    { tab:'examday',    sel:'.card:has(#edTiming)', label:'Pacing for the real exam' },
   exam_checklist: { tab:'examday',    sel:'#edChecklistCard', label:'Exam-week checklist' },
+  exam_day_before:{ tab:'examday',    sel:'#dbwCard', label:'The day before' },
   exam_bring:     { tab:'examday',    sel:'.card:has(.ed-grid):has(.ed-item b)', label:'What to bring' },
 };
 
@@ -53991,7 +54076,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000409';
+const BUILD_ID = '2026-11-01.00000410';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -54608,5 +54693,166 @@ function perfEnable(){
 </div>
 <div class="cd-overlay" id="conductorOverlay" role="dialog" aria-modal="true" aria-labelledby="cdTitle"><div class="cd-panel" id="conductorPanel"></div></div>
     <button type="button" class="cd-pill" id="conductorPill" onclick="conductorOpenMenu()"></button>
+<script>
+// The day before: a seven-step walkthrough of exam day, built from the CFP Board candidate handbook (pp. 14–17, Appendices B and C).
+(function(){
+  const KEY = 'cfp-dayBefore-v1';
+  const STEPS = [
+    { id:'appt', title:'Confirm your appointment',
+      intro:'Your Prometric confirmation email has the date, time, and address. Check each one against what you booked.',
+      items:[
+        {id:'a0',text:'Saved or printed the Prometric confirmation email'},
+        {id:'a1',text:'Date, time, and address match your booking'},
+        {id:'a2',text:'Route and parking (or transit) checked, with extra time built in'}
+      ],
+      extra:'time' },
+    { id:'id', title:'Your photo ID',
+      intro:'The ID must be valid, government-issued, with a photo and a signature, and not expired. Its name must match the name on your CFP Board registration.',
+      items:[
+        {id:'i0',text:'Not expired, with a photo and a visible signature'},
+        {id:'i1',text:'Name matches your registration exactly'},
+        {id:'i2',text:'Accepted type: driver’s license, government ID card, passport, or U.S. military ID card'},
+        {id:'i3',text:'The ID is in the bag you will take tomorrow'}
+      ] },
+    { id:'calc', title:'Your calculator',
+      intro:'Bring one or more battery-powered, non-programmable, dedicated financial calculators from the pre-approved list. The test center does not provide one.',
+      items:[
+        {id:'c0',text:'Model is on the Appendix C pre-approved list (HP, Sharp, or TI BA II Plus models). Check the exact name against the handbook'},
+        {id:'c1',text:'Fresh batteries, tested tonight. Loose spare batteries are allowed without packaging'},
+        {id:'c2',text:'Any notes or formulas printed on the back are covered with solid tape, and pull-out cards are removed'},
+        {id:'c3',text:'You know how to clear memory and reset your settings. Staff will not do it for you, and memory must be cleared before each section'}
+      ] },
+    { id:'leave', title:'What stays out of the room',
+      intro:'Your personal things go in a locker. Only a few items come into the room.',
+      items:[
+        {id:'l0',text:'Phone, watch, and any wearable or electronic device stay at home or in the locker'},
+        {id:'l1',text:'No notes, books, or printed material, and no bag or purse in the room'},
+        {id:'l2',text:'Heavy coat or parka goes in the locker. A light sweater can hang on your chair'},
+        {id:'l3',text:'Large jewelry goes in the locker. Food is not allowed; one clear water bottle with labels removed is fine'},
+        {id:'l4',text:'Soft earplugs without cords are allowed. Tissues and scratch paper are supplied'}
+      ] },
+    { id:'checkin', title:'Check-in, in order',
+      intro:'This is the order every time you check in, and again each time you come back from a break.',
+      plain:['1. Locker key given, and personal items locked away','2. Photo ID checked, then fingerprint and photo taken','3. Pockets emptied and turned out, pant legs and sleeves raised','4. Metal detector wand scan before entering the room','5. Calculator inspected and its memory cleared','6. A proctor walks you to your workstation'],
+      items:[
+        {id:'k0',text:'I can list this order from memory'}
+      ] },
+    { id:'sections', title:'Sections and breaks',
+      intro:'170 questions in two 3-hour sections. Each section has two subsections, and each section shares one clock.',
+      items:[
+        {id:'s0',text:'Within a subsection you can move between questions. Once the next subsection starts, you cannot go back to the previous one'},
+        {id:'s1',text:'The optional break between subsections does not stop the timer'},
+        {id:'s2',text:'The scheduled 40-minute break comes after the first section. Be back at your seat before it ends, because the second section starts 40 minutes after the first ends whether or not you return'},
+        {id:'s3',text:'Leaving the room means signing out. Coming back means ID, sign-in, and a fingerprint again'},
+        {id:'s4',text:'You can highlight text and flag questions for later review'},
+        {id:'s5',text:'I have decided whether I will take the optional break'}
+      ] },
+    { id:'day', title:'Tomorrow and the morning of',
+      intro:'Plan for about seven hours door to door. That includes check-in and the scheduled lunch break.',
+      items:[
+        {id:'d0',text:'Light review only tonight. No new material; go over your own list of weak spots'},
+        {id:'d1',text:'Bag packed tonight: photo ID, calculator with fresh batteries, confirmation email, and a water bottle with the label removed'},
+        {id:'d2',text:'Alarm set with time to spare. Eat a familiar breakfast. Sleep matters more than one more hour of study'},
+        {id:'d3',text:'Clothes you can layer, so a sweater can go on or come off'},
+        {id:'d4',text:'Leave with enough time to be at check-in 30 minutes before your appointment'}
+      ],
+      extra:'schedule' }
+  ];
+
+  function load(){
+    try{ const raw = localStorage.getItem(KEY); const o = raw ? JSON.parse(raw) : null; if(o && typeof o === 'object') return o; }catch(e){}
+    return { step:0, checks:{}, time:'' };
+  }
+  function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
+
+  function fmtCheckIn(t){
+    if(!t) return '';
+    const p = t.split(':').map(Number); if(p.length < 2 || isNaN(p[0]) || isNaN(p[1])) return '';
+    const d = new Date(2000,0,1,p[0],p[1]); d.setMinutes(d.getMinutes() - 30);
+    return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  }
+  function fmtTime(t){
+    if(!t) return '';
+    const p = t.split(':').map(Number); if(p.length < 2 || isNaN(p[0]) || isNaN(p[1])) return '';
+    const d = new Date(2000,0,1,p[0],p[1]);
+    return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function extraHTML(kind, s){
+    if(kind === 'time'){
+      const ci = fmtCheckIn(s.time);
+      return `<div class="dbw-field"><label for="dbwTime">Your appointment time</label><input type="time" id="dbwTime" value="${esc(s.time||'')}"></div>
+        <p class="dbw-answer">${ci ? 'Be at check-in by ' + esc(ci) + ' (30 minutes before your appointment).' : 'Enter your appointment time to see when to be at check-in.'}</p>`;
+    }
+    if(kind === 'schedule'){
+      const appt = fmtTime(s.time);
+      const ci = fmtCheckIn(s.time);
+      const head = s.time ? `<p class="dbw-answer">Check-in by ${esc(ci)} for your ${esc(appt)} appointment.</p>` : '<p class="dbw-answer">Set your appointment time in step 1 to see your times here.</p>';
+      return head + `<ul class="dbw-plain" style="list-style:none;padding:0;display:grid;gap:6px;">
+        <li>Report 30 minutes before your appointment; check-in and security come first</li>
+        <li>A short tutorial and the non-disclosure agreement</li>
+        <li>Section 1: 3 hours, then the optional break if you take it</li>
+        <li>Scheduled break: 40 minutes, back at your seat before it ends</li>
+        <li>Section 2: 3 hours</li>
+        <li>Survey: about 5 minutes</li>
+      </ul>
+      <p class="dbw-intro">The handbook says the whole appointment lasts about 7 hours, including check-in and lunch.</p>`;
+    }
+    return '';
+  }
+
+  function render(){
+    const s = load();
+    if(s.step < 0 || s.step >= STEPS.length) s.step = 0;
+    const st = STEPS[s.step];
+    const prog = document.getElementById('dbwProgress');
+    const body = document.getElementById('dbwBody');
+    const count = document.getElementById('dbwCount');
+    const back = document.getElementById('dbwBack');
+    const next = document.getElementById('dbwNext');
+    if(!prog || !body) return;
+
+    prog.innerHTML = STEPS.map((x,i)=>{
+      const allDone = x.items.every(it => s.checks[it.id]);
+      return `<button type="button" data-i="${i}" ${i===s.step?'aria-current="step"':''} class="${allDone?'dbw-done':''}" aria-label="Step ${i+1}: ${esc(x.title)}">${i+1}</button>`;
+    }).join('');
+
+    const listHTML = st.items.map(it => `<li><input type="checkbox" id="dbwc-${esc(it.id)}" data-id="${esc(it.id)}" ${s.checks[it.id]?'checked':''}><label for="dbwc-${esc(it.id)}">${esc(it.text)}</label></li>`).join('');
+    const plainHTML = st.plain ? `<ul class="dbw-plain" style="list-style:none;padding:0;display:grid;gap:6px;">${st.plain.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '';
+    body.innerHTML = `<div class="dbw-title">${esc(st.title)}</div>
+      <p class="dbw-intro">${esc(st.intro)}</p>
+      ${st.extra ? extraHTML(st.extra, s) : ''}
+      ${plainHTML}
+      <ul class="dbw-list">${listHTML}</ul>`;
+
+    const done = st.items.filter(it => s.checks[it.id]).length;
+    count.textContent = `Step ${s.step+1} of ${STEPS.length} · ${done} of ${st.items.length} ticked`;
+    back.disabled = s.step === 0;
+    next.textContent = s.step === STEPS.length - 1 ? 'Start over' : 'Next';
+  }
+
+  document.addEventListener('click', function(e){
+    const tgt = e.target;
+    if(!(tgt instanceof Element)) return;
+    const dot = tgt.closest('#dbwProgress button[data-i]');
+    if(dot){ const s = load(); s.step = Number(dot.getAttribute('data-i')); save(s); render(); return; }
+    if(tgt.id === 'dbwBack'){ const s = load(); s.step = Math.max(0, s.step - 1); save(s); render(); return; }
+    if(tgt.id === 'dbwNext'){ const s = load(); s.step = s.step >= STEPS.length - 1 ? 0 : s.step + 1; save(s); render(); return; }
+  });
+  document.addEventListener('change', function(e){
+    const tgt = e.target;
+    if(!(tgt instanceof Element)) return;
+    if(tgt.id === 'dbwTime'){ const s = load(); s.time = tgt.value || ''; save(s); render(); return; }
+    if(tgt.matches && tgt.matches('#dbwBody input[type=checkbox][data-id]')){
+      const s = load(); s.checks[tgt.getAttribute('data-id')] = tgt.checked; save(s); render();
+    }
+  });
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
+})();
+</script>
+
 </body>
 </html>
