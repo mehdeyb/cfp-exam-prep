@@ -45122,6 +45122,8 @@ function mwClear(){ if(DATA.mwProgress){ DATA.mwProgress = null; try{ persist();
 function mwSave(){
   try{
     if(!mw || mw.stage === 'wrap'){ return; }
+    // Working in the walk-through starts the day, so the plan's pinned misses stop re-deriving while it is in progress.
+    try{ planDayLog().started = true; }catch(e){}
     DATA.mwProgress = { at: Date.now(), i: mw.i, used: Array.from(mw.used || []), planDone: !!mw.planDone, total: mw.total || 0,
       items: mw.items.map(x => ({ id: x.q.id, why: x.why || '', pick: x.pick, stage: x.stage, reason: x.reason || null, nowRight: !!x.nowRight, sib: x.sib || null, sibPick: x.sibPick, ok: x.ok })) };
     persist();
@@ -53942,7 +53944,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000387';
+const BUILD_ID = '2026-11-01.00000399';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
