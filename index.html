@@ -9430,6 +9430,238 @@ const COVERAGE_IT_QUESTIONS = [
  }
 ];
 QUESTIONS.push(...COVERAGE_IT_QUESTIONS);
+// Added content: investment question depth, measures and risk (batch 2).
+const COVERAGE_IT2_QUESTIONS = [
+ {
+  "id": "xi3-01",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A portfolio returned 10% with a risk-free rate of 3% and a standard deviation of 14%. Its Sharpe ratio is:",
+  "choices": [
+   "0.10",
+   "0.50",
+   "0.71",
+   "1.43"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — 0.10 is the excess return before dividing by risk, not the Sharpe ratio.",
+   "Correct — (10% − 3%) divided by 14% is 0.50.",
+   "Wrong — 0.71 divides by the wrong figure; the standard deviation is the denominator.",
+   "Wrong — 1.43 inverts the calculation and does not match the formula."
+  ]
+ },
+ {
+  "id": "xi3-02",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A portfolio has a beta of 1.3. If the market rises 10%, the portfolio is expected to rise about:",
+  "choices": [
+   "1.3%",
+   "3%",
+   "10%",
+   "13%"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 1.3% ignores the market move; beta scales the market move, it does not replace it.",
+   "Wrong — 3% subtracts instead of multiplying the market move by beta.",
+   "Wrong — 10% assumes the portfolio moves with the market, which a beta of 1.3 does not.",
+   "Correct — beta of 1.3 times a 10% market move is about 13%."
+  ]
+ },
+ {
+  "id": "xi3-03",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A portfolio returned 12% when the risk-free rate was 3%, the market returned 9%, and the portfolio's beta was 1.2. Its alpha is about:",
+  "choices": [
+   "1.8%",
+   "3.0%",
+   "9.0%",
+   "12.0%"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — the expected return is 3% + 1.2 × (9% − 3%) = 10.2%, so alpha is 12% − 10.2% = 1.8%.",
+   "Wrong — 3% is the risk-free rate, not the alpha.",
+   "Wrong — 9% is the market return, not the portfolio's excess over its expected return.",
+   "Wrong — 12% is the total return, which does not account for the risk taken."
+  ]
+ },
+ {
+  "id": "xi3-04",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "Which return measure is most affected by the timing of the client's own deposits and withdrawals?",
+  "choices": [
+   "time-weighted return",
+   "dollar-weighted (money-weighted) return",
+   "geometric mean of annual returns",
+   "benchmark return"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — time-weighted return removes the effect of cash-flow timing.",
+   "Correct — the dollar-weighted return reflects when the client added or took out money.",
+   "Wrong — the geometric mean of annual returns is a time-based measure and ignores cash flows.",
+   "Wrong — the benchmark return is the index result and is unaffected by the client's cash flows."
+  ]
+ },
+ {
+  "id": "xi3-05",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "Standard deviation of returns is used to measure:",
+  "choices": [
+   "the return above the risk-free rate",
+   "the dispersion of returns around the average, a measure of total risk",
+   "the sensitivity of the portfolio to the market",
+   "the cost of the portfolio's holdings"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — that describes excess return, not dispersion.",
+   "Correct — standard deviation measures how widely returns spread around their average.",
+   "Wrong — sensitivity to the market is measured by beta.",
+   "Wrong — cost is not measured by standard deviation."
+  ]
+ },
+ {
+  "id": "xi3-06",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "Two bonds have the same yield. The bond with the longer duration will:",
+  "choices": [
+   "rise less when rates fall",
+   "fall more when rates rise",
+   "be unaffected by rate changes",
+   "pay a higher coupon"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — longer duration means the price moves more, including when rates fall.",
+   "Correct — longer duration means greater price sensitivity, so the price falls more when rates rise.",
+   "Wrong — duration measures exactly how much rate changes affect price.",
+   "Wrong — duration does not set the coupon rate."
+  ]
+ },
+ {
+  "id": "xi3-07",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "The duration of a zero-coupon bond equals:",
+  "choices": [
+   "its coupon rate",
+   "its time to maturity",
+   "its yield to maturity",
+   "zero, because it pays no coupons"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a zero-coupon bond pays no coupons, so the coupon rate is zero.",
+   "Correct — with no interim payments, duration equals the time to maturity.",
+   "Wrong — yield to maturity is a return measure, not the duration.",
+   "Wrong — duration is not zero for a zero-coupon bond; it equals the maturity."
+  ]
+ },
+ {
+  "id": "xi3-08",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "When market interest rates rise, the price of an existing fixed-rate bond generally:",
+  "choices": [
+   "rises, because its coupon becomes more valuable",
+   "falls, because new bonds offer higher yields",
+   "stays the same, because the coupon is fixed",
+   "rises, because investors demand more bonds"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a fixed coupon becomes less attractive when new bonds pay more.",
+   "Correct — existing bonds with lower coupons must fall in price to match new yields.",
+   "Wrong — the coupon is fixed, but the price still adjusts to market yields.",
+   "Wrong — demand does not drive a bond's price up when yields rise."
+  ]
+ },
+ {
+  "id": "xi3-09",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "The risk that coupon payments must be reinvested at lower rates is called:",
+  "choices": [
+   "call risk",
+   "reinvestment risk",
+   "inflation risk",
+   "credit risk"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — call risk is the issuer redeeming the bond early.",
+   "Correct — falling rates reduce the return on reinvested coupons.",
+   "Wrong — inflation risk concerns the loss of purchasing power.",
+   "Wrong — credit risk concerns the issuer failing to pay."
+  ]
+ },
+ {
+  "id": "xi3-10",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "A callable bond that the issuer redeems early when rates fall exposes the investor to:",
+  "choices": [
+   "call risk",
+   "liquidity risk",
+   "currency risk",
+   "longevity risk"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — call risk is the chance the issuer redeems early, forcing reinvestment at lower rates.",
+   "Wrong — liquidity risk concerns the difficulty of selling.",
+   "Wrong — currency risk concerns exchange-rate movements.",
+   "Wrong — longevity risk concerns outliving assets, not early redemption."
+  ]
+ },
+ {
+  "id": "xi3-11",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "Investing a fixed dollar amount at regular intervals, regardless of price, is called:",
+  "choices": [
+   "market timing",
+   "dollar-cost averaging",
+   "tactical allocation",
+   "rebalancing"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — market timing tries to predict prices, which the strategy avoids.",
+   "Correct — a fixed amount at regular intervals buys more shares when prices are low.",
+   "Wrong — tactical allocation changes asset mix, not the timing of each purchase.",
+   "Wrong — rebalancing restores target weights and is a separate practice."
+  ]
+ },
+ {
+  "id": "xi3-12",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "Passive investing, such as holding a low-cost index fund, aims to:",
+  "choices": [
+   "beat the market after costs",
+   "match the return of a market index at low cost",
+   "time entry and exit around cycles",
+   "hold a concentrated set of stocks"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — beating the market is the active manager's aim.",
+   "Correct — passive investing seeks the index return at low cost.",
+   "Wrong — timing cycles is an active approach.",
+   "Wrong — a concentrated portfolio is the opposite of broad index exposure."
+  ]
+ }
+];
+QUESTIONS.push(...COVERAGE_IT2_QUESTIONS);
 const COVERAGE_LT_QUESTIONS = [
   {
     id: "lt-01",
@@ -42461,7 +42693,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000321';
+const BUILD_ID = '2026-10-31.00000322';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
