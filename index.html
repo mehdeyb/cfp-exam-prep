@@ -7123,7 +7123,14 @@ const FORMULAS = [
   {name:"Estate Tax Above the Exclusion", domain:"estate", formula:"Estate tax = Tax on (Taxable estate) − Unified credit", note:"Only value above the basic exclusion is taxed. The unified credit is the tax equivalent of the exclusion, so check the exclusion in force for the year of death."},
   {name:"Taxable Gift After Annual Exclusion", domain:"estate", formula:"Taxable gift = Gift to each recipient − Annual exclusion (per recipient, per year)", note:"Gifts within the annual exclusion need no gift tax return. Larger gifts use part of the lifetime exclusion instead of being taxed immediately."},
   {name:"Estate Liquidity Need", domain:"estate", formula:"Cash needed = Estate tax + Debts + Final expenses + Administration costs − Liquid assets", note:"Estates often hold illiquid assets such as a home or a business. This is the cash the executor must find without a forced sale; life insurance held in an ILIT is a common source."},
-  {name:"Basis at Death (Step-Up)", domain:"estate", formula:"Heir's basis = Fair market value on the date of death", note:"Inherited assets generally take a basis equal to value at death, so the built-in gain that accrued during the owner's life is not taxed to the heir."},
+  {name:"Basis at Death (Step-Up)", domain:"estate", formula:"Heir's basis = Fair market value on the date of death", note:"Inherited assets generally take a basis equal to value at death, so the built-in gain that accrued during the owner's life is not taxed to the heir."},,
+  {name:"Arithmetic Mean", domain:"invest", formula:"AM = (a₁ + a₂ + a₃ + … + aₙ) ÷ n", note:"The simple average of the returns. It is always at or above the geometric mean, and the gap grows when returns vary a lot."},
+  {name:"Sample Standard Deviation", domain:"invest", formula:"S_r = √[ Σ(rₜ − r̄)² ÷ (n − 1) ]", note:"Use it when the returns are a sample of a longer history. Dividing by n − 1 corrects for the sample understating variance."},
+  {name:"Population Standard Deviation", domain:"invest", formula:"σ_r = √[ Σ(rₜ − r̄)² ÷ n ]", note:"Use it when the returns cover the whole population being described. Divide by n."},
+  {name:"Covariance", domain:"invest", formula:"COVᵢⱼ = ρᵢⱼ × σᵢ × σⱼ", note:"Joint movement of two assets. Positive when they tend to move together. Correlation is the same measure rescaled to −1 to +1."},
+  {name:"Beta (covariance form)", domain:"invest", formula:"βᵢ = COVᵢₘ ÷ σm² = ρᵢₘ × σᵢ ÷ σm", note:"Covariance with the market divided by the market's variance. It equals the correlation times the ratio of the two standard deviations."},
+  {name:"Implied Return (Gordon)", domain:"invest", formula:"r = D₁ ÷ P + g", note:"The price-based form of the Gordon model. It solves for the required return when you know the price. Value-based form: V = D₁ ÷ (r − g)."},
+  {name:"Macaulay Duration (closed form)", domain:"invest", formula:"D = (1 + y) ÷ y − [(1 + y) + t(c − y)] ÷ { c[(1 + y)ᵗ − 1] + y }", note:"y is the yield per period, c the coupon rate per period, t the number of periods. Modified duration = D ÷ (1 + y). The sheet's price-change formula uses this Macaulay D."}
 ];
 
 const FLASHCARDS = [
@@ -53984,7 +53991,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000408';
+const BUILD_ID = '2026-11-01.00000409';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
