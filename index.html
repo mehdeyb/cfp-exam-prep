@@ -38341,7 +38341,7 @@ function tvmRenderStatusCore(){
 function tvmMsStages(p){ return p.stages || [p.stage1, p.stage2].filter(Boolean); }
 function tvmMakeMultiStage(){
   const P = tvmGPick, R = tvmGRange, M = tvmGMoney;
-  const kind = P(['retire','retire','educ','educ','save','mortgage']);
+  const kind = P(['retire','retire','educ','college2','college2','save','mortgage']);
   tvmGenCounter++;
   const id = 'msg-' + kind + '-' + tvmGenCounter;
   if(kind === 'retire'){
@@ -38357,6 +38357,13 @@ function tvmMakeMultiStage(){
       { scenario:`College costs ${M(T)} a year today and rises ${inf}% a year. A parent's child starts in ${n} years. What will the first year cost?`, solveFor:'FV', known:{ n, iy:inf, pv:-T, pmt:0 }, hint:'Tuition inflation grows a lump sum.' },
       { scenarioTemplate:`The first year costs {carriedValue}, carried over from Part 1. Pay it at the start of each of 4 years (hold it level to keep this simple), with the fund earning ${r}% a year. How much must be in the fund when the child starts?`, solveFor:'PV', known:{ n:4, iy:r, fv:0 }, carryInto:'pmt', carrySignFlip:false, begin:true, hint:'Tuition is paid at the start of each year: BEGIN mode.' },
       { scenarioTemplate:`The fund needs {carriedValue} at enrolment, carried over from Part 2. The parent starts from zero and saves at the end of each year for ${n} years, earning ${rs}% a year. How much per year?`, solveFor:'PMT', known:{ n, iy:rs, pv:0 }, carryInto:'fv', carrySignFlip:true, begin:false, hint:'Back to END mode for end-of-year deposits.' } ] };
+  }
+  // Two-part college funding: save into a fund, then draw it down for college.
+  if(kind === 'college2'){
+    const A = P([6000,8000,10000,12000]), n = P([12,15,18]), r = P([5,6,7]), k = P([4,5]);
+    return { id, title:'Education funding: save, then draw down for college', stages:[
+      { scenario:`A parent contributes ${M(A)} at the end of each year for ${n} years to a college fund earning ${r}% a year. How much will the fund hold when the child starts college?`, solveFor:'FV', known:{ n, iy:r, pv:0, pmt:-A } },
+      { scenarioTemplate:`The fund holds {carriedValue}, carried over from Part 1. The family withdraws a fixed amount at the end of each year for ${k} years of college, fully depleting the fund, with it still earning ${r}% a year. How much can they withdraw each year?`, solveFor:'PMT', known:{ n:k, iy:r, fv:0 }, carryInto:'pv', carrySignFlip:true } ] };
   }
   if(kind === 'mortgage'){
     const y = P([15,30]), k = P([5,7,10]), L = P([200000,250000,300000,350000,400000]), r = P([4,4.5,5,6]);
@@ -48165,7 +48172,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000344';
+const BUILD_ID = '2026-10-31.00000345';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
