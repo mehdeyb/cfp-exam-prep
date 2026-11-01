@@ -35116,15 +35116,19 @@ function fcBalCounts(n, o, L){
   let nNew = Math.round(n * newShare), nRev = n - nNew;
   if(nRev > reviewAvail){ nNew += nRev - reviewAvail; nRev = reviewAvail; }
   if(nNew > newAvail){ const spill = nNew - newAvail; nNew = newAvail; nRev = Math.min(reviewAvail, nRev + spill); }
-  const nWeak = Math.min(L.weakNew.length, Math.ceil(nNew * 0.7)), nBreadth = Math.min(L.newer.length, nNew - nWeak);
-  const nWeakFill = Math.min(L.weakNew.length, nNew - nBreadth); // breadth short: weak fills the rest
   // Review slots: cards tied to missed questions, cards the student marked still learning, then ordinary spaced reviews.
+  // Still-learning cards come back in a limited share (about a quarter of a session), so due reviews and new material still get their turn.
+  const learnCap = o.only === 'review' ? nRev : Math.max(2, Math.round(n * 0.25));
   const nGap = Math.min(L.gap.length, o.kind === 'gap' ? nRev : Math.ceil(nRev * 0.4));
   const nLeech = Math.min(2, L.leech.length, Math.max(0, nRev - nGap));
-  const nLearn = Math.min(L.learn.length, Math.max(0, nRev - nGap - nLeech), o.only === 'review' ? nRev : Math.ceil(nRev * 0.6));
+  const nLearn = Math.min(L.learn.length, Math.max(0, nRev - nGap - nLeech), Math.min(learnCap, o.only === 'review' ? nRev : Math.ceil(nRev * 0.6)));
   const nDue = Math.min(L.due.length, Math.max(0, nRev - nGap - nLeech - nLearn));
-  const nLearn2 = Math.min(L.learn.length, nLearn + Math.max(0, nRev - nGap - nLeech - nLearn - nDue)); // nothing else due: more of the flagged ones
-  return { gap:nGap, learn:nLearn2, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
+  // Review slots nothing else could fill go to new material, not to more still-learning cards.
+  const leftover = Math.max(0, nRev - nGap - nLeech - nLearn - nDue);
+  nNew += Math.min(leftover, Math.max(0, newAvail - nNew));
+  const nWeak = Math.min(L.weakNew.length, Math.ceil(nNew * 0.7)), nBreadth = Math.min(L.newer.length, nNew - nWeak);
+  const nWeakFill = Math.min(L.weakNew.length, nNew - nBreadth); // breadth short: weak fills the rest
+  return { gap:nGap, learn:nLearn, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
 }
 function fcBalanced(n, o){
   o = o || {}; n = Math.max(4, Math.min(40, parseInt(n, 10) || 20));
@@ -35337,7 +35341,13 @@ function fcCompose(pool, filtered){
     _fcPri = new Map(open.map(c => [c.id, flashcardPriority(c)]));
     if(fresh.length > 1){ const f2 = fcWeightedPick(fresh, fresh.length, 1.5); fresh.splice(0, fresh.length, ...f2); } // weighted order over every new card, so no domain or subtopic is cut off by a priority window
     let tricky = 0; const keep = [], hold = [];
-    review.forEach((c, idx) => { if(fcCardSignals(c).leech && tricky >= 2 && idx < 20) hold.push(c); else { if(fcCardSignals(c).leech) tricky++; keep.push(c); } });
+    let flagged = 0; // still-learning returns: at most five near the top of the session, the rest wait behind the other due cards
+    review.forEach((c, idx) => {
+      const stillLearning = getSpacedStat(DATA.flashcardStats, c.id).known === false && !fcCardSignals(c).leech;
+      if(fcCardSignals(c).leech && tricky >= 2 && idx < 20) hold.push(c);
+      else if(stillLearning && flagged >= 5 && idx < 20) hold.push(c);
+      else { if(fcCardSignals(c).leech) tricky++; if(stillLearning) flagged++; keep.push(c); }
+    });
     review.length = 0; keep.slice(0, 20).concat(hold, keep.slice(20)).forEach(c => review.push(c));
   }
   const days = getDaysUntilExam();
@@ -36707,6 +36717,7 @@ function undoFlashcardRating(){
   fcIndex = u.index; _fcUndo = null;
   persist(); renderFlashcard(); renderFlashcardStats(); fcUndoRefresh(); try{ refreshHeaderStats(); refreshCoachSurfaces(); }catch(e){}
 }
+const FC_STILL_RETURN_MS = 4 * 3600000;
 function rateFlashcard(knowsIt){
   const card = fcQueue[fcIndex];
   if(fcView && fcView.mode === 'apply' && fcView.applyRight === false) knowsIt = false; // missed the applied question: the card is still learning, whatever the button
@@ -36715,6 +36726,8 @@ function rateFlashcard(knowsIt){
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
+  // Still learning comes back later the same day, not straight away: a 4-hour wait gives the material room to settle and lets other cards in first.
+  if(!knowsIt) DATA.flashcardStats[card.id].dueAt = Date.now() + FC_STILL_RETURN_MS;
   try{ fcNoteLapse(card, knowsIt); }catch(e){}
   window._fcJustRated = window._fcJustRated || {}; window._fcJustRated[card.id] = { knew: !!knowsIt, at: Date.now() };
   if(knowsIt && fcView.hintUsed && fcView.mode === 'foundation'){
@@ -51890,7 +51903,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000356';
+const BUILD_ID = '2026-11-01.00000357';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
