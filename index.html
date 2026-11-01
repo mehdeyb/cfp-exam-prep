@@ -26708,6 +26708,10 @@ function staleBonusDepQ(q){
   const text = [q.q, q.scenario || '', ...(Array.isArray(q.choices) ? q.choices : []), ...(Array.isArray(q.rationale) ? q.rationale : [])].join(' ');
   return /bonus depreciation/i.test(text) && /phase/i.test(text) && /2026/.test(text) && !/restored|permanent|superseded|no longer appl|january 19, 2025|one big beautiful|obbba|2025 tax law/i.test(text);
 }
+// Built-in questions and cards retired because they repeat another one in the bank. The copy that teaches more is kept.
+// Kept here (not in saved data) so every device drops them the same way; remove an id to bring it back.
+const RETIRED_CONTENT_IDS = new Set(['ret-77','inv3-08','inv4-11','tu-tx-03','inv3-07','tax-02','tax-15','ret-100',
+  'xj-11','xj-08','xj-03','tgc54','xi-12','nfc-138']);
 function allQuestions(){
   const g = DATA.generatedBank, m = _aqMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
@@ -26718,8 +26722,9 @@ function allQuestions(){
   // Corrections from flagged questions apply here, to built-in and generated questions alike.
   { const fx = DATA.questionFixes || {}; const sameAsBank = (pv, q) => !!pv && pv.q === q.q && JSON.stringify(pv.choices) === JSON.stringify(q.choices) && pv.correct === q.correct && JSON.stringify(pv.rationale || null) === JSON.stringify(q.rationale || null); QUESTIONS.concat(g || []).forEach(q => { const f = q && fx[String(q.id)]; if(f && (!f.prev || sameAsBank(f.prev, q))){ q.q = f.q; q.choices = f.choices; q.correct = f.correct; q.rationale = f.rationale; q.scenario = f.scenario || undefined; } }); }
   QUESTIONS.concat((g || []).filter(q => !staleBonusDepQ(q))).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
-  _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
-  return out;
+  const kept = out.filter(q => !RETIRED_CONTENT_IDS.has(String(q.id)));
+  _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out: kept };
+  return kept;
 }
 
 // Difficulty tier (1=foundational recall, 2=intermediate, 3=applied/complex),
@@ -26745,8 +26750,9 @@ function allFlashcards(){
   const g = DATA.generatedFlashcards, m = _afMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
   const out = FLASHCARDS.concat(typeof FLASHCARDS_EXTRA !== 'undefined' ? FLASHCARDS_EXTRA : [], typeof FLASHCARDS_EXTRA2 !== 'undefined' ? FLASHCARDS_EXTRA2 : [], typeof FLASHCARDS_EXTRA3 !== 'undefined' ? FLASHCARDS_EXTRA3 : [], typeof FLASHCARDS_EXTRA4 !== 'undefined' ? FLASHCARDS_EXTRA4 : [], g || []).filter(c => c && c.id);  // a damaged saved card must not break every screen that reads the deck
-  _afMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out };
-  return out;
+  const keptF = out.filter(f => !RETIRED_CONTENT_IDS.has(String(f.id)));
+  _afMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out: keptF };
+  return keptF;
 }
 
 // ---- Readiness model helpers ----
@@ -53956,7 +53962,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000401';
+const BUILD_ID = '2026-11-01.00000402';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
