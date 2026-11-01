@@ -29275,6 +29275,7 @@ function buildStudyPlanCore(minutes){
       how: ['Read the formula and what each letter stands for.','Work the problem with the numbers shown, on the calculator or on paper.','Enter your answer, then read the explanation, including when you were right.','Do four problems; each one has new numbers.'],
       run: () => { showTab('study'); openFormulaDrill(name); } };
   };
+  const noNewNow = days !== null && days <= 4 && days >= 0; // the last four days, whatever the phase label
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
@@ -29286,6 +29287,15 @@ function buildStudyPlanCore(minutes){
       const kind = gapT >= 4 ? 'gap' : null;
       let K = null; try{ K = fcBalCounts(n, { kind }, fcBalListsCached({})); }catch(e){}
       const R = K ? K.gap + K.learn + K.due + K.leech : n, F = K ? K.fresh : 0;
+      if(noNewNow){
+        // The last four days: no new cards. Review only, and no step at all when nothing is due.
+        const rv = K ? K.gap + K.learn + K.due + K.leech : 0;
+        if(rv < 1) return null;
+        const nr = Math.min(n, rv);
+        return { id:'cards', title:`Review ${nr} flashcards`, minutes: Math.max(4, Math.ceil(nr * 0.4)), need:nr, have:Math.min(act.cards, nr), unit:'cards',
+          why:'Four days out, review is what sticks. Cards you have already met, the ones due and the ones you missed; new cards wait until after the exam.',
+          run: () => { fcStepRef('cards'); const b = fcBalanced(Math.max(4, nr - act.cards), { kind, noNew:true }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
+      }
       const title = F > 0 && R > 0 ? `Review ${n} flashcards, ${R} to review and ${F} new` : F > 0 ? `Learn ${n} new flashcards` : `Review ${n} due flashcards`;
       return { id:'cards', title, minutes: mins, need:n, have:act.cards, unit:'cards',
         why: gapT >= 4
@@ -29604,6 +29614,7 @@ function buildStudyPlanCore(minutes){
       return first === 'calculator' ? mkFormulaPractice('calc2', 'calcFormula2', 1) : mkCalcPractice('calc2', 'calcKind2');
     },
     cards2: () => {
+      if(noNewNow && !L.targets.cards2) return null; // last four days: no new cards in any step
       let unseen = 0; try{ unseen = computeFlashcardProgress().unseenCount || 0; }catch(e){}
       const first = (L.targets.cards || 0) + (L.targets.newcards || 0); // the earlier card steps count first; only cards beyond them count here
       if(!L.targets.cards2 && unseen - first < 8) return null;
@@ -29723,7 +29734,7 @@ function buildStudyPlanCore(minutes){
     return base;
   })();
   // The last four days: no new ground or new cards, only consolidation and timed work.
-  const finalStretch = phase.key === 'sharpen' && days !== null && days <= 4;
+  const finalStretch = days !== null && days <= 4 && days >= 0;
   if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2', 'newcards'].includes(k)));
   // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
   let focus = null;
@@ -37000,10 +37011,12 @@ function fcBalCounts(n, o, L){
   const days = getDaysUntilExam();
   let newShare = (days !== null && days <= 7) ? 0.3 : 0.5;
   try{ if(fcContext().backlog > 40 && !(days !== null && days <= 7)) newShare = Math.min(newShare, 0.4); }catch(e){}
-  if(o.only === 'new') newShare = 1; else if(o.only === 'review') newShare = 0; else if(o.kind === 'gap') newShare = Math.min(newShare, 0.4);
+  if(o.only === 'new') newShare = 1; else if(o.only === 'review' || o.noNew) newShare = 0; else if(o.kind === 'gap') newShare = Math.min(newShare, 0.4);
   const reviewAvail = L.gap.length + L.learn.length + L.due.length + Math.min(2, L.leech.length);
   const newAvail = L.weakNew.length + L.newer.length;
-  let nNew = Math.round(n * newShare), nRev = n - nNew;
+  // Last four days: review only. A card never met before does not go in, and a short review pool gives a shorter set.
+  if(o.noNew) n = Math.min(n, reviewAvail);
+  let nNew = o.noNew ? 0 : Math.round(n * newShare), nRev = n - nNew;
   if(nRev > reviewAvail){ nNew += nRev - reviewAvail; nRev = reviewAvail; }
   if(nNew > newAvail){ const spill = nNew - newAvail; nNew = newAvail; nRev = Math.min(reviewAvail, nRev + spill); }
   // Review slots: cards tied to missed questions, cards the student marked still learning, then ordinary spaced reviews.
@@ -37015,7 +37028,7 @@ function fcBalCounts(n, o, L){
   const nDue = Math.min(L.due.length, Math.max(0, nRev - nGap - nLeech - nLearn));
   // Review slots nothing else could fill go to new material, not to more still-learning cards.
   const leftover = Math.max(0, nRev - nGap - nLeech - nLearn - nDue);
-  nNew += Math.min(leftover, Math.max(0, newAvail - nNew));
+  if(!o.noNew) nNew += Math.min(leftover, Math.max(0, newAvail - nNew));
   const nWeak = Math.min(L.weakNew.length, Math.ceil(nNew * 0.7)), nBreadth = Math.min(L.newer.length, nNew - nWeak);
   const nWeakFill = Math.min(L.weakNew.length, nNew - nBreadth); // breadth short: weak fills the rest
   return { gap:nGap, learn:nLearn, due:nDue, leech:nLeech, fresh:nWeakFill + nBreadth, weakNew:nWeakFill, breadth:nBreadth };
@@ -53887,7 +53900,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000387';
+const BUILD_ID = '2026-11-01.00000388';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
