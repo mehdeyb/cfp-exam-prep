@@ -26880,7 +26880,8 @@ function computeStats(){
     });
     const firstAcc = attemptedN ? Math.max(READINESS_FLOOR, (fs + READINESS_PRIOR_WEIGHT*READINESS_FLOOR)/(fw + READINESS_PRIOR_WEIGHT)) : READINESS_FLOOR;
     const keep = (Qfresh - READINESS_FLOOR) > 0.01 ? Math.max(0, Math.min(1, (Q - READINESS_FLOOR)/(Qfresh - READINESS_FLOOR))) : 1;
-    const unseenP = READINESS_FLOOR + (firstAcc - READINESS_FLOOR) * keep * (0.6 + 0.4*coverageFactor);
+    // Skill, not coverage: the untried part is estimated from first-attempt results alone, with no discount for how much was tried.
+    const unseenP = READINESS_FLOOR + (firstAcc - READINESS_FLOOR) * keep;
     // Thin evidence is pulled toward the untried estimate: a handful of tried items says less than a lot.
     const Qs = attemptedN ? (attemptedN*Q + 3*unseenP)/(attemptedN + 3) : READINESS_FLOOR;
     // What you have already tried counts two ways: how well each item is retained (Qs), and what your
@@ -26968,10 +26969,18 @@ function computeStats(){
       lever: info.attemptedN === 0 ? 'start' : (coverageLoss > strengthLoss ? 'coverage' : 'strength')
     });
   });
-  // How far to trust it: a plain sampling margin on the accuracy estimate, widened for the untried share.
+  // The headline is measured on the domains you have tried, weighted by exam share. Untried domains are not scored as zero:
+  // they are listed separately, so the number says how you are doing where you have practised, not how much you have covered.
+  const scored = parts.filter(p => p.attempted);
+  const scoredW = scored.reduce((a,p)=>a+p.weight,0);
+  if(scoredW > 0){
+    weighted = scored.reduce((a,p)=>a+p.earned,0) / scoredW * 100;
+    expectedAcc = scored.reduce((a,p)=>a+p.weight*p.expectedAccuracy,0) / scoredW;
+  }
+  const scoredShare = scoredW; // exam weight (out of 100) that has been tried at least once
   const triedTotal = parts.reduce((a,p)=>a+p.attempted,0), poolTotal = parts.reduce((a,p)=>a+p.poolSize,0);
   const triedShare = poolTotal ? triedTotal/poolTotal : 0;
-  const margin = triedTotal ? Math.min(30, Math.round(100 * 1.64 * Math.sqrt(expectedAcc*(1-expectedAcc)/triedTotal) * (1 + (1-triedShare)))) : null;
+  const margin = triedTotal ? Math.min(30, Math.round(100 * 1.64 * Math.sqrt(expectedAcc*(1-expectedAcc)/triedTotal))) : null;
   const readiness = Math.round(weighted * calibrationFactor);
   // The headline accuracy estimate and the readiness score are two views of one number: readiness is how far above guessing the estimate sits.
   // Tie them together after the overconfidence adjustment, so the ring and the line under it can never disagree.
@@ -26987,7 +26996,7 @@ function computeStats(){
   const weakestMeta = DOMAINS.find(d=>d.key===weakestKey);
   const weakestStat = DATA.domainStats[weakestKey];
   const weakestMastery = weakestStat.total ? Math.round((weakestStat.correct/weakestStat.total)*100) : null;
-  return { totalAnswered, accuracy, readiness, readinessExact: weighted * calibrationFactor, weakestMeta, weakestMastery, parts, calibration, rawReadiness: weighted, expectedAccuracy: Math.round(expectedAcc*100), accuracyMargin: margin, triedTotal, exam };
+  return { totalAnswered, accuracy, readiness, readinessExact: weighted * calibrationFactor, weakestMeta, weakestMastery, parts, calibration, rawReadiness: weighted, expectedAccuracy: Math.round(expectedAcc*100), accuracyMargin: margin, triedTotal, exam, scoredWeight: scoredShare, untriedWeight: 100 - scoredShare, untriedDomains: parts.filter(p => !p.attempted).map(p => p.name) };
 }
 
 // What forgetting costs right now: the score if nothing were overdue, minus the score as it stands.
@@ -27136,7 +27145,7 @@ function refreshCoachIdleMessage(){
       const topBand = reached[reached.length-1];
       if(!DATA.announcedMilestones.includes('band_'+topBand)){
         reached.forEach(b => { if(!DATA.announcedMilestones.includes('band_'+b)) DATA.announcedMilestones.push('band_'+b); });
-        setCoach(`Readiness is now ${sc}/100 — in the "${readinessBandLabel(sc, DATA.answerCounter)}" range. Tap "Why this score" to see what would move it next.`, false);
+        setCoach(`Readiness is now ${sc}/100 — in the "${readinessBandLabel(sc, DATA.answerCounter, null, null)}" range. Tap "Why this score" to see what would move it next.`, false);
         return;
       }
     }
@@ -27815,8 +27824,10 @@ function examPhaseLabel(daysLeft){
    READINESS GAUGE + COACH: explain the score, show the trend,
    and say what to do next
 =========================================================== */
-function readinessBandLabel(score, totalAnswered, margin){
+function readinessBandLabel(score, totalAnswered, margin, scoredWeight){
   if(!totalAnswered) return 'Not started yet';
+  // The score only speaks for the part of the exam you have tried: say so until most of it has been practised.
+  if(typeof scoredWeight === 'number' && scoredWeight < 60 && score >= 15) return 'Early read: ' + scoredWeight + '% of the exam tried';
   // A high score built on little evidence is not called strong: wait until the likely range is tight.
   if(score >= 55 && typeof margin === 'number' && margin >= 12) return 'Promising, still early';
   if(score < 15) return 'Just getting started';
@@ -27943,11 +27954,11 @@ function domainBreakdownHtml(stats, key){
 function renderReadinessExtras(stats){
   const bandEl = document.getElementById('readinessBand');
   const trendEl = document.getElementById('readinessTrend');
-  if(bandEl) bandEl.textContent = readinessBandLabel(stats.readiness, stats.totalAnswered, stats.accuracyMargin);
+  if(bandEl) bandEl.textContent = readinessBandLabel(stats.readiness, stats.totalAnswered, stats.accuracyMargin, stats.scoredWeight);
   const estEl = document.getElementById('readinessEst');
   if(estEl){
     if(stats.totalAnswered >= 10 && stats.accuracyMargin !== null){
-      estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '');
+      estEl.textContent = `≈ ${stats.expectedAccuracy}% on exam-style questions` + (stats.triedTotal < 40 ? ' · early estimate' : '') + (stats.untriedWeight > 0 ? ` · scored on ${stats.scoredWeight}% of the exam so far` : '');
       estEl.title = `Likely range ${Math.max(0, stats.expectedAccuracy - stats.accuracyMargin)}–${Math.min(100, stats.expectedAccuracy + stats.accuracyMargin)}%. It narrows as you try more questions. Readiness counts only what you know beyond guessing (25% on four-choice questions), so ${stats.expectedAccuracy}% expected accuracy is ${stats.readiness} of 100.`;
       estEl.style.display = 'block';
     } else { estEl.style.display = 'none'; }
@@ -53973,7 +53984,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000406';
+const BUILD_ID = '2026-11-01.00000407';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
