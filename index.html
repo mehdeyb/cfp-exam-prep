@@ -35028,7 +35028,7 @@ function subtopicIsNew(domainKey, idx){
   try{ const t = exposureModel().topics.find(x => x.key === domainKey + '-' + idx); return !!t && t.state === 'new'; }catch(e){ return false; }
 }
 // Shared concept sheet: a short list of terms or figures, shown before a drill starts. Dismissing it starts nothing.
-function showConceptSheet(kicker, title, items, onGo){
+function showConceptSheet(kicker, title, items, onGo, recall){
   if(!items.length) return false;
   const old = document.getElementById('conceptHost'); if(old) old.remove();
   const host = document.createElement('div'); host.id = 'conceptHost';
@@ -35046,7 +35046,27 @@ function showConceptSheet(kicker, title, items, onGo){
     dt.style.cssText = 'font-weight:600;margin-top:10px;';
     const dd = document.createElement('dd'); dd.textContent = it.def;
     dd.style.cssText = 'margin:3px 0 0;font-size:14px;line-height:1.45;color:var(--muted);';
-    list.append(dt, dd);
+    if(!recall || !it.id){ list.append(dt, dd); return; }
+    // Recall first: the student says the definition to themselves, then reveals it and rates it. Ratings go to the flashcard schedule.
+    dd.style.display = 'none';
+    const row = document.createElement('div'); row.style.cssText = 'margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
+    const reveal = document.createElement('button'); reveal.type = 'button'; reveal.textContent = 'Reveal';
+    reveal.style.cssText = 'min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);';
+    const rate = (knew) => {
+      const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew);
+      if(!knew) ns.dueAt = Date.now() + FC_STILL_RETURN_MS;
+      DATA.flashcardStats[it.id] = ns;
+      try{ persist(); }catch(e){}
+      row.textContent = knew ? 'Knew it' : 'Not yet: back in your flashcards today';
+      row.style.color = knew ? 'var(--muted)' : 'var(--gold)';
+    };
+    const ya = document.createElement('button'); ya.type = 'button'; ya.textContent = 'Knew it';
+    const na = document.createElement('button'); na.type = 'button'; na.textContent = 'Not yet';
+    [ya, na].forEach(b => { b.style.cssText = 'min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);'; });
+    ya.onclick = () => rate(true); na.onclick = () => rate(false);
+    reveal.onclick = () => { dd.style.display = ''; reveal.remove(); row.append(ya, na); };
+    row.append(reveal);
+    list.append(dt, dd, row);
   });
   const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
   const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Close';
@@ -35065,7 +35085,7 @@ function showSubtopicConcept(domainKey, idx){
   const key = domainKey + '-' + idx, name = (SUBTOPICS[domainKey] || [])[idx] || key;
   const byId = new Map(allFlashcards().map(c => [c.id, c]));
   const cards = (covTopicCards()[key] || []).map(id => byId.get(id)).filter(c => c && c.term && c.def).slice(0, 4);
-  return showConceptSheet('Learn these first', name, cards.map(c => ({ term: c.term, def: c.def })), () => startSubtopicDrill(domainKey, idx, true));
+  return showConceptSheet('Learn these first', name, cards.map(c => ({ id: c.id, term: c.term, def: c.def })), () => startSubtopicDrill(domainKey, idx, true), true);
 }
 function startSubtopicDrill(domainKey, idx, skipConcept){
   const pool = tiltedPool(subtopicPool(domainKey, idx), SUBTOPIC_DRILL_LENGTH);
@@ -53696,7 +53716,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000368';
+const BUILD_ID = '2026-11-01.00000369';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
