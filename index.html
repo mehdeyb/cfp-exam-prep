@@ -45228,10 +45228,11 @@ function mwSibling(q, used){
 function mwOpen(n, prefer){
   const host = document.getElementById('mwHost'); if(!host) return false;
   // A walk-through you left partway comes back at the same miss, even when it is started again from a plan row or a list.
-  // It is only picked up when every miss in it is one that was asked for; otherwise the new list starts fresh.
+  // It is only picked up when every unfinished miss in it is one that was asked for; otherwise the new list starts fresh.
   const wantIds = prefer ? new Set(prefer.map(x => typeof x === 'string' ? x : x.id)) : null;
   const saved = mwRestore();
-  const back = saved && (!wantIds || saved.items.every(x => wantIds.has(x.q.id))) ? saved : null;
+  // Misses already fixed drop out of the open list, so only the unfinished ones have to be in it.
+  const back = saved && (!wantIds || saved.items.filter(x => x.stage !== 'done').every(x => wantIds.has(x.q.id))) ? saved : null;
   const qs = back ? back.items : mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
