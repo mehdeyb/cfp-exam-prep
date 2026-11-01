@@ -26861,6 +26861,7 @@ function planLogAnswer(mode){
     if(session && session.catchup) mode = 'catchup';
     // A timed mock or full exam counts toward today's plan only when it is finished: a sitting that is left part-way is discarded, so its answers must not tick off the checkpoint.
     if(session && (session.mode === 'mock' || session.mode === 'fullexam')){ session.planAnswered = (session.planAnswered || 0) + 1; return; }
+    if(mode === 'review' && !(session && session.planReview)) mode = 'review-other'; // stuck re-tests and chat revisits are not 'missed' review
     const L = planDayLog();
     L.modes[mode] = (L.modes[mode] || 0) + 1;
     if(mode === 'drill' && session && session.drillTopic) L.drill[session.drillTopic] = (L.drill[session.drillTopic] || 0) + 1;
@@ -27602,7 +27603,7 @@ function buildStudyPlanCore(minutes){
         // Pinned for the day, so answering questions never swaps the step's topic out from under the count.
         let wd = weakDom;
         try{ const k = planTarget('weakDomKey', weakDom.key); wd = domainMasteryList().find(d => d.key === k) || weakDom; }catch(e){}
-        return { id:'weak', domPool:true, title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(cnt.drill || 0, 12), unit:'questions',
+        return { id:'weak', domPool:true, title:`Drill: ${wd.name}`, minutes:18, need:12, have: Math.min(((L.dd || {})[wd.key] || 0), 12), unit:'questions',
         why:`${wd.name} is ${wd.weight}% of the exam and ${wd.mastery === null ? 'not yet started' : 'at ' + wd.mastery + '% (' + STAGES[domainStageOf(wd.key) - 1].name + ')'}. It is where the most points are waiting.`,
         run: () => { showTab('study'); startDrill(wd.key); } };
       }
@@ -43556,6 +43557,7 @@ function startMissedReview(o){
   const reasons = {};
   ranked.forEach(q => { reasons[q.id] = 'due'; });
   beginSession(adaptiveInterleave(ranked, reasons), 'review', null, reasons);
+  try{ if(session) session.planReview = 'missed'; }catch(e){}
 }
 
 // Orders an adaptive session so the mix works as practice, not a pile: it opens with a plain due-or-new recall question,
@@ -43764,7 +43766,7 @@ function saveInProgressSession(){
     catchup: !!session.catchup,
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
-    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null, weakDom: session.weakDom || null,
+    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null, weakDom: session.weakDom || null, planReview: session.planReview || null,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null, caseLevels: session.caseLevels || null, caseTarget: session.caseTarget || null, caseSteps: session.caseSteps || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
@@ -43801,7 +43803,7 @@ function resumeInProgressSession(){
     sectionBreakIndex: null, onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
-    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, variantAttempted: saved.variantAttempted || {},
+    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, planReview: saved.planReview || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
@@ -46317,7 +46319,7 @@ function selectAnswerCore(i){
   try{ fmtRecord(q, isCorrect); }catch(e){}
   try{ updatePlanChip(); }catch(e){}
   DATA.recentAccuracyLog.push({correct: isCorrect, difficulty: questionDifficulty(q)});
-  try{ if(session && session.weakDom){ const DL = planDayLog(); DL.dom = DL.dom || {}; DL.dom[session.weakDom] = (DL.dom[session.weakDom] || 0) + 1; } }catch(e){}
+  try{ const DL = planDayLog(); if(session && session.weakDom){ DL.dom = DL.dom || {}; DL.dom[session.weakDom] = (DL.dom[session.weakDom] || 0) + 1; } else if(session && session.mode === 'drill' && !session.drillTopic){ DL.dd = DL.dd || {}; DL.dd[q.domain] = (DL.dd[q.domain] || 0) + 1; } }catch(e){}
   if(DATA.recentAccuracyLog.length > 20) DATA.recentAccuracyLog.shift();
 
   // Only in the modes where the confidence row was actually shown — an
@@ -47327,6 +47329,7 @@ function startSessionMisses(){
   if(!pool.length) return;
   exitToMenu();
   beginSession(shuffle(pool), 'review', null);
+  try{ if(session) session.planReview = 'missed'; }catch(e){}
 }
 function openToolFromResults(key){
   exitToMenu();
@@ -51929,7 +51932,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000359';
+const BUILD_ID = '2026-11-01.00000360';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
