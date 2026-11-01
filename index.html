@@ -46718,6 +46718,28 @@ function trapIsGrounded(trap, q){
   const stem = (String(q.q || '') + ' ' + String(q.scenario || '') + ' ' + (q.choices || []).join(' ')).toLowerCase().replace(/\s+/g, ' ');
   return quotes.some(x => stem.includes(x));
 }
+// Letter references in an AI explanation must match the real answer: a sentence that calls a wrong letter correct is dropped,
+// and "Choice X is correct" is rewritten to the letter that is actually correct.
+function cleanLetterText(text, q){
+  if(!text || !q || typeof q.correct !== 'number') return text;
+  const right = ['A','B','C','D'][q.correct];
+  const sents = String(text).split(/(?<=[.!?])\s+/);
+  const kept = [];
+  sents.forEach(s => {
+    const refs = [...s.matchAll(/\b(choice|option|answer)\s*\(?([A-D])\)?\b/gi)];
+    if(!refs.length){ kept.push(s); return; }
+    const wrong = refs.some(m => m[2].toUpperCase() !== right);
+    if(!wrong){ kept.push(s); return; }
+    if(/\bis\s+(the\s+)?correct\b/i.test(s) && refs.length === 1){ kept.push(s.replace(/\b(choice|option|answer)(\s*\(?)([A-D])(\)?)\b/i, (m, w, o, l, c) => w + o + right + c)); return; }
+    // Otherwise the sentence names a wrong letter; drop it rather than teach the wrong answer.
+  });
+  return kept.join(' ').replace(/\s+/g, ' ').trim();
+}
+function cleanLetterFields(obj, q){
+  const o = {};
+  ['idea','why','remember','trap'].forEach(k => { if(obj && typeof obj[k] === 'string') o[k] = cleanLetterText(obj[k], q); });
+  return o;
+}
 function cleanTrap(trap, q){ return (!trap || trapNamesCorrectAnswer(trap, q) || !trapIsGrounded(trap, q)) ? '' : trap; }
 function trapNamesCorrectAnswer(trap, q){
   if(!trap || !q || !Array.isArray(q.choices)) return false;
@@ -46808,7 +46830,7 @@ async function requestSimplerExplanation(){
   const simpKey = 'v5:' + q.id;
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[simpKey];
   if(!isRetry && cached){
-    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, { analogy: gateAnalogy(cached.analogy), trap: (session && session.lastSelectedIndex === q.correct) ? '' : cleanTrap(cached.trap, q) }) : cached, true);
+    renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, cleanLetterFields(cached, q), { analogy: gateAnalogy(cached.analogy), trap: (session && session.lastSelectedIndex === q.correct) ? '' : cleanTrap(cached.trap, q) }) : cached, true);
     btn.textContent = 'Try a different explanation';
     return;
   }
@@ -46850,7 +46872,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap a specific mistake: the tempting word in the stem that pulls toward the pick, then the one fact or test that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), the tempting word in the stem that pulls toward it, then the one fact or test that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nReturn ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences. First: name the wrong letter and quote, word for word in double quotes, the exact words from the question stem that pull a candidate toward it. Second: the one test, using a figure or fact from the question, that shows that letter fails. Example shape: Choosing B is tempting because the stem says \"moves into the 24% bracket\", but only the dollars above the threshold are taxed at 24%. Never name the correct letter, and do not restate the rationale"}`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap a specific mistake: the tempting word in the stem that pulls toward the pick, then the one fact or test that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), the tempting word in the stem that pulls toward it, then the one fact or test that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nThe correct answer is letter ${letters[q.correct]}: "${q.choices[q.correct]}". In "idea" and "why", describe choices by their words only; never name a letter for a choice unless it is ${letters[q.correct]}, the correct one. Return ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences. First: name the wrong letter and quote, word for word in double quotes, the exact words from the question stem that pull a candidate toward it. Second: the one test, using a figure or fact from the question, that shows that letter fails. Example shape: Choosing B is tempting because the stem says \"moves into the 24% bracket\", but only the dollars above the threshold are taxed at 24%. Never name the correct letter, and do not restate the rationale"}`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -46858,6 +46880,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       || trimToSentence(rawSimple)
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     // The trap is about a wrong answer. If the model named the correct one, drop the trap rather than teach the wrong lesson.
+    if(reply && typeof reply === 'object') reply = Object.assign({}, reply, cleanLetterFields(reply, q));
     if(reply && typeof reply === 'object') reply = Object.assign({}, reply, { trap: wasCorrect ? '' : cleanTrap(reply.trap, q) });
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(typeof reply === 'string' ? reply : [reply.idea, reply.why, reply.analogy, reply.spot, reply.trap].join(' '));
     if(hitCalcConventionGuard){
@@ -51903,7 +51926,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000357';
+const BUILD_ID = '2026-11-01.00000358';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
