@@ -29211,7 +29211,7 @@ function buildStudyPlanCore(minutes){
   // The moment any work starts they freeze, so counts and part totals never move under you.
   try{
     const untouched = !Object.keys(L.modes).some(m => L.modes[m] > 0) && !act.cards && !act.tvm && !act.formula && !Object.keys(L.manual || {}).length && !(L.trees || []).length && !(L.explains || []).length && !(L.figs || []).length && !DATA.conductor && !L.started && !session;
-    const sig = [phase.key, minutes, Math.min(missedN, 15), dueCards >= 5 ? 1 : 0, dueQs >= 8 ? 1 : 0, [0,10,20,30,60,80,100,150].filter(t => answered >= t).length, freshWeak[0] ? freshWeak[0].key + '-' + freshWeak[0].idx : '', ov ? 'ov' : '', tutorFlagged.length].join('|');
+    const sig = [phase.key, minutes, Math.min(missedN, 15), dueCards >= 5 ? 1 : 0, dueQs >= 8 ? 1 : 0, [0,10,20,30,60,80,100,150].filter(t => answered >= t).length, freshWeak[0] ? freshWeak[0].key + '-' + freshWeak[0].idx : '', ov ? 'ov' : '', tutorFlagged.length, (() => { const r = (DATA.recentAccuracyLog || []).slice(-60); return r.length >= 20 ? Math.floor(10 * r.filter(e => e.correct).length / r.length) : 'n'; })(), (() => { try { const m = domainMasteryList().filter(d => d.mastery != null).map(d => d.mastery); return m.length && Math.min(...m) < 60 ? 'w' : ''; } catch(e) { return ''; } })()].join('|');
     if(L.sig !== sig){
       if(untouched && L.sig !== undefined){ L.targets = {}; L.snap = {}; L.drill = {}; L.meta = {}; }
       L.sig = sig; try{ persist(); }catch(e){}
@@ -29671,7 +29671,7 @@ function buildStudyPlanCore(minutes){
       need: (keySkimToday() && keySkimToday().ids.length) || sk.length, have: (() => { const ks = keySkimToday(); if(!ks) return 0; return ks.done ? ks.ids.length : (ks.i || 0); })(),
       manual:true, run: () => { openKeySkim(); } }; }
   };
-  const order = {
+  const orderTable = {
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
@@ -29679,7 +29679,23 @@ function buildStudyPlanCore(minutes){
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
     after:      []
-  }[phase.key];
+  };
+  // Where you stand decides which work the last days hold: shaky results repair what you know, strong results rehearse pace.
+  // With no results yet, the calendar order stands.
+  const order = (() => {
+    const base = (orderTable[phase.key] || []).slice();
+    const recent = (DATA.recentAccuracyLog || []).slice(-60);
+    const recentAcc = recent.length >= 20 ? recent.filter(e => e.correct).length / recent.length : null;
+    const weakNow = !!(weakDom && weakDom.mastery != null && weakDom.mastery < 60);
+    const shakyNow = (recentAcc !== null && recentAcc < 0.65) || weakNow;
+    const readyNow = recentAcc !== null && recentAcc >= 0.75 && !weakNow && missedN < 5;
+    if(phase.key === 'taper'){
+      if(shakyNow) return ['weak','missed','cards','calc','figures','logistics','listen'];
+      if(readyNow) return ['cards','missed','checkpoint','calc','figures','logistics'];
+    }
+    if(phase.key === 'rest' && missedN >= 3) return ['missed'].concat(base);
+    return base;
+  })();
   // The last four days: no new ground or new cards, only consolidation and timed work.
   const finalStretch = phase.key === 'sharpen' && days !== null && days <= 4;
   if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2', 'newcards'].includes(k)));
@@ -53827,7 +53843,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000379';
+const BUILD_ID = '2026-11-01.00000380';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
