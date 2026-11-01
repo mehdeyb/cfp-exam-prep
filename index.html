@@ -29746,6 +29746,7 @@ function buildStudyPlanCore(minutes){
     }
     st.manual = !!st.manual;
     st.done = st.id === 'keys' ? !!(keySkimToday() && (keySkimToday().done || ((keySkimToday().ids || []).length > 0 && (keySkimToday().i || 0) >= keySkimToday().ids.length))) : st.manual ? !!L.manual[st.id] : (st.need > 0 ? st.have >= st.need : false);
+    if(st.manual && st.done && !(L.snap[k] && L.snap[k].manual)){ L.snap[k] = { title:st.title, minutes:st.minutes, why:st.why, need:1, have:1, unit:st.unit, manual:true }; try{ persist(); }catch(e){} }
     if(!st.manual && st.need > 0){
       const sn = L.snap[k];
       if(!sn || sn.title !== st.title || sn.have !== st.have || sn.need !== st.need){ L.snap[k] = { title:st.title, minutes:st.minutes, why:st.why, need:st.need, have:st.have, unit:st.unit }; try{ persist(); }catch(e){} }
@@ -29938,6 +29939,19 @@ function buildStudyPlanCore(minutes){
       for(let i = steps.length - 1; i >= 0; i--){ const st = steps[i]; if(!st.done && (ovD.drops || []).some(d => hit(st, d))){ used -= st.minutes || 0; steps.splice(i, 1); } }
       if(ovD.moveTop){ const j = steps.findIndex(st => hit(st, ovD.moveTop)); if(j > 0){ const [mv] = steps.splice(j, 1); steps.unshift(mv); } }
     } }
+  // A step you finished today stays on the list, marked done, even when the conditions that put it there have since changed.
+  // Without this, a finished step could vanish the moment its trigger eased (for example, misses cleared below the threshold).
+  try{
+    const present = new Set(steps.map(x => x.id));
+    Object.keys(L.snap || {}).forEach(k => {
+      const sn = L.snap[k];
+      if(present.has(k) || !sn) return;
+      const worked = sn.manual ? !!(L.manual && L.manual[k]) : (sn.have || 0) > 0;
+      if(!worked) return;
+      steps.push(Object.assign({ id:k, done:true, kept:true, run:null }, sn, { have: sn.need || sn.have || 1, done:true, kept:true, run:null }));
+      used += sn.minutes || 0;
+    });
+  }catch(e){}
   const blocks = [];
   if(phase.key === 'sharpen' && days !== null && days >= 4){
     const lastFull = (DATA.sessions || []).filter(x => x.mode === 'fullexam').pop();
@@ -53862,7 +53876,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000385';
+const BUILD_ID = '2026-11-01.00000386';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
