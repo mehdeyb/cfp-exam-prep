@@ -5806,8 +5806,8 @@
             <div class="tutor-status" id="gemini2KeyStatus" role="alert"></div>
           </div>
           <div class="api-key-connected" id="gemini2Connected" style="display:none;margin-top:12px;">
-            <span><b class="akc-name">Second Gemini key</b> <span>✓ Connected as a backup key.</span></span>
-            <div class="akc-actions"><button class="linklike" onclick="handleClearGemini2Key()">Remove second key</button></div>
+            <span><b class="akc-name">Second Gemini key</b> <span id="gemini2HealthText">✓ Connected as a backup key.</span></span>
+            <div class="akc-actions"><button class="linklike" onclick="testGemini2Connection()">Test</button><button class="linklike" onclick="handleClearGemini2Key()">Remove second key</button></div>
           </div>
           <div class="app-audit-box" style="margin-top:14px;">
             <div class="akc-name">App audit</div>
@@ -14940,6 +14940,19 @@ async function handleSaveGemini2Key(){
   try{ let val = key; try{ val = await sealSecret(key); }catch(e){} await storageSet(GEMINI_KEY2_STORAGE, val); }catch(e){}
   geminiKey2 = key; if(input) input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
+}
+// Tests the second key on its own, so a fault in either key is visible separately.
+async function testGemini2Connection(){
+  const el = document.getElementById('gemini2HealthText');
+  if(!geminiKey2 || !el) return;
+  el.textContent = 'Testing the second key…';
+  const prev = geminiKey; geminiKey = geminiKey2;
+  try{
+    const r = await geminiRequestOnceCore({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 });
+    el.textContent = /\S/.test(String(r)) ? '✓ Second key works.' : 'Second key answered with nothing. Try again in a moment.';
+  }catch(e){
+    el.textContent = 'Second key: ' + describeAiError(e);
+  }finally{ geminiKey = prev; }
 }
 async function handleClearGemini2Key(){
   if(!confirm('Remove the second Gemini key? The first key keeps working.')) return;
@@ -43217,7 +43230,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000326';
+const BUILD_ID = '2026-10-31.00000327';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
