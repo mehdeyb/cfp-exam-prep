@@ -23,7 +23,15 @@ const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
     const steps = buildStudyPlan().steps;
     const walk = steps.find(x => /^Walk through/.test(x.title));
     const review = steps.find(x => x.id === 'missed');
-    return { walk: walk ? { manual: !!walk.manual, need: walk.need, have: walk.have, title: walk.title } : null, reviewPresent: !!review };
+    const walks = steps.filter(x => x.missWalk);
+    const lesson = steps.find(x => x.id === 'listen' || x.id === 'tlesson');
+    // A finished lesson is counted once its playback reaches the end.
+    DATA.planLessonDone = { day: localDayKey(), key: 'personalized-medium' };
+    _dataVer++;
+    const finished = planLessonFinishedToday('personalized-');
+    return { walk: walk ? { manual: !!walk.manual, need: walk.need, have: walk.have, title: walk.title } : null, reviewPresent: !!review,
+      walkCount: walks.length, manualWalks: steps.filter(x => /^Walk through/.test(x.title) && x.manual).length,
+      lessonNoManual: !lesson || !lesson.manual, lessonFinished: finished };
   });
   const fails = [];
   if(!out.walk) fails.push('no walk-through step for the 8 missed tax questions');
@@ -31,6 +39,10 @@ const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
     if(out.walk.manual) fails.push('walk-through is manual (no Start / auto-done)');
     if(out.walk.need !== 8) fails.push('walk-through count is ' + out.walk.need + ', expected 8');
   }
+  if(out.walkCount > 1) fails.push(out.walkCount + ' walk-throughs of misses are live at once; only one should be');
+  if(out.manualWalks) fails.push('a walk-through of misses is manual');
+  if(!out.lessonNoManual) fails.push('the lesson step is manual (no automatic finish)');
+  if(!out.lessonFinished) fails.push('a lesson that finished today does not count as done');
   if(out.reviewPresent) fails.push('"Review N missed questions" still shows alongside the walk-through');
   if(errs.length) fails.push('page errors: ' + errs.slice(0, 3).join(' | '));
   await b.close();
