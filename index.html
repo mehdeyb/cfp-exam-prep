@@ -3936,6 +3936,17 @@
     body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcContrast{grid-column:1;}
     body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell{grid-column:2;}
   }
+  /* Side by side left a short column and a tall one, so the card scrolled with empty space beside it. Now the card stacks: the
+     look-alike box and the definition sit at full width, and the teaching notes flow into two balanced columns beneath them. */
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcBack,
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcContrast,
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell,
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcEbBtn{grid-column:1 / -1;grid-row:auto;}
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell{column-count:2;column-gap:18px;}
+  body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell > *{break-inside:avoid;}
+  @media (max-width:699px), (max-height:699px){
+    body.flashcard-fullscreen .fc-card:has(> #fcContrast[style*="block"]):has(> #fcRetell[style*="block"]) > #fcRetell{column-count:1;}
+  }
     body.flashcard-fullscreen .fc-card .fc-front{font-size:clamp(26px,4.2vh,34px);}
     body.flashcard-fullscreen .fc-card .fc-front.fc-front-def{font-size:clamp(18px,2.7vh,22px);}
     body.flashcard-fullscreen .fc-card .fc-back{font-size:clamp(16px,2.2vh,19px);line-height:1.6;}
@@ -53962,7 +53973,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000402';
+const BUILD_ID = '2026-11-01.00000403';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
