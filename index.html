@@ -12397,6 +12397,484 @@ const COVERAGE_RET_QUESTIONS = [
  }
 ];
 QUESTIONS.push(...COVERAGE_RET_QUESTIONS);
+const COVERAGE_TAX_QUESTIONS = [
+ {
+  "id": "tax-01",
+  "domain": "tax",
+  "sub": "Income tax fundamentals and calculations",
+  "q": "A taxpayer has adjusted gross income of $100,000 and itemized deductions of $30,000, with no other adjustments. Taxable income before the qualified business income deduction is:",
+  "choices": [
+   "$30,000",
+   "$70,000",
+   "$100,000",
+   "$130,000"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — $30,000 is only the itemized deduction.",
+   "Correct — $100,000 of AGI less $30,000 of itemized deductions is $70,000.",
+   "Wrong — $100,000 ignores the deduction.",
+   "Wrong — $130,000 adds the deduction instead of subtracting it."
+  ]
+ },
+ {
+  "id": "tax-02",
+  "domain": "tax",
+  "sub": "Income tax fundamentals and calculations",
+  "q": "A tax credit differs from a deduction because a credit:",
+  "choices": [
+   "Reduces taxable income",
+   "Reduces the tax owed dollar for dollar",
+   "Is only available to businesses",
+   "Is taxed as ordinary income"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — reducing taxable income describes a deduction.",
+   "Correct — a credit reduces the tax itself by its full amount.",
+   "Wrong — individuals can claim many credits.",
+   "Wrong — a credit is not income."
+  ]
+ },
+ {
+  "id": "tax-03",
+  "domain": "tax",
+  "sub": "Income tax fundamentals and calculations",
+  "q": "Net capital losses in excess of capital gains may offset ordinary income in a year up to:",
+  "choices": [
+   "$1,000",
+   "$3,000",
+   "$10,000",
+   "No limit"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the annual limit is larger than $1,000 for most filers.",
+   "Correct — the annual limit against ordinary income is $3,000, with the excess carried forward.",
+   "Wrong — $10,000 is not the annual limit.",
+   "Wrong — there is an annual limit on offsetting ordinary income."
+  ]
+ },
+ {
+  "id": "tax-04",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "A sale of stock at a loss is disallowed under the wash sale rule if the same stock is bought within how many days before or after the sale?",
+  "choices": [
+   "15 days",
+   "30 days",
+   "60 days",
+   "90 days"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the window is longer than 15 days on each side.",
+   "Correct — purchases within 30 days before or after the sale trigger the rule.",
+   "Wrong — the window is 30 days on each side, not 60.",
+   "Wrong — 90 days is not the wash sale window."
+  ]
+ },
+ {
+  "id": "tax-05",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "To qualify for long-term capital gain treatment, an asset must generally be held for more than:",
+  "choices": [
+   "6 months",
+   "1 year",
+   "2 years",
+   "5 years"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — six months is not the holding period.",
+   "Correct — assets held more than one year generally produce long-term gains.",
+   "Wrong — two years is not the general holding period.",
+   "Wrong — five years is not the general holding period."
+  ]
+ },
+ {
+  "id": "tax-06",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "Under the installment method, gain on a sale with payments over several years is generally recognized:",
+  "choices": [
+   "All in the year of sale",
+   "As each payment is received",
+   "Only at the seller's death",
+   "Never, if the buyer is a relative"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the installment method spreads recognition over the payment years.",
+   "Correct — gain is recognized proportionally as principal payments are received.",
+   "Wrong — death is not the recognition event under this method.",
+   "Wrong — a relative buyer does not change the basic rule."
+  ]
+ },
+ {
+  "id": "tax-07",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "Gain on the sale of real property held over one year that reflects prior depreciation, known as unrecaptured Section 1250 gain, is generally taxed at a maximum federal rate of:",
+  "choices": [
+   "15%",
+   "20%",
+   "25%",
+   "28%"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — 15% is the rate for most long-term gains, not this category.",
+   "Wrong — 20% is the top rate for most long-term gains, not this category.",
+   "Correct — unrecaptured Section 1250 gain is generally taxed at a maximum of 25%.",
+   "Wrong — 28% is not the rate for this category."
+  ]
+ },
+ {
+  "id": "tax-08",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "A like-kind exchange under Section 1031 currently applies to:",
+  "choices": [
+   "Stocks and bonds",
+   "Real property held for business or investment",
+   "Personal residences",
+   "Inventory held for sale"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — securities are not eligible for like-kind treatment.",
+   "Correct — real property held for productive use or investment qualifies.",
+   "Wrong — a personal residence is generally excluded under Section 121 instead.",
+   "Wrong — inventory is excluded from like-kind treatment."
+  ]
+ },
+ {
+  "id": "tax-09",
+  "domain": "tax",
+  "sub": "Tax consequences of property transactions",
+  "q": "In a Section 1031 exchange, the replacement property must generally be identified within how many days of the sale?",
+  "choices": [
+   "30 days",
+   "45 days",
+   "90 days",
+   "180 days"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — 30 days is shorter than the identification window.",
+   "Correct — identification is due within 45 days, and the exchange closes within 180 days.",
+   "Wrong — 90 days is not the identification deadline.",
+   "Wrong — 180 days is the closing deadline, not the identification deadline."
+  ]
+ },
+ {
+  "id": "tax-10",
+  "domain": "tax",
+  "sub": "Characteristics and income taxation of business entities",
+  "q": "A C corporation's earnings are generally subject to which tax treatment?",
+  "choices": [
+   "Taxed only at the shareholder level",
+   "Taxed at the corporate level, and dividends taxed again to shareholders",
+   "Passed through entirely to shareholders",
+   "Exempt from federal tax"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the corporation itself is taxed on its income.",
+   "Correct — this is double taxation: corporate tax, then tax on dividends.",
+   "Wrong — pass-through treatment applies to S corporations and partnerships.",
+   "Wrong — C corporations pay federal income tax."
+  ]
+ },
+ {
+  "id": "tax-11",
+  "domain": "tax",
+  "sub": "Characteristics and income taxation of business entities",
+  "q": "An S corporation generally passes its income and losses through to shareholders, and it may have no more than how many shareholders?",
+  "choices": [
+   "35",
+   "75",
+   "100",
+   "500"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — 35 is not the S corporation shareholder limit.",
+   "Wrong — 75 is not the limit.",
+   "Correct — S corporations may have up to 100 shareholders.",
+   "Wrong — 500 is not the limit."
+  ]
+ },
+ {
+  "id": "tax-12",
+  "domain": "tax",
+  "sub": "Characteristics and income taxation of business entities",
+  "q": "A partnership reports its income and deductions to partners on which form?",
+  "choices": [
+   "Form 1120",
+   "Schedule K-1",
+   "Form 1041",
+   "Schedule C"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — Form 1120 is the corporate return.",
+   "Correct — partners receive a Schedule K-1 showing their share.",
+   "Wrong — Form 1041 is the trust and estate return.",
+   "Wrong — Schedule C is used by sole proprietors."
+  ]
+ },
+ {
+  "id": "tax-13",
+  "domain": "tax",
+  "sub": "Characteristics and income taxation of business entities",
+  "q": "A sole proprietor reports business income and expenses on which schedule?",
+  "choices": [
+   "Schedule A",
+   "Schedule C",
+   "Schedule D",
+   "Schedule E"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — Schedule A is for itemized deductions.",
+   "Correct — Schedule C reports profit or loss from a sole proprietorship.",
+   "Wrong — Schedule D reports capital gains and losses.",
+   "Wrong — Schedule E reports rental and partnership income."
+  ]
+ },
+ {
+  "id": "tax-14",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "q": "Income retained by a complex trust is generally taxed to the trust at:",
+  "choices": [
+   "The beneficiary's rate",
+   "Compressed trust tax brackets that reach the top rate at low income levels",
+   "A flat 10% rate",
+   "No federal tax applies"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — retained income is taxed to the trust unless distributed.",
+   "Correct — trust brackets are compressed, so the top rate applies at much lower income than for individuals.",
+   "Wrong — there is no flat 10% rate for trust income.",
+   "Wrong — retained trust income is generally subject to federal tax."
+  ]
+ },
+ {
+  "id": "tax-15",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "q": "Distributable net income (DNI) mainly determines:",
+  "choices": [
+   "The trust's investment policy",
+   "How much of a trust's income is taxed to beneficiaries when distributed",
+   "The trust's estate tax exemption",
+   "The trustee's fee"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — investment policy is set by the trust document, not DNI.",
+   "Correct — DNI limits the amount of income carried out to beneficiaries and taxed to them.",
+   "Wrong — the estate tax exemption is not determined by DNI.",
+   "Wrong — trustee fees are not computed through DNI."
+  ]
+ },
+ {
+  "id": "tax-16",
+  "domain": "tax",
+  "sub": "Income taxation of trusts and estates",
+  "q": "A grantor trust's income is generally taxed to:",
+  "choices": [
+   "The trust, at compressed rates",
+   "The grantor who retains certain powers",
+   "The beneficiary, regardless of distributions",
+   "No one"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — grantor trust income is not taxed at the trust's compressed rates.",
+   "Correct — the grantor is treated as the owner for income tax purposes.",
+   "Wrong — beneficiaries are not taxed on income simply for being beneficiaries.",
+   "Wrong — the income is taxed to someone."
+  ]
+ },
+ {
+  "id": "tax-17",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "q": "A qualified charitable distribution from an IRA, made by an owner age 70½ or older, is:",
+  "choices": [
+   "Taxable and deductible",
+   "Excluded from income and may count toward the required minimum distribution",
+   "Taxed at a 10% penalty",
+   "Available only to Roth IRAs"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the distribution is not included in income, so it is not deducted.",
+   "Correct — the distribution is excluded from income and can satisfy part of the RMD.",
+   "Wrong — there is no 10% penalty on a qualified charitable distribution.",
+   "Wrong — QCDs come from traditional IRAs, not Roth IRAs."
+  ]
+ },
+ {
+  "id": "tax-18",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "q": "Tax-loss harvesting means:",
+  "choices": [
+   "Selling losing investments to realize losses that offset gains or income",
+   "Holding losing investments until they recover",
+   "Buying more of a losing investment to lower its cost",
+   "Donating losing investments to charity for a deduction"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — harvesting realizes losses to offset gains, subject to the wash sale rule.",
+   "Wrong — holding losers is the opposite of harvesting.",
+   "Wrong — buying more is a wash sale concern, not a harvesting technique.",
+   "Wrong — donating losing stock does not produce a deductible loss."
+  ]
+ },
+ {
+  "id": "tax-19",
+  "domain": "tax",
+  "sub": "Tax reduction/management techniques",
+  "q": "Bunching charitable gifts into one tax year is most useful when:",
+  "choices": [
+   "The taxpayer's deductions are already well above the standard deduction",
+   "The taxpayer's itemized deductions would otherwise fall below the standard deduction",
+   "The taxpayer has no charitable giving",
+   "The taxpayer is in the lowest bracket only"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — bunching helps when itemizing is otherwise lost, not when already itemizing well.",
+   "Correct — concentrating gifts can push itemized deductions above the standard deduction in one year.",
+   "Wrong — bunching requires charitable giving to be worthwhile.",
+   "Wrong — bracket level is not the main test for bunching."
+  ]
+ },
+ {
+  "id": "tax-20",
+  "domain": "tax",
+  "sub": "Charitable/philanthropic contributions and deductions",
+  "q": "Donating long-term appreciated stock to a public charity generally allows a deduction of:",
+  "choices": [
+   "The stock's original cost",
+   "Its fair market value, limited to 30% of AGI",
+   "Its fair market value, with no limit",
+   "Half its value"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the cost basis is not the deduction amount.",
+   "Correct — the fair market value deduction is generally limited to 30% of AGI for appreciated stock.",
+   "Wrong — there is an AGI limit for this type of gift.",
+   "Wrong — the deduction is not half the value."
+  ]
+ },
+ {
+  "id": "tax-21",
+  "domain": "tax",
+  "sub": "Charitable/philanthropic contributions and deductions",
+  "q": "A donor-advised fund generally provides:",
+  "choices": [
+   "No immediate deduction until grants are made",
+   "An immediate deduction, with grants to charities made over time",
+   "Income to the donor for life",
+   "Estate tax exemption for the donor's entire estate"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the deduction is generally available when the contribution is made.",
+   "Correct — the donor gets the deduction when contributing and recommends grants later.",
+   "Wrong — DAFs do not pay income to the donor for life.",
+   "Wrong — a DAF does not exempt the estate from tax."
+  ]
+ },
+ {
+  "id": "tax-22",
+  "domain": "tax",
+  "sub": "Charitable/philanthropic contributions and deductions",
+  "q": "A charitable remainder trust pays income to a noncharitable beneficiary for a term, and the remainder goes to charity. The donor's deduction is based on:",
+  "choices": [
+   "The full value of the assets",
+   "The present value of the remainder interest passing to charity",
+   "The income paid to the beneficiary",
+   "Zero, because the donor gets income"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the deduction is not the full asset value.",
+   "Correct — the deduction is the present value of the remainder that goes to charity.",
+   "Wrong — the income to the beneficiary is not the deduction base.",
+   "Wrong — the donor can receive a deduction even when income is retained."
+  ]
+ },
+ {
+  "id": "tax-23",
+  "domain": "tax",
+  "sub": "Tax implications of special circumstances",
+  "q": "Qualified dividends are generally taxed at long-term capital gain rates if the stock is held for more than:",
+  "choices": [
+   "30 days",
+   "61 days in a 121-day period around the ex-dividend date",
+   "1 year",
+   "5 years"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — 30 days is not the holding requirement.",
+   "Correct — the holding period test is more than 60 days within the 121-day window around the ex-dividend date.",
+   "Wrong — a one-year holding period applies to long-term capital gains, not this test.",
+   "Wrong — five years is not the holding period for dividends."
+  ]
+ },
+ {
+  "id": "tax-24",
+  "domain": "tax",
+  "sub": "Tax implications of special circumstances",
+  "q": "A net investment income tax of 3.8% generally applies when a taxpayer's modified adjusted gross income exceeds:",
+  "choices": [
+   "The standard deduction",
+   "Fixed thresholds set by filing status, such as $200,000 for single filers",
+   "$1,000,000 regardless of filing status",
+   "No threshold applies"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the standard deduction is not the NIIT threshold.",
+   "Correct — the threshold is $200,000 for single filers and $250,000 for married filing jointly.",
+   "Wrong — the threshold is not $1,000,000 for all filers.",
+   "Wrong — a threshold does apply."
+  ]
+ },
+ {
+  "id": "tax-25",
+  "domain": "tax",
+  "sub": "Tax implications of special circumstances",
+  "q": "Under the kiddie tax, a child's unearned income above a set amount is generally taxed at:",
+  "choices": [
+   "The child's own bracket, which is always 0%",
+   "The parent's marginal rate",
+   "A flat 50% rate",
+   "The trust's compressed rate"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the child's own bracket does not apply to income above the threshold.",
+   "Correct — excess unearned income of a qualifying child is taxed at the parent's marginal rate.",
+   "Wrong — there is no flat 50% rate.",
+   "Wrong — the trust's rate applies to trusts, not to a child's income under the kiddie tax."
+  ]
+ }
+];
+QUESTIONS.push(...COVERAGE_TAX_QUESTIONS);
 const COVERAGE_LT_QUESTIONS = [
   {
     id: "lt-01",
@@ -45541,7 +46019,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000338';
+const BUILD_ID = '2026-10-31.00000339';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
