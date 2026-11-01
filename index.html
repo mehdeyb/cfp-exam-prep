@@ -36988,7 +36988,8 @@ function startFlashcardSet(cards, kind){
   // A set you left partway comes back at the same card, with the round tally intact; it syncs with your data.
   try{
     const p = DATA.fcProgress;
-    if(p && kind && kind !== 'picked' && p.kind === kind && Date.now() - (p.at || 0) < 86400000 && p.i > 0 && Array.isArray(p.ids) && p.i < p.ids.length){
+    // A hand-picked set resumes only when it is the same set again; any other kind resumes by kind as before.
+    if(p && kind && p.kind === kind && (kind !== 'picked' || (Array.isArray(p.ids) && p.ids.join('|') === cards.map(c => c.id).join('|'))) && Date.now() - (p.at || 0) < 86400000 && p.i > 0 && Array.isArray(p.ids) && p.i < p.ids.length){
       const byId = {}; allFlashcards().forEach(c => { byId[c.id] = c; });
       const cs = p.ids.map(id => byId[id]).filter(Boolean);
       if(cs.length === p.ids.length){ fcQueue = cs; fcIndex = p.i; fcRound = p.round && Array.isArray(p.round.missedIds) ? { total:p.round.total || 0, knew:p.round.knew || 0, missed:[], missedIds:p.round.missedIds } : fcRound; fcRound.missed = fcRound.missedIds.map(id => byId[id]).filter(Boolean).map(c => c.term); }
@@ -45602,6 +45603,7 @@ function saveInProgressSession(){
     // Timed exams keep their answers, flags and end time, so a resumed exam shows the time that is actually left.
     examAnswers: session.examAnswers || {}, flagged: Array.from(session.flagged || []), timerEndAt: session.timerEndAt || null,
     sectionBreakIndex: session.sectionBreakIndex == null ? null : session.sectionBreakIndex, onSectionBreak: !!session.onSectionBreak,
+    figDrill: !!session.figDrill,
   };
   // A case keeps its own draft, so starting another case never throws away the answers already given here.
   if(session.mode === 'case' && session.caseId){
@@ -45641,6 +45643,7 @@ function resumeInProgressSession(){
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
+  if(saved.figDrill) session.figDrill = true;
   if(examSaved) session.timerSeconds = saved.timerEndAt ? Math.max(0, Math.round((saved.timerEndAt - Date.now()) / 1000)) : 0;
   try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
@@ -53776,7 +53779,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000373';
+const BUILD_ID = '2026-11-01.00000374';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
