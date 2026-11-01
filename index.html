@@ -4069,8 +4069,9 @@
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-row{grid-column:1;grid-row:2;flex-direction:row;flex-wrap:nowrap;align-items:stretch;align-self:stretch;gap:8px;margin-top:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-row .btn.ghost{flex:1 1 0;min-width:0;width:auto;white-space:normal;min-height:42px;padding:6px 8px;font-size:13px;line-height:1.25;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card{grid-column:1;grid-row:3;min-height:clamp(230px,40vh,420px) !important;display:flex;flex-direction:column;justify-content:center;padding:22px 32px;}
-    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box{grid-column:1;grid-row:4;margin-top:4px;align-self:stretch;min-height:0;max-height:none;overflow:visible;column-count:3;column-gap:28px;column-rule:1px solid rgba(120,160,150,.35);font-size:13px;line-height:1.45;padding:14px 18px;text-align:left;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box{grid-column:1;grid-row:4;margin-top:4px;align-self:stretch;min-height:0;max-height:none;overflow:visible;column-count:1;column-gap:28px;column-rule:1px solid rgba(120,160,150,.35);font-size:13px;line-height:1.45;padding:14px 18px;text-align:left;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box > .simplify-label{break-after:avoid;margin-top:6px;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box:has(> .simplify-label + span + .simplify-label){column-count:3;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-actions{grid-column:1;grid-row:5;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card:has(> #fcApply[style*="block"]){position:relative;display:block;text-align:center;min-height:clamp(300px,74vh,600px) !important;padding:24px 28px 24px 28px;padding-right:calc(50% + 12px);}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply{position:absolute;top:24px;bottom:24px;right:24px;width:calc(50% - 36px);box-sizing:border-box;margin:0;padding:14px 16px;text-align:left;font-size:clamp(12px,1.6vh,14px);line-height:1.4;overflow:hidden;border-radius:10px;}
@@ -28055,7 +28056,7 @@ function aiReplyText(r){
   return '';
 }
 
-function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; const dg = ((e && (e.provider === 'gemini' || e.geminiErr)) && _geminiDiag && _geminiDiag.length) ? ' (' + _geminiDiag.join(' | ').slice(0, 220) + ')' : ''; return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1) + dg; }
+function aiFailText(e){ const d = describeAiError(e) || 'try again in a moment.'; try{ if(_geminiDiag && _geminiDiag.length) console.warn('AI detail:', _geminiDiag.join(' | ')); }catch(x){} return "Couldn't get one right now. " + d.charAt(0).toUpperCase() + d.slice(1); } /* the raw provider detail goes to the console, not the card */
 function describeAiError(err){
   if(err && err.geminiErr && !err._describing){
     err._describing = true;
@@ -41781,7 +41782,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000314';
+const BUILD_ID = '2026-10-31.00000315';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
