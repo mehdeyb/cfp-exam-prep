@@ -35528,7 +35528,17 @@ function fcCardMode(card){
   const lvl = fcCardLevel(card), st = getSpacedStat(DATA.flashcardStats, card.id);
   const ds = (DATA.domainStats && DATA.domainStats[card.domain]) || { total:0, correct:0 };
   const stg = domainStageOf(card.domain), practised = ds.total >= 5;
-  if(lvl === 'struggling'){ const n = fcLapseN(card); return (n >= 2 && n % 2 === 0 && fcMaskCovers(card)) ? 'cloze' : 'foundation'; } // every other miss, ask it from the definition's side
+  // Still learning: every return comes at the card from a different side, so the wording and the angle change each time.
+  // Mark 1 asks the term from the definition, mark 2 puts it to an exam question, mark 3 gives a new example, mark 4 asks for recall again.
+  const stillN = fcLapseN(card);
+  if(stillN >= 1 && st.box <= 2){
+    const angle = ['cloze','apply','foundation','recall'][(stillN - 1) % 4];
+    if(angle === 'cloze' && !fcMaskCovers(card)) return 'foundation';
+    if(angle === 'apply' && !fcRelatedQuestions(card).length) return 'foundation';
+    if(angle === 'recall' && String(card.def).length > 240) return 'foundation';
+    return angle;
+  }
+  if(lvl === 'struggling') return 'foundation';
   if(lvl === 'new' && practised && stg === 1) return 'foundation-new';
   if(lvl === 'strong' && (stg >= 2 || st.box >= 5)){
     if(st.seen % 2 === 1 && fcRelatedQuestions(card).length) return 'apply';
@@ -35726,7 +35736,7 @@ function fcApplyAdaptation(card){
     const t = document.createElement('div'); t.className = 'fc-back-term'; t.textContent = card.term; back.appendChild(t);
     const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     hint.textContent = 'name the term, then tap to reveal';
-    if(mode === 'cloze'){ msg = 'Missed ' + fcLapseN(card) + ' times — name it from the definition'; cls += ' tricky'; } else { msg = 'Name the term'; cls += ' strong'; }
+    if(mode === 'cloze'){ msg = fcLapseN(card) >= 1 ? 'Still learning — a new angle: name it from the definition' : 'Missed ' + fcLapseN(card) + ' times — name it from the definition'; cls += ' tricky'; } else { msg = 'Name the term'; cls += ' strong'; }
   } else if(mode === 'apply'){
     const seenOf = x => (getSpacedStat(DATA.questionStats, x.id).seen || 0);
     const rel = fcRelatedQuestions(card).slice().sort(() => Math.random() - 0.5).sort((x, y) => seenOf(x) - seenOf(y)); // fresh questions first, never a repeat while others are unseen
@@ -35739,7 +35749,7 @@ function fcApplyAdaptation(card){
       q.choices.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fc-apply-choice'; b.textContent = c; b.onclick = (e) => { e.stopPropagation(); fcApplyChoose(i); }; ap.appendChild(b); });
       ap.style.display = 'flex';
     }
-    msg = 'Apply it'; cls += ' strong';
+    msg = fcLapseN(card) >= 1 ? 'Still learning — a new angle: try it on an exam question' : 'Apply it'; cls += ' strong';
   } else if(mode === 'foundation' || mode === 'foundation-new'){
     back.innerHTML = '';
     const sp = fcCoreSplit(card.def);
@@ -35749,7 +35759,7 @@ function fcApplyAdaptation(card){
     } else {
       const d = document.createElement('div'); d.textContent = card.def; back.appendChild(d);
     }
-    const ex = fcNeedsRetell(card) ? null : fcExampleFor(card, 0); // a card being retold shows its examples in the new-angle box instead, so nothing appears twice
+    const ex = fcNeedsRetell(card) ? null : fcExampleFor(card, Math.max(0, fcLapseN(card) - 1)); // each still-learning return shows the next example, not the same one // a card being retold shows its examples in the new-angle box instead, so nothing appears twice
     if(ex){
       const e = document.createElement('div'); e.className = 'fc-example';
       const l3 = document.createElement('span'); l3.className = 'fc-lbl'; l3.textContent = 'How it shows up on the exam'; e.appendChild(l3);
@@ -35757,7 +35767,7 @@ function fcApplyAdaptation(card){
       const p2 = document.createElement('div'); p2.className = 'fc-ex-ans'; p2.textContent = '→ ' + ex.answer + (ex.why ? '. ' + ex.why : ''); e.appendChild(p2);
       back.appendChild(e);
     }
-    if(mode === 'foundation'){ const mn = fcLapseN(card); msg = mn >= 2 ? 'Missed ' + mn + ' times — a new angle after you flip' : 'Tricky card — a hint is available'; cls += ' tricky'; }
+    if(mode === 'foundation'){ const mn = fcLapseN(card); msg = mn >= 3 ? 'Still learning — a new example after you flip' : mn >= 2 ? 'Missed ' + mn + ' times — a new angle after you flip' : 'Tricky card — a hint is available'; cls += ' tricky'; }
     else { msg = 'Building block for a weaker area — shown with an exam example'; cls += ' tricky'; }
   }
   modeEl.textContent = msg; modeEl.style.display = msg ? 'block' : 'none'; modeEl.className = cls;
@@ -51880,7 +51890,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000355';
+const BUILD_ID = '2026-11-01.00000356';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
