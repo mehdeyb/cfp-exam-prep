@@ -29724,7 +29724,7 @@ function buildStudyPlanCore(minutes){
   })();
   // The last four days: no new ground or new cards, only consolidation and timed work.
   const finalStretch = phase.key === 'sharpen' && days !== null && days <= 4;
-  if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2', 'newcards'].includes(k)));
+  if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2'].includes(k)));
   // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
   let focus = null;
   if(!['taper','rest','exam','after'].includes(phase.key)){
@@ -29838,7 +29838,7 @@ function buildStudyPlanCore(minutes){
     const famOf = k => ({ missed:'review', stuck:'review', tool:'tools', case:'exam', case2:'exam', case3:'exam', checkpoint:'exam', checkpoint2:'exam', adaptive2:'drill', weak2:'drill', weak3:'drill', weak4:'drill', weak5:'drill', weak6:'drill', listen:'lesson', tutor:'lesson', tutor2:'lesson', read:'lesson', stmts:'drill', cards2:'cards', newcards:'cards', calc2:'calc', keys:'calc', figures2:'figures', refresh:'figures' })[k] || k;
     const famUsed = {};
     const fillOrder = phase.key === 'taper' ? (tapShaky ? ['cards2','missed','figures2','tutor'] : ['tool','checkpoint','case','tutor','cards2','missed','figures2']) : ['tool','case','checkpoint','weak2','adaptive2','cards2','tutor','read','case2','calc2','checkpoint2','weak3','figures2','tutor2','weak4','missed','stmts','listen','newcards','keys','refresh'];
-    const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1 && !(finalStretch && k === 'newcards')).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
+    const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
     let curated = 0;
     ranked.forEach(k => {
       if(curated >= 6 || used >= minutes * 0.92 || steps.some(x => x.id === k) || !mk[k]) return;
