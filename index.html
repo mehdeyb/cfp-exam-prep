@@ -26579,8 +26579,31 @@ function scheduleSurfaceSync(){
 // Saves are batched: a burst of changes (an answer, its plan update, the flashcard stats) becomes one write a moment later.
 // The change itself invalidates the caches right away, so nothing reads stale data; only the write waits. Pending writes are flushed when the app is hidden or closed.
 let _persistTimer = null, _persistWaiters = [];
+// The tutor conversation is saved as plain text (questions and answers, no tool data), so it is there when you come back.
+function tutorThreadForSave(){
+  const out = [];
+  for(const m of tutorMessages){
+    const t = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(b => b && b.type === 'text' && b.text).map(b => b.text).join('\n') : '');
+    if(!t || !t.trim()) continue;
+    if(out.length && out[out.length - 1].role === m.role) out[out.length - 1].content += '\n' + t;
+    else out.push({ role: m.role, content: t });
+  }
+  while(out.length && out[0].role !== 'user') out.shift();
+  return out.slice(-30);
+}
+function tutorRestoreThread(){
+  if(window._tutorRestored) return;
+  window._tutorRestored = true;
+  if(tutorMessages.length) return;
+  const saved = Array.isArray(DATA.tutorThread) ? DATA.tutorThread : [];
+  const thread = document.getElementById('tutorThread');
+  if(!saved.length || !thread) return;
+  thread.querySelectorAll('.tutor-bubble').forEach(x => x.remove());
+  saved.forEach(m => { tutorMessages.push({ role: m.role, content: m.content }); renderTutorMessage(m.role, m.content); });
+}
 function persist(){
   _dataVer++;
+  try{ if(typeof tutorMessages !== 'undefined' && (tutorMessages.length || window._tutorRestored)) DATA.tutorThread = tutorThreadForSave(); }catch(_){}
   try{ _expMemo = null; _dgMemo = null; scheduleSurfaceSync(); }catch(_){} // any change makes the shared models (exposure, diagnosis) stale, and visible surfaces catch up shortly
   return new Promise(resolve => {
     _persistWaiters.push(resolve);
@@ -49756,6 +49779,7 @@ async function resetProgress(){
   DATA.theme = keepTheme;
   DATA.themeMode = keepThemeMode || 'auto';
   DATA.examDate = keepExamDate;
+  DATA.tutorThread = [];
   if(keepAiTokenUsage) DATA.aiTokenUsage = keepAiTokenUsage;
   dataEpoch++;
   await persist();
@@ -53554,6 +53578,7 @@ function renderTutorStart(stats){
   host.style.display = 'flex';
 }
 function updateTutorContextNote(){
+  try{ tutorRestoreThread(); }catch(e){}
   try{ renderTutorChips(); }catch(e){}
   try{ renderTutorStart(computeStats()); }catch(e){}
   const stats = computeStats();
@@ -53747,7 +53772,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000371';
+const BUILD_ID = '2026-11-01.00000372';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
