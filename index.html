@@ -5601,7 +5601,8 @@
     </div>
     <div class="card" id="dbwCard">
       <div class="card-head"><h2>The day before</h2><div class="note">walk through exam day, one step at a time</div></div>
-      <p class="hint">Seven short steps for tomorrow. Tick things off as you go; your ticks and your appointment time stay on this device.</p>
+      <p class="hint">Seven short steps for the day before. Tick things off as you go; your ticks and your appointment time stay on this device.</p>
+      <p class="dbw-answer" id="dbwWhen" aria-live="polite"></p>
       <div class="dbw-progress" id="dbwProgress" role="group" aria-label="Walkthrough steps"></div>
       <div class="dbw-body" id="dbwBody" aria-live="polite"></div>
       <div class="dbw-nav">
@@ -54076,7 +54077,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000411';
+const BUILD_ID = '2026-11-01.00000412';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -54827,6 +54828,15 @@ function perfEnable(){
       ${plainHTML}
       <ul class="dbw-list">${listHTML}</ul>`;
 
+    const when = document.getElementById('dbwWhen');
+    if(when){
+      let d = null; try{ if(typeof getDaysUntilExam === 'function' && typeof DATA !== 'undefined' && DATA) d = getDaysUntilExam(); }catch(e){ d = null; }
+      when.textContent = d === null ? 'Set your exam date to see how far away it is.'
+        : d === 1 ? 'Your exam is tomorrow. Work through every step tonight.'
+        : d === 0 ? 'Your exam is today. Check your bag, then go over the morning steps.'
+        : d > 1 ? 'Your exam is in ' + d + ' days. This walkthrough is for the day before, so come back the evening before.'
+        : 'Your exam date has passed. Update it in Settings for the next one.';
+    }
     const done = st.items.filter(it => s.checks[it.id]).length;
     count.textContent = `Step ${s.step+1} of ${STEPS.length} · ${done} of ${st.items.length} ticked`;
     back.disabled = s.step === 0;
