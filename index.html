@@ -29671,6 +29671,12 @@ function buildStudyPlanCore(minutes){
       need: (keySkimToday() && keySkimToday().ids.length) || sk.length, have: (() => { const ks = keySkimToday(); if(!ks) return 0; return ks.done ? ks.ids.length : (ks.i || 0); })(),
       manual:true, run: () => { openKeySkim(); } }; }
   };
+  // Readiness, read once for the final days: shaky students repair before anything timed or applied; strong students rehearse pace.
+  const tapRecent = (DATA.recentAccuracyLog || []).slice(-60);
+  const tapAcc = tapRecent.length >= 20 ? tapRecent.filter(e => e.correct).length / tapRecent.length : null;
+  const tapWeak = !!(weakDom && weakDom.mastery != null && weakDom.mastery < 60);
+  const tapShaky = (tapAcc !== null && tapAcc < 0.65) || tapWeak;
+  const tapReady = tapAcc !== null && tapAcc >= 0.75 && !tapWeak && missedN < 5;
   const orderTable = {
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
@@ -29684,14 +29690,9 @@ function buildStudyPlanCore(minutes){
   // With no results yet, the calendar order stands.
   const order = (() => {
     const base = (orderTable[phase.key] || []).slice();
-    const recent = (DATA.recentAccuracyLog || []).slice(-60);
-    const recentAcc = recent.length >= 20 ? recent.filter(e => e.correct).length / recent.length : null;
-    const weakNow = !!(weakDom && weakDom.mastery != null && weakDom.mastery < 60);
-    const shakyNow = (recentAcc !== null && recentAcc < 0.65) || weakNow;
-    const readyNow = recentAcc !== null && recentAcc >= 0.75 && !weakNow && missedN < 5;
     if(phase.key === 'taper'){
-      if(shakyNow) return ['weak','missed','cards','calc','figures','logistics','listen'];
-      if(readyNow) return ['cards','missed','checkpoint','calc','figures','logistics'];
+      if(tapShaky) return ['weak','missed','cards','calc','figures','logistics','listen'];
+      if(tapReady) return ['cards','missed','checkpoint','calc','figures','logistics'];
     }
     if(phase.key === 'rest' && missedN >= 3) return ['missed'].concat(base);
     return base;
@@ -29810,7 +29811,7 @@ function buildStudyPlanCore(minutes){
     // Families keep one day from piling into the same kind of work; drills may repeat once.
     const famOf = k => ({ missed:'review', stuck:'review', tool:'tools', case:'exam', case2:'exam', case3:'exam', checkpoint:'exam', checkpoint2:'exam', adaptive2:'drill', weak2:'drill', weak3:'drill', weak4:'drill', weak5:'drill', weak6:'drill', listen:'lesson', tutor:'lesson', tutor2:'lesson', read:'lesson', stmts:'drill', cards2:'cards', newcards:'cards', calc2:'calc', keys:'calc', figures2:'figures', refresh:'figures' })[k] || k;
     const famUsed = {};
-    const fillOrder = phase.key === 'taper' ? ['tool','checkpoint','case','tutor','cards2','missed','figures2'] : ['tool','case','checkpoint','weak2','adaptive2','cards2','tutor','read','case2','calc2','checkpoint2','weak3','figures2','tutor2','weak4','missed','stmts','listen','newcards','keys','refresh'];
+    const fillOrder = phase.key === 'taper' ? (tapShaky ? ['cards2','missed','figures2','tutor'] : ['tool','checkpoint','case','tutor','cards2','missed','figures2']) : ['tool','case','checkpoint','weak2','adaptive2','cards2','tutor','read','case2','calc2','checkpoint2','weak3','figures2','tutor2','weak4','missed','stmts','listen','newcards','keys','refresh'];
     const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1 && !(finalStretch && k === 'newcards')).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
     let curated = 0;
     ranked.forEach(k => {
@@ -29847,7 +29848,7 @@ function buildStudyPlanCore(minutes){
     try{ if(weakDom && weakDom.mastery !== null && weakDom.mastery < 60) needs.push(['weak', `${weakDom.name} is at ${weakDom.mastery}%, and it carries ${weakDom.weight}% of the exam.`]); }catch(e){}
     try{ const fr = figFreshness(); if(fr.due >= 6) needs.push(['figures', `${fr.due} key figures are due for recall; limits and thresholds are where exam questions catch people.`]); }catch(e){}
     try{ const tq = DATA.tvmQuizStats; if(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6) needs.push(['calc', `Calculator problems are at ${Math.round(100 * tq.correct / tq.asked)}%; the HP keys have to be automatic on exam day.`]); }catch(e){}
-    if(days !== null && days <= 21 && answered >= 100 && minutes >= MOCK_MINUTES){ const lastM = (DATA.sessions || []).filter(x => x.mode === 'mock' || x.mode === 'fullexam').pop(); const since = lastM ? (Date.now() - new Date(lastM.date).getTime()) / ONE_DAY_MS : Infinity; if(since >= 7) needs.push(['checkpoint', `The exam is ${days} days away and you have not sat a timed set in ${since === Infinity ? 'a while' : Math.round(since) + ' days'}; pacing is a skill you have to rehearse.`]); }
+    if(days !== null && days <= 21 && answered >= 100 && minutes >= MOCK_MINUTES && !(phase.key === 'taper' && tapShaky)){ const lastM = (DATA.sessions || []).filter(x => x.mode === 'mock' || x.mode === 'fullexam').pop(); const since = lastM ? (Date.now() - new Date(lastM.date).getTime()) / ONE_DAY_MS : Infinity; if(since >= 7) needs.push(['checkpoint', `The exam is ${days} days away and you have not sat a timed set in ${since === Infinity ? 'a while' : Math.round(since) + ' days'}; pacing is a skill you have to rehearse.`]); }
     needs.forEach(([k, reason]) => {
       if(steps.some(x => x.id === k) || !mk[k]) return;
       const st = finish(k, mk[k]());
@@ -53843,7 +53844,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000380';
+const BUILD_ID = '2026-11-01.00000381';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
