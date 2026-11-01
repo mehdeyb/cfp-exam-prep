@@ -38465,9 +38465,17 @@ async function qrevTryFix(q, r){
     const fixed = qrevValidFix(qrevParse(raw));
     if(!fixed) return false;
     if((await blindSolveResult(fixed)) !== 'ok') return false;
-    qrevApplyFix(q, fixed);
-    return fixed;
+    return fixed; // proposed only: the student applies it from the review sheet
   }catch(e){ return false; }
+}
+let qrevLast = null;
+function qrevApplyProposal(){
+  if(!qrevLast || !qrevLast.result || !qrevLast.result.candidate) return;
+  const q = qrevLast.q, r = qrevLast.result;
+  qrevApplyFix(q, r.candidate);
+  r.fixed = r.candidate; r.candidate = null;
+  try{ qrevRecord(q, r); }catch(e){}
+  qrevShow(r, q);
 }
 function qrevUndo(){
   const q = qrevCurrent; if(!q || !DATA.questionFixes) return;
@@ -38486,7 +38494,7 @@ function qrevKey(e){ if(e.key === 'Escape') closeQuestionReview(); }
 function closeQuestionReview(){
   const h = document.getElementById('qrevHost'); if(h) h.remove();
   document.removeEventListener('keydown', qrevKey);
-  qrevToken++; qrevCurrent = null;
+  qrevToken++; qrevCurrent = null; qrevLast = null;
 }
 function openQuestionReview(q){
   closeQuestionReview();
@@ -38528,18 +38536,11 @@ async function qrevRun(q, focus){
   if(token !== qrevToken || !document.getElementById('qrevBody')) return;
   if(result.status === 'problem'){
     body.innerHTML = '<div class="qrev-status"><span class="qrev-spin" aria-hidden="true"></span><span>Problem found. Writing a corrected version and checking it against 2026 rules…</span></div>';
-    result.fixed = await qrevTryFix(q, result);
+    result.candidate = await qrevTryFix(q, result) || null;
     if(token !== qrevToken || !document.getElementById('qrevBody')) return;
   }
   if(result.status !== 'error'){ result.focus = focus || 'general'; qrevRecord(q, result); }
-  // A generated question whose error could not be fixed to a version that passes the check is not worth keeping: remove it from the bank.
-  try{
-    if(result.status === 'problem' && result.fixed === false && Array.isArray(DATA.generatedBank) && DATA.generatedBank.some(x => x && String(x.id) === String(q.id))){
-      DATA.generatedBank = DATA.generatedBank.filter(x => !(x && String(x.id) === String(q.id)));
-      result.removed = true;
-      persist();
-    }
-  }catch(e){}
+  qrevLast = { q, result };
   qrevMarkFocus(focus);
   qrevShow(result, q);
 }
@@ -38576,13 +38577,19 @@ function qrevShow(r, q){
       note = 'Saved for fixing.';
     }
     const hasFix = !!(DATA.questionFixes && DATA.questionFixes[String(q.id)]);
-    foot.innerHTML = '<span class="qrev-note">' + note + '</span>' + (r.fixed || hasFix ? '<button type="button" class="qrev-btn" onclick="qrevUndo()">Undo fix</button>' : '') + again + done;
+    if(r.candidate && !r.fixed){
+      const c = r.candidate;
+      html += '<div class="qrev-proposal"><p class="qrev-fix"><b>Proposed correction:</b> ' + E(c.what || 'the question would be rewritten.') + ' The correct answer would be <b>' + E(L[c.correct] || '?') + '</b>.</p><p class="qrev-note">Nothing changes until you apply it.</p></div>';
+      foot.innerHTML = '<span class="qrev-note">' + note + '</span><button type="button" class="qrev-btn primary" onclick="qrevApplyProposal()">Apply correction</button>' + again + done;
+    } else {
+      foot.innerHTML = '<span class="qrev-note">' + note + '</span>' + (r.fixed || hasFix ? '<button type="button" class="qrev-btn" onclick="qrevUndo()">Undo fix</button>' : '') + again + done;
+    }
   }
   if(title) title.textContent = ttl;
   const qe = document.querySelector('#qrevHost .qrev-q');
   if(r && r.fixed && qe) qe.textContent = String(r.fixed.q || '').slice(0, 180);
   const fixNote = r && r.fixed ? '<p class="qrev-fix"><b>Corrected:</b> ' + E(r.fixed.what || 'the question was rewritten.') + ' The correct answer is now <b>' + E(L[r.fixed.correct] || '?') + '</b>.</p>'
-    : (r && r.status === 'problem' && r.fixed === false ? '<p class="qrev-note">' + (r.removed ? 'The corrected version did not pass its own check, so this question has been removed from the bank.' : 'The corrected version did not pass its own check, so your flag stays in the review list.') + '</p>' : '');
+    : (r && r.status === 'problem' && r.fixed === false ? '<p class="qrev-note">' + 'The corrected version did not pass its own check, so your flag stays in the review list.' + '</p>' : '');
   body.innerHTML = html + fixNote;
 }
 // A checkpoint every FC_CHECKPOINT cards: say what went well, name the cards
