@@ -53254,7 +53254,9 @@ let _lastFocusStep = null;
 function tutorStepDonePrompt(title){
   if(session || _focus) return;
   try{ if(conductorState()) return; }catch(e){} // a guided session already shows the finished part and the next one (card and pill)
-  const panel = document.querySelector('.tab-panel.active'); if(!panel || panel.id === 'tab-tutor') return;
+  const panel = document.querySelector('.tab-panel.active');
+  // On Today the plan already shows the finished step with its green check and the next step right below it, so no pop-up.
+  if(!panel || panel.id === 'tab-tutor' || panel.id === 'tab-study') return;
   const nx = tutorNextChoice();
   const old = document.querySelector('.tutor-guide'); if(old) old.remove();
   const box = tutorGuideBox(); if(!box) return;
