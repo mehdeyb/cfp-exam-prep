@@ -4026,6 +4026,7 @@
   .mw-why{margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--muted);} .mw-why b{display:inline;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px;color:var(--muted);opacity:.85;}
   .mw-sub{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:1px;}
   .mw-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;}
+  .mw-keys{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line, rgba(128,128,128,.35));border-radius:8px;font-size:14px;line-height:1.5;} .mw-keys b{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;} .mw-keys ol{margin:0;padding-left:20px;} .mw-keys li{margin:4px 0;}
   .mw-verdict{font-weight:600;font-size:16px;margin:2px 0 10px;color:var(--paper);}
   .mw-verdict.ok{color:var(--correct);} .mw-verdict.no{color:var(--incorrect);}
   .mw-sum{display:flex;gap:10px;margin:8px 0 14px;}
@@ -15993,6 +15994,12 @@ const COVERAGE_INV2_QUESTIONS = [
    "Wrong — $26.25 does not use the correct growth adjustment.",
    "Correct — next year's dividend is $1.575, and $1.575 divided by 5% is about $31.50.",
    "Wrong — $63.00 would need a 2.5% spread between return and growth."
+  ],
+  "calcType": "arithmetic",
+  "calcSteps": [
+   "Step 1, the spread: enter 10, press [−], enter 5, press [=]. The display shows 5, which is the required return minus growth.",
+   "Step 2, next year's dividend: enter 1.5, press [×], enter 1.05, press [=]. The display shows 1.575. Enter 1.05 for 1 + 5%, not 0.05.",
+   "Step 3, the value: type 1.575 again, press [×], enter 100, press [÷], enter 5, press [=]. The display shows 31.5, which is $31.50. Times 100 then divided by 5 is the same as dividing by 0.05."
   ]
  },
  {
@@ -42399,7 +42406,7 @@ const FD_GENS = {
     const d1 = fdPick([1.5,2,2.4,3,3.2]), g = fdPick([3,4,5]), r = Math.max(fdPick([8,9,10,11]), g + 2); // the required return must stay above growth
     const ans = d1/((r-g)/100);
     return { scenario:`A stock is expected to pay a dividend of $${fdNum(d1,2)} next year, which should grow ${g}% a year indefinitely. If investors require a ${r}% return, what is the stock worth today?`, unit:'$', answer:ans, tol:0.06,
-      keys:[`Work out the spread first: ${r} − ${g} = ${r-g} (this is the rate gap in percent).`, `Enter ${fdNum(d1,2)}, press [×], enter 100, press [÷], enter ${r-g}, press [=] — the display shows ${fdNum(ans,2)}.`], steps:[`P₀ = D₁ ÷ (r − g)`, `Spread: ${r}% − ${g}% = ${r-g}% = ${fdNum((r-g)/100,2)}`, `$${fdNum(d1,2)} ÷ ${fdNum((r-g)/100,2)} = $${fdNum(ans,2)}`],
+      keys:[`Step 1, the spread: enter ${r}, press [−], enter ${g}, press [=]. The display shows ${r-g}, the rate gap in percent.`, `Step 2, the value: type ${fdNum(d1,2)} again, press [×], enter 100, press [÷], enter ${r-g}, press [=]. The display shows ${fdNum(ans,2)}. Times 100 then divided by ${r-g} is the same as dividing by ${fdNum((r-g)/100,2)}.`], steps:[`P₀ = D₁ ÷ (r − g)`, `Spread: ${r}% − ${g}% = ${r-g}% = ${fdNum((r-g)/100,2)}`, `$${fdNum(d1,2)} ÷ ${fdNum((r-g)/100,2)} = $${fdNum(ans,2)}`],
       trap: x => Math.abs(x - d1/((r+g)/100)) < 0.06 ? 'The denominator is the required return minus the growth rate, not plus.' : null };
   },
   'Coefficient of Variation': () => {
@@ -45229,12 +45236,16 @@ function mwBreakdown(it){
   } else if(it.nowRight){
     how.push('You picked the right answer this time, so the idea is closer than the earlier miss suggested. Now say why, so it holds up when the wording changes.');
   }
-  if(q.calcSteps && q.calcSteps.length) how.push('Calculator path: ' + q.calcSteps.map(x => escapeHtml(x)).join(' '));
+  if(q.calcSteps && q.calcSteps.length) out += mwKeysHtml(q.calcSteps);
   if(how.length) out += sec(it.pick >= 0 ? 'How it went wrong' : 'Why it holds', how.map(x => `<p>${x}</p>`).join(''));
   const others = q.choices.map((c, k) => ({ c, k })).filter(o => o.k !== q.correct && o.k !== it.pick);
   if(others.length) out += `<details class="mw-more"><summary>Why the other ${others.length === 1 ? 'choice is' : others.length + ' choices are'} out</summary>${others.map(o => `<p><b>${mwLetter(o.k)}</b> ${escapeHtml(o.c)}<br><span>${escapeHtml(mwClean(rat[o.k]))}</span></p>`).join('')}</details>`;
   if(r && r.steps) out += sec('Next time, do this', `<ol>${r.steps.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`);
   return out;
+}
+function mwKeysHtml(steps){
+  if(!Array.isArray(steps) || !steps.length) return '';
+  return `<div class="mw-keys"><b>Calculator path, step by step</b><ol>${steps.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol></div>`;
 }
 function mwWhy(t){ return `<p class="mw-why"><b>Why this step</b>${escapeHtml(t)}</p>`; }
 function mwHead(it, extra){
@@ -45303,7 +45314,7 @@ function mwRender(){
     const last = mw.i >= mw.items.length - 1;
     body.innerHTML = mwHead(it, 'similar idea') + (s.scenario ? `<div class="mw-scn">${escapeHtml(s.scenario)}</div>` : '') + `<div class="mw-q">${qTextHtml(s.q)}</div><ul class="mw-choices">${choices}</ul>`
       + (answered ? '' : mwWhy('A different question on the same idea is real recall. Re-reading the same one only tests whether you recognise it, and this shows if you learned the idea or just the wording.'))
-      + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div>${mwWhy(it.ok ? 'Getting it right after a miss, on different wording, is what builds durable memory. The original comes back later, since spaced repeats beat cramming.' : 'A miss here is useful: it shows the idea is not secure. The original is now due again sooner, so you meet it again before it fades.')}<div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
+      + (answered ? `<div class="mw-verdict ${it.ok ? 'ok' : 'no'}">${it.ok ? 'Right. That idea is sticking.' : 'Not yet. It will come back soon.'}</div>${mwWhy(it.ok ? 'Getting it right after a miss, on different wording, is what builds durable memory. The original comes back later, since spaced repeats beat cramming.' : 'A miss here is useful: it shows the idea is not secure. The original is now due again sooner, so you meet it again before it fades.')}${s.calcSteps ? mwKeysHtml(s.calcSteps) : ''}<div class="mw-actions"><button type="button" class="btn" onclick="mwNext()">${last ? 'See what to take from this' : 'Next miss'}</button></div>` : '');
     return;
   }
 }
@@ -53876,7 +53887,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000386';
+const BUILD_ID = '2026-11-01.00000387';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
