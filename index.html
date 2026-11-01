@@ -4071,7 +4071,11 @@
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card{grid-column:1;grid-row:3;min-height:clamp(230px,40vh,420px) !important;display:flex;flex-direction:column;justify-content:center;padding:22px 32px;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box{grid-column:1;grid-row:4;margin-top:4px;align-self:stretch;min-height:0;max-height:none;overflow:visible;column-count:1;column-gap:28px;column-rule:1px solid rgba(120,160,150,.35);font-size:13px;line-height:1.45;padding:14px 18px;text-align:left;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box > .simplify-label{break-after:avoid;margin-top:6px;}
-    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box:has(> .simplify-label + span + .simplify-label){column-count:3;}
+    body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-mnemonic-box:has(> .wx-step){column-count:3;}
+    body.flashcard-fullscreen .fc-mnemonic-box .wx-step{break-inside:avoid;margin:0 0 10px;display:block;}
+    .fc-mnemonic-box .wx-lead{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:2px;}
+    .fc-mnemonic-box .wx-body{display:block;}
+    .fc-mnemonic-box .wx-more{display:block;margin-top:4px;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-actions{grid-column:1;grid-row:5;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-card:has(> #fcApply[style*="block"]){position:relative;display:block;text-align:center;min-height:clamp(300px,74vh,600px) !important;padding:24px 28px 24px 28px;padding-right:calc(50% + 12px);}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card:has(> #fcApply[style*="block"]) > #fcApply{position:absolute;top:24px;bottom:24px;right:24px;width:calc(50% - 36px);box-sizing:border-box;margin:0;padding:14px 16px;text-align:left;font-size:clamp(12px,1.6vh,14px);line-height:1.4;overflow:hidden;border-radius:10px;}
@@ -26280,6 +26284,26 @@ function fcExplainLocal(card, ctx){
   parts.push('Turn on the AI features in Settings to get a worked client example and a check question for this card.');
   return parts.join('\n\n');
 }
+// The worked example is split into its numbered steps, each a block of its own, so the columns never cut a step in half.
+function fcPaintStructuredExample(box, text){
+  const lines = String(text || '').split(/\n+/).map(x => x.trim()).filter(Boolean);
+  let step = null;
+  lines.forEach(line => {
+    const m = line.match(/^\d\)\s*([^:]{1,40}):\s*(.*)$/) || line.match(/^\d\)\s*(.*)$/);
+    if(m){
+      step = document.createElement('div'); step.className = 'wx-step';
+      const lead = document.createElement('span'); lead.className = 'wx-lead';
+      const body = document.createElement('span'); body.className = 'wx-body';
+      if(m.length === 3){ lead.textContent = m[1]; body.textContent = m[2]; } else { lead.textContent = ''; body.textContent = m[1]; }
+      if(lead.textContent) step.appendChild(lead);
+      step.appendChild(body); box.appendChild(step);
+    } else if(step){
+      const more = document.createElement('span'); more.className = 'wx-body wx-more'; more.textContent = line; step.appendChild(more);
+    } else {
+      const plain = document.createElement('div'); plain.className = 'wx-body'; plain.textContent = line; box.appendChild(plain);
+    }
+  });
+}
 async function requestFlashcardExplain(){
   if(!fcQueue.length || fcIndex >= fcQueue.length) return;
   const card = fcQueue[fcIndex];
@@ -26291,7 +26315,8 @@ async function requestFlashcardExplain(){
     box.innerHTML = '';
     const l = document.createElement('span'); l.className = 'simplify-label'; l.textContent = label;
     box.appendChild(l);
-    const t = document.createElement('span'); t.style.whiteSpace = 'pre-line'; t.textContent = text; box.appendChild(t);
+    if(label === 'Worked example') fcPaintStructuredExample(box, text);
+    else { const t = document.createElement('span'); t.style.whiteSpace = 'pre-line'; t.textContent = text; box.appendChild(t); }
     box.style.display = 'block';
   }
   const ctx = fcExplainContext(card);
@@ -41782,7 +41807,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000315';
+const BUILD_ID = '2026-10-31.00000316';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
