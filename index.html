@@ -45306,7 +45306,7 @@ function mwBreakdown(it){
   const sec = (h, body) => `<div class="mw-sec"><b>${h}</b>${body}</div>`;
   let out = '';
   const tested = mwFirstSentence(rat[q.correct]);
-  if(tested && d.name) out += sec('What this was testing', `<p>${escapeHtml(d.name)}: ${it.pick >= 0 ? 'telling the right answer apart from one that sounds close.' : 'knowing the rule well enough to defend it.'} The key fact: <b>${escapeHtml(String(q.choices[q.correct]).replace(/\s+/g, ' ').slice(0, 110))}${String(q.choices[q.correct]).length > 110 ? '…' : ''}</b></p>`);
+  if(tested && d.name) out += sec('What this was testing', `<p>${escapeHtml(d.name)}: ${it.pick >= 0 ? 'telling the right answer apart from one that sounds close.' : 'knowing the rule well enough to defend it.'} The key fact: <b>${escapeHtml(String(q.choices[q.correct]).replace(/\s+/g, ' ').trim())}</b></p>`);
   const how = [];
   if(it.pick >= 0){
     how.push(`You chose <b>${mwLetter(it.pick)}</b>. ${/\bIS\b|\btrue\b/i.test(rat[it.pick] || '') ? 'It is a real fact, but it does not fit what was asked.' : 'It sounds close, but the facts given point to the other answer.'}`);
@@ -53973,7 +53973,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000403';
+const BUILD_ID = '2026-11-01.00000404';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
