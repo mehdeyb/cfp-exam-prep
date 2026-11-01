@@ -35069,27 +35069,32 @@ function showConceptSheet(kicker, title, items, onGo, recall){
     dt.style.cssText = 'font-weight:600;margin-top:10px;';
     const dd = document.createElement('dd'); dd.textContent = it.def;
     dd.style.cssText = 'margin:3px 0 0;font-size:14px;line-height:1.45;color:var(--muted);';
-    if(!recall || !it.id){ list.append(dt, dd); return; }
+    if(!recall || (!it.id && !it.rate)){ list.append(dt, dd); return; }
+    const answer = it.answer != null ? it.answer : it.def;
     // Say it back, in a fixed format: pick the definition that matches the term from three curated options. The answer rates the term.
     dd.style.display = 'none';
     const qrow = document.createElement('div'); qrow.style.cssText = 'margin-top:10px;';
-    const ask = document.createElement('div'); ask.textContent = 'Which definition matches?';
+    const ask = document.createElement('div');
     ask.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:6px;';
+    ask.textContent = it.askText || 'Which definition matches?';
     const opts = document.createElement('div'); opts.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     const rate = (knew) => {
-      const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew);
-      if(!knew) ns.dueAt = Date.now() + FC_STILL_RETURN_MS;
-      DATA.flashcardStats[it.id] = ns;
-      try{ persist(); }catch(e){}
-      qrow.textContent = knew ? 'Right: knew it' : 'Not quite: back in your flashcards today';
+      if(it.rate) it.rate(knew);
+      else {
+        const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew);
+        if(!knew) ns.dueAt = Date.now() + FC_STILL_RETURN_MS;
+        DATA.flashcardStats[it.id] = ns;
+        try{ persist(); }catch(e){}
+      }
+      qrow.textContent = knew ? 'Right: knew it' : (it.notYetText || 'Not quite: back in your flashcards today');
       qrow.style.color = knew ? 'var(--muted)' : 'var(--gold)';
     };
-    shuffle([it.def].concat((it.pool || []).slice(0, 2))).forEach(o => {
+    shuffle([answer].concat((it.pool || []).slice(0, 2))).forEach(o => {
       const ob = document.createElement('button'); ob.type = 'button'; ob.textContent = o;
       ob.style.cssText = 'text-align:left;min-height:40px;padding:8px 12px;border-radius:9px;border:1px solid var(--hair);background:transparent;color:var(--ink);font-size:13px;line-height:1.4;';
       ob.onclick = () => {
-        const right = o === it.def;
-        opts.querySelectorAll('button').forEach(x => { x.disabled = true; x.style.opacity = x.textContent === it.def ? '1' : '.5'; });
+        const right = o === answer;
+        opts.querySelectorAll('button').forEach(x => { x.disabled = true; x.style.opacity = x.textContent === answer ? '1' : '.5'; });
         dd.style.display = '';
         ob.style.borderColor = right ? 'var(--gold)' : 'var(--hair)';
         setTimeout(() => rate(right), 900);
@@ -39129,12 +39134,33 @@ function openKeySkim(){
   render();
   return true;
 }
+// Recall item for a figure: name it, pick its value from three of the same format, then the memory hook. The rating goes to the figure stats only;
+// it does not count toward today's figure step, which is for drilled figures.
+function figRecallDistractors(k){
+  const shape = figShape(k.value), pool = KEY_NUMBERS.filter(x => x.label !== k.label && x.value !== k.value);
+  const ordered = shuffle(pool.filter(x => figShape(x.value) === shape)).concat(shuffle(pool.filter(x => figShape(x.value) !== shape)));
+  const out = [];
+  for(const x of ordered){ if(!out.includes(x.value)) out.push(x.value); if(out.length === 2) break; }
+  return out;
+}
+function figRecallOutcome(label, ok){
+  try{
+    DATA.figStats = DATA.figStats || {};
+    const p = DATA.figStats[label] || { n: 0, ok: 0, streak: 0 };
+    DATA.figStats[label] = { n: p.n + 1, ok: p.ok + (ok ? 1 : 0), streak: ok ? p.streak + 1 : 0, last: Date.now(), lastOk: !!ok };
+    persist();
+  }catch(e){}
+}
+function figRecallItem(k){
+  return { term: k.label, answer: k.value, def: k.value + '. ' + (k.hook || ''), pool: figRecallDistractors(k), askText: 'Which figure is it?',
+    notYetText: 'Not quite: you will see this figure again in the drill', rate: knew => figRecallOutcome(k.label, knew) };
+}
 function startFigureDrill(n, skipConcept){
   n = Math.max(3, Math.min(12, n || 6));
   const picks = figPick(n);
   if(!picks.length) return false;
   // Figures never drilled before are taught first: the value and its memory hook, so the number means something before it is tested.
-  if(!skipConcept){ const fresh = picks.filter(k => !figStatOf(k.label)).slice(0, 6); if(fresh.length && showConceptSheet('Learn these figures first', 'New figures in this drill', fresh.map(k => ({ term: k.label + ': ' + k.value, def: k.hook || '' })), () => startFigureDrill(n, true))) return true; }
+  if(!skipConcept){ const fresh = picks.filter(k => !figStatOf(k.label)).slice(0, 6); if(fresh.length && showConceptSheet('Learn these figures first', 'New figures in this drill', fresh.map(figRecallItem), () => startFigureDrill(n, true), true)) return true; }
   beginSession(picks.map(figChooseBuild), 'drill', null);
   if(session){ session.figDrill = true; retagSessionPlan(); }
   return true;
@@ -53779,7 +53805,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000374';
+const BUILD_ID = '2026-11-01.00000375';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
