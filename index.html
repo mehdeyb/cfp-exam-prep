@@ -5797,6 +5797,18 @@
             <button class="linklike" onclick="handleClearGeminiKey()">Replace key</button></div>
           </div>
           <div class="hint" id="geminiHelp" style="display:none;margin-top:10px;"></div>
+          <div class="api-key-box" id="gemini2Box" style="display:none;margin-top:12px;">
+            <p class="hint" style="margin-top:0;"><b>Second Gemini key (optional).</b> If your first key runs out of quota, the app uses this one for that request, and keeps using it for a while. Use a key from a different Google project to get a separate quota.</p>
+            <div class="api-key-row">
+              <input type="password" id="gemini2KeyInput" class="tutor-input" aria-label="Second Gemini API key" placeholder="AIza… or AQ.…" onkeydown="if(event.key==='Enter') handleSaveGemini2Key();">
+              <button class="btn" onclick="handleSaveGemini2Key()">Add second key</button>
+            </div>
+            <div class="tutor-status" id="gemini2KeyStatus" role="alert"></div>
+          </div>
+          <div class="api-key-connected" id="gemini2Connected" style="display:none;margin-top:12px;">
+            <span><b class="akc-name">Second Gemini key</b> <span>✓ Connected as a backup key.</span></span>
+            <div class="akc-actions"><button class="linklike" onclick="handleClearGemini2Key()">Remove second key</button></div>
+          </div>
           <div class="app-audit-box" style="margin-top:14px;">
             <div class="akc-name">App audit</div>
             <p class="hint" style="margin:4px 0 8px;">Gemini reviews the app's design and content from a written description (no personal progress or answers are sent) and suggests the most valuable improvements.</p>
@@ -14791,6 +14803,7 @@ async function reverifyCasesOnce(){
   finally { _caseReverifyRunning = false; }
 }
 async function checkAIAvailability(){
+  if(!geminiKey2){ try{ geminiKey2 = await loadGeminiKey2(); }catch(e){} }
   
   if(hasArtifactStorage()){
     aiMode = 'artifact';
@@ -14837,6 +14850,7 @@ function renderApiKeyUI(){
   if(apiKeyBox) apiKeyBox.style.display = (aiMode === 'none') ? 'block' : 'none';
   if(apiKeyConnected) apiKeyConnected.style.display = (aiMode === 'direct') ? 'flex' : 'none';
   try{ const bl = document.getElementById('aiBuildLine'); if(bl) bl.textContent = 'App build ' + BUILD_ID + (geminiKey ? ' · Gemini ' + GEMINI_MODELS[Math.min(geminiModelIdx, GEMINI_MODELS.length - 1)] : ''); }catch(e){}
+  try{ const g2 = document.getElementById('gemini2Box'), g2c = document.getElementById('gemini2Connected'); if(g2) g2.style.display = (geminiKey && !geminiKey2) ? 'block' : 'none'; if(g2c) g2c.style.display = (geminiKey && geminiKey2) ? 'block' : 'none'; }catch(e){}
   try{ const gb = document.getElementById('geminiBox'), gc = document.getElementById('geminiConnected'); if(gb) gb.style.display = geminiKey ? 'none' : 'block'; if(gc) gc.style.display = geminiKey ? 'flex' : 'none'; }catch(e){}
   const tutorApiKeyHint = document.getElementById('tutorApiKeyHint');
   if(tutorApiKeyHint) tutorApiKeyHint.style.display = (aiMode === 'none') ? 'flex' : 'none';
@@ -14905,6 +14919,33 @@ async function handleSaveGeminiKey(){
   input.value = ''; status.textContent = ''; status.classList.remove('err');
   await checkAIAvailability();
   try{ const h = document.getElementById('geminiHealthText'); if(h) h.textContent = '✓ Connected.'; geminiOk(true); geminiHelpLinks(null); }catch(e){}
+}
+const GEMINI_KEY2_STORAGE = 'cfp-blueprint-gemini-key-2';
+async function loadGeminiKey2(){
+  try{ const v = await storageGet(GEMINI_KEY2_STORAGE); if(!v || !v.length) return null; return v.startsWith('v1:') ? await openSecret(v) : v; }catch(e){ return null; }
+}
+async function handleSaveGemini2Key(){
+  const input = document.getElementById('gemini2KeyInput'), status = document.getElementById('gemini2KeyStatus');
+  const key = ((input && input.value) || '').trim();
+  if(!key){ status.textContent = 'Paste a second key first.'; status.classList.add('err'); return; }
+  if(!/^[A-Za-z0-9_.\-]{30,}$/.test(key)){ status.textContent = 'That does not look like a Google AI Studio key (they start with "AIza" or "AQ.").'; status.classList.add('err'); return; }
+  if(key === geminiKey){ status.textContent = 'That is the same key as your first one. Paste a different key.'; status.classList.add('err'); return; }
+  status.textContent = 'Checking the key…'; status.classList.remove('err');
+  const prev = geminiKey; geminiKey = key;
+  try{ await geminiRequestOnceCore({ messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
+  catch(e){
+    const busy = e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500);
+    if(!busy){ geminiKey = prev; status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
+  } finally{ geminiKey = prev; }
+  try{ let val = key; try{ val = await sealSecret(key); }catch(e){} await storageSet(GEMINI_KEY2_STORAGE, val); }catch(e){}
+  geminiKey2 = key; if(input) input.value = ''; status.textContent = ''; status.classList.remove('err');
+  await checkAIAvailability();
+}
+async function handleClearGemini2Key(){
+  if(!confirm('Remove the second Gemini key? The first key keeps working.')) return;
+  try{ await storageSet(GEMINI_KEY2_STORAGE, ''); }catch(e){}
+  geminiKey2 = null; _gemPrimarySkipUntil = 0;
+  await checkAIAvailability();
 }
 async function handleClearGeminiKey(){
   if(!confirm('Remove the saved Gemini key so you can paste a new one? Your Claude key, if any, keeps working.')) return;
@@ -29263,7 +29304,21 @@ async function runAppAudit(mode){
     out.textContent = "The audit could not run: " + (describeAiError(e) || 'try again in a moment') + '.';
   }finally{ btn.disabled = false; }
 }
-async function geminiRequestOnce({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg }){
+// A second key covers the first when Google reports a used-up quota. A per-minute limit clears by itself, so it does not switch keys.
+let geminiKey2 = null, _gemPrimarySkipUntil = 0;
+async function geminiRequestOnce(args){
+  if(!geminiKey2 || geminiKey2 === geminiKey) return geminiRequestOnceCore(args);
+  const primary = geminiKey, second = geminiKey2;
+  if(Date.now() < _gemPrimarySkipUntil){ geminiKey = second; try{ return await geminiRequestOnceCore(args); } finally{ geminiKey = primary; } }
+  try{ return await geminiRequestOnceCore(args); }
+  catch(e){
+    if(!(e && e.provider === 'gemini' && e.status === 429)) throw e;
+    if(/per.?minute|requests per minute|too many requests/i.test((_geminiDiag || []).join(' '))) throw e;
+    _gemPrimarySkipUntil = Date.now() + 15 * 60000;
+    geminiKey = second; try{ return await geminiRequestOnceCore(args); } finally{ geminiKey = primary; }
+  }
+}
+async function geminiRequestOnceCore({ system, messages, maxTokens, tools, grown, timeoutMs, modelIdx, tries, deg }){
   deg = deg || 0;
   if(!geminiKey){ const e = new Error('No Gemini key connected.'); e.code = 'NO_API_KEY'; e.provider = 'gemini'; throw e; }
   const body = { contents: toGeminiContents(messages), generationConfig: { maxOutputTokens: Math.max(256, maxTokens || 1000) } };
@@ -43162,7 +43217,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000325';
+const BUILD_ID = '2026-10-31.00000326';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
