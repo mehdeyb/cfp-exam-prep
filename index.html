@@ -29446,7 +29446,12 @@ function describeAiError(err){
     if(/no longer available|update your code|retired/i.test(err.message || '')) return 'Google has retired the Gemini model this app was using. The app refreshes its list of models and retries once; if this message stays, the app needs an update (check the build in Settings). Google said: "' + String(err.message || '').replace(/\s+/g, ' ').slice(0, 220) + '"';
     if(status === 400 && /API key/i.test(err.message || '')) return 'the Gemini key was rejected — check it in Settings.';
     const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
-    if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)) return status === 429 ? 'Gemini is rate-limiting this key — wait a bit and try again.' : "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
+    if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)){
+      if(status !== 429 && !(status && status >= 500)) return "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
+      if(/exceeded your current quota|quota.*exceeded|RESOURCE_EXHAUSTED|free.?tier|billing/i.test(_gtxt) && !/per.?minute|requests per minute/i.test(_gtxt)) return "Gemini says this key has used up its quota. Free-tier quota resets daily at midnight Pacific time. To keep going now, check the plan and billing for the key's project at aistudio.google.com, or add a key from a project with billing on.";
+      if(/per.?minute|requests per minute|too many requests/i.test(_gtxt)) return "Gemini is limiting this key to a set number of requests a minute. Wait about a minute, then tap Test.";
+      return "Gemini refused this request with a rate-limit error. Wait a minute, then tap Test. If it keeps failing, check the key's quota at aistudio.google.com.";
+    }
     if(/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured|not enabled/i.test(_gtxt)) return "Google's Gemini service is switched off for the project this key belongs to. Easiest fix: open aistudio.google.com/apikey, tap Create API key (choose a new project), and paste that key in Settings. A key made there has the service on already.";
     if(status === 403 && /referer|referrer|restrict|blocked|IP address/i.test(_gtxt)) return 'this Gemini key has restrictions (website or app limits) that block the app. Make a new unrestricted key at aistudio.google.com/apikey and paste it in Settings.';
     if(status === 401 || status === 403) return 'Google refused the Gemini key — check it in Settings, or make a new one at aistudio.google.com/apikey.';
@@ -43157,7 +43162,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000324';
+const BUILD_ID = '2026-10-31.00000325';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
