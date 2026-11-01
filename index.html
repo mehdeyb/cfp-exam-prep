@@ -48867,7 +48867,7 @@ function cleanLetterFields(obj, q){
   ['idea','why','remember','trap'].forEach(k => { if(obj && typeof obj[k] === 'string') o[k] = cleanLetterText(obj[k], q); });
   return o;
 }
-function cleanTrap(trap, q){ return (!trap || trapNamesCorrectAnswer(trap, q) || !trapIsGrounded(trap, q)) ? '' : trap; }
+function cleanTrap(trap, q){ return (!trap || trapNamesCorrectAnswer(trap, q) || /\b(choice|option|answer|choosing|choose|pick|picking|select|selecting)\s+\(?[A-D]\)?\b|\b[A-D]\s+(is|would be|looks)\b/i.test(String(trap))) ? '' : trap; }
 function trapNamesCorrectAnswer(trap, q){
   if(!trap || !q || !Array.isArray(q.choices)) return false;
   const t = String(trap).replace(/\s+/g, ' ');
@@ -48954,7 +48954,7 @@ async function requestSimplerExplanation(){
 
   const isRetry = btn.textContent === 'Try a different explanation';
   // The key carries a version, so explanations written with the older, thinner prompt are not shown again.
-  const simpKey = 'v6:' + q.id;
+  const simpKey = 'v7:' + q.id;
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[simpKey];
   if(!isRetry && cached){
     renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, cleanLetterFields(cached, q), { analogy: gateAnalogy(cached.analogy), trap: (session && session.lastSelectedIndex === q.correct) ? '' : cleanTrap(cached.trap, q) }) : cached, true);
@@ -48999,7 +48999,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. The trap is the exam's trap for this kind of problem: the specific mistake a candidate makes on a question like this (a misread word, a number taken from the wrong line, or a rule mixed up with a look-alike), then the one fact or step that avoids it. Two short sentences. Do not mention the student's answer, do not say why any choice seemed reasonable or tempting, and do not name a letter.} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nThe correct answer is letter ${letters[q.correct]}: "${q.choices[q.correct]}". In "idea" and "why", describe choices by their words only; never name a letter for a choice unless it is ${letters[q.correct]}, the correct one. Return ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences. First: name the wrong letter and quote, word for word in double quotes, the exact words from the question stem that pull a candidate toward it. Second: the one test, using a figure or fact from the question, that shows that letter fails. Example shape: Choosing B is tempting because the stem says \"moves into the 24% bracket\", but only the dollars above the threshold are taxed at 24%. Never name the correct letter, and do not restate the rationale"}`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. The trap is the exam's trap for this kind of problem: the specific mistake a candidate makes on a question like this (a misread word, a number taken from the wrong line, or a rule mixed up with a look-alike), then the one fact or step that avoids it. Two short sentences. Do not mention the student's answer, do not say why any choice seemed reasonable or tempting, and do not name a letter. The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nThe correct answer is letter ${letters[q.correct]}: "${q.choices[q.correct]}". In "idea" and "why", describe choices by their words only; never name a letter for a choice unless it is ${letters[q.correct]}, the correct one. Return ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences: the specific mistake a candidate makes on a question like this, then the one fact or step that avoids it. Do not name any letter, do not call a choice tempting, and never describe the correct answer"}`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -49014,7 +49014,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
     } else if(!q.isVariant){
       if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
-      DATA.simplifiedExplanations['v6:' + q.id] = decodeGenEntities(reply);
+      DATA.simplifiedExplanations['v7:' + q.id] = decodeGenEntities(reply);
       persist();
     }
     if(!stillOnSameQuestion()) return;
@@ -54076,7 +54076,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000410';
+const BUILD_ID = '2026-11-01.00000411';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
