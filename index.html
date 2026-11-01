@@ -48864,7 +48864,7 @@ async function requestSimplerExplanation(){
 
   const isRetry = btn.textContent === 'Try a different explanation';
   // The key carries a version, so explanations written with the older, thinner prompt are not shown again.
-  const simpKey = 'v5:' + q.id;
+  const simpKey = 'v6:' + q.id;
   const cached = !q.isVariant && DATA.simplifiedExplanations && DATA.simplifiedExplanations[simpKey];
   if(!isRetry && cached){
     renderSimplifiedExplanation(box, (typeof cached === 'object' && cached) ? Object.assign({}, cached, cleanLetterFields(cached, q), { analogy: gateAnalogy(cached.analogy), trap: (session && session.lastSelectedIndex === q.correct) ? '' : cleanTrap(cached.trap, q) }) : cached, true);
@@ -48909,7 +48909,7 @@ D. ${q.choices[3]}
 
 Correct answer: ${letters[q.correct]}.${!wasCorrect ? ` The student chose: ${letters[chosenIdx]}.` : ''}
 
-They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. ${!wasCorrect ? "The student picked " + letters[chosenIdx] + ", which seems reasonable but isn't. Make the trap a specific mistake: the tempting word in the stem that pulls toward the pick, then the one fact or test that corrects it, in two short sentences. Do not restate the rationale." : "The student got it right. Write the 'trap' as one specific mistake a candidate would really make on this question: name the wrong letter (" + letters.filter((_, i) => i !== q.correct).join(', ') + "), the tempting word in the stem that pulls toward it, then the one fact or test that corrects it. Two short sentences. Do not restate the rationale for why the answer is right or wrong."} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nThe correct answer is letter ${letters[q.correct]}: "${q.choices[q.correct]}". In "idea" and "why", describe choices by their words only; never name a letter for a choice unless it is ${letters[q.correct]}, the correct one. Return ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences. First: name the wrong letter and quote, word for word in double quotes, the exact words from the question stem that pull a candidate toward it. Second: the one test, using a figure or fact from the question, that shows that letter fails. Example shape: Choosing B is tempting because the stem says \"moves into the 24% bracket\", but only the dollars above the threshold are taxed at 24%. Never name the correct letter, and do not restate the rationale"}`;
+They already read a standard rationale for each choice, but it wasn't clicking. Explain it in plain everyday language, with no jargon left unexplained. The trap is the exam's trap for this kind of problem: the specific mistake a candidate makes on a question like this (a misread word, a number taken from the wrong line, or a rule mixed up with a look-alike), then the one fact or step that avoids it. Two short sentences. Do not mention the student's answer, do not say why any choice seemed reasonable or tempting, and do not name a letter.} The trap must never be the correct answer ${letters[q.correct]}; it describes a wrong one.\nThe correct answer is letter ${letters[q.correct]}: "${q.choices[q.correct]}". In "idea" and "why", describe choices by their words only; never name a letter for a choice unless it is ${letters[q.correct]}, the correct one. Return ONLY a JSON object, no other text, with these string fields. Keep the whole object under 130 words and use only the facts in the question; do not invent figures. {"idea": "the rule in one plain sentence, in the student's words", "why": "two short sentences on why the correct answer is right, quoting the question's own figure or fact", "remember": "one sentence giving the test a student can apply to any question like this: a rule of thumb in the stem's own terms that shows how to decide, not a restatement of the answer. Do not use an analogy. Example shape: \"Premiums for a tax-qualified long-term care policy count as medical care, so they help only if you itemize and your medical total passes the floor.\" Do not name the correct letter.", "trap": "two short sentences. First: name the wrong letter and quote, word for word in double quotes, the exact words from the question stem that pull a candidate toward it. Second: the one test, using a figure or fact from the question, that shows that letter fails. Example shape: Choosing B is tempting because the stem says \"moves into the 24% bracket\", but only the dollars above the threshold are taxed at 24%. Never name the correct letter, and do not restate the rationale"}`;
 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
@@ -48918,13 +48918,13 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     // The trap is about a wrong answer. If the model named the correct one, drop the trap rather than teach the wrong lesson.
     if(reply && typeof reply === 'object') reply = Object.assign({}, reply, cleanLetterFields(reply, q));
-    if(reply && typeof reply === 'object') reply = Object.assign({}, reply, { trap: wasCorrect ? '' : cleanTrap(reply.trap, q) });
+    if(reply && typeof reply === 'object') reply = Object.assign({}, reply, { trap: cleanTrap(reply.trap, q) });
     const hitCalcConventionGuard = q.calcSteps && usesWrongCalculatorConventionInProse(typeof reply === 'string' ? reply : [reply.idea, reply.why, reply.analogy, reply.spot, reply.trap].join(' '));
     if(hitCalcConventionGuard){
       reply = "That explanation used the wrong calculator's conventions -- tap the button again for another try.";
     } else if(!q.isVariant){
       if(!DATA.simplifiedExplanations) DATA.simplifiedExplanations = {};
-      DATA.simplifiedExplanations['v5:' + q.id] = decodeGenEntities(reply);
+      DATA.simplifiedExplanations['v6:' + q.id] = decodeGenEntities(reply);
       persist();
     }
     if(!stillOnSameQuestion()) return;
@@ -53984,7 +53984,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000407';
+const BUILD_ID = '2026-11-01.00000408';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
