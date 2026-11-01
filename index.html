@@ -21414,7 +21414,7 @@ function buildStudyPlanCore(minutes){
       const caseN = Math.max(1, caseQuestions(pick.id).length);
       const prevCase = (DATA.caseStats || {})[pick.id];
       const prevTxt = prevCase && prevCase.attempts && prevCase.lastTotal ? ` Your last try at this case: ${prevCase.lastCorrect} of ${prevCase.lastTotal}${prevCase.lastCorrect / prevCase.lastTotal < 0.7 ? ', so read the deciding facts slowly this time' : ''}.` : ' You have not tried this case yet.';
-      return { id:'case', title:`Case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(cnt.case || 0, caseN), unit:'questions',
+      return { id:'case', title:`Case study: ${pick.title}`, minutes:25, need:caseN, have: caseStepProgress(pick.id, caseN), unit:'questions',
         why:'The real exam wraps most questions in a client case. Flag the facts that would change the answer, then check which ones actually decided it. That reading habit is what this trains.' + prevTxt,
         run: () => { showTab('study'); startCase(pick.id); } };
     },
@@ -21476,12 +21476,13 @@ function buildStudyPlanCore(minutes){
       if(answered < 100) return null;
       const f1 = L.targets.caseId, f2 = L.targets.caseId2;
       const stats = DATA.caseStats || {};
-      const pool = allCases().filter(c => c.id !== f1 && c.id !== f2 && caseQuestions(c.id).length).sort((a, b) => ((stats[a.id] || {}).attempts || 0) - ((stats[b.id] || {}).attempts || 0));
-      const pickId = planTarget('caseId3', (pool[0] || {}).id || null);
+      const pool0 = allCases().filter(c => c.id !== f1 && c.id !== f2 && caseQuestions(c.id).length);
+      const pool = (pool0.some(c => !caseFinishedToday(c.id)) ? pool0.filter(c => !caseFinishedToday(c.id)) : pool0).sort((a, b) => ((stats[a.id] || {}).attempts || 0) - ((stats[b.id] || {}).attempts || 0));
+      let pickId = planTarget('caseId3', (pool[0] || {}).id || null);
+      if(pickId && (pickId === f1 || pickId === f2 || caseFinishedToday(pickId))) pickId = (pool[0] || {}).id || null;
       const pick = pickId ? caseById(pickId) : null; if(!pick) return null;
       const caseN = Math.max(1, caseQuestions(pick.id).length);
-      const prior = ((L.snap.case || {}).need || 0) + ((L.snap.case2 || {}).need || 0);
-      return { id:'case3', title:`Third case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(Math.max(0, (cnt.case || 0) - prior), caseN), unit:'questions',
+      return { id:'case3', title:`Third case study: ${pick.title}`, minutes:25, need:caseN, have: caseStepProgress(pick.id, caseN), unit:'questions',
         why:'The real exam is built from client cases. A third one late in a long day trains the hardest part: reading carefully when you are tired.', run: () => { showTab('study'); startCase(pick.id); } };
     },
     figures2: () => {
@@ -21549,7 +21550,7 @@ function buildStudyPlanCore(minutes){
       const pick = pickId ? caseById(pickId) : null;
       if(!pick || pick.id === first) return null;
       const caseN = Math.max(1, caseQuestions(pick.id).length);
-      return { id:'case2', title:`Second case study: ${pick.title}`, minutes:25, need:caseN, have: Math.min(Math.max(0, (cnt.case || 0) - ((L.snap.case || {}).need || 0)), caseN), unit:'questions',
+      return { id:'case2', title:`Second case study: ${pick.title}`, minutes:25, need:caseN, have: caseStepProgress(pick.id, caseN), unit:'questions',
         why:'Two cases in a day builds the reading stamina the real exam asks for. Flag the deciding facts again with fresh eyes.', run: () => { showTab('study'); startCase(pick.id); } };
     },
     newcards: () => {
@@ -32799,9 +32800,22 @@ function caseFit(id){
 // A case that was opened lately, finished or not, goes to the back: the same one never comes round twice in a row.
 function caseRecency(id){ const t = ((DATA.caseStarts || {})[id] || {}).last || 0; return (Date.now() - t) < 36*3600000 ? 1 : 0; }
 function caseStartCount(id){ return ((DATA.caseStarts || {})[id] || {}).n || 0; }
+// A case counts as done for today once it has been finished today.
+function caseFinishedToday(id){
+  const t = ((DATA.caseStats || {})[id] || {}).lastAt || 0;
+  return !!t && localDayKey(new Date(t)) === localDayKey();
+}
+// Today's progress on one case, from that case's own record: finished means every question, otherwise the answers in its unfinished draft.
+function caseStepProgress(id, caseN){
+  if(caseFinishedToday(id)) return caseN;
+  const dr = (DATA.caseDrafts || {})[id];
+  const startedToday = !!(dr && dr.startedAt) && localDayKey(new Date(dr.startedAt)) === localDayKey();
+  return Math.min(startedToday && dr.answerLog ? dr.answerLog.length : 0, caseN);
+}
 function nextCaseToTry(excludeId){
   const stats = DATA.caseStats || {};
-  const pool = allCases().filter(c => c.id !== excludeId && caseQuestions(c.id).length);
+  const pool0 = allCases().filter(c => c.id !== excludeId && caseQuestions(c.id).length);
+  const pool = pool0.some(c => !caseFinishedToday(c.id)) ? pool0.filter(c => !caseFinishedToday(c.id)) : pool0;
   pool.sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
   return pool[0] || null;
 }
@@ -45526,7 +45540,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000335';
+const BUILD_ID = '2026-10-31.00000336';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
