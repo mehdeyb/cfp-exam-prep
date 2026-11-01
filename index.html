@@ -35023,9 +35023,50 @@ function weakSubtopics(limit){
   rows.sort((a, b) => a.st.acc - b.st.acc || b.st.attempts - a.st.attempts);
   return rows.slice(0, limit || 3);
 }
-function startSubtopicDrill(domainKey, idx){
+// Concept card: a subtopic the student has never seen opens with its key terms, so the ideas are met before the first drill.
+function subtopicIsNew(domainKey, idx){
+  try{ const t = exposureModel().topics.find(x => x.key === domainKey + '-' + idx); return !!t && t.state === 'new'; }catch(e){ return false; }
+}
+function showSubtopicConcept(domainKey, idx){
+  const key = domainKey + '-' + idx, name = (SUBTOPICS[domainKey] || [])[idx] || key;
+  const byId = new Map(allFlashcards().map(c => [c.id, c]));
+  const cards = (covTopicCards()[key] || []).map(id => byId.get(id)).filter(c => c && c.term && c.def).slice(0, 4);
+  if(!cards.length) return false;
+  const old = document.getElementById('conceptHost'); if(old) old.remove();
+  const host = document.createElement('div'); host.id = 'conceptHost';
+  host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true');
+  host.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px;';
+  const box = document.createElement('div');
+  box.style.cssText = 'width:100%;max-width:520px;max-height:80vh;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--hair);border-radius:16px;padding:20px;';
+  const kick = document.createElement('div'); kick.textContent = 'Learn these first';
+  kick.style.cssText = 'font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);';
+  const h = document.createElement('h3'); h.textContent = name;
+  h.style.cssText = 'margin:6px 0 12px;font-size:17px;line-height:1.3;';
+  const list = document.createElement('dl'); list.style.cssText = 'margin:0 0 16px;';
+  cards.forEach(c => {
+    const dt = document.createElement('dt'); dt.textContent = c.term;
+    dt.style.cssText = 'font-weight:600;margin-top:10px;';
+    const dd = document.createElement('dd'); dd.textContent = c.def;
+    dd.style.cssText = 'margin:3px 0 0;font-size:14px;line-height:1.45;color:var(--muted);';
+    list.append(dt, dd);
+  });
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;';
+  const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Close';
+  close.style.cssText = 'min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--hair);background:transparent;color:var(--ink);';
+  const go = document.createElement('button'); go.type = 'button'; go.textContent = 'Start drill';
+  go.style.cssText = 'min-height:40px;padding:0 16px;border-radius:10px;border:0;background:var(--gold);color:#fff;font-weight:600;';
+  const dismiss = () => host.remove();
+  close.onclick = dismiss;
+  go.onclick = () => { dismiss(); startSubtopicDrill(domainKey, idx, true); };
+  host.addEventListener('click', e => { if(e.target === host) dismiss(); });
+  row.append(close, go); box.append(kick, h, list, row); host.append(box); document.body.append(host);
+  go.focus();
+  return true;
+}
+function startSubtopicDrill(domainKey, idx, skipConcept){
   const pool = tiltedPool(subtopicPool(domainKey, idx), SUBTOPIC_DRILL_LENGTH);
   if(pool.length < 3) return;
+  if(!skipConcept && subtopicIsNew(domainKey, idx)){ try{ if(showSubtopicConcept(domainKey, idx)) return; }catch(e){} }
   const missed = new Set(DATA.missed || []);
   const ranked = pool.map(q => ({ q, st: getSpacedStat(DATA.questionStats, q.id), r: Math.random() })).sort((a, b) => {
     const am = missed.has(a.q.id) ? 0 : (a.st.seen === 0 ? 1 : 2), bm = missed.has(b.q.id) ? 0 : (b.st.seen === 0 ? 1 : 2);
@@ -53649,7 +53690,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000366';
+const BUILD_ID = '2026-11-01.00000367';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
