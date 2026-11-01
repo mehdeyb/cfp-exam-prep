@@ -45085,7 +45085,11 @@ function mwSibling(q, used){
 }
 function mwOpen(n, prefer){
   const host = document.getElementById('mwHost'); if(!host) return false;
-  const back = prefer ? null : mwRestore();
+  // A walk-through you left partway comes back at the same miss, even when it is started again from a plan row or a list.
+  // It is only picked up when every miss in it is one that was asked for; otherwise the new list starts fresh.
+  const wantIds = prefer ? new Set(prefer.map(x => typeof x === 'string' ? x : x.id)) : null;
+  const saved = mwRestore();
+  const back = saved && (!wantIds || saved.items.every(x => wantIds.has(x.q.id))) ? saved : null;
   const qs = back ? back.items : mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
@@ -53772,7 +53776,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000372';
+const BUILD_ID = '2026-11-01.00000373';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
