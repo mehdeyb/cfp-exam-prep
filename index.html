@@ -29564,6 +29564,9 @@ function buildStudyPlanCore(minutes){
     adaptive3: () => { if(answered === 0) return null;
       return { id:'adaptive3', title:`Third mixed round (${ADAPTIVE_LENGTH} questions)`, minutes:22,
         why:'A six-hour day ends with a late mixed round on purpose. The real exam asks for your best thinking in its last hour, and practicing that while tired is the training.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - 2 * ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
+    adaptive4: () => { if(answered === 0) return null;
+      return { id:'adaptive4', title:`Fourth mixed round (${ADAPTIVE_LENGTH} questions)`, minutes:22,
+        why:'A long day gets a fourth mixed round, spaced after the others. Each round mixes every domain, so the last one tests what the earlier ones made stick.', need: ADAPTIVE_LENGTH, have: Math.max(0, Math.min((cnt.adaptive || 0) - 3 * ADAPTIVE_LENGTH, ADAPTIVE_LENGTH)), unit:'questions', run: () => { showTab('study'); startAdaptive(); } }; },
     checkpoint2: () => {
       if(answered < 100 || !steps.some(x => x.id === 'checkpoint')) return null;
       return { id:'checkpoint2', title:`Second timed set (${MOCK_QUESTION_COUNT} questions)`, minutes:MOCK_MINUTES,
@@ -29881,7 +29884,7 @@ function buildStudyPlanCore(minutes){
     // Fill to the pace: while the day is still short of the pace target, add more of the app's own work in order of value.
     // Each step comes from its own activity and is sized by what is left to do; nothing is added just to pad the day.
     if(!['rest','exam','after'].includes(phase.key) && answered >= 20){
-      const padOrder = ['weak3','adaptive2','case2','calc2','figures2','weak4','checkpoint2','stmts','listen','read','cards2','tutor2','keys','refresh','newcards'];
+      const padOrder = ['weak3','adaptive2','case2','calc2','figures2','adaptive3','weak4','checkpoint2','case3','weak5','adaptive4','weak6','stmts','listen','read','cards2','tutor2','keys','refresh','newcards'];
       for(const k of padOrder){
         if(used >= minutes * 0.92) break;
         if(steps.some(x => x.id === k) || !mk[k]) continue;
