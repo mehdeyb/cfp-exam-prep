@@ -5798,7 +5798,7 @@
           </div>
           <div class="hint" id="geminiHelp" style="display:none;margin-top:10px;"></div>
           <div class="api-key-box" id="gemini2Box" style="display:none;margin-top:12px;">
-            <p class="hint" style="margin-top:0;"><b>Second Gemini key (optional).</b> If your first key runs out of quota, the app uses this one for that request, and keeps using it for a while. Use a key from a different Google project to get a separate quota.</p>
+            <p class="hint" style="margin-top:0;"><b>Second Gemini key (optional).</b> If your first key runs out of its daily quota, the app switches to this one for 15 minutes, then tries the first key again. A per-minute limit just waits, without switching. Use a key from a different Google project for a separate quota.</p>
             <div class="api-key-row">
               <input type="password" id="gemini2KeyInput" class="tutor-input" aria-label="Second Gemini API key" placeholder="AIza… or AQ.…" onkeydown="if(event.key==='Enter') handleSaveGemini2Key();">
               <button class="btn" onclick="handleSaveGemini2Key()">Add second key</button>
@@ -17193,7 +17193,7 @@ async function handleSaveGemini2Key(){
   try{ await geminiRequestOnceCore({ key, messages:[{role:'user', content:'Reply with the single word OK.'}], maxTokens: 16, timeoutMs: 20000 }); }
   catch(e){
     const busy = e && e.provider === 'gemini' && (e.status === 429 || e.status >= 500);
-    if(!busy){ status.textContent = 'Google rejected that: ' + describeAiError(e); status.classList.add('err'); return; }
+    if(!busy){ status.textContent = 'Google rejected this key: ' + describeAiError(e); status.classList.add('err'); return; }
   }
   try{ let val = key; try{ val = await sealSecret(key); }catch(e){} await storageSet(GEMINI_KEY2_STORAGE, val); }catch(e){}
   geminiKey2 = key; if(input) input.value = ''; status.textContent = ''; status.classList.remove('err');
@@ -31775,7 +31775,9 @@ function describeAiError(err){
     const _gtxt = (err.message || '') + ' ' + (_geminiDiag || []).join(' ');
     if(status === 429 || (status && status >= 500) || /answered (429|5\d\d)/.test(_gtxt)){
       if(status !== 429 && !(status && status >= 500)) return "Google's Gemini models are busy right now (the key itself is fine) — try again in a moment.";
-      if(/exceeded your current quota|quota.*exceeded|RESOURCE_EXHAUSTED|free.?tier|billing/i.test(_gtxt) && !/per.?minute|requests per minute/i.test(_gtxt)) return "Gemini says this key has used up its quota. Free-tier quota resets daily at midnight Pacific time. To keep going now, check the plan and billing for the key's project at aistudio.google.com, or add a key from a project with billing on.";
+      if(/exceeded your current quota|quota.*exceeded|RESOURCE_EXHAUSTED|free.?tier|billing/i.test(_gtxt) && !/per.?minute|requests per minute/i.test(_gtxt)) return geminiKey2 && geminiKey2 !== geminiKey
+        ? "Both Gemini keys have run out of quota for now. Free-tier quota resets daily at midnight Pacific time. To keep going sooner, check billing for each key's project at aistudio.google.com."
+        : "Gemini says this key has used up its quota. Free-tier quota resets daily at midnight Pacific time. Add a second key from a different Google project in Settings to keep going, or check billing for this key's project at aistudio.google.com.";
       if(/per.?minute|requests per minute|too many requests/i.test(_gtxt)) return "Gemini is limiting this key to a set number of requests a minute. Wait about a minute, then tap Test.";
       return "Gemini refused this request with a rate-limit error. Wait a minute, then tap Test. If it keeps failing, check the key's quota at aistudio.google.com.";
     }
@@ -45539,7 +45541,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000337';
+const BUILD_ID = '2026-10-31.00000338';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
