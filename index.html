@@ -27301,7 +27301,8 @@ function weakestDrillTarget(stats){
     return { key: m.key, name: m.name, attempted: p ? (p.attempted || 0) : 0, acc: (p && p.attempted) ? Math.round(p.expectedAccuracy * 100) : null };
   }catch(e){ return null; }
 }
-function startWeakestDrill(){ const w = weakestDrillTarget(); if(!w) return; showTab('study'); startDrill(w.key); }
+let _wkDrillPending = null; // the domain of a weakest-area drill being launched from today's plan
+async function startWeakestDrill(){ const w = weakestDrillTarget(); if(!w) return; showTab('study'); _wkDrillPending = w.key; try{ await startDrill(w.key); } finally { _wkDrillPending = null; } }
 // Runs an activity the tutor added to today's plan, through the same tools the tutor already uses.
 async function tutorRunAdded(a){
   let name, inp;
@@ -27590,7 +27591,7 @@ function buildStudyPlanCore(minutes){
       let sub = null; try{ sub = drillWeakTopic(w.key); }catch(e){}
       const subTxt = sub ? ` Weakest topic there: ${sub.name} (about ${Math.round(sub.acc * 100)}%).` : '';
       return { id:'wkdrill', title:`Weakest area: ${w.name}`, minutes:12, need:NEED, have, unit:'questions',
-        why:`Your expected accuracy here is about ${w.acc}%, your lowest domain. Lifting it toward 80% moves your readiness most.${subTxt} Any question you answer in this domain today counts toward the ten.`,
+        why:`Your expected accuracy here is about ${w.acc}%, your lowest domain. Lifting it toward 80% moves your readiness most.${subTxt} Only answers from the weakest-area drill count toward the ten; questions from reviews or other drills do not.`,
         run: () => startWeakestDrill() };
     },
     weak: () => {
@@ -43025,6 +43026,8 @@ function launchDrill(domainKey, size, unseen){
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
   DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
   beginSession(queue, 'drill', null, reasons);
+  // Only answers from a weakest-area drill count toward that plan step; a review or other drill does not.
+  try{ if(_wkDrillPending === domainKey && session) session.weakDom = domainKey; }catch(e){}
 }
 
 // How much a question looks like the real exam's. The CFP exam is application-level: stand-alone items
@@ -43761,7 +43764,7 @@ function saveInProgressSession(){
     catchup: !!session.catchup,
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
-    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null,
+    variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null, weakDom: session.weakDom || null,
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null, caseLevels: session.caseLevels || null, caseTarget: session.caseTarget || null, caseSteps: session.caseSteps || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
@@ -43798,7 +43801,7 @@ function resumeInProgressSession(){
     sectionBreakIndex: null, onSectionBreak: false,
     examAnswers: {}, flagged: new Set(), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
-    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, variantAttempted: saved.variantAttempted || {},
+    startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
@@ -46314,7 +46317,7 @@ function selectAnswerCore(i){
   try{ fmtRecord(q, isCorrect); }catch(e){}
   try{ updatePlanChip(); }catch(e){}
   DATA.recentAccuracyLog.push({correct: isCorrect, difficulty: questionDifficulty(q)});
-  try{ const DL = planDayLog(); DL.dom = DL.dom || {}; DL.dom[q.domain] = (DL.dom[q.domain] || 0) + 1; }catch(e){}
+  try{ if(session && session.weakDom){ const DL = planDayLog(); DL.dom = DL.dom || {}; DL.dom[session.weakDom] = (DL.dom[session.weakDom] || 0) + 1; } }catch(e){}
   if(DATA.recentAccuracyLog.length > 20) DATA.recentAccuracyLog.shift();
 
   // Only in the modes where the confidence row was actually shown — an
@@ -51926,7 +51929,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000358';
+const BUILD_ID = '2026-11-01.00000359';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
