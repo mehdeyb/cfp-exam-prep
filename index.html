@@ -45501,7 +45501,7 @@ function startAdaptive(opts){
 // section-break state that would need much riskier reconciliation logic
 // to resume safely (what happens if the timer would have expired while
 // the app was closed?), so those are left to simply restart clean.
-const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case'];
+const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case', 'mock', 'fullexam'];
 const STUDY_MODES = ['adaptive', 'drill', 'review', 'case'];
 // The most recent timed sitting (checkpoint or full exam) and how it went against the clock.
 function lastSitting(){ return (DATA.sessions || []).filter(x => (x.mode === 'mock' || x.mode === 'fullexam') && x.total >= 20).pop() || null; }
@@ -45572,6 +45572,9 @@ function saveInProgressSession(){
     selectionReasons: session.selectionReasons || {}, caseId: session.caseId || null, caseLevels: session.caseLevels || null, caseTarget: session.caseTarget || null, caseSteps: session.caseSteps || null,
     siblingOf: session.siblingOf || {}, wantNew: session.wantNew || {}, gated: Array.from(session.gated || []),
     readinessAtStart: session.readinessAtStart, readinessExactAtStart: session.readinessExactAtStart,
+    // Timed exams keep their answers, flags and end time, so a resumed exam shows the time that is actually left.
+    examAnswers: session.examAnswers || {}, flagged: Array.from(session.flagged || []), timerEndAt: session.timerEndAt || null,
+    sectionBreakIndex: session.sectionBreakIndex == null ? null : session.sectionBreakIndex, onSectionBreak: !!session.onSectionBreak,
   };
   // A case keeps its own draft, so starting another case never throws away the answers already given here.
   if(session.mode === 'case' && session.caseId){
@@ -45597,19 +45600,21 @@ function resumeInProgressSession(){
   // overlay, since #quizFullscreenHost's un-activated state is
   // display:contents. Tapping Resume looked like it did nothing.
   lockBodyScroll();
-  const wasAlreadyAnswered = (saved.answerLog || []).some(e => e.index === saved.index);
+  const examSaved = saved.mode === 'mock' || saved.mode === 'fullexam';
+  const wasAlreadyAnswered = examSaved ? false : (saved.answerLog || []).some(e => e.index === saved.index);
   const resumeIndex = wasAlreadyAnswered ? saved.index + 1 : saved.index;
   session = {
     queue: saved.queue, mode: saved.mode, index: resumeIndex, correct: saved.correct,
     domainTally: saved.domainTally, answerLog: saved.answerLog,
     sectionBreakIndex: null, onSectionBreak: false,
-    examAnswers: {}, flagged: new Set(), scored: false,
+    examAnswers: saved.examAnswers || {}, flagged: new Set(saved.flagged || []), scored: false,
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, planReview: saved.planReview || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
     siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
+  if(examSaved) session.timerSeconds = saved.timerEndAt ? Math.max(0, Math.round((saved.timerEndAt - Date.now()) / 1000)) : 0;
   try{ const _a = document.querySelector('.tab-panel.active'); if(_a && !document.body.classList.contains('quiz-active')) window._quizOrigin = (_a.id === 'tab-tutor' || _a.id === 'tab-study') ? _a.id.slice(4) : ''; }catch(e){}
   document.querySelectorAll('.tab-panel.active').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-study').classList.add('active');
@@ -45620,6 +45625,12 @@ function resumeInProgressSession(){
   document.getElementById('quizView').style.display = 'block';
   document.getElementById('quizTimer').style.display = 'none';
   enterFullScreenQuiz();
+  if(examSaved){
+    // The clock picks up from the saved end time: time that passed while the app was closed is gone, as it is in a real exam.
+    if(session.timerSeconds <= 0){ examTimeUp(); return; }
+    document.getElementById('quizTimer').style.display = '';
+    startTimer();
+  }
   if(resumeIndex >= session.queue.length){
     finishSession();
   } else {
@@ -45638,7 +45649,7 @@ function dismissInProgressSession(){
 // The half-finished session is offered once, in the Next best step card (resume, or start fresh); there is no separate banner.
 function renderResumeSessionBanner(){}
 function resumeSessionLabel(saved){
-  const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study' }[saved.mode] || 'session');
+  const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study', mock: 'Mock Exam', fullexam: 'Full Exam' }[saved.mode] || 'session');
   return modeLabel;
 }
 
@@ -47530,6 +47541,7 @@ async function maybeSwapQuestionForVariant(q){
 
 function selectExamAnswer(i){
   session.examAnswers[session.index] = i;
+  try{ saveInProgressSession(); }catch(e){}
   updatePaceChip();
   const wraps = document.querySelectorAll('#qChoices .choice-wrap');
   wraps.forEach((wrap, idx)=>{
@@ -49233,8 +49245,9 @@ function exitToMenu(){
   if(session && RESUMABLE_MODES.includes(session.mode)){
     const rv = document.getElementById('resultsView');
     const finished = rv && rv.style.display !== 'none' && rv.style.display !== '';
-    if(!finished && (session.answerLog || []).length > 0 && session.index < session.queue.length){ saveInProgressSession(); }
-    else if(!(DATA.inProgressSession && (DATA.inProgressSession.answerLog || []).length > 0 && !finished)) clearInProgressSession();
+    const answeredAny = (session.answerLog || []).length > 0 || Object.keys(session.examAnswers || {}).length > 0;
+    if(!finished && answeredAny && session.index < session.queue.length){ saveInProgressSession(); }
+    else if(!(DATA.inProgressSession && ((DATA.inProgressSession.answerLog || []).length > 0 || Object.keys(DATA.inProgressSession.examAnswers || {}).length > 0) && !finished)) clearInProgressSession();
   }
   session = null;
   setTimeout(maybeAutoGenerateCase, 3000);
@@ -53734,7 +53747,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000370';
+const BUILD_ID = '2026-11-01.00000371';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
