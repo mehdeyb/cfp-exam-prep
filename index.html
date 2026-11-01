@@ -32636,6 +32636,31 @@ function caseQuestions(id){
   const re = new RegExp('^' + id + '-(\\d+)$');
   return allQuestions().filter(q => re.test(q.id)).sort((a,b) => parseInt(a.id.split('-')[1],10) - parseInt(b.id.split('-')[1],10));
 }
+// Distinctive facts of a case: client first names and dollar or percent figures. A new case that reuses them is the same story with new labels.
+const CASE_COMMON_WORDS = new Set(['The','This','That','They','Their','There','These','She','He','Her','His','Its','Mr','Mrs','Ms','Dr','If','In','At','On','For','With','After','Before','When','While','Over','Each','Both','Last','Next','IRA','IRS','Roth','ETF','SEP','SIMPLE','Social','Security','Medicare','Medicaid','New','One','Two','Three','Under','Since','Because','Also','Assume','Ignore','Client','Clients','Planner','Under','Ohio','Florida','Texas','California','York','Year','Years','Once','Under','Later','Earlier','Today','Their','Your','What','Which','How','Why','Who']);
+function caseFacts(text){
+  const s = new Set(), t = String(text || '');
+  (t.match(/\b[A-Z][a-z]{2,}\b/g) || []).forEach(w => { if(!CASE_COMMON_WORDS.has(w)) s.add('n:' + w.toLowerCase()); });
+  (t.match(/\$[\d,]+(?:\.\d+)?|\d+(?:\.\d+)?%/g) || []).forEach(f => s.add('f:' + f.replace(/,/g, '')));
+  return s;
+}
+function recentCaseScenarios(){
+  return allCases().map(c => { const q = caseQuestions(c.id)[0]; return q && q.scenario ? String(q.scenario) : ''; }).filter(Boolean);
+}
+// True when a new case shares two or more client names, or a name and two figures, or four figures, with a case already in the app.
+function caseRepeatsEarlier(scenario){
+  const mine = caseFacts(scenario);
+  return recentCaseScenarios().some(prev => {
+    const theirs = caseFacts(prev); let names = 0, figs = 0;
+    mine.forEach(f => { if(theirs.has(f)){ if(f[0] === 'n') names++; else figs++; } });
+    return names >= 2 || (names >= 1 && figs >= 2) || figs >= 4;
+  });
+}
+function caseNamesInUse(){
+  const out = new Set();
+  recentCaseScenarios().forEach(s => (String(s).match(/\b[A-Z][a-z]{2,}\b/g) || []).forEach(w => { if(!CASE_COMMON_WORDS.has(w)) out.add(w); }));
+  return Array.from(out).slice(0, 80);
+}
 let caseGenBusy = false;
 function buildCasePrompt(domainKeys, variant){
   const titles = allCases().map(c => c.title).join('; ');
@@ -32643,7 +32668,10 @@ function buildCasePrompt(domainKeys, variant){
   const caseLevel = avgStage < 2 ? 'Keep the case straightforward: one clear goal, simple figures, one complication, and questions that each test one core idea.' : avgStage < 3 ? 'Give the case two complications and ask questions needing one or two steps of reasoning.' : 'Make the case demanding: several complications, some irrelevant detail, and questions that need the right rule chosen before it is applied.';
   const domLines = domainKeys.map((k,i) => { const d = DOMAINS.find(x => x.key === k); return `${i+1}. "${k}" (${d.name})`; }).join('\n');
   const variantLine = variant ? `\nThis is a FRESH VERSION for a learner who has already worked the case "${variant.title}". Test the same underlying concepts as these earlier questions, but never the same story: ${variant.stems.map((t, i) => (i + 1) + ') ' + t).join(' ')}\nChange the client names, ages, family, figures and, most importantly, the deciding facts so that a memorized answer from the earlier case would be WRONG for at least three of the new questions (for example a different filing status, plan type, or timing that flips the rule). The correct answer should sit in a different position than before. Do not reuse any earlier names.` : '';
+  const namesInUse = caseNamesInUse();
+  const avoidLine = namesInUse.length ? `Do not use any of these names, or the same family situation, anywhere in the case: ${namesInUse.join(', ')}.` : '';
   return `You write realistic client case studies for CFP® exam candidates.${variantLine}
+${avoidLine}
 Write ONE new client situation of 110 to 170 words with specific figures (ages, incomes, balances, goals, a few complications). It must feel different from these existing cases${variant ? ' (except for the concepts it tests)' : ''}: ${titles}.
 ${caseLevel}
 Then write exactly 5 multiple-choice questions, each of which depends on facts in the case, one per domain in this order:
@@ -32722,6 +32750,7 @@ async function generateNewCase(opts){
           const kept = [];
           for(const q of made.questions){ if(await blindSolveOk(q)) kept.push(q); }
           made = kept.length >= 4 ? Object.assign({}, made, { questions: kept }) : null;
+          if(made && caseRepeatsEarlier(made.scenario)) made = null; // same people or figures as a case already in the app: try again
         }
         if(!made && !/[\]}]\s*$/.test(String(raw).trim())) maxTokens += 1200;
       }catch(e){ /* try again */ }
@@ -45496,7 +45525,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-10-31.00000333';
+const BUILD_ID = '2026-10-31.00000334';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
