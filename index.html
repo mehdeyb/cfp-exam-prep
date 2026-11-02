@@ -29115,7 +29115,7 @@ function tutorRunDiagnostic(inp){
   });
   if(queue.length < 3) return 'Error: not enough questions on those topics to run a diagnostic.';
   showTab('study');
-  DATA.recentAdaptiveIds = (DATA.recentAdaptiveIds || []).concat(queue.map(q => q.id)).slice(-40);
+  DATA.recentAdaptiveIds = (DATA.recentAdaptiveIds || []).concat(queue.map(q => q.id)).slice(-80);
   beginSession(shuffle(queue).slice(0, cnt), 'drill', null);
   try{ session.diagnostic = true; }catch(err){}
   return `Started a ${Math.min(cnt, queue.length)}-question diagnostic across ${topics.length} topic(s): ${topics.map(t => t.name).join('; ')}. When they finish, call diagnose_learner again to read what it showed, then shape_today_plan.`;
@@ -35631,7 +35631,7 @@ function startSubtopicDrill(domainKey, idx, skipConcept){
   if(!DATA.subtopicDrillAt) DATA.subtopicDrillAt = {};
   DATA.subtopicDrillAt[domainKey + '-' + idx] = Date.now();
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
-  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
+  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-80);
   beginSession(queue, 'drill', null);
   try{ const nm = (SUBTOPICS[domainKey] || [])[idx]; const tk = domainKey + '-' + idx; session.drillTopic = tk; planDayLog().meta[tk] = { key:domainKey, idx, name: nm || tk }; }catch(e){}
 }
@@ -39809,7 +39809,7 @@ function pickAdaptiveQueue(n){
   // per-domain where enough OTHER material exists to still work without
   // it -- a small domain is never starved of eligible content just to
   // avoid a repeat.
-  const recentSet = new Set((DATA.recentAdaptiveIds || []).slice(-28));
+  const recentSet = new Set((DATA.recentAdaptiveIds || []).slice(-60));
   const MIN_DOMAIN_POOL = 4;
   const domainNonRecentCounts = {};
   DOMAINS.forEach(d => {
@@ -39894,7 +39894,7 @@ function pickAdaptiveQueue(n){
   const remainingEligible = eligible.filter(q => !usedIds.has(q.id));
   const missedEligible = remainingEligible.filter(q => DATA.missed.includes(q.id));
   const freshEligible = remainingEligible.filter(q => !DATA.missed.includes(q.id));
-  const maxMissedSlots = Math.max(2, Math.ceil(n * 0.35));
+  const maxMissedSlots = Math.max(2, Math.ceil(n * 0.25));
   const missedAlreadyInFloor = picks.filter(q => DATA.missed.includes(q.id)).length;
   const missedSlotsLeft = Math.max(0, maxMissedSlots - missedAlreadyInFloor);
 
@@ -39954,8 +39954,43 @@ function pickAdaptiveQueue(n){
       picks.push(restingLeft[i]);
     }
   }
+  // Balance within the session. No subtopic takes more than its share, and two
+  // questions that test the same answer in the same subtopic are not both used.
+  // Replacements come from the same domain and the same eligible or resting
+  // material, so the domain mix above is unchanged. A question that cannot be
+  // replaced is kept, so a thin subtopic is never left short.
+  {
+    const subKey = q => inferQuestionSubtopic(q) || (q.domain + '-?');
+    const answerKey = q => String(q.choices[q.correct] || '').toLowerCase().replace(/[^a-z0-9% ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const dupKey = q => (q.sub || '') + '|' + answerKey(q);
+    const cap = Math.max(2, Math.ceil(n * 0.2));
+    const protectedIds = new Set(conceptPairs.flat());
+    const movable = q => !protectedIds.has(q.id) && ['fresh','due','domainFloor','resting'].includes(reasons[q.id]);
+    const subCount = {}, ansSeen = new Set(), kept = [], over = [];
+    picks.forEach(q => {
+      const sk = subKey(q);
+      if(movable(q) && ((subCount[sk] || 0) >= cap || ansSeen.has(dupKey(q)))) { over.push(q); return; }
+      kept.push(q); subCount[sk] = (subCount[sk] || 0) + 1; ansSeen.add(dupKey(q));
+    });
+    const pool = eligible.concat(resting);
+    over.forEach(q => {
+      const cands = pool.filter(c => !usedIds.has(c.id) && c.domain === q.domain && (subCount[subKey(c)] || 0) < cap && !ansSeen.has(dupKey(c)));
+      const r = cands.length ? weightedDrawWithoutReplacement(cands, 1)[0] : null;
+      if(r){
+        usedIds.delete(q.id); delete reasons[q.id];
+        const isDue = eligible.includes(r);
+        reasons[r.id] = isDue ? (getSpacedStat(DATA.questionStats, r.id).seen > 0 ? 'due' : 'fresh') : 'resting';
+        usedIds.add(r.id);
+        kept.push(r); subCount[subKey(r)] = (subCount[subKey(r)] || 0) + 1; ansSeen.add(dupKey(r));
+      } else {
+        kept.push(q); subCount[subKey(q)] = (subCount[subKey(q)] || 0) + 1; ansSeen.add(dupKey(q));
+      }
+    });
+    picks.length = 0; picks.push(...kept);
+  }
+
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
-  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(picks.map(q=>q.id)).slice(-40);
+  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(picks.map(q=>q.id)).slice(-80);
   // Mode slots: a session should not be only plain recall. Make sure it carries one or two applied scenario questions (the exam's
   // case-style items) and one worked-calculation item when such material is due, by swapping them in for plain new or due picks
   // of the same domain, so the domain balance above is unchanged. Domains still being rebuilt keep to simpler material.
@@ -45774,7 +45809,7 @@ async function startDrill(domainKey){
 function launchDrill(domainKey, size, unseen){
   document.body.classList.remove('domain-picker-active'); // leave scroll locked continuously through this transition into the quiz — see lockBodyScroll's idempotency check
   const all = allQuestions().filter(q => q.domain === domainKey);
-  const recent = new Set((DATA.recentAdaptiveIds || []).slice(-28));
+  const recent = new Set((DATA.recentAdaptiveIds || []).slice(-60));
   const reasons = {}, picks = [], used = new Set();
   const take = (q, why) => { picks.push(q); used.add(q.id); reasons[q.id] = why; };
   const weak = drillWeakTopic(domainKey);
@@ -45804,7 +45839,7 @@ function launchDrill(domainKey, size, unseen){
     ? picks.map(q => ({ q, k: questionDifficulty(q) + Math.random() * 1.4 })).sort((a, b) => a.k - b.k).map(x => x.q)
     : shuffle(picks);
   if(!DATA.recentAdaptiveIds) DATA.recentAdaptiveIds = [];
-  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-40);
+  DATA.recentAdaptiveIds = DATA.recentAdaptiveIds.concat(queue.map(q => q.id)).slice(-80);
   beginSession(queue, 'drill', null, reasons);
   // Only answers from a weakest-area drill count toward that plan step; a review or other drill does not.
   try{ if(_wkDrillPending === domainKey && session) session.weakDom = domainKey; }catch(e){}
@@ -54958,7 +54993,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000423';
+const BUILD_ID = '2026-11-01.00000424';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
