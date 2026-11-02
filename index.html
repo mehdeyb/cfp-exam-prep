@@ -5221,6 +5221,7 @@
             </div>
             <div class="result-col result-col-r">
             <div id="retrievalRecap" style="display:none;"></div>
+            <div id="adaptiveNext" style="display:none;margin:14px 0;padding:14px 16px;border-radius:12px;border:1px solid rgba(127,127,127,.25);"></div>
             </div>
             <div class="quiz-actions">
               <button class="btn ghost" onclick="exitToMenu()">Back to studio</button>
@@ -46560,6 +46561,38 @@ function adaptiveAfterAnswer(q, isCorrect){
   session.selectionReasons = session.selectionReasons || {};
   session.selectionReasons[pick.id] = 'followUp';
 }
+// An adaptive sitting ends on one concrete next step: the subtopic where it cost the most, with a button
+// that opens its drill. Only shown when two or more misses share a subtopic, since one miss is not a pattern yet.
+function adaptiveNextTarget(){
+  if(!session || session.mode !== 'adaptive') return null;
+  const hit = {}, tried = {};
+  (session.answerLog || []).forEach(a => {
+    const q = session.queue[a.index]; const key = q && inferQuestionSubtopic(q);
+    if(!key) return;
+    tried[key] = (tried[key] || 0) + 1;
+    if(!a.correct) hit[key] = (hit[key] || 0) + 1;
+  });
+  const best = Object.keys(hit).map(key => ({ key, n: hit[key] })).filter(x => x.n >= 2).sort((a, b) => b.n - a.n)[0];
+  if(!best) return null;
+  const cut = best.key.lastIndexOf('-');
+  const dk = best.key.slice(0, cut), idx = +best.key.slice(cut + 1);
+  const name = (SUBTOPICS[dk] || [])[idx];
+  if(!name) return null;
+  const dom = DOMAINS.find(d => d.key === dk);
+  return { dk, idx, name, domName: dom ? dom.name : dk, miss: best.n, total: tried[best.key] || best.n };
+}
+function renderAdaptiveNext(){
+  const box = document.getElementById('adaptiveNext'); if(!box) return;
+  const t = adaptiveNextTarget();
+  if(!t){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="an-h" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Next step</div>'
+    + '<div style="font-size:17px;font-weight:600;margin:4px 0 2px;">' + escapeHtml(t.name) + ' <span style="font-weight:400;opacity:.7;">· ' + escapeHtml(t.domName) + '</span></div>'
+    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">You missed ' + t.miss + ' of ' + t.total + ' questions here. The drill starts with the ones you missed. Misses in this sitting are saved and come back in later sessions.</div>'
+    + '<button class="btn" id="adaptiveNextBtn" type="button">Work on this subtopic</button>';
+  box.style.display = 'block';
+  const btn = document.getElementById('adaptiveNextBtn');
+  if(btn) btn.onclick = () => { try{ startSubtopicDrill(t.dk, t.idx); }catch(e){} };
+}
 
 /* ===========================================================
    QUIZ RUNTIME
@@ -50224,6 +50257,7 @@ function finishSession(){
   }catch(e){}
   renderPlanResult();
   try{ renderStmtRecap(); }catch(e){}
+  try{ renderAdaptiveNext(); }catch(e){}
 
   const sectionBox = document.getElementById('sectionBreakdown');
   if(session.mode==='fullexam' && session.sectionBreakIndex){
@@ -55041,7 +55075,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000432';
+const BUILD_ID = '2026-11-02.00000433';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
