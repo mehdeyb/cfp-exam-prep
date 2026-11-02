@@ -46635,7 +46635,7 @@ function saveInProgressSession(){
   if(!session || !RESUMABLE_MODES.includes(session.mode)) return;
   catchupNote(session);
   DATA.inProgressSession = {
-    catchup: !!session.catchup,
+    catchup: !!session.catchup, plannedLen: session.plannedLen || null, followUps: session.followUps || 0,
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
     variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null, weakDom: session.weakDom || null, planReview: session.planReview || null,
@@ -46682,7 +46682,7 @@ function resumeInProgressSession(){
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, planReview: saved.planReview || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
-    siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup,
+    siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup, plannedLen: saved.plannedLen || null, followUps: saved.followUps || 0,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
   if(saved.figDrill) session.figDrill = true;
@@ -55041,7 +55041,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000431';
+const BUILD_ID = '2026-11-02.00000432';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
