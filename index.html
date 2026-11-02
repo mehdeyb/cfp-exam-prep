@@ -4086,6 +4086,9 @@
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:static;background:none;margin-top:14px;padding:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{min-height:clamp(300px,52vh,520px);}
     /* The explanation takes the card's right half, beside the term and definition, so the whole card reads without scrolling. */
+    /* No helper row beside the card any more: the card takes the width and height of the screen. */
+    body.flashcard-fullscreen .fc-fullscreen-inner{ max-width:min(1180px, calc(100vw - 40px)) !important; width:100%; }
+    body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{ min-height:calc(100dvh - 200px) !important; height:auto; }
     /* Card teaching section: two columns on landscape tablets, one column on phones. */
     #fcRetell.fc-teach-grid{ display:grid !important; grid-template-columns:1fr; gap:4px 18px; }
     @media (min-width:700px) and (orientation:landscape){ #fcRetell.fc-teach-grid{ grid-template-columns:1fr 1fr; } }
@@ -4604,7 +4607,7 @@
   @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
     body{padding-bottom:16px !important;}
     #tab-flashcards .fc-deck-line, #tab-flashcards p.hint.fc-deck-line{display:none !important;}
-    #tab-flashcards .fc-card{padding:16px 22px !important;min-height:0 !important;}
+    #tab-flashcards .fc-card{padding:16px 22px !important;min-height:calc(100dvh - 230px) !important;}
     #tab-flashcards .fc-actions{margin-top:8px !important;}
     #tab-flashcards .fc-controls{margin-top:6px !important;gap:6px !important;}
     #tab-flashcards .fc-controls .btn{padding:6px 10px !important;font-size:12px !important;}
@@ -5527,9 +5530,6 @@
             <button class="btn learning" onclick="rateFlashcard(false)">Still learning</button>
             <button class="btn know" onclick="rateFlashcard(true)">I know this</button>
             <button class="speak-btn" id="speakFlashcardBtn" title="Read card aloud" onclick="event.stopPropagation(); speakFlashcard();" style="display:none;"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
-          </div>
-          <div class="fc-mnemonic-row" id="fcMnemonicRow" style="display:none;">
-            <button class="btn ghost" id="fcTutorBtn" onclick="event.stopPropagation(); askTutorAboutCard();">Talk it through with the tutor</button>
           </div>
           
         </div>
@@ -38350,8 +38350,6 @@ function renderFlashcard(){
   document.getElementById('fcHint').textContent = fcCardSignals(card).leech ? 'say it in your own words, then tap to reveal' : 'tap to reveal';
   document.getElementById('fcActions').style.display = 'none';
   fcApplyAdaptation(card);
-  const mnemonicRow = document.getElementById('fcMnemonicRow');
-  if(mnemonicRow) mnemonicRow.style.display = 'none';
   fcFlipped = false;
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = 'Explain it first'; }
 }
@@ -38671,9 +38669,6 @@ function flipFlashcardContent(){
     else if(hb && fcAdaptOn() && fcView.mode === 'foundation' && !fcView.hintUsed) hb.style.display = 'inline-flex';
     else if(hl && fcView.hintUsed) hl.style.display = 'block'; }
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = fcFlipped ? 'Explain it back' : 'Explain it first'; }
-  const mnemonicRow = document.getElementById('fcMnemonicRow');
-  // The row shows whenever a card is flipped (it holds the tutor button).
-  if(mnemonicRow) mnemonicRow.style.display = fcFlipped ? 'flex' : 'none';
   const speakBtn = document.getElementById('speakFlashcardBtn');
   if(speakBtn) speakBtn.style.display = (fcFlipped && hasSpeechSupport()) ? 'flex' : 'none';
   try{ fcPaintRetell(); }catch(e){}
@@ -39060,11 +39055,6 @@ function fcKeepInView(){
   const c = document.getElementById('fcCard'); if(!c || c.style.display === 'none') return;
   const r = c.getBoundingClientRect();
   if(r.top < 70 || r.bottom > window.innerHeight - 90){ try{ c.scrollIntoView({ block: 'center', behavior: 'auto' }); }catch(e){} }
-}
-function askTutorAboutCard(){
-  const c = fcQueue[fcIndex]; if(!c) return;
-  if(document.body.classList.contains('flashcard-fullscreen')) exitFlashcardFullscreen();
-  askTutorAbout('I am studying the flashcard "' + c.term + '" (' + c.def + ') Check whether I really understand it: ask me one short question about it, wait for my answer, then tell me exactly what I am missing and how the exam might test it.', { kind:'term', term:c.term, def:c.def });
 }
 let _fcUndo = null;
 function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b) return; const rc = document.getElementById('fcRecap'); const ok = _fcUndo && _fcUndo.queue === fcQueue && !(rc && rc.style.display === 'block'); b.classList.toggle('show', !!ok); }
@@ -55106,7 +55096,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000447';
+const BUILD_ID = '2026-11-02.00000448';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
