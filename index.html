@@ -30242,7 +30242,7 @@ function buildStudyPlanCore(minutes){
     logistics: () => {
       let when = ''; try{ if(DATA.examDate){ const p = String(DATA.examDate).split('-').map(Number); when = new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); } }catch(e){}
       const days = getDaysUntilExam();
-      const dbw = (DATA && DATA.dayBefore) || { checked: 0, total: 0 };
+      const dbw = (DATA && DATA.dayBefore) || (() => { try{ return JSON.parse(localStorage.getItem('cfp-dayBefore-count')) || { checked: 0, total: 0 }; }catch(e){ return { checked: 0, total: 0 }; } })();
       const dbwTotal = dbw.total || 0, dbwHave = Math.min(dbw.checked || 0, dbwTotal);
       const dbwWhy = dbwTotal ? (dbwHave >= dbwTotal ? 'Every item on the exam-day walkthrough is ticked. ' : dbwHave + ' of ' + dbwTotal + ' items ticked on the exam-day walkthrough. Tick them as you go; this step completes when they are all ticked. ') : 'Open the exam-day walkthrough and tick its items as you go. ';
       return { id:'logistics', title: when ? `Check your exam-day plan: ${when}` : 'Check your exam-day plan', minutes:5,
@@ -55240,7 +55240,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000440';
+const BUILD_ID = '2026-11-02.00000441';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -55933,7 +55933,9 @@ function perfEnable(){
     try{
       const total = STEPS.reduce((a, x) => a + x.items.length, 0);
       const checked = STEPS.reduce((a, x) => a + x.items.filter(it => s && s.checks && s.checks[it.id]).length, 0);
-      if(typeof DATA !== 'undefined' && DATA){ DATA.dayBefore = { checked, total, at: Date.now() }; persist(); }
+      const info = { checked, total, at: Date.now() };
+      try{ localStorage.setItem('cfp-dayBefore-count', JSON.stringify(info)); }catch(e){}
+      if(typeof DATA !== 'undefined' && DATA){ DATA.dayBefore = info; persist(); }
     }catch(e){}
   }
 
