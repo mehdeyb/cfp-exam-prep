@@ -5,3 +5,4 @@
 - Each answer counts toward a plan step only if it came from that step's own activity. A review of missed questions counts only for the missed step. A walk-through counts only for its own step. A plan step's title must describe what its Start actually opens.
 - Bump BUILD_ID in index.html, build.json and /home/claude/build.json for every push.
 - Before pushing any change, run `node tools/persist-check.js`. Saved progress must survive a reload; a failing check blocks the push.
+- Before pushing any change, also run `node tools/backup-check.js`. A backup must restore progress intact.
