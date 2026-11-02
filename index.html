@@ -4086,6 +4086,10 @@
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-actions{position:static;background:none;margin-top:14px;padding:0;}
     body.flashcard-fullscreen .fc-fullscreen-inner > .fc-card{min-height:clamp(300px,52vh,520px);}
     /* The explanation takes the card's right half, beside the term and definition, so the whole card reads without scrolling. */
+    /* Card teaching section: two columns on landscape tablets, one column on phones. */
+    #fcRetell.fc-teach-grid{ display:grid !important; grid-template-columns:1fr; gap:4px 18px; }
+    @media (min-width:700px) and (orientation:landscape){ #fcRetell.fc-teach-grid{ grid-template-columns:1fr 1fr; } }
+    #fcRetell .fc-teach-more{ grid-column:1 / -1; justify-self:start; margin-top:10px; }
     /* Worked example open (landscape): the card runs the full width of the screen, the helper buttons sit above it and the worked example runs in three columns beneath it, so the whole study screen is built around the card. */
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]){grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto auto;max-width:calc(100vw - 32px);width:100%;margin-left:auto;margin-right:auto;align-content:start;}
     body.flashcard-fullscreen .fc-fullscreen-inner:has(> #fcMnemonicRow[style*="flex"]) > .fc-progress{grid-column:1;grid-row:1;}
@@ -38534,7 +38538,7 @@ const FC_TEACH_LABELS = [
   { k:'trap',   re:/^exam trap\s*:/i,           label:'How the exam trips you' },
   { k:'check',  re:/^check\s*:/i,              label:'Check yourself' }
 ];
-const _fcTeachBusy = {}, _fcTeachFailed = {};
+const _fcTeachBusy = {}, _fcTeachFailed = {}, _fcTeachForce = {};
 function fcTeachGet(card){
   const t = DATA && DATA.fcTeach && DATA.fcTeach[card.id];
   return t && Array.isArray(t.sections) && t.sections.length >= 3 ? t : null;
@@ -38554,12 +38558,13 @@ function fcTeachParse(text){
 }
 async function fcMaybeTeach(card){
   if(!aiFeaturesAvailable || _fcTeachBusy[card.id]) return;
+  const force = !!_fcTeachForce[card.id]; delete _fcTeachForce[card.id];
   let ctx = { picks:[], mix:null, justRated:null, distractor:null, quiz:null };
   try{ ctx = fcExplainContext(card); }catch(e){}
   const sig = fcExplainSignature(card, ctx);
   const stored = fcTeachGet(card);
-  if(stored && stored.sig === sig) return; // already current for this student's history
-  if(!stored && _fcTeachFailed[card.id] === sig) return; // this history already failed once
+  if(stored && stored.sig === sig && !force) return; // already current for this student's history
+  if(!stored && !force && _fcTeachFailed[card.id] === sig) return; // this history already failed once
   _fcTeachBusy[card.id] = true;
   try{
     const lines = [];
@@ -38597,20 +38602,35 @@ async function fcMaybeTeach(card){
 }
 function fcPaintTeach(box, t){
   box.innerHTML = '';
+  box.classList.toggle('fc-teach-grid', t.sections.length > 2);
   t.sections.forEach(sec => {
     const row = document.createElement('div'); row.style.marginTop = '8px';
     const l = document.createElement('b'); l.textContent = sec.label; row.appendChild(l);
     row.appendChild(document.createTextNode(sec.text));
     box.appendChild(row);
   });
+  if(t.ai){
+    const more = document.createElement('button'); more.className = 'btn ghost fc-teach-more';
+    more.textContent = 'Another example';
+    more.onclick = (e) => { e.stopPropagation(); const c = fcQueue[fcIndex]; if(c) fcRegenerateTeach(c); };
+    box.appendChild(more);
+  }
   box.style.display = 'block';
+}
+// Writes a fresh lesson for this card on request. The old lesson stays on screen until the new one is ready.
+function fcRegenerateTeach(card){
+  if(!aiFeaturesAvailable || _fcTeachBusy[card.id]) return;
+  _fcTeachForce[card.id] = true;
+  const box = document.getElementById('fcRetell');
+  if(box){ box.classList.remove('fc-teach-grid'); box.innerHTML = ''; const w = document.createElement('b'); w.textContent = 'Writing another example…'; box.appendChild(w); box.style.display = 'block'; }
+  fcMaybeTeach(card);
 }
 function fcPaintRetell(){
   const box = document.getElementById('fcRetell'); if(!box) return;
   const card = fcQueue[fcIndex];
   if(!fcFlipped || !card || (fcView && fcView.mode === 'apply' && !fcView.applied)){ box.style.display = 'none'; box.textContent = ''; return; }
   const teach = fcTeachGet(card);
-  if(teach){ fcPaintTeach(box, teach); return; }
+  if(teach){ fcPaintTeach(box, { sections: teach.sections, ai: true }); return; }
   if(aiFeaturesAvailable && !_fcTeachFailed[card.id]){
     box.innerHTML = ''; const w = document.createElement('b'); w.textContent = 'Teaching this card'; box.appendChild(w);
     box.appendChild(document.createTextNode('Writing a short lesson for this card…')); box.style.display = 'block';
@@ -55171,7 +55191,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000443';
+const BUILD_ID = '2026-11-02.00000444';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
