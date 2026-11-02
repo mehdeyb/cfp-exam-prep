@@ -50038,19 +50038,24 @@ function trapNamesCorrectAnswer(trap, q){
   return ct.length >= 8 && t.toLowerCase().includes(ct);
 }
 function parseSimpleExplanation(raw){
-  try{
-    const m = String(raw || '').match(/\{[\s\S]*\}/); if(!m) return null;
-    const o = JSON.parse(m[0]);
-    const pick = k => String(o[k] || '').replace(/\s+/g, ' ').trim().slice(0, 400);
-    const out = { idea: pick('idea'), why: pick('why'), remember: pick('remember'), trap: pick('trap') };
-    return out.idea && out.why ? out : null;
-  }catch(e){ return null; }
+  // The model sometimes wraps its JSON in a code fence or puts unescaped double quotes inside a value, so a strict parse can fail.
+  // Fall back to reading each named field directly, up to the next field name.
+  const s = String(raw || '').replace(/```(?:json)?/gi, '').trim();
+  const grab = (k, next) => { const tail = next.length ? '(?:\\s*,\\s*"(?:' + next.join('|') + ')"\\s*:|\\s*\\})' : '\\s*\\}'; const m = s.match(new RegExp('"' + k + '"\\s*:\\s*"([\\s\\S]*?)"' + tail)); return m ? m[1] : ''; };
+  let o = null;
+  try{ const m = s.match(/\{[\s\S]*\}/); if(m) o = JSON.parse(m[0]); }catch(e){ o = null; }
+  if(!o) o = { idea: grab('idea', ['why','analogy','remember','trap','spot']), why: grab('why', ['remember','trap','analogy','spot']), remember: grab('remember', ['trap']), trap: grab('trap', []) };
+  const pick = k => String(o[k] == null ? '' : o[k]).replace(/\\"/g, '"').replace(/\s+/g, ' ').trim().slice(0, 400);
+  const out = { idea: pick('idea'), why: pick('why'), remember: pick('remember'), trap: pick('trap') };
+  return out.idea && out.why ? out : null;
 }
 function simpleExplanationSpeech(reply){
   if(typeof reply === 'string') return reply;
   return [reply.idea, reply.why, reply.remember ? 'Remember: ' + reply.remember : '', reply.trap ? 'Watch out: ' + reply.trap : ''].filter(Boolean).join(' ');
 }
 function renderSimplifiedExplanation(box, reply, fromCache){
+  // Replies saved before the parser was fixed may still be raw text: read them again, and never show raw JSON.
+  if(typeof reply === 'string'){ const p = parseSimpleExplanation(reply); if(p) reply = p; else if(/"idea"|```/.test(reply)) reply = "That explanation didn't come through cleanly. Tap 'Try a different explanation' for another."; }
   box.className = 'simplified-explanation';
   box.innerHTML = '';
   const label = document.createElement('span');
@@ -50162,7 +50167,7 @@ They already read a standard rationale for each choice, but it wasn't clicking. 
   try{
     const rawSimple = await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 1100 });
     let reply = parseSimpleExplanation(rawSimple)
-      || trimToSentence(rawSimple)
+      || (/"idea"|```/.test(String(rawSimple || '')) ? null : trimToSentence(rawSimple))
       || "Sorry, I couldn't come up with a simpler version just then — try again in a moment.";
     // The trap is about a wrong answer. If the model named the correct one, drop the trap rather than teach the wrong lesson.
     if(reply && typeof reply === 'object') reply = Object.assign({}, reply, cleanLetterFields(reply, q));
@@ -55237,7 +55242,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000452';
+const BUILD_ID = '2026-11-02.00000453';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
