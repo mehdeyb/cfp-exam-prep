@@ -30078,7 +30078,7 @@ function buildStudyPlanCore(minutes){
         const n = pin.length, still = pin.filter(id => (DATA.missed || []).includes(id) && !walkedToday(id));
         return { id:'listen', missWalk:true, title:`Walk through ${n} missed question${n === 1 ? '' : 's'} in ${dn}`, minutes: Math.max(5, Math.round(n * 1.6)), need:n, have: n - still.length, unit:'questions',
           why:`Each question you missed in ${dn} comes back with what you picked, why it looked right, and the fix. It counts off once you answer it correctly.`,
-          run: () => { mwOpen(pin.length, pin); } };
+          run: () => { mwOpen(pin.length, pin, 'listen'); } };
       }
       const first = b && b.focus.length ? b.focus[0].label : weakDom.name;
       const top = b && b.focus.length ? b.focus.slice(0, 2).map(f => f.label).join(' and ') : weakDom.name;
@@ -46058,7 +46058,7 @@ function mwSave(){
     if(!mw || mw.stage === 'wrap'){ return; }
     // Working in the walk-through starts the day, so the plan's pinned misses stop re-deriving while it is in progress.
     try{ planDayLog().started = true; }catch(e){}
-    DATA.mwProgress = { at: Date.now(), i: mw.i, used: Array.from(mw.used || []), planDone: !!mw.planDone, total: mw.total || 0,
+    DATA.mwProgress = { at: Date.now(), src: mw.src || null, i: mw.i, used: Array.from(mw.used || []), planDone: !!mw.planDone, total: mw.total || 0,
       items: mw.items.map(x => ({ id: x.q.id, why: x.why || '', pick: x.pick, stage: x.stage, reason: x.reason || null, nowRight: !!x.nowRight, sib: x.sib || null, sibPick: x.sibPick, ok: x.ok })) };
     persist();
   }catch(e){}
@@ -46076,7 +46076,7 @@ function mwRestore(){
   if(!items.length || items.every(x => x.stage === 'done')){ mwClear(); return null; }
   let i = Math.min(Math.max(0, p.i || 0), items.length - 1);
   if(items[i].stage === 'done'){ const nx = items.findIndex(x => x.stage !== 'done'); if(nx >= 0) i = nx; }
-  return { items, i, used:new Set(p.used || []), notes:{}, planDone: !!p.planDone, total: p.total || (DATA.missed || []).length, resumed:true };
+  return { items, i, src: p.src || null, used:new Set(p.used || []), notes:{}, planDone: !!p.planDone, total: p.total || (DATA.missed || []).length, resumed:true };
 }
 function mwClean(t){ return String(t || '').replace(/^\s*(Wrong|Correct|Incorrect)\s*[—–-]\s*/i, '').trim(); }
 function mwYourPick(q){
@@ -46161,19 +46161,19 @@ function mwSibling(q, used){
   cand.sort((a, b) => b.sc - a.sc);
   return cand.length ? cand[0].c : null;
 }
-function mwOpen(n, prefer){
+function mwOpen(n, prefer, src){
   const host = document.getElementById('mwHost'); if(!host) return false;
   // A walk-through you left partway comes back at the same miss, even when it is started again from a plan row or a list.
   // It is only picked up when every unfinished miss in it is one that was asked for; otherwise the new list starts fresh.
   const wantIds = prefer ? new Set(prefer.map(x => typeof x === 'string' ? x : x.id)) : null;
   const saved = mwRestore();
   // Misses already fixed drop out of the open list, so only the unfinished ones have to be in it.
-  const back = saved && (!wantIds || saved.items.filter(x => x.stage !== 'done').every(x => wantIds.has(x.q.id))) ? saved : null;
+  const back = saved && ((src && saved.src === src) || !wantIds || saved.items.filter(x => x.stage !== 'done').every(x => wantIds.has(x.q.id))) ? saved : null;
   const qs = back ? back.items : mwPick(n || 5, prefer);
   if(!qs.length){ try{ setCoach('Nothing to walk through yet. Questions you miss land here, so an adaptive session is the quickest way to start.', false); }catch(e){} return false; }
   try{ conductorHide(); }catch(e){}
   if(back){ mw = back; }
-  else mw = { items: qs.map(q => ({ q, why: (mwPick.why || {})[q.id] || '', pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
+  else mw = { src: src || null, items: qs.map(q => ({ q, why: (mwPick.why || {})[q.id] || '', pick: mwYourPick(q), stage:'why', reason:null, sib:null, sibPick:null, ok:null })), i:0, used:new Set(), notes:{}, planDone:false, total:(DATA.missed || []).length };
   if(host.parentElement !== document.body){ mw.home = host.parentElement; document.body.appendChild(host); }
   mw.opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   document.body.classList.add('mw-active');
@@ -55149,7 +55149,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000450';
+const BUILD_ID = '2026-11-02.00000451';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
