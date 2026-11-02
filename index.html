@@ -38561,7 +38561,7 @@ async function fcMaybeTeach(card){
   const force = !!_fcTeachForce[card.id]; delete _fcTeachForce[card.id];
   let ctx = { picks:[], mix:null, justRated:null, distractor:null, quiz:null };
   try{ ctx = fcExplainContext(card); }catch(e){}
-  const sig = fcExplainSignature(card, ctx);
+  const sig = fcTeachSig(card, ctx);
   const stored = fcTeachGet(card);
   if(stored && stored.sig === sig && !force) return; // already current for this student's history
   if(!stored && !force && _fcTeachFailed[card.id] === sig) return; // this history already failed once
@@ -38810,6 +38810,13 @@ function fcExplainContext(card){
 const fcClientsUsed = []; // client types already used this session, so examples do not repeat
 function fcExplainSignature(card, ctx){
   return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card), ctx.justRated ? (ctx.justRated.knew ? 'k' : 'm') : '', ctx.distractor || '', ctx.quiz ? (ctx.quiz.stem + ctx.quiz.right) : ''].join('::');
+}
+// The card's lesson is rewritten only when the student's mistakes on it change: a new wrong pick, a new mix-up,
+// another miss on the card, a "did not know" rating, or a missed quiz question. Correct answers do not change it.
+function fcTeachSig(card, ctx){
+  const quizMiss = ctx.quiz && ctx.quiz.answered && ctx.quiz.right === false ? ctx.quiz.stem : '';
+  const notKnew = ctx.justRated && ctx.justRated.knew === false ? 'n' : '';
+  return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card), notKnew, ctx.distractor || '', quizMiss].join('::');
 }
 function fcExplainLocal(card, ctx){
   const out = [{ k:'idea', label:'The idea', text: String(card.def || '') }];
@@ -55191,7 +55198,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000444';
+const BUILD_ID = '2026-11-02.00000445';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
