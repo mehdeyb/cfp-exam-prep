@@ -28728,9 +28728,15 @@ function planLogAnswer(mode){
 }
 // A target that is set the first time it is needed today, so titles and counts stay put while you work through them.
 // A set of misses pinned for today. A walk-through counts only the questions in its own set, and each one drops off once it is answered correctly.
+// A miss counts toward its walk-through once it has been walked today, even if the follow-up was not answered right yet.
+function walkedToday(id){
+  const d = (DATA.mwDone || {})[id]; if(!d) return false;
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  return (d.t || 0) >= start.getTime();
+}
 function pinnedMissWalk(key, pickIds){
   const pin = planTarget(key, pickIds) || [];
-  const still = pin.filter(id => (DATA.missed || []).includes(id));
+  const still = pin.filter(id => (DATA.missed || []).includes(id) && !walkedToday(id));
   return { pin, still, have: pin.length - still.length };
 }
 // Whether a tutor lesson or podcast of this kind finished today (recorded when its playback reaches the end).
@@ -29607,7 +29613,7 @@ function buildStudyPlanCore(minutes){
         const dm = DOMAINS.find(d => d.key === f0.key), dn = dm ? dm.name : f0.key;
         const pin = planTarget('listenMissIds', (DATA.missed || []).filter(id => { const q = allQuestions().find(x => x.id === id); return q && q.domain === f0.key; }).slice(-8));
         if(!pin.length) return null;
-        const n = pin.length, still = pin.filter(id => (DATA.missed || []).includes(id));
+        const n = pin.length, still = pin.filter(id => (DATA.missed || []).includes(id) && !walkedToday(id));
         return { id:'listen', missWalk:true, title:`Walk through ${n} missed question${n === 1 ? '' : 's'} in ${dn}`, minutes: Math.max(5, Math.round(n * 1.6)), need:n, have: n - still.length, unit:'questions',
           why:`Each question you missed in ${dn} comes back with what you picked, why it looked right, and the fix. It counts off once you answer it correctly.`,
           run: () => { mwOpen(pin.length, pin); } };
@@ -54699,7 +54705,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000415';
+const BUILD_ID = '2026-11-01.00000416';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
