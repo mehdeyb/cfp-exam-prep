@@ -29107,7 +29107,8 @@ function ppGo(id){ ppCloseSheet(); try{ const cs = conductorState(); if(cs && cs
 function ppRefresh(){
   try{
     document.querySelectorAll('.pp[data-pp]').forEach(el => {
-      const cur = ppCur(el.dataset.pp);
+      // The flashcard screen keeps its own space for the card, so the plan strip stays off it.
+      const cur = el.dataset.pp === 'fc' ? null : ppCur(el.dataset.pp);
       if(cur === null){ if(el.style.display !== 'none'){ el.style.display = 'none'; el.innerHTML = ''; } return; }
       const h = ppHtml(cur); if(!h){ el.style.display = 'none'; return; }
       if(el._pp !== h){ el.innerHTML = h; el._pp = h; }
@@ -55198,7 +55199,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000445';
+const BUILD_ID = '2026-11-02.00000446';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
