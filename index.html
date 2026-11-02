@@ -29123,8 +29123,8 @@ function planLogAnswer(mode){
     // A catch-up round is an adaptive-mode sitting, but it has its own step: its answers must not also count toward the mixed rounds.
     if(session && session.catchup) mode = 'catchup';
     // A timed mock or full exam counts toward today's plan only when it is finished: a sitting that is left part-way is discarded, so its answers must not tick off the checkpoint.
-    // A learning checkpoint teaches as you go and is not a plan step, so its answers count toward nothing in the plan.
-    if(session && session.mode === 'learncp') return;
+    // A learning checkpoint teaches as you go; its answers count toward the checkpoint step only.
+    if(session && session.mode === 'learncp'){ const L0 = planDayLog(); L0.modes.learncp = (L0.modes.learncp || 0) + 1; return; }
     if(session && (session.mode === 'mock' || session.mode === 'fullexam')){ session.planAnswered = (session.planAnswered || 0) + 1; return; }
     if(mode === 'review' && !(session && session.planReview)) mode = 'review-other'; // stuck re-tests and chat revisits are not 'missed' review
     const L = planDayLog();
@@ -30052,13 +30052,11 @@ function buildStudyPlanCore(minutes){
         run: () => { showTab('study'); startCase(pick.id); } };
     },
     checkpoint: () => {
+      // A learning checkpoint: the exam's domain mix with no clock, and an explanation after every answer. Its own answers count toward this step only.
       if(answered < 100) return null;
-      const lastT = (DATA.sessions || []).filter(x => x.mode === 'mock' || x.mode === 'fullexam').pop();
-      const since = lastT ? (Date.now() - new Date(lastT.date).getTime()) / ONE_DAY_MS : Infinity;
-      if(since < 6 && !act.modes.includes('mock')) return null;
-      return { id:'checkpoint', title:`Timed checkpoint (${MOCK_QUESTION_COUNT} questions)`, minutes:MOCK_MINUTES,
-        why:(() => { const st = sittingClockStatus(lastSitting()); return st === 'tight' ? 'Your last checkpoint left almost no time at the end. Run it again and bank minutes on the easy questions so there is room for the ones you flag.' : st === 'roomy' ? 'Your last checkpoint finished with plenty of clock left. Another one will show whether you can use that time to get more right.' : 'The real exam mix at the real pace shows where you actually stand and how you handle the clock. Its score feeds your readiness number.'; })(),
-        need:MOCK_QUESTION_COUNT, have: Math.min(cnt.mock || 0, MOCK_QUESTION_COUNT), unit:'questions', run: () => { showTab('study'); startMock(); } };
+      return { id:'checkpoint', title:`Learning checkpoint (${MOCK_QUESTION_COUNT} questions)`, minutes:MOCK_MINUTES,
+        why:'Every answer gets its explanation right away, so each miss is taught as it happens. There is no clock, and it counts toward this step only.',
+        need:MOCK_QUESTION_COUNT, have: Math.min(planDayLog().modes.learncp || 0, MOCK_QUESTION_COUNT), unit:'questions', run: () => { showTab('study'); startLearningCheckpoint(); } };
     },
     teach: () => {
       const topic = wk ? wk.name : (weakDom && answered >= 20 ? weakDom.name : null);
@@ -30380,7 +30378,7 @@ function buildStudyPlanCore(minutes){
     const fillScore = {
       tool: [answered >= 60 ? 2 : 0, 'Decision tools turn what you know into client decisions, which is how the exam asks applied questions.'],
       case: [readyCases ? 3 : (answered >= 60 ? 1 : 0), readyCases ? 'Your accuracy is strong enough to work a whole case study, the exam\'s applied format.' : 'A case study ties several topics together.'],
-      checkpoint: [(days !== null && days <= 21 && answered >= 100) ? 3 : 0.5, 'A timed set shows whether your pace holds under exam conditions.'],
+      checkpoint: [(days !== null && days <= 21 && answered >= 100) ? 3 : 0.5, 'A learning checkpoint mixes the exam domains and explains each answer as you go.'],
       weak2: [weakLow ? 3 : 1, weakLow ? wdN + ' is at ' + wdM + '% and carries a large share of the exam.' : 'A focused drill on your weakest subtopic.'],
       adaptive2: [1, 'A mixed round keeps every domain in view, weighted toward your weak spots.'],
       weak3: [weakLow ? 2 : 0.5, weakLow ? 'A second pass on ' + wdN + ', where the score is still low.' : ''],
@@ -30457,7 +30455,6 @@ function buildStudyPlanCore(minutes){
     try{ if(weakDom && weakDom.mastery !== null && weakDom.mastery < 60) needs.push(['weak', `${weakDom.name} is at ${weakDom.mastery}%, and it carries ${weakDom.weight}% of the exam.`]); }catch(e){}
     try{ const fr = figFreshness(); if(fr.due >= 6) needs.push(['figures', `${fr.due} key figures are due for recall; limits and thresholds are where exam questions catch people.`]); }catch(e){}
     try{ const tq = DATA.tvmQuizStats; if(tq && tq.asked >= 4 && tq.correct / tq.asked < 0.6) needs.push(['calc', `Calculator problems are at ${Math.round(100 * tq.correct / tq.asked)}%; the HP keys have to be automatic on exam day.`]); }catch(e){}
-    if(days !== null && days <= 21 && answered >= 100 && minutes >= MOCK_MINUTES && !(phase.key === 'taper' && tapShaky)){ const lastM = (DATA.sessions || []).filter(x => x.mode === 'mock' || x.mode === 'fullexam').pop(); const since = lastM ? (Date.now() - new Date(lastM.date).getTime()) / ONE_DAY_MS : Infinity; if(since >= 7) needs.push(['checkpoint', `The exam is ${days} days away and you have not sat a timed set in ${since === Infinity ? 'a while' : Math.round(since) + ' days'}; pacing is a skill you have to rehearse.`]); }
     needs.forEach(([k, reason]) => {
       if(steps.some(x => x.id === k) || !mk[k]) return;
       const st = finish(k, mk[k]());
@@ -30726,7 +30723,7 @@ const CONDUCTOR_CUES = {
   weak: 'Go a little slower on the first few. This is the topic you have been missing, so each one is worth thinking through.',
   missed: 'These come back as new questions on the same ideas, so think about the idea itself, not the old question.',
   case: 'Read the scenario once for the numbers and who owns what, then decide which facts would change the answer.',
-  checkpoint: 'Treat this like the real thing: no looking things up, and keep to the pace.',
+  checkpoint: 'Work each question through, then read the explanation. The explanation is where the learning happens.',
   calc: 'Do the key presses by hand. The habit matters more than the answer.',
   teach: 'Say the idea back in your own words. Gaps show up fastest when you try to explain it.',
   figures: 'Say the number before you look at the choices. If it is a range, say both ends.',
@@ -55096,7 +55093,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000448';
+const BUILD_ID = '2026-11-02.00000449';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
