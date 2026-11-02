@@ -29266,6 +29266,7 @@ function planLogAnswer(mode){
     if(session && session.stmtDrill) mode = 'stmts';
     // A catch-up round is an adaptive-mode sitting, but it has its own step: its answers must not also count toward the mixed rounds.
     if(session && session.catchup) mode = 'catchup';
+    if(session && session.adaptivePart){ const LP = planDayLog(); const kp = 'part' + session.adaptivePart; LP.modes[kp] = (LP.modes[kp] || 0) + 1; return; }
     // A timed mock or full exam counts toward today's plan only when it is finished: a sitting that is left part-way is discarded, so its answers must not tick off the checkpoint.
     // A learning checkpoint teaches as you go; its answers count toward the checkpoint step only.
     if(session && session.mode === 'learncp'){ const L0 = planDayLog(); L0.modes.learncp = (L0.modes.learncp || 0) + 1; return; }
@@ -30558,17 +30559,22 @@ function buildStudyPlanCore(minutes){
       st.curated = true; famUsed[fam] = (famUsed[fam] || 0) + 1;
       steps.push(st); used += st.minutes; curated++;
     });
-    // Behind the pace target and no other step fills it: a catch-up round of new questions, sized to the gap and aimed at the weakest area.
-    // Once started it stays on the list with Continue and a progress bar, and completes from the questions actually answered.
-    const cuToday = catchupToday();
-    if(cuToday || (!['rest','exam','after'].includes(phase.key) && answered >= 20 && minutes - used >= 45)){
-      const n = cuToday ? cuToday.n : Math.min(60, Math.floor((minutes - used) / 1.4 / 5) * 5);
-      if(n >= 10){
-        steps.push({ id:'catchup', title:'Catch-up round: ' + n + ' questions', minutes: Math.round(n * 1.4), need: n, have: cuToday ? Math.min(cuToday.answered || 0, n) : 0, unit:'questions', curated:true,
-          why: (cuToday && (cuToday.answered || 0) < n ? (cuToday.answered || 0) + ' of ' + n + ' answered so far. Continue picks up at question ' + ((cuToday.answered || 0) + 1) + '; it completes when all ' + n + ' are answered. ' : (cuToday && cuToday.done ? 'Done: all ' + n + ' questions answered today. ' : '')) + 'Your pace target for ' + (days !== null ? days + ' days to go' : 'the exam') + ' is about ' + paceHrs(minutes) + ' a day, and the plan is short of it. This round adds ' + n + ' questions weighted toward ' + wdN + ' and your open misses.',
-          run: () => startCatchupRun(n) });
-        if(!cuToday) used += Math.round(n * 1.4);
-        curated++;
+    // Two 30-question adaptive parts: one early and one later in the day, so the work is split rather than one long round.
+    {
+      const partN = 30, perPart = Math.round(partN * 1.4);
+      const modesNow = () => planDayLog().modes || {};
+      const partStep = p => ({ id:'part' + p, title:'Adaptive part ' + p + ': ' + partN + ' questions', minutes: perPart, need: partN, have: Math.min(modesNow()['part' + p] || 0, partN), done: (modesNow()['part' + p] || 0) >= partN, unit:'questions', curated:true,
+        why: 'A mixed round of new questions picked for your gaps, with an explanation after each answer. ' + (p === 1 ? 'It comes early, while you are fresh.' : 'It comes later, to test what you carried forward.'),
+        run: () => startAdaptivePart(p) });
+      if(answered >= 20 && !['rest','exam','after'].includes(phase.key)){
+        const parts = [];
+        if(minutes - used >= perPart){ parts.push(partStep(1)); used += perPart; }
+        if(parts.length && minutes - used >= perPart){ parts.push(partStep(2)); used += perPart; }
+        if(parts.length){
+          const at1 = Math.min(2, steps.length);
+          steps.splice(at1, 0, parts[0]);
+          if(parts[1]) steps.splice(Math.max(at1 + 1, Math.floor(steps.length * 0.7)), 0, parts[1]);
+        }
       }
     }
     // Fill to the pace: while the day is still short of the pace target, add more of the app's own work in order of value.
@@ -46825,11 +46831,17 @@ function startCatchupRun(n){
   _catchupLaunch = true;
   try{ tutorLengthOverride = n; showTab('study'); startAdaptive(); } finally { tutorLengthOverride = null; _catchupLaunch = false; }
 }
+// One 30-question part of today's plan: an adaptive round with its own count, so its answers only tick off its own step.
+let _adaptivePart = null;
+function startAdaptivePart(p){
+  _adaptivePart = p;
+  try{ tutorLengthOverride = 30; showTab('study'); startAdaptive(); } finally { tutorLengthOverride = null; _adaptivePart = null; }
+}
 function saveInProgressSession(){
   if(!session || !RESUMABLE_MODES.includes(session.mode)) return;
   catchupNote(session);
   DATA.inProgressSession = {
-    catchup: !!session.catchup, plannedLen: session.plannedLen || null, followUps: session.followUps || 0,
+    catchup: !!session.catchup, adaptivePart: session.adaptivePart || null, plannedLen: session.plannedLen || null, followUps: session.followUps || 0,
     queue: session.queue, mode: session.mode, index: session.index, correct: session.correct,
     domainTally: session.domainTally, answerLog: session.answerLog,
     variantAttempted: session.variantAttempted, startedAt: session.startedAt, treeDrill: session.treeDrill || null, toolPractice: session.toolPractice || null, drillTopic: session.drillTopic || null, weakDom: session.weakDom || null, planReview: session.planReview || null,
@@ -46876,7 +46888,7 @@ function resumeInProgressSession(){
     timerSeconds: null, timerHandle: null, locked: false,
     startedAt: saved.startedAt, treeDrill: saved.treeDrill || null, toolPractice: saved.toolPractice || null, drillTopic: saved.drillTopic || null, weakDom: saved.weakDom || null, planReview: saved.planReview || null, variantAttempted: saved.variantAttempted || {},
     selectionReasons: saved.selectionReasons || {}, caseId: saved.caseId || null, caseLevels: saved.caseLevels || (saved.mode === 'case' ? caseQuestionLevels(saved.queue) : null), caseTarget: saved.caseTarget || 2, caseSteps: saved.caseSteps || [],
-    siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup, plannedLen: saved.plannedLen || null, followUps: saved.followUps || 0,
+    siblingOf: saved.siblingOf || {}, wantNew: saved.wantNew || {}, gated: new Set(saved.gated || []), thinkGate: false, catchup: !!saved.catchup, adaptivePart: saved.adaptivePart || null, plannedLen: saved.plannedLen || null, followUps: saved.followUps || 0,
     readinessAtStart: saved.readinessAtStart, readinessExactAtStart: saved.readinessExactAtStart,
   };
   if(saved.figDrill) session.figDrill = true;
@@ -47358,7 +47370,7 @@ function beginSession(queue, mode, timerSeconds, selectionReasons){
   if(session && session.timerHandle) clearInterval(session.timerHandle);
   const statsAtStart = computeStats();
   session = {
-    queue, mode, index:0, correct:0, plannedLen: queue.length, catchup: _catchupLaunch === true,
+    queue, mode, index:0, correct:0, plannedLen: queue.length, catchup: _catchupLaunch === true, adaptivePart: _adaptivePart || null,
     domainTally: {}, answerLog: [],
     sectionBreakIndex: (mode==='fullexam') ? FULL_EXAM_SECTION_SIZE : null,
     onSectionBreak: false,
@@ -55242,7 +55254,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000453';
+const BUILD_ID = '2026-11-02.00000454';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
