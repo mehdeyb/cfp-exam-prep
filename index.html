@@ -46529,6 +46529,37 @@ function startAdaptive(opts){
   const queue = adaptiveInterleave(tvmInjectIntoAdaptive(picked.queue, reasons), reasons);
   beginSession(queue, 'adaptive', null, reasons);
 }
+// In-session adaptation: the sitting reacts to each answer rather than running a fixed list. After a miss,
+// one fresh question on the same subtopic (never a repeat, never a same-answer twin of anything already in
+// the sitting) is queued two places ahead, so the gap is worked while it is still warm. Only in adaptive
+// sittings, capped at about 30% of the length so the sitting never grows much past what was promised.
+function adaptiveAfterAnswer(q, isCorrect){
+  if(!session || session.mode !== 'adaptive' || isCorrect || !q) return;
+  const planned = session.plannedLen || session.queue.length;
+  const cap = Math.max(3, Math.ceil(planned * 0.3));
+  if((session.followUps || 0) >= cap) return;
+  const answerKey = x => (x.sub || '') + '|' + String((x.choices || [])[x.correct] || '').trim().toLowerCase();
+  const used = new Set(session.queue.map(x => String(x.id)));
+  const usedAnswers = new Set(session.queue.map(answerKey));
+  const subKey = inferQuestionSubtopic(q);
+  const pool = allQuestions().filter(x =>
+    x.domain === q.domain && !used.has(String(x.id)) && !usedAnswers.has(answerKey(x)));
+  if(!pool.length) return;
+  const sameSub = subKey ? pool.filter(x => inferQuestionSubtopic(x) === subKey) : [];
+  const base = sameSub.length ? sameSub : pool;
+  // Prefer material the student has not met yet, then anything not shown in the last few sittings.
+  const recent = new Set((DATA.recentAdaptiveIds || []).slice(-60).map(String));
+  const unseen = base.filter(x => !(getSpacedStat(DATA.questionStats, x.id).seen > 0));
+  const notRecent = base.filter(x => !recent.has(String(x.id)));
+  const choices = unseen.length ? unseen : (notRecent.length ? notRecent : base);
+  const pick = choices[Math.floor(Math.random() * choices.length)];
+  const at = Math.min(session.queue.length, session.index + 2);
+  session.queue.splice(at, 0, shuffleQuestionChoices(Object.assign({}, pick)));
+  session.plannedLen = session.queue.length;
+  session.followUps = (session.followUps || 0) + 1;
+  session.selectionReasons = session.selectionReasons || {};
+  session.selectionReasons[pick.id] = 'followUp';
+}
 
 /* ===========================================================
    QUIZ RUNTIME
@@ -48236,6 +48267,7 @@ function renderQuestion(){
     hypercorrection: 'revisiting a confident miss',
     mixup: 'a concept pair you have been mixing up',
     domainFloor: 'ensuring broad coverage',
+    followUp: 'a fresh question on the subtopic you just missed',
     missed: 'still working on this',
     due: 'due for review',
     fresh: 'new material',
@@ -49341,6 +49373,7 @@ function selectAnswerCore(i){
   dt.total++;
   if(isCorrect){ dt.correct++; session.correct++; }
   session.answerLog.push({index: session.index, correct: isCorrect});
+  try{ adaptiveAfterAnswer(q, isCorrect); }catch(e){}
   // In a missed-question review, a question missed again comes back once, a few places later, so it is
   // retried after some distance instead of being dropped or repeated right away. Only once per session.
   if(!isCorrect && session.mode === 'review'){
@@ -55008,7 +55041,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000430';
+const BUILD_ID = '2026-11-02.00000431';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
