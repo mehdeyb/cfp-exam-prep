@@ -28719,6 +28719,8 @@ function planLogAnswer(mode){
     // A catch-up round is an adaptive-mode sitting, but it has its own step: its answers must not also count toward the mixed rounds.
     if(session && session.catchup) mode = 'catchup';
     // A timed mock or full exam counts toward today's plan only when it is finished: a sitting that is left part-way is discarded, so its answers must not tick off the checkpoint.
+    // A learning checkpoint teaches as you go and is not a plan step, so its answers count toward nothing in the plan.
+    if(session && session.mode === 'learncp') return;
     if(session && (session.mode === 'mock' || session.mode === 'fullexam')){ session.planAnswered = (session.planAnswered || 0) + 1; return; }
     if(mode === 'review' && !(session && session.planReview)) mode = 'review-other'; // stuck re-tests and chat revisits are not 'missed' review
     const L = planDayLog();
@@ -41899,6 +41901,7 @@ function openExamPicker(){
   const ap = DOMAINS.filter(d => domainStageOf(d.key) >= 3 && ((DATA.domainStats[d.key] || {}).total || 0) > 0).length;
   openChoicePicker('Practice exam', 'Timed, in the real exam\'s domain mix.', [
     { name: 'Timed checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · about ' + MOCK_MINUTES + ' min', note: (() => { const x = lastSitting(); return x ? 'Last: ' + sittingClockLine(x) + '. Exam conditions, no feedback until you submit.' : 'Exam conditions: no feedback until you submit. Counts toward readiness.'; })(), run: () => startMock() },
+    { name: 'Learning checkpoint', meta: MOCK_QUESTION_COUNT + ' questions · no clock', note: 'The same mix as the timed checkpoint, with an explanation after every answer. Not counted toward the plan.', run: () => startLearningCheckpoint() },
     { name: 'Full ' + FULL_EXAM_QUESTION_COUNT + '-question exam', meta: 'Two 3-hour sections with a break', note: 'Apply+ in ' + ap + '/' + DOMAINS.length + ' domains. Best in the last three weeks, rested.', run: () => startFullExam() }
   ]);
 }
@@ -45659,6 +45662,13 @@ function startMock(){
   applyExamSimSkin();
 }
 
+// Same questions and domain mix as the timed checkpoint, with no clock: the explanation follows each answer.
+function startLearningCheckpoint(){
+  const counts = {}; DOMAINS.forEach(d => { counts[d.key] = d.mockCount; });
+  const queue = examBlockQueue(counts, 0, MOCK_QUESTION_COUNT >= 20 ? 1 : 0, 1, true);
+  beginSession(queue, 'learncp', null);
+}
+
 function startFullExam(){
   // The same weight-proportional 170 questions in two 85-question, 3-hour sections, now laid out the way the real exam delivers them:
   // one case study in each section, short scenarios of about three questions, and stand-alone questions around them.
@@ -46246,8 +46256,8 @@ function startAdaptive(opts){
 // section-break state that would need much riskier reconciliation logic
 // to resume safely (what happens if the timer would have expired while
 // the app was closed?), so those are left to simply restart clean.
-const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case', 'mock', 'fullexam'];
-const STUDY_MODES = ['adaptive', 'drill', 'review', 'case'];
+const RESUMABLE_MODES = ['adaptive', 'drill', 'review', 'case', 'mock', 'fullexam', 'learncp'];
+const STUDY_MODES = ['adaptive', 'drill', 'review', 'case', 'learncp'];
 // The most recent timed sitting (checkpoint or full exam) and how it went against the clock.
 function lastSitting(){ return (DATA.sessions || []).filter(x => (x.mode === 'mock' || x.mode === 'fullexam') && x.total >= 20).pop() || null; }
 function sittingClockLine(x){
@@ -46398,7 +46408,7 @@ function dismissInProgressSession(){
 // The half-finished session is offered once, in the Next best step card (resume, or start fresh); there is no separate banner.
 function renderResumeSessionBanner(){}
 function resumeSessionLabel(saved){
-  const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study', mock: 'Mock Exam', fullexam: 'Full Exam' }[saved.mode] || 'session');
+  const modeLabel = (saved.treeDrill && TREE_META[saved.treeDrill]) ? 'decision-tree drill (' + TREE_META[saved.treeDrill].name + ')' : ({ adaptive: 'Adaptive Session', drill: 'Domain Drill', review: 'Missed Review', case: 'Case Study', mock: 'Mock Exam', fullexam: 'Full Exam', learncp: 'Learning checkpoint' }[saved.mode] || 'session');
   return modeLabel;
 }
 
@@ -49858,6 +49868,7 @@ function finishSession(){
   const modeLabel = caseDef ? ('Case study — ' + caseDef.title)
     : session.mode==='fullexam' ? `Full ${FULL_EXAM_QUESTION_COUNT}-question exam`
     : session.mode==='mock' ? 'Timed checkpoint'
+    : session.mode==='learncp' ? 'Learning checkpoint'
     : session.mode==='review' ? 'Missed-question review'
     : session.mode==='adaptive' ? 'Adaptive session'
     : session.treeDrill ? 'Decision-tree drill'
@@ -54707,7 +54718,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000417';
+const BUILD_ID = '2026-11-01.00000418';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
