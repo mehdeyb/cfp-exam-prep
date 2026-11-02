@@ -5529,10 +5529,9 @@
             <button class="speak-btn" id="speakFlashcardBtn" title="Read card aloud" onclick="event.stopPropagation(); speakFlashcard();" style="display:none;"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
           </div>
           <div class="fc-mnemonic-row" id="fcMnemonicRow" style="display:none;">
-            <button class="btn ghost" id="fcMnemonicBtn" onclick="event.stopPropagation(); requestFlashcardMnemonic();">Give me a memory trick for this</button>
             <button class="btn ghost" id="fcTutorBtn" onclick="event.stopPropagation(); askTutorAboutCard();">Talk it through with the tutor</button>
           </div>
-          <div class="fc-mnemonic-box" id="fcMnemonicBox" style="display:none;"></div>
+          
         </div>
       </div>
     </div>
@@ -38353,10 +38352,6 @@ function renderFlashcard(){
   fcApplyAdaptation(card);
   const mnemonicRow = document.getElementById('fcMnemonicRow');
   if(mnemonicRow) mnemonicRow.style.display = 'none';
-  const mnemonicBox = document.getElementById('fcMnemonicBox');
-  if(mnemonicBox){ mnemonicBox.style.display = 'none'; mnemonicBox.innerHTML = ''; }
-  const mnemonicBtn = document.getElementById('fcMnemonicBtn');
-  if(mnemonicBtn){ mnemonicBtn.textContent = 'Give me a memory trick for this'; mnemonicBtn.disabled = false; }
   fcFlipped = false;
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = 'Explain it first'; }
 }
@@ -38537,7 +38532,8 @@ const FC_TEACH_LABELS = [
   { k:'example', re:/^worked example\s*:/i,     label:'A worked example' },
   { k:'diff',   re:/^the difference\s*:/i,      label:'The deciding difference' },
   { k:'trap',   re:/^exam trap\s*:/i,           label:'How the exam trips you' },
-  { k:'check',  re:/^check\s*:/i,              label:'Check yourself' }
+  { k:'check',  re:/^check\s*:/i,              label:'Check yourself' },
+  { k:'mnemonic', re:/^memory trick\s*:/i,       label:'Memory trick' }
 ];
 const _fcTeachBusy = {}, _fcTeachFailed = {}, _fcTeachForce = {};
 function fcTeachGet(card){
@@ -38550,7 +38546,7 @@ function fcTeachParse(text){
     const l = line.replace(/^[\s*#>-]+/, '').replace(/\*\*/g, '').trim();
     FC_TEACH_LABELS.forEach(lb => {
       if(lb.re.test(l)){
-        const body = l.replace(lb.re, '').trim();
+        const body = l.replace(lb.re, '').replace(/\*/g, '').trim();
         if(body.length >= 25 && body.length <= 520 && /[.!?”")]$/.test(body)) out.push({ k: lb.k, label: lb.label, text: body });
       }
     });
@@ -38571,12 +38567,13 @@ async function fcMaybeTeach(card){
     const lines = [];
     lines.push('You are teaching one CFP exam concept to a candidate, on the back of a flashcard. Teach it so the card leaves them able to explain it and answer an exam question on it. Plain text, no markdown, no preamble. Each section under 60 words.');
     lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
-    lines.push('Write exactly five sections, in this order. Start each on its own line with its label, then the text:\n' +
+    lines.push('Write exactly six sections, in this order. Start each on its own line with its label, then the text:\n' +
       'Plain words: one or two sentences in everyday language, without reusing the definition\'s wording.\n' +
       'Worked example: one short, concrete client situation with simple numbers, marked as illustrative, and one sentence on what it shows.\n' +
       'The difference: the deciding fact that separates this idea from the look-alike it is confused with.\n' +
       'Exam trap: how the exam disguises this idea and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first; otherwise use the common wrong answer given. End with the quick rule that cuts through.\n' +
-      'Check: one quick question the student can answer in their head, then the answer, on one line, like "Check: ...? Answer: ...".');
+      'Check: one quick question the student can answer in their head, then the answer, on one line, like "Check: ...? Answer: ...".\n' +
+      'Memory trick: one short mnemonic or hook that helps recall this term (wordplay, a vivid image, an acronym, or a sound-alike), anchored to the one feature the exam asks about. One or two sentences.');
     lines.push('Do not invent rules, limits or figures; if you are not certain of a number, leave numbers out and stay general.');
     const cast = ['a retired nurse in her 70s', 'a freelance graphic designer with irregular income', 'a couple with twin toddlers', 'a small-business owner selling her company', 'a new graduate with student loans', 'a widower managing his late wife\'s accounts', 'a tech employee with stock options', 'a contractor paid in cash and checks', 'a farmer with a seasonal income', 'a physician in her second year of practice', 'a divorced father sharing custody', 'a young couple buying their first home'];
     const usedCast = fcClientsUsed.slice(-8);
@@ -38601,6 +38598,13 @@ async function fcMaybeTeach(card){
   finally{ delete _fcTeachBusy[card.id]; }
   try{ fcPaintRetell(); }catch(e){}
 }
+// A memory trick saved from earlier shows as its own section, so no saved trick is lost.
+function fcWithSavedTrick(card, secs){
+  const out = (secs || []).slice();
+  const saved = DATA && DATA.flashcardMnemonics && DATA.flashcardMnemonics[card.id];
+  if(saved && !out.some(s => s.k === 'mnemonic')) out.push({ k:'mnemonic', label:'Memory trick', text: String(saved).replace(/\*/g, '') });
+  return out;
+}
 function fcPaintTeach(box, t){
   box.innerHTML = '';
   box.classList.toggle('fc-teach-grid', t.sections.length > 2);
@@ -38608,6 +38612,11 @@ function fcPaintTeach(box, t){
     const row = document.createElement('div'); row.style.marginTop = '8px';
     const l = document.createElement('b'); l.textContent = sec.label; row.appendChild(l);
     row.appendChild(document.createTextNode(sec.text));
+    if(sec.k === 'mnemonic'){ // the memory trick keeps its read-aloud
+      const sp = document.createElement('button'); sp.className = 'speak-btn mnemonic-speak-btn'; sp.title = 'Read memory trick aloud'; sp.innerHTML = SPEAKER_SVG;
+      sp.onclick = (e) => { e.stopPropagation(); const c = fcQueue[fcIndex]; if(!c) return; speakText(sec.text, sp, 'mnem-' + c.id, () => !!(fcQueue[fcIndex] && fcQueue[fcIndex].id === c.id)); };
+      row.appendChild(sp);
+    }
     box.appendChild(row);
   });
   if(t.ai){
@@ -38631,7 +38640,7 @@ function fcPaintRetell(){
   const card = fcQueue[fcIndex];
   if(!fcFlipped || !card || (fcView && fcView.mode === 'apply' && !fcView.applied)){ box.style.display = 'none'; box.textContent = ''; return; }
   const teach = fcTeachGet(card);
-  if(teach){ fcPaintTeach(box, { sections: teach.sections, ai: true }); return; }
+  if(teach){ fcPaintTeach(box, { sections: fcWithSavedTrick(card, teach.sections), ai: true }); return; }
   if(aiFeaturesAvailable && !_fcTeachFailed[card.id]){
     box.innerHTML = ''; const w = document.createElement('b'); w.textContent = 'Teaching this card'; box.appendChild(w);
     box.appendChild(document.createTextNode('Writing a short lesson for this card…')); box.style.display = 'block';
@@ -38640,8 +38649,9 @@ function fcPaintRetell(){
   // Without AI (or when AI failed), the card still shows what the lesson would have: the idea, where this student trips, and the quiz result.
   const extra = (!aiFeaturesAvailable || _fcTeachFailed[card.id]) ? fcExplainLocal(card, fcExplainContext(card)) : [];
   if(fcNeedsRetell(card)){ const p = fcRetellPick(card); if(p) extra.push({ k:'retell', label:p.label, text:p.text }); }
-  if(!extra.length){ box.style.display = 'none'; box.textContent = ''; return; }
-  fcPaintTeach(box, { sections: extra });
+  const shown = fcWithSavedTrick(card, extra);
+  if(!shown.length){ box.style.display = 'none'; box.textContent = ''; return; }
+  fcPaintTeach(box, { sections: shown });
 }
 
 function flipFlashcardContent(){
@@ -38660,20 +38670,10 @@ function flipFlashcardContent(){
     if(fcFlipped){ if(hb) hb.style.display = 'none'; if(hl) hl.style.display = 'none'; }
     else if(hb && fcAdaptOn() && fcView.mode === 'foundation' && !fcView.hintUsed) hb.style.display = 'inline-flex';
     else if(hl && fcView.hintUsed) hl.style.display = 'block'; }
-  if(fcFlipped && fcAdaptOn() && fcView.mode === 'foundation' && fcQueue[fcIndex]){
-    const saved = DATA.flashcardMnemonics && DATA.flashcardMnemonics[fcQueue[fcIndex].id];
-    const mb = document.getElementById('fcMnemonicBox');
-    if(saved && mb){ renderMnemonicResult(mb, fcQueue[fcIndex], saved, true); mb.style.display = 'block'; }
-  }
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = fcFlipped ? 'Explain it back' : 'Explain it first'; }
   const mnemonicRow = document.getElementById('fcMnemonicRow');
-  // The row shows whenever a card is flipped; only the AI memory trick needs AI.
+  // The row shows whenever a card is flipped (it holds the tutor button).
   if(mnemonicRow) mnemonicRow.style.display = fcFlipped ? 'flex' : 'none';
-  { const mt = document.getElementById('fcMnemonicBtn'); if(mt) mt.style.display = aiFeaturesAvailable ? '' : 'none'; }
-  if(!fcFlipped){
-    const mnemonicBox = document.getElementById('fcMnemonicBox');
-    if(mnemonicBox) mnemonicBox.style.display = 'none';
-  }
   const speakBtn = document.getElementById('speakFlashcardBtn');
   if(speakBtn) speakBtn.style.display = (fcFlipped && hasSpeechSupport()) ? 'flex' : 'none';
   try{ fcPaintRetell(); }catch(e){}
@@ -38687,99 +38687,6 @@ function openSettingsFromAnyFullscreen(){
   openSettings();
 }
 
-function renderMnemonicResult(box, card, text, fromCache){
-  box.className = 'fc-mnemonic-box';
-  box.innerHTML = '';
-  const label = document.createElement('span');
-  label.className = 'simplify-label';
-  label.textContent = fromCache ? 'Memory trick — from last time' : 'Memory trick';
-  box.appendChild(label);
-  const textSpan = document.createElement('span');
-  textSpan.textContent = text;
-  box.appendChild(textSpan);
-  const speakBtn = document.createElement('button');
-  speakBtn.className = 'speak-btn mnemonic-speak-btn';
-  speakBtn.title = 'Read memory trick aloud';
-  speakBtn.innerHTML = SPEAKER_SVG;
-  speakBtn.onclick = (e) => {
-    e.stopPropagation();
-    function stillOnSameCard(){
-      return fcQueue[fcIndex] && fcQueue[fcIndex].id === card.id;
-    }
-    speakText(text, speakBtn, 'mnem-' + card.id, stillOnSameCard);
-  };
-  box.appendChild(speakBtn);
-}
-
-async function requestFlashcardMnemonic(){
-  if(!fcQueue.length || fcIndex >= fcQueue.length) return;
-  const card = fcQueue[fcIndex];
-  const box = document.getElementById('fcMnemonicBox');
-  const btn = document.getElementById('fcMnemonicBtn');
-  if(!box || !btn || btn.disabled) return;
-
-  const cached = DATA.flashcardMnemonics && DATA.flashcardMnemonics[card.id];
-  if(cached){
-    renderMnemonicResult(box, card, cached, true);
-    box.style.display = 'block';
-    return;
-  }
-
-  if(!aiFeaturesAvailable){
-    box.className = 'fc-mnemonic-box';
-    box.innerHTML = '<span class="simplify-label">Memory trick</span><span class="simplify-err">Connect an API key to unlock this — add one and come back to get a memory trick tailored to this exact card.</span><br><button class="btn ghost gen-review-btn" onclick="openSettingsFromAnyFullscreen()">Open Settings</button>';
-    box.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Thinking of one…';
-  box.className = 'fc-mnemonic-box loading';
-  box.innerHTML = '<span class="simplify-label">Memory trick</span>Coming up with something memorable…';
-  box.style.display = 'block';
-
-  // If the user rates the card and advances before this resolves, the
-  // response must never land on whatever card is now showing.
-  const cardIdAtRequestTime = card.id;
-  const indexAtRequestTime = fcIndex;
-  function stillOnSameCard(){
-    return fcQueue[indexAtRequestTime] && fcQueue[indexAtRequestTime].id === cardIdAtRequestTime && fcIndex === indexAtRequestTime;
-  }
-
-  const prompt = `Give a short, memorable mnemonic or memory trick to help someone recall this CFP exam flashcard:
-
-Term: ${card.term}
-Definition: ${card.def}
-
-The trick should help them connect the term to its meaning — wordplay, a vivid mental image, an acronym, or a sound-alike association, whatever's most natural for this specific term. 1-2 sentences. Anchor it to the one feature or number the exam asks about for this term, not trivia. Don't just restate the definition in different words. If a lookalike term is easy to confuse with this one on the exam, make the trick separate the two.`;
-
-  try{
-    const reply = trimToSentence(await anthropicMessagesRequest({ messages: [{role:'user', content: prompt}], maxTokens: 320 }))
-      || "Sorry, couldn't come up with one just now — try again in a moment.";
-    if(!DATA.flashcardMnemonics) DATA.flashcardMnemonics = {};
-    DATA.flashcardMnemonics[card.id] = reply;
-    persist();
-    if(!stillOnSameCard()) return;
-    renderMnemonicResult(box, card, reply, false);
-    btn.textContent = 'Give me a memory trick for this';
-    btn.disabled = false;
-  }catch(e){
-    if(!stillOnSameCard()) return;
-    const msg = (e && e.message) ? e.message : 'Unknown error';
-    box.className = 'fc-mnemonic-box';
-    box.innerHTML = '';
-    const label = document.createElement('span');
-    label.className = 'simplify-label';
-    label.textContent = 'Memory trick';
-    box.appendChild(label);
-    const errSpan = document.createElement('span');
-    errSpan.className = 'simplify-err';
-    errSpan.textContent = aiFailText(e);
-    box.appendChild(errSpan);
-    btn.textContent = 'Give me a memory trick for this';
-    btn.disabled = false;
-  }
-}
 
 // Explain the card on screen with a short worked example. Kept for the session
 // only (not saved), so a second tap on the same card is instant and free.
@@ -55199,7 +55106,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000446';
+const BUILD_ID = '2026-11-02.00000447';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
