@@ -29707,8 +29707,8 @@ function buildStudyPlanCore(minutes){
       if(answered < 100) return null;
       const f1 = L.targets.caseId, f2 = L.targets.caseId2;
       const stats = DATA.caseStats || {};
-      const pool0 = allCases().filter(c => c.id !== f1 && c.id !== f2 && caseQuestions(c.id).length);
-      const pool = (pool0.some(c => !caseFinishedToday(c.id)) ? pool0.filter(c => !caseFinishedToday(c.id)) : pool0).sort((a, b) => ((stats[a.id] || {}).attempts || 0) - ((stats[b.id] || {}).attempts || 0));
+      const pool0 = availableCases().filter(c => c.id !== f1 && c.id !== f2);
+      const pool = pool0.slice().sort((a, b) => ((stats[a.id] || {}).attempts || 0) - ((stats[b.id] || {}).attempts || 0));
       let pickId = planTarget('caseId3', (pool[0] || {}).id || null);
       if(pickId && (pickId === f1 || pickId === f2 || caseFinishedToday(pickId))) pickId = (pool[0] || {}).id || null;
       const pick = pickId ? caseById(pickId) : null; if(!pick) return null;
@@ -41082,6 +41082,277 @@ const CASE_STUDIES = [
   { id:'cs-d', title:"Carlos — memory decline and his estate", blurb:"An elderly widower with early memory decline, a jointly owned home and a will that may not fit his situation." },
   { id:'cs-e', title:"Priya — the proprietary fund dilemma", blurb:"A CFP professional advising a couple, where her firm's higher-fee funds would also raise her own pay." },
 ];
+const S13="Nadia, 58, and Felix, 62, own Brightline Landscaping LLC, which is taxed as a partnership with the two of them as the only members. Their 2014 wills leave everything to each other, with no other terms. A brokerage account in Nadia's name is registered as transfer on death to their son, Rafi, who is 27. Nadia also holds a $300,000 IRA with Rafi as beneficiary. If Felix dies first, his share of the LLC passes to Nadia under the 2014 wills. Nadia wants Rafi's share of the estate to be used only for his education and home, but nothing in writing says so. Felix has a second child from a prior marriage, Lena, who is 31 and is not named in any account.";
+const S14="Gerald, 66, has a universal life policy he bought in 2009. An agent now suggests replacing it with a new policy that has lower premiums and a higher cash value. Since 2009, Gerald has been treated for high blood pressure. His wife, Lois, 64, is in good health and wants long-term care coverage. The agent offers a policy with a 30-day elimination period at a higher premium, or a 90-day period at a lower one. Lois is worried the premium could rise later. The couple also holds a hospital indemnity policy that pays $200 per day in the hospital, regardless of the actual bill.";
+const S15="Dana, 47, is a nurse with $310,000 in her 401(k) and a $40,000 credit card balance. Over the past year she has lost about $25,000 betting on sports and has borrowed to cover it. She says she wants to make the money back before her son starts college in five years. Her 401(k) is 90% stocks. She describes herself as comfortable with risk, but she has no emergency fund and her income depends on a single job. She avoided the planner's last meeting and asked to reschedule today.";
+
+const CASE_V412_META = [
+ {
+  "id": "cs13",
+  "title": "Nadia & Felix — the family LLC and an old will",
+  "blurb": "A landscaping LLC, a brokerage account with a transfer-on-death registration, and wills that have not changed since 2014."
+ },
+ {
+  "id": "cs14",
+  "title": "Gerald & Lois — the coverage review",
+  "blurb": "Replacing a life policy after a health change, choosing a long-term care waiting period, and reading a hospital indemnity policy."
+ },
+ {
+  "id": "cs15",
+  "title": "Dana — the losing streak",
+  "blurb": "A nurse borrowing to chase gambling losses, with a portfolio sized for a quick recovery and no safety net."
+ }
+];
+
+const CASE_V412_QUESTIONS = [
+ {
+  "id": "cs13-1",
+  "domain": "estate",
+  "sub": "Property titling and beneficiary designations",
+  "scenario": "Nadia, 58, and Felix, 62, own Brightline Landscaping LLC, which is taxed as a partnership with the two of them as the only members. Their 2014 wills leave everything to each other, with no other terms. A brokerage account in Nadia's name is registered as transfer on death to their son, Rafi, who is 27. Nadia also holds a $300,000 IRA with Rafi as beneficiary. If Felix dies first, his share of the LLC passes to Nadia under the 2014 wills. Nadia wants Rafi's share of the estate to be used only for his education and home, but nothing in writing says so. Felix has a second child from a prior marriage, Lena, who is 31 and is not named in any account.",
+  "q": "If Nadia dies first, what happens to the brokerage account registered as transfer on death to Rafi?",
+  "choices": [
+   "It passes directly to Rafi outside probate, whatever the 2014 will says",
+   "It becomes part of Nadia's probate estate and is divided under the 2014 will",
+   "It passes to Felix first, and then to Rafi when Felix dies",
+   "It is frozen until a court appoints an administrator for the estate"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a transfer on death registration passes the account directly to the named beneficiary, outside probate.",
+   "Wrong — a valid TOD registration controls that account, so the will does not divide it.",
+   "Wrong — the registration names Rafi, so the account is not routed through Felix.",
+   "Wrong — a TOD account does not need a court-appointed administrator before it passes."
+  ]
+ },
+ {
+  "id": "cs13-2",
+  "domain": "tax",
+  "sub": "Characteristics and income taxation of business entities",
+  "scenario": "Nadia, 58, and Felix, 62, own Brightline Landscaping LLC, which is taxed as a partnership with the two of them as the only members. Their 2014 wills leave everything to each other, with no other terms. A brokerage account in Nadia's name is registered as transfer on death to their son, Rafi, who is 27. Nadia also holds a $300,000 IRA with Rafi as beneficiary. If Felix dies first, his share of the LLC passes to Nadia under the 2014 wills. Nadia wants Rafi's share of the estate to be used only for his education and home, but nothing in writing says so. Felix has a second child from a prior marriage, Lena, who is 31 and is not named in any account.",
+  "q": "How is Brightline Landscaping LLC taxed for federal income tax purposes?",
+  "choices": [
+   "It pays federal corporate income tax at the entity level on its profits, and the owners then pay tax again when they receive distributions",
+   "Income and deductions pass through to Nadia's and Felix's personal returns, with no entity-level federal tax",
+   "It is exempt from federal income tax because it is a small business",
+   "Its income is taxed only when the owners sell their interests"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — entity-level corporate tax describes a C corporation, not an LLC taxed as a partnership.",
+   "Correct — a multi-member LLC taxed as a partnership is a passthrough, so income and deductions flow to the members.",
+   "Wrong — small size does not exempt a business from federal income tax.",
+   "Wrong — partnership income is reported to the owners each year as it is earned, not when they sell."
+  ]
+ },
+ {
+  "id": "cs13-3",
+  "domain": "estate",
+  "sub": "Postmortem estate planning techniques",
+  "scenario": "Nadia, 58, and Felix, 62, own Brightline Landscaping LLC, which is taxed as a partnership with the two of them as the only members. Their 2014 wills leave everything to each other, with no other terms. A brokerage account in Nadia's name is registered as transfer on death to their son, Rafi, who is 27. Nadia also holds a $300,000 IRA with Rafi as beneficiary. If Felix dies first, his share of the LLC passes to Nadia under the 2014 wills. Nadia wants Rafi's share of the estate to be used only for his education and home, but nothing in writing says so. Felix has a second child from a prior marriage, Lena, who is 31 and is not named in any account.",
+  "q": "Suppose Felix dies first and Nadia inherits his share of the LLC. What income tax basis does Nadia generally take in that share?",
+  "choices": [
+   "Felix's original cost, carried over unchanged",
+   "The value on the date Nadia files the estate return",
+   "Zero, because inherited business interests carry no basis",
+   "Fair market value on the date of Felix's death"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — inherited property does not generally keep the decedent's original cost.",
+   "Wrong — the basis is set at death, not at the later filing date.",
+   "Wrong — inherited property generally takes a basis; it does not start at zero.",
+   "Correct — inherited property generally takes a basis equal to fair market value on the date of death, which is the step-up."
+  ]
+ },
+ {
+  "id": "cs13-4",
+  "domain": "estate",
+  "sub": "Estate and incapacity planning documents",
+  "scenario": "Nadia, 58, and Felix, 62, own Brightline Landscaping LLC, which is taxed as a partnership with the two of them as the only members. Their 2014 wills leave everything to each other, with no other terms. A brokerage account in Nadia's name is registered as transfer on death to their son, Rafi, who is 27. Nadia also holds a $300,000 IRA with Rafi as beneficiary. If Felix dies first, his share of the LLC passes to Nadia under the 2014 wills. Nadia wants Rafi's share of the estate to be used only for his education and home, but nothing in writing says so. Felix has a second child from a prior marriage, Lena, who is 31 and is not named in any account.",
+  "q": "Nadia wants Rafi's share used only for his education and home. Which document best records that wish for the trustee or executor without changing the legal terms?",
+  "choices": [
+   "A letter of wishes, which is non-binding guidance for the trustee or executor",
+   "A codicil to the 2014 will, which amends the legal terms of the gift and must be signed like a new will",
+   "A durable power of attorney for property",
+   "A beneficiary designation form on the IRA"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a letter of wishes records what Nadia intends and guides the trustee, but it does not change the legal terms of the gift.",
+   "Wrong — a codicil changes the will's legal terms, which is more than Nadia wants here.",
+   "Wrong — a durable power of attorney lets an agent act during incapacity; it does not direct distributions after death.",
+   "Wrong — a beneficiary designation decides who receives the IRA; it does not record how the money should be used."
+  ]
+ },
+ {
+  "id": "cs14-1",
+  "domain": "risk",
+  "sub": "Insurance policy and company selection",
+  "scenario": "Gerald, 66, has a universal life policy he bought in 2009. An agent now suggests replacing it with a new policy that has lower premiums and a higher cash value. Since 2009, Gerald has been treated for high blood pressure. His wife, Lois, 64, is in good health and wants long-term care coverage. The agent offers a policy with a 30-day elimination period at a higher premium, or a 90-day period at a lower one. Lois is worried the premium could rise later. The couple also holds a hospital indemnity policy that pays $200 per day in the hospital, regardless of the actual bill.",
+  "q": "What is the most important concern before Gerald replaces his 2009 policy?",
+  "choices": [
+   "A new contestability period would start, and his blood pressure could make the new policy costlier or unavailable",
+   "The new policy would automatically take over the old policy's cash value and its full surrender terms",
+   "The old policy's surrender charges would be waived for any replacement made within the first year of the new policy",
+   "Replacement is always cheaper, so no comparison is needed"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a new policy generally starts a new contestability period, and his health history may make the new policy harder or costlier to obtain.",
+   "Wrong — the old policy's cash value does not move to the new policy automatically.",
+   "Wrong — surrender charges on the old policy usually still apply unless its terms say otherwise.",
+   "Wrong — replacement is not always cheaper, so the two policies must be compared side by side."
+  ]
+ },
+ {
+  "id": "cs14-2",
+  "domain": "risk",
+  "sub": "Long-term care insurance and long-term care planning (individual and group)",
+  "scenario": "Gerald, 66, has a universal life policy he bought in 2009. An agent now suggests replacing it with a new policy that has lower premiums and a higher cash value. Since 2009, Gerald has been treated for high blood pressure. His wife, Lois, 64, is in good health and wants long-term care coverage. The agent offers a policy with a 30-day elimination period at a higher premium, or a 90-day period at a lower one. Lois is worried the premium could rise later. The couple also holds a hospital indemnity policy that pays $200 per day in the hospital, regardless of the actual bill.",
+  "q": "Lois can choose a 30-day or a 90-day elimination period. What is the trade-off?",
+  "choices": [
+   "A longer period raises the premium, shortens the wait, and means benefits start sooner than with a 30-day period",
+   "The elimination period has no effect on premiums, only on the benefit amount",
+   "A longer period lowers the premium, but she pays for care out of pocket for those days first",
+   "A longer period means the policy pays from the first day of care"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — a longer elimination period lowers the premium, and it delays benefits rather than shortening the wait.",
+   "Wrong — the elimination period does affect the premium, not just the benefit amount.",
+   "Correct — the elimination period works like a deductible in time: a longer wait lowers the premium, and she covers those days herself.",
+   "Wrong — a longer elimination period delays benefits; it never starts them sooner."
+  ]
+ },
+ {
+  "id": "cs14-3",
+  "domain": "risk",
+  "sub": "Health insurance and health care cost management (individual and group)",
+  "scenario": "Gerald, 66, has a universal life policy he bought in 2009. An agent now suggests replacing it with a new policy that has lower premiums and a higher cash value. Since 2009, Gerald has been treated for high blood pressure. His wife, Lois, 64, is in good health and wants long-term care coverage. The agent offers a policy with a 30-day elimination period at a higher premium, or a 90-day period at a lower one. Lois is worried the premium could rise later. The couple also holds a hospital indemnity policy that pays $200 per day in the hospital, regardless of the actual bill.",
+  "q": "How should the hospital indemnity policy be understood in the couple's plan?",
+  "choices": [
+   "A major medical policy that pays a set share of covered costs after the deductible and within the plan's network",
+   "A supplement that pays a fixed daily benefit regardless of the bill, so it does not replace major medical",
+   "A health savings account that the couple funds each year and can draw on for any medical or household expense",
+   "A long-term care policy that starts paying after a 90-day wait"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — major medical pays a share of covered charges, which is not how this policy pays.",
+   "Correct — a hospital indemnity policy pays a fixed amount per day regardless of the bill, so it supplements rather than replaces major medical coverage.",
+   "Wrong — an HSA is a savings account for medical costs, not an insurance policy that pays a daily benefit.",
+   "Wrong — this policy covers hospital stays; long-term care is a separate product."
+  ]
+ },
+ {
+  "id": "cs14-4",
+  "domain": "risk",
+  "sub": "Long-term care insurance and long-term care planning (individual and group)",
+  "scenario": "Gerald, 66, has a universal life policy he bought in 2009. An agent now suggests replacing it with a new policy that has lower premiums and a higher cash value. Since 2009, Gerald has been treated for high blood pressure. His wife, Lois, 64, is in good health and wants long-term care coverage. The agent offers a policy with a 30-day elimination period at a higher premium, or a 90-day period at a lower one. Lois is worried the premium could rise later. The couple also holds a hospital indemnity policy that pays $200 per day in the hospital, regardless of the actual bill.",
+  "q": "Lois wants long-term care coverage. Which statement about when benefits are triggered is most accurate?",
+  "choices": [
+   "Benefits begin at age 65 regardless of health or care needs, once the premium has been paid for ten years",
+   "Benefits are paid only for care received inside a hospital or skilled nursing facility, on a doctor's written order, after a stay",
+   "Benefits begin on the date the policy is issued, as long as the first premium has cleared",
+   "Benefits start once a set number of daily living activities are lost, or with severe cognitive impairment"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — age alone does not trigger long-term care benefits.",
+   "Wrong — long-term care benefits are not limited to hospital care.",
+   "Wrong — benefits begin when a trigger is met, not on the policy's issue date.",
+   "Correct — long-term care benefits are triggered by a loss of daily living activities or by severe cognitive impairment, not by age or place of care."
+  ]
+ },
+ {
+  "id": "cs15-1",
+  "domain": "psych",
+  "sub": "Crisis events with severe consequences",
+  "scenario": "Dana, 47, is a nurse with $310,000 in her 401(k) and a $40,000 credit card balance. Over the past year she has lost about $25,000 betting on sports and has borrowed to cover it. She says she wants to make the money back before her son starts college in five years. Her 401(k) is 90% stocks. She describes herself as comfortable with risk, but she has no emergency fund and her income depends on a single job. She avoided the planner's last meeting and asked to reschedule today.",
+  "q": "Which pattern in Dana's story is the clearest warning sign that she needs specialized help?",
+  "choices": [
+   "She is borrowing to cover gambling losses and chasing them",
+   "She describes herself as comfortable with risk and has said she will manage her own investments",
+   "Her 401(k) is 90% stocks",
+   "She has a son starting college in five years"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — chasing losses and borrowing to cover them are classic warning signs of problem gambling; the planner should refer her for specialized help.",
+   "Wrong — a self-description of comfort with risk is not a warning sign of gambling.",
+   "Wrong — a stock-heavy allocation is a planning issue, not by itself a sign of problem gambling.",
+   "Wrong — a child's college timeline is a goal, not a warning sign."
+  ]
+ },
+ {
+  "id": "cs15-2",
+  "domain": "psych",
+  "sub": "Client and planner attitudes, values, biases",
+  "scenario": "Dana, 47, is a nurse with $310,000 in her 401(k) and a $40,000 credit card balance. Over the past year she has lost about $25,000 betting on sports and has borrowed to cover it. She says she wants to make the money back before her son starts college in five years. Her 401(k) is 90% stocks. She describes herself as comfortable with risk, but she has no emergency fund and her income depends on a single job. She avoided the planner's last meeting and asked to reschedule today.",
+  "q": "Dana says she is comfortable with risk, yet she has no emergency fund and a single income. How should the planner set her risk level?",
+  "choices": [
+   "Use her stated tolerance, since it is what she told the planner",
+   "Set the risk level from the 90% stock allocation she already holds, since it reflects her choices",
+   "Use the lowest of her tolerance, capacity and the return her goal needs",
+   "Use the highest return she could earn to make the money back quickly"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — stated tolerance is only one of three measures and should not decide the level alone.",
+   "Wrong — the current allocation reflects her choices so far, not what she can afford to lose.",
+   "Correct — the portfolio should respect the most restrictive of risk tolerance, risk capacity and risk need, here the lowest.",
+   "Wrong — chasing the highest return to recover losses is the behavior the planner should be correcting."
+  ]
+ },
+ {
+  "id": "cs15-3",
+  "domain": "psych",
+  "sub": "General principles of effective communication",
+  "scenario": "Dana, 47, is a nurse with $310,000 in her 401(k) and a $40,000 credit card balance. Over the past year she has lost about $25,000 betting on sports and has borrowed to cover it. She says she wants to make the money back before her son starts college in five years. Her 401(k) is 90% stocks. She describes herself as comfortable with risk, but she has no emergency fund and her income depends on a single job. She avoided the planner's last meeting and asked to reschedule today.",
+  "q": "Dana asked to reschedule and has been avoiding the planner. Which question is most useful to open the next meeting?",
+  "choices": [
+   "Are you still gambling? Yes or no?",
+   "What worries you most about your money right now?",
+   "Do you agree that you need to stop gambling and stop borrowing, starting this week?",
+   "Is your credit card balance over $40,000?"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a yes-or-no question invites a defensive answer and gives the planner little to work with.",
+   "Correct — an open-ended question invites her to name what matters to her, which builds the relationship and surfaces the real concerns.",
+   "Wrong — asking her to agree before she has been heard puts her on the defensive.",
+   "Wrong — a narrow question about one figure does not invite her to talk about the underlying problem."
+  ]
+ },
+ {
+  "id": "cs15-4",
+  "domain": "psych",
+  "sub": "Crisis events with severe consequences",
+  "scenario": "Dana, 47, is a nurse with $310,000 in her 401(k) and a $40,000 credit card balance. Over the past year she has lost about $25,000 betting on sports and has borrowed to cover it. She says she wants to make the money back before her son starts college in five years. Her 401(k) is 90% stocks. She describes herself as comfortable with risk, but she has no emergency fund and her income depends on a single job. She avoided the planner's last meeting and asked to reschedule today.",
+  "q": "Dana has a $40,000 credit card balance and is under debt stress. Which step comes first?",
+  "choices": [
+   "Consolidate everything into a new 401(k) loan at once",
+   "Tell her to stop all borrowing and stop talking about the debt until she has repaid the card in full",
+   "Move her 401(k) into cash until the debt is paid",
+   "Build a prioritized repayment plan with her and refer her for gambling help"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — borrowing against the 401(k) to clear the card shifts the risk and can cost her the account if she leaves her job.",
+   "Wrong — shutting down the conversation leaves the debt and the gambling unaddressed.",
+   "Wrong — moving the whole retirement account to cash gives up growth and does not fix the debt.",
+   "Correct — a concrete repayment plan eases the stress, and the gambling needs its own specialized help alongside it."
+  ]
+ }
+];
+
+
+CASE_STUDIES.push(...CASE_V412_META);
+QUESTIONS.push(...CASE_V412_QUESTIONS);
+// Once and done: a case the student has finished is never offered or started again.
+function caseDone(id){ const s = (DATA.caseStats || {})[id]; return !!(s && s.attempts > 0); }
+function availableCases(){ return allCases().filter(c => caseQuestions(c.id).length && !caseDone(c.id)); }
 function allCases(){
   const gen = (DATA.generatedCases || []).filter(c => c && c.id && caseQuestions(c.id).length).map(c => ({
     id:c.id, title:c.title, generated:true,
@@ -41270,8 +41541,7 @@ function caseStepProgress(id, caseN){
 }
 function nextCaseToTry(excludeId){
   const stats = DATA.caseStats || {};
-  const pool0 = allCases().filter(c => c.id !== excludeId && caseQuestions(c.id).length);
-  const pool = pool0.some(c => !caseFinishedToday(c.id)) ? pool0.filter(c => !caseFinishedToday(c.id)) : pool0;
+  const pool = availableCases().filter(c => c.id !== excludeId);
   pool.sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((stats[a.id]||{}).attempts||0) - ((stats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0) || (a.generated?1:0) - (b.generated?1:0) || ((stats[a.id]||{}).lastAt||0) - ((stats[b.id]||{}).lastAt||0));
   return pool[0] || null;
 }
@@ -41334,29 +41604,12 @@ function startCase(id, o){
       return;
     }
   }catch(e){}
-  // Without AI, or when a fresh version could not be written, a worked case is not replayed with the same facts: a less-worked case that tests the same domains is used instead, so the idea carries over and the story does not.
-  if(!(o && o.rotated) && ((DATA.caseStats || {})[id] || {}).attempts && (!aiFeaturesAvailable || (o && o.replay))){
-    const mine = new Set(qs.map(q => q.domain));
-    const attemptsOf = c => ((DATA.caseStats || {})[c.id] || {}).attempts || 0;
-    const here = attemptsOf(def);
-    const alts = allCases().filter(c => c.id !== id && attemptsOf(c) < here && caseQuestions(c.id).length)
-      .map(c => ({ c, overlap: new Set(caseQuestions(c.id).map(q => q.domain).filter(d => mine.has(d))).size }))
-      .sort((a, b) => b.overlap - a.overlap || attemptsOf(a.c) - attemptsOf(b.c));
-    if(alts.length){
-      const pick = alts[0].c;
-      document.body.classList.remove('domain-picker-active');
-      try{ closeDomainPicker(); }catch(e){}
-      try{ setCoach('You have worked "' + def.title + '" already. "' + pick.title + '" tests the same ideas on different facts, so you work the concept rather than the story.', false); }catch(e){}
-      startCase(pick.id, { rotated: true });
-      return;
-    }
-  }
-  // A case already worked is never replayed as it was: the AI writes a fresh version (new people, new figures, deciding facts changed) so the concept is what carries over, not the answers.
-  if(!(o && o.replay) && ((DATA.caseStats || {})[id] || {}).attempts && aiFeaturesAvailable && !caseGenBusy){
+  // Once and done: a case already finished is never started again. A new one is written instead when the AI is available.
+  if(!(o && o.fresh) && caseDone(id) && !((DATA.caseDrafts || {})[id] && ((DATA.caseDrafts[id].answerLog || []).length))){
     document.body.classList.remove('domain-picker-active');
     try{ closeDomainPicker(); }catch(e){}
-    try{ setCoach('Writing a fresh version of "' + def.title + '" with new facts, so you work the idea rather than remember the answers. About half a minute.', false); }catch(e){}
-    generateNewCase({ variantOf:id });
+    if(aiFeaturesAvailable && !caseGenBusy){ try{ setCoach('"' + def.title + '" is finished, so you get a new case instead. Writing it now.', false); }catch(e){} generateNewCase({ auto:true }); }
+    else { try{ setCoach('"' + def.title + '" is finished. Connect an API key in Settings for new cases, or pick one you have not finished.', false); }catch(e){} }
     return;
   }
   try{ if(!DATA.caseStarts || typeof DATA.caseStarts !== 'object') DATA.caseStarts = {}; const cst = DATA.caseStarts[id] || { n:0, last:0 }; cst.n++; cst.last = Date.now(); DATA.caseStarts[id] = cst; persist(); }catch(e){}
@@ -41403,7 +41656,8 @@ function openCasePicker(){
   genBox.appendChild(genNote);
   const oldBox = document.getElementById('caseGenBox'); if(oldBox) oldBox.remove();
   list.parentNode.insertBefore(genBox, list);
-  const order = allCases().sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0));
+  const order = availableCases().sort((a,b) => caseRecency(a.id) - caseRecency(b.id) || ((DATA.caseStats[a.id]||{}).attempts||0) - ((DATA.caseStats[b.id]||{}).attempts||0) || caseStartCount(a.id) - caseStartCount(b.id) || (caseFit(b.id).avg >= 2 ? 1 : 0) - (caseFit(a.id).avg >= 2 ? 1 : 0));
+  if(!order.length){ const m = document.createElement('div'); m.className = 'hint'; m.style.cssText = 'padding:14px 4px;'; m.textContent = aiFeaturesAvailable ? 'You have finished every case study in the app. A new one is written for you as you work.' : 'You have finished every case study in the app. Connect an API key in Settings and the AI writes new ones for you.'; list.appendChild(m); }
   order.forEach(c => {
     const qs = caseQuestions(c.id);
     if(!qs.length) return;
@@ -46920,6 +47174,119 @@ function renderCalcCue(q){
 }
 
 const CASE_CUES = {"cs1-1":{"ev":["retire in 6 years","$850,000 in a 401(k) split 70/30 between growth stock funds and bonds"],"noise":["$2.1M in retained earnings"],"note":"A short time horizon plus a growth-heavy 70/30 mix points to reviewing the allocation. The business facts belong to other questions."},"cs1-2":{"ev":["considering selling the business to a group of long-time employees","no formal buy-sell agreement in place"],"noise":["federal marginal tax bracket is 35%"],"note":"\"No formal buy-sell agreement\" is the planted gap: nothing sets the price or how the purchase is paid for."},"cs1-3":{"ev":["$1.2M of company stock with a low cost basis of $80,000"],"noise":["Diane (age 57)"],"note":"Value minus basis is the gain. Nothing says the stock was held under a year, so the gain is long term."},"cs1-4":{"ev":["low cost basis of $80,000"],"noise":[],"note":"A low basis is a built-in gain. Death resets the basis, which is why \"if he keeps it until death\" changes the answer."},"cs1-5":{"ev":["considering selling the business to a group of long-time employees","no formal buy-sell agreement in place"],"noise":[],"note":"The case names the tool (a buy-sell agreement). The question asks what pays for it."},"cs1-6":{"ev":["$1.2M of company stock","$850,000 in a 401(k)"],"noise":["successful manufacturing business"],"note":"Set the size of the single holding against total investable assets. That comparison is the concentration cue."},"cs1-7":{"ev":["Diane (age 57), who has a modest IRA of $120,000"],"noise":[],"note":"A modest account for the spouse with the smaller assets points to whether she is covered if she outlives him."},"cs1-8":{"ev":["current federal marginal tax bracket is 35%","retire in 6 years"],"noise":[],"note":"Conversion size is a bracket comparison: the 35% rate today against the rate expected in retirement."},"cs2-1":{"ev":["self-employed contractor","no employer benefits","two young children (ages 3 and 6)","no life insurance"],"noise":["$40,000 in student loan debt at 6%"],"note":"A sole earner with no employer benefits and young children puts income protection first."},"cs2-2":{"ev":["$15,000 in emergency savings","two young children (ages 3 and 6)","no life insurance"],"noise":["$40,000 in student loan debt at 6%"],"note":"The 6% loan looks urgent, but missing protection with young children outranks paying debt faster."},"cs2-3":{"ev":["'just knows' the market will rebound quickly"],"noise":["$95,000/year"],"note":"Certainty about predicting the market is the overconfidence cue. Nothing mentions past losses or following a crowd."},"cs2-4":{"ev":["$15,000 in emergency savings","no life insurance","aggressive all-stock investment approach"],"noise":[],"note":"Capacity is what the family can afford to lose. Their thin cushion limits it, however confident James feels."},"cs2-5":{"ev":["two young children (ages 3 and 6)"],"noise":["Maria works part-time"],"note":"Young children and a long runway point to the education-specific, tax-advantaged account."},"cs2-6":{"ev":["self-employed contractor","no employer benefits"],"noise":["small employer 401(k) match"],"note":"\"Self-employed\" narrows the list to plans built for the self-employed. Maria's 401(k) is a different person's plan."},"cs3-1":{"ev":["still names her ex-husband as primary beneficiary on several accounts"],"noise":["22 years of marriage"],"note":"Beneficiary forms override a will, so the fix has to be made at the account, not just in her will."},"cs3-2":{"ev":["small consulting business (an S-corporation)"],"noise":[],"note":"The entity named in the case is the clue: S-corporation income passes through to her personal return."},"cs3-3":{"ev":["Patricia, age 55","$340,000 in a traditional IRA received as part of the divorce settlement"],"noise":[],"note":"Age 55 is under 59½, and once the money sits in her own IRA the ordinary rules apply: taxable, with a possible 10% penalty."},"cs3-4":{"ev":["needs to update her estate plan"],"noise":["22 years of marriage"],"note":"Two needs, two tools: where the assets go (will and beneficiaries) and who acts if she cannot (durable power of attorney)."},"cs3-5":{"ev":["small consulting business (an S-corporation)","$180,000 in annual net income"],"noise":[],"note":"A $30,000 salary against $180,000 of profit is the red flag: owner-employees must be paid reasonable compensation."},"cs3-6":{"ev":["small consulting business","$180,000 in annual net income"],"noise":["22 years of marriage"],"note":"High income and a one-person business make a solo 401(k) a better fit than an IRA with its low limit."},"cs4-1":{"ev":["only disability coverage is an employer-paid group long-term disability policy"],"noise":["$380,000 taxable brokerage account"],"note":"\"Employer-paid\" decides the tax treatment: when the employer pays the premium, the benefit is taxable."},"cs4-2":{"ev":["$650,000 mortgage","$500,000 term life policy on Daniel only","fund college for both children"],"noise":["$380,000 taxable brokerage account"],"note":"A needs analysis adds up the obligations (mortgage, income, college) and subtracts what already exists."},"cs4-3":{"ev":["$190,000 is a single technology stock","cost basis $40,000","keep their tax bill under control"],"noise":[],"note":"A large position with a low basis means selling has a tax cost, so the best answer manages the gain."},"cs4-4":{"ev":["$380,000 taxable brokerage account","$520,000 in employer retirement plans"],"noise":[],"note":"Two kinds of accounts means asset location: put the most heavily taxed income where the tax is deferred."},"cs4-5":{"ev":["two children, ages 12 and 9","fund college for both children"],"noise":[],"note":"Children aged 12 and 9 with a college goal point to the education account with tax-free qualified withdrawals."},"cs4-6":{"ev":["combined $420,000"],"noise":[],"note":"Income well over the phase-out rules out a direct Roth contribution. The workaround is the backdoor Roth, with the pro rata rule as the catch."},"cs5-1":{"ev":["Helen claimed Social Security at 62 and receives $1,400 per month","Walter, whose full retirement age is 67, has not yet claimed and is considering waiting until 70"],"noise":["$250,000 Roth IRA in Walter's name"],"note":"Her benefit is small and his is large. Delay raises the benefit that the survivor keeps."},"cs5-2":{"ev":["$900,000 in Walter's traditional IRA","has not yet claimed"],"noise":["$300,000 in a taxable account"],"note":"A big pre-tax IRA plus a low-income window before Social Security starts is the moment for partial Roth conversions."},"cs5-3":{"ev":["three adult children"],"noise":["Roth IRA in Walter's name"],"note":"Adult children are non-spouse designated beneficiaries, which brings in the 10-year rule."},"cs5-4":{"ev":["a favorite charity","$900,000 in Walter's traditional IRA"],"noise":[],"note":"Pre-tax IRA money carries income tax for heirs but none for a charity, so it is the best asset to leave to charity."},"cs5-5":{"ev":["Both are healthy","Helen's family tends to live into the nineties"],"noise":["a paid-off $600,000 home"],"note":"Good health and long family lifespans raise the chance of needing long-term care. Medicaid pays only after assets are spent down."},"cs5-6":{"ev":["after-tax spending need is $9,000 per month"],"noise":["$300,000 in a taxable account"],"note":"Annualize the need ($108,000), subtract the guaranteed income, then divide only the gap by the portfolio."},"cs6-1":{"ev":["plans to sell the practice to her associate dentist, Dr. Kim, in eight to ten years","protect the practice's value if something happens to her sooner"],"noise":[],"note":"A known buyer, a future sale and a wish to protect value if she dies sooner all point to a funded buy-sell agreement."},"cs6-2":{"ev":["owns 100% of a dental practice","if something happens to her sooner"],"noise":["a rental property"],"note":"She is the sole owner who produces the revenue, so the practice needs key-person coverage it owns."},"cs6-3":{"ev":["owns 100% of a dental practice"],"noise":["$1.2 million term life policy"],"note":"Only one fact matters: she owns a dental practice, so the exposure is professional. The rest is knowing that a personal umbrella policy excludes professional services."},"cs6-4":{"ev":["dental practice organized as an S-corporation"],"noise":[],"note":"A dental practice is a specified service business, so the QBI deduction phases out at higher income."},"cs6-5":{"ev":["total net worth is roughly $4.5 million"],"noise":["$1.2 million term life policy"],"note":"Compare net worth with the 2026 exclusion amount of $15 million. The state-tax caveat is why the answer says \"could still apply\"."},"cs6-6":{"ev":["asked by Dr. Kim to advise him on the eventual purchase as well"],"noise":["19-year-old daughter in college"],"note":"One planner advising both sides of one deal is a conflict of interest: disclose, get informed consent and manage it, or decline one engagement."}};
+const CASE_V412_CUES = {
+ "cs13-1": {
+  "ev": [
+   "registered as transfer on death to their son, Rafi"
+  ],
+  "noise": [
+   "Brightline Landscaping LLC"
+  ],
+  "note": "The registration decides who gets the account. A transfer on death registration passes it directly to the named beneficiary, so the 2014 will does not control it."
+ },
+ "cs13-2": {
+  "ev": [
+   "taxed as a partnership"
+  ],
+  "noise": [
+   "Their 2014 wills"
+  ],
+  "note": "Two members taxed as a partnership is a passthrough: the business reports its results and each owner reports a share."
+ },
+ "cs13-3": {
+  "ev": [
+   "his share of the LLC passes to Nadia"
+  ],
+  "noise": [
+   "a $300,000 IRA"
+  ],
+  "note": "Inherited property generally takes a basis equal to fair market value at death. The step-up means the old cost basis does not carry over."
+ },
+ "cs13-4": {
+  "ev": [
+   "wants Rafi's share of the estate to be used only for his education and home"
+  ],
+  "noise": [
+   "Felix has a second child from a prior marriage"
+  ],
+  "note": "The wish is clear, but it is not a legal term. A letter of wishes records the intent and guides the trustee; the will or trust sets the binding terms."
+ },
+ "cs14-1": {
+  "ev": [
+   "Since 2009, Gerald has been treated for high blood pressure."
+  ],
+  "noise": [
+   "a hospital indemnity policy"
+  ],
+  "note": "A replacement restarts the contestability period, and new health underwriting may be harder now. Compare the old policy before replacing it."
+ },
+ "cs14-2": {
+  "ev": [
+   "a 90-day period at a lower one"
+  ],
+  "noise": [
+   "Lois, 64, is in good health"
+  ],
+  "note": "The elimination period works like a deductible in time: the longer the wait, the lower the premium, and the more care costs she covers herself."
+ },
+ "cs14-3": {
+  "ev": [
+   "pays $200 per day in the hospital, regardless of the actual bill"
+  ],
+  "noise": [
+   "universal life policy he bought in 2009"
+  ],
+  "note": "A fixed-benefit policy pays its daily amount whatever the bill. It adds money at the bedside but is not a substitute for major medical coverage."
+ },
+ "cs14-4": {
+  "ev": [
+   "wants long-term care coverage"
+  ],
+  "noise": [
+   "a new policy that has lower premiums"
+  ],
+  "note": "Long-term care triggers are health-based: loss of daily living activities or severe cognitive impairment, not age or place of care."
+ },
+ "cs15-1": {
+  "ev": [
+   "betting on sports",
+   "has borrowed to cover it"
+  ],
+  "noise": [
+   "Her 401(k) is 90% stocks"
+  ],
+  "note": "Chasing losses and borrowing to cover them are classic warning signs. The planner recognizes them and refers her to specialized help."
+ },
+ "cs15-2": {
+  "ev": [
+   "She describes herself as comfortable with risk"
+  ],
+  "noise": [
+   "$310,000 in her 401(k)"
+  ],
+  "note": "Risk tolerance is only one part. Capacity (no emergency fund, one income) and need (a five-year goal) set the ceiling."
+ },
+ "cs15-3": {
+  "ev": [
+   "asked to reschedule today"
+  ],
+  "noise": [
+   "is a nurse"
+  ],
+  "note": "Open-ended questions invite her to name what matters. Yes-or-no questions invite a defensive answer."
+ },
+ "cs15-4": {
+  "ev": [
+   "a $40,000 credit card balance"
+  ],
+  "noise": [
+   "son starts college in five years"
+  ],
+  "note": "Debt stress eases with a concrete plan and a next step. The gambling needs its own help, so the referral goes alongside the plan."
+ }
+};
+
+Object.assign(CASE_CUES, CASE_V412_CUES);
 
 /* ===========================================================
    CASE READING TRAINING
@@ -52617,7 +52984,7 @@ async function executeTutorTool(toolName, toolInput){
         return `Started a domain drill on ${domainMeta.name}.`;
       }
       if(toolInput.mode === 'case'){
-        const chosen = caseById(toolInput.case) || nextCaseToTry();
+        const reqCase = caseById(toolInput.case); const chosen = (reqCase && !caseDone(reqCase.id)) ? reqCase : nextCaseToTry();
         if(!chosen) return `No case studies are available right now.`;
         startCase(chosen.id);
         return `Started the case study "${chosen.title}" (${caseQuestions(chosen.id).length} questions).`;
@@ -54077,7 +54444,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000412';
+const BUILD_ID = '2026-11-01.00000413';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
