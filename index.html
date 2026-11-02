@@ -25770,12 +25770,13 @@ async function storageGet(key){
   const candidates = [artifactValue, localValue, idbValue].filter(v => v !== null);
   if(candidates.length === 0) return (key in memoryFallback) ? memoryFallback[key] : null;
   if(candidates.length === 1) return candidates[0];
-  let best = candidates[0], bestCount = -1;
+  let best = candidates[0], bestCount = -1, bestStamp = -1;
   for(const c of candidates){
     try{
       const parsed = JSON.parse(c);
+      const stamp = Number(parsed._savedAt) || Number(parsed._modAt) || 0;
       const count = Number(parsed.answerCounter) || 0;
-      if(count > bestCount){ bestCount = count; best = c; }
+      if(stamp > bestStamp || (stamp === bestStamp && count > bestCount)){ bestStamp = stamp; bestCount = count; best = c; }
     }catch(e){ /* skip an unparseable candidate when comparing */ }
   }
   return best;
@@ -26744,7 +26745,7 @@ function persistFlush(){
   if(!_persistTimer) return;
   clearTimeout(_persistTimer); _persistTimer = null;
   // A synchronous copy first, so the save survives the page going away before the async write finishes.
-  try{ if(typeof DATA !== 'undefined' && DATA) localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){}
+  try{ if(typeof DATA !== 'undefined' && DATA){ DATA._savedAt = Date.now(); localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } }catch(e){}
   const ws = _persistWaiters; _persistWaiters = [];
   persistWrite().then(ok => ws.forEach(r => r(ok)), () => ws.forEach(r => r(false)));
 }
@@ -26753,9 +26754,10 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 async function persistWrite(){
   // With sync on, stamp the data whenever it actually changed, so two devices can tell whose edit is newer.
   if(typeof SYNC !== 'undefined' && SYNC.on && !SYNC.applying && DATA){
-    const probe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+    const probe = JSON.stringify(DATA, (k, v) => (k === '_modAt' || k === '_savedAt') ? undefined : v);
     if(probe !== SYNC.lastProbe){ SYNC.lastProbe = probe; DATA._modAt = Date.now(); }
   }
+  DATA._savedAt = Date.now();
   const payload = JSON.stringify(DATA);
   try{
     const ok = await storageSet(STORAGE_KEY, payload);
@@ -54697,7 +54699,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000414';
+const BUILD_ID = '2026-11-01.00000415';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -54794,7 +54796,7 @@ const SYNC = { on:false, token:null, gistId:null, etag:null, lastOkAt:0, status:
 
 function syncCanon(v){
   if(Array.isArray(v)) return '[' + v.map(syncCanon).join(',') + ']';
-  if(v && typeof v === 'object') return '{' + Object.keys(v).filter(k => k !== '_modAt').sort().map(k => JSON.stringify(k) + ':' + syncCanon(v[k])).join(',') + '}';
+  if(v && typeof v === 'object') return '{' + Object.keys(v).filter(k => k !== '_modAt' && k !== '_savedAt').sort().map(k => JSON.stringify(k) + ':' + syncCanon(v[k])).join(',') + '}';
   return JSON.stringify(v === undefined ? null : v);
 }
 function syncKind(v){ return Array.isArray(v) ? 'arr' : (v && typeof v === 'object') ? 'obj' : typeof v === 'number' ? 'num' : 'other'; }
@@ -54950,7 +54952,7 @@ async function syncApply(m){
     try{ refreshCoachSurfaces(); }catch(e){}
     try{ updateTutorContextNote(); }catch(e){}
   } finally { SYNC.applying = false; }
-  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => (k === '_modAt' || k === '_savedAt') ? undefined : v);
 }
 async function syncNow(reason){
   if(!SYNC.on || !DATA) return;
@@ -55043,7 +55045,7 @@ async function syncJoin(token, gistId, create){
   }
   SYNC.gistId = gistId; SYNC.etag = null; SYNC.on = true; SYNC.status = 'idle'; SYNC.keyPushedFor = null; SYNC.lastPushedCanon = null;
   DATA._modAt = DATA._modAt || Date.now();
-  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+  SYNC.lastProbe = JSON.stringify(DATA, (k, v) => (k === '_modAt' || k === '_savedAt') ? undefined : v);
   await syncSaveConfig();
   syncStartLoops();
   renderSyncCard(true);
@@ -55135,7 +55137,7 @@ async function syncInit(){
   try{
     if(await syncLoadConfig()){
       DATA._modAt = DATA._modAt || Date.now();
-      SYNC.lastProbe = JSON.stringify(DATA, (k, v) => k === '_modAt' ? undefined : v);
+      SYNC.lastProbe = JSON.stringify(DATA, (k, v) => (k === '_modAt' || k === '_savedAt') ? undefined : v);
       syncStartLoops();
       setTimeout(() => syncNow('launch'), 1200);
     }
