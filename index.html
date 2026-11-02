@@ -30416,7 +30416,7 @@ function buildStudyPlanCore(minutes){
       const n = cuToday ? cuToday.n : Math.min(60, Math.floor((minutes - used) / 1.4 / 5) * 5);
       if(n >= 10){
         steps.push({ id:'catchup', title:'Catch-up round: ' + n + ' questions', minutes: Math.round(n * 1.4), need: n, have: cuToday ? Math.min(cuToday.answered || 0, n) : 0, unit:'questions', curated:true,
-          why:'Your pace target for ' + (days !== null ? days + ' days to go' : 'the exam') + ' is about ' + paceHrs(minutes) + ' a day, and the plan is short of it. This round adds ' + n + ' questions weighted toward ' + wdN + ' and your open misses.',
+          why: (cuToday && (cuToday.answered || 0) < n ? (cuToday.answered || 0) + ' of ' + n + ' answered so far. Continue picks up at question ' + ((cuToday.answered || 0) + 1) + '; it completes when all ' + n + ' are answered. ' : (cuToday && cuToday.done ? 'Done: all ' + n + ' questions answered today. ' : '')) + 'Your pace target for ' + (days !== null ? days + ' days to go' : 'the exam') + ' is about ' + paceHrs(minutes) + ' a day, and the plan is short of it. This round adds ' + n + ' questions weighted toward ' + wdN + ' and your open misses.',
           run: () => startCatchupRun(n) });
         if(!cuToday) used += Math.round(n * 1.4);
         curated++;
@@ -46694,7 +46694,8 @@ function startAdaptive(opts){
 // the sitting) is queued two places ahead, so the gap is worked while it is still warm. Only in adaptive
 // sittings, capped at about 30% of the length so the sitting never grows much past what was promised.
 function adaptiveAfterAnswer(q, isCorrect){
-  if(!session || session.mode !== 'adaptive' || isCorrect || !q) return;
+  // A catch-up round is a fixed set (its size is what the plan row counts), so it adds no follow-ups.
+  if(!session || session.mode !== 'adaptive' || session.catchup || isCorrect || !q) return;
   const planned = session.plannedLen || session.queue.length;
   const cap = Math.max(3, Math.ceil(planned * 0.3));
   if((session.followUps || 0) >= cap) return;
@@ -50385,6 +50386,7 @@ function finishSession(){
     : session.mode==='mock' ? 'Timed checkpoint'
     : session.mode==='learncp' ? 'Learning checkpoint'
     : session.mode==='review' ? 'Missed-question review'
+    : session.catchup ? (() => { const cu = catchupToday(); return 'Catch-up round' + (cu ? ' \u00b7 ' + Math.min(cu.answered || 0, cu.n) + ' of ' + cu.n + ' done' : ''); })()
     : session.mode==='adaptive' ? 'Adaptive session'
     : session.treeDrill ? 'Decision-tree drill'
     : 'Domain drill';
@@ -55234,7 +55236,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000438';
+const BUILD_ID = '2026-11-02.00000439';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
