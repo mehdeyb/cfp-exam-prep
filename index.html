@@ -46293,6 +46293,8 @@ function catchupNote(sess){
 }
 function startCatchupRun(n){
   const cur = catchupToday();
+  // Today's round is finished: it is never started over. It returns on the next day, when the plan has a new gap.
+  if(cur && cur.done){ try{ setCoach('Today\'s catch-up round is done (' + cur.n + ' of ' + cur.n + ').', false); }catch(e){} return; }
   if(cur && DATA.inProgressSession && DATA.inProgressSession.catchup && !cur.done){ resumeInProgressSession(); return; }
   if(cur && !cur.done){
     // Unfinished round with no saved sitting (it was dismissed or cleared): keep what was answered and ask only for the rest.
@@ -54705,7 +54707,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-01.00000416';
+const BUILD_ID = '2026-11-01.00000417';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
