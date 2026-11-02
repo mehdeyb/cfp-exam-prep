@@ -5526,7 +5526,6 @@
           </div>
           <div class="fc-mnemonic-row" id="fcMnemonicRow" style="display:none;">
             <button class="btn ghost" id="fcMnemonicBtn" onclick="event.stopPropagation(); requestFlashcardMnemonic();">Give me a memory trick for this</button>
-            <button class="btn ghost" id="fcExplainBtn" onclick="event.stopPropagation(); requestFlashcardExplain();">Explain it with an example</button>
             <button class="btn ghost" id="fcTutorBtn" onclick="event.stopPropagation(); askTutorAboutCard();">Talk it through with the tutor</button>
           </div>
           <div class="fc-mnemonic-box" id="fcMnemonicBox" style="display:none;"></div>
@@ -38353,8 +38352,6 @@ function renderFlashcard(){
   if(mnemonicBox){ mnemonicBox.style.display = 'none'; mnemonicBox.innerHTML = ''; }
   const mnemonicBtn = document.getElementById('fcMnemonicBtn');
   if(mnemonicBtn){ mnemonicBtn.textContent = 'Give me a memory trick for this'; mnemonicBtn.disabled = false; }
-  const explainBtn = document.getElementById('fcExplainBtn');
-  if(explainBtn){ explainBtn.textContent = 'Explain it with an example'; explainBtn.disabled = false; }
   fcFlipped = false;
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = 'Explain it first'; }
 }
@@ -38534,7 +38531,8 @@ const FC_TEACH_LABELS = [
   { k:'plain',  re:/^plain words\s*:/i,         label:'In plain words' },
   { k:'example', re:/^worked example\s*:/i,     label:'A worked example' },
   { k:'diff',   re:/^the difference\s*:/i,      label:'The deciding difference' },
-  { k:'trap',   re:/^exam trap\s*:/i,           label:'How the exam trips you' }
+  { k:'trap',   re:/^exam trap\s*:/i,           label:'How the exam trips you' },
+  { k:'check',  re:/^check\s*:/i,              label:'Check yourself' }
 ];
 const _fcTeachBusy = {}, _fcTeachFailed = {};
 function fcTeachGet(card){
@@ -38555,22 +38553,45 @@ function fcTeachParse(text){
   const seen = {}; return out.filter(x => !seen[x.k] && (seen[x.k] = true));
 }
 async function fcMaybeTeach(card){
-  if(!aiFeaturesAvailable || fcTeachGet(card) || _fcTeachBusy[card.id] || _fcTeachFailed[card.id]) return;
+  if(!aiFeaturesAvailable || _fcTeachBusy[card.id]) return;
+  let ctx = { picks:[], mix:null, justRated:null, distractor:null, quiz:null };
+  try{ ctx = fcExplainContext(card); }catch(e){}
+  const sig = fcExplainSignature(card, ctx);
+  const stored = fcTeachGet(card);
+  if(stored && stored.sig === sig) return; // already current for this student's history
+  if(!stored && _fcTeachFailed[card.id] === sig) return; // this history already failed once
   _fcTeachBusy[card.id] = true;
   try{
     const lines = [];
-    lines.push('You are teaching one CFP exam concept to a candidate, on the back of a flashcard. Teach it properly: the card should leave them able to explain it and answer an exam question on it.');
+    lines.push('You are teaching one CFP exam concept to a candidate, on the back of a flashcard. Teach it so the card leaves them able to explain it and answer an exam question on it. Plain text, no markdown, no preamble. Each section under 60 words.');
     lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
-    lines.push('Write exactly four sections. Start each on its own line with its label, then the text:\nPlain words: one or two sentences in everyday language, without reusing the definition\'s wording.\nWorked example: one short, concrete client scenario with simple numbers, marked as illustrative, and one sentence on what it shows.\nThe difference: the look-alike idea this is most often confused with, and the single fact that decides between them.\nExam trap: how the exam disguises this idea, the wrong answer it invites, and the quick rule that cuts through.');
-    lines.push('Plain text only, no markdown, no preamble. Each section under 60 words. Do not invent rules, limits or figures; if you are not certain of a number, leave numbers out and stay general.');
-    const text = await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 600 });
+    lines.push('Write exactly five sections, in this order. Start each on its own line with its label, then the text:\n' +
+      'Plain words: one or two sentences in everyday language, without reusing the definition\'s wording.\n' +
+      'Worked example: one short, concrete client situation with simple numbers, marked as illustrative, and one sentence on what it shows.\n' +
+      'The difference: the deciding fact that separates this idea from the look-alike it is confused with.\n' +
+      'Exam trap: how the exam disguises this idea and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first; otherwise use the common wrong answer given. End with the quick rule that cuts through.\n' +
+      'Check: one quick question the student can answer in their head, then the answer, on one line, like "Check: ...? Answer: ...".');
+    lines.push('Do not invent rules, limits or figures; if you are not certain of a number, leave numbers out and stay general.');
+    const cast = ['a retired nurse in her 70s', 'a freelance graphic designer with irregular income', 'a couple with twin toddlers', 'a small-business owner selling her company', 'a new graduate with student loans', 'a widower managing his late wife\'s accounts', 'a tech employee with stock options', 'a contractor paid in cash and checks', 'a farmer with a seasonal income', 'a physician in her second year of practice', 'a divorced father sharing custody', 'a young couple buying their first home'];
+    const usedCast = fcClientsUsed.slice(-8);
+    const pool = cast.filter(c => !usedCast.includes(c)); const pick = pool[Math.floor(Math.random() * pool.length)] || cast[0];
+    fcClientsUsed.push(pick);
+    lines.push('Client for the worked example: ' + pick + '. Give them a first name of your own choosing, and do not reuse names or situations from other examples.');
+    if(ctx.picks.length) lines.push('Their own wrong picks on related questions:\n' + ctx.picks.map(p => '- "' + p.stem + '" They chose "' + p.wrong + '" (correct: "' + p.right + '")' + (p.n > 1 ? ' ' + p.n + ' times' : '')).join('\n'));
+    if(ctx.mix) lines.push('They have mixed this up with: ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '.');
+    if(ctx.distractor) lines.push('A wrong answer that often appears on this idea in practice questions: "' + ctx.distractor + '".');
+    if(ctx.justRated) lines.push(ctx.justRated.knew ? 'Just now they said they knew this card. Confirm the idea briefly, then push on the trap.' : 'Just now they said they did not know this card. Start with the idea in the plainest words.');
+    if(ctx.quiz) lines.push('The quiz question they have open is about the same idea: "' + ctx.quiz.stem + '"' + (ctx.quiz.answered ? (ctx.quiz.right ? ' They got it right.' : ' They got it wrong.') : '') + ' Connect the lesson to that question.');
+    const lp = fcLapseN(card); if(lp) lines.push('They have missed this card ' + lp + ' time' + (lp === 1 ? '' : 's') + '.');
+    try{ const st = computeStats(); if(st && st.weakestMeta && st.weakestMeta.name) lines.push('Their weakest area right now is ' + st.weakestMeta.name + '.'); }catch(e){}
+    const text = await anthropicMessagesRequest({ messages:[{ role:'user', content: lines.join('\n\n') }], maxTokens: 700 });
     const sections = fcTeachParse(text);
     if(sections.length >= 3){
       if(!DATA.fcTeach || typeof DATA.fcTeach !== 'object') DATA.fcTeach = {};
-      DATA.fcTeach[card.id] = { sections, t: Date.now() };
+      DATA.fcTeach[card.id] = { sections, sig, t: Date.now() };
       persist();
-    } else _fcTeachFailed[card.id] = true;
-  }catch(e){ _fcTeachFailed[card.id] = true; }
+    } else if(!stored) _fcTeachFailed[card.id] = sig;
+  }catch(e){ if(!stored) _fcTeachFailed[card.id] = sig; }
   finally{ delete _fcTeachBusy[card.id]; }
   try{ fcPaintRetell(); }catch(e){}
 }
@@ -38595,13 +38616,11 @@ function fcPaintRetell(){
     box.appendChild(document.createTextNode('Writing a short lesson for this card…')); box.style.display = 'block';
     return;
   }
-  if(!fcNeedsRetell(card)){ box.style.display = 'none'; box.textContent = ''; return; }
-  const p = fcRetellPick(card);
-  if(!p){ box.style.display = 'none'; return; }
-  box.innerHTML = '';
-  const l = document.createElement('b'); l.textContent = p.label; box.appendChild(l);
-  box.appendChild(document.createTextNode(p.text));
-  box.style.display = 'block';
+  // Without AI (or when AI failed), the card still shows what the lesson would have: the idea, where this student trips, and the quiz result.
+  const extra = (!aiFeaturesAvailable || _fcTeachFailed[card.id]) ? fcExplainLocal(card, fcExplainContext(card)) : [];
+  if(fcNeedsRetell(card)){ const p = fcRetellPick(card); if(p) extra.push({ k:'retell', label:p.label, text:p.text }); }
+  if(!extra.length){ box.style.display = 'none'; box.textContent = ''; return; }
+  fcPaintTeach(box, { sections: extra });
 }
 
 function flipFlashcardContent(){
@@ -38627,7 +38646,7 @@ function flipFlashcardContent(){
   }
   { const eb = document.getElementById('fcEbBtn'); if(eb) eb.textContent = fcFlipped ? 'Explain it back' : 'Explain it first'; }
   const mnemonicRow = document.getElementById('fcMnemonicRow');
-  // The explain button works without AI (it falls back to the card's own data), so the row shows whenever a card is flipped; only the AI memory trick needs AI.
+  // The row shows whenever a card is flipped; only the AI memory trick needs AI.
   if(mnemonicRow) mnemonicRow.style.display = fcFlipped ? 'flex' : 'none';
   { const mt = document.getElementById('fcMnemonicBtn'); if(mt) mt.style.display = aiFeaturesAvailable ? '' : 'none'; }
   if(!fcFlipped){
@@ -38743,12 +38762,7 @@ The trick should help them connect the term to its meaning — wordplay, a vivid
 
 // Explain the card on screen with a short worked example. Kept for the session
 // only (not saved), so a second tap on the same card is instant and free.
-const fcExplainCache = {};
-// "Explain it with an example" follows one fixed teaching order every time, so each reply does the same job:
-// the idea in one sentence, one client example built from the definition's own figures, the exam trap this student actually falls into, and a quick check.
-// It is written from this student's history (their wrong picks and recorded mix-ups), and it is refreshed when that history changes.
-// The context the explanation is written from: the student's history on this card, how they just did on it, a common wrong answer
-// when there is no history yet, and the quiz question on screen if it is about the same idea.
+// The card's teaching section is written from the student's own history and refreshed when that history changes.
 function fcCommonDistractor(card){
   const count = {};
   try{ fcRelatedQuestions(card).forEach(q => (q.choices || []).forEach((c, i) => { if(i !== q.correct){ const k = String(c).trim(); if(k) count[k] = (count[k] || 0) + 1; } })); }catch(e){}
@@ -38778,95 +38792,12 @@ function fcExplainSignature(card, ctx){
   return [card.id, ctx.picks.map(p => p.wrong).join('|'), ctx.mix ? ctx.mix.other : '', fcLapseN(card), ctx.justRated ? (ctx.justRated.knew ? 'k' : 'm') : '', ctx.distractor || '', ctx.quiz ? (ctx.quiz.stem + ctx.quiz.right) : ''].join('::');
 }
 function fcExplainLocal(card, ctx){
-  const parts = ['The idea: ' + card.def];
-  if(ctx.mix) parts.push('Where it trips you: you have mixed this up with ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '. Ask which of the two the question is about before choosing.');
-  else if(ctx.picks.length) parts.push('Where it trips you: you chose "' + ctx.picks[0].wrong + '" on a related question. The right answer was "' + ctx.picks[0].right + '".');
-  else if(ctx.distractor) parts.push('Where it trips you: a wrong answer that often shows up on this idea is "' + ctx.distractor + '". Check whether it describes this idea before choosing it.');
-  if(ctx.quiz && ctx.quiz.answered) parts.push('On the quiz question open now, ' + (ctx.quiz.right ? 'you got it right, so this card is a good way to lock it in.' : 'you missed it, so read this card before going back to it.'));
-  parts.push('Turn on the AI features in Settings to get a worked client example and a check question for this card.');
-  return parts.join('\n\n');
-}
-// The worked example is split into its numbered steps, each a block of its own, so the columns never cut a step in half.
-function fcPaintStructuredExample(box, text){
-  const lines = String(text || '').split(/\n+/).map(x => x.trim()).filter(Boolean);
-  let step = null;
-  lines.forEach(line => {
-    const m = line.match(/^\d\)\s*([^:]{1,40}):\s*(.*)$/) || line.match(/^\d\)\s*(.*)$/);
-    if(m){
-      step = document.createElement('div'); step.className = 'wx-step';
-      const lead = document.createElement('span'); lead.className = 'wx-lead';
-      const body = document.createElement('span'); body.className = 'wx-body';
-      if(m.length === 3){ lead.textContent = m[1]; body.textContent = m[2]; } else { lead.textContent = ''; body.textContent = m[1]; }
-      if(lead.textContent) step.appendChild(lead);
-      step.appendChild(body); box.appendChild(step);
-    } else if(step){
-      const more = document.createElement('span'); more.className = 'wx-body wx-more'; more.textContent = line; step.appendChild(more);
-    } else {
-      const plain = document.createElement('div'); plain.className = 'wx-body'; plain.textContent = line; box.appendChild(plain);
-    }
-  });
-}
-async function requestFlashcardExplain(){
-  if(!fcQueue.length || fcIndex >= fcQueue.length) return;
-  const card = fcQueue[fcIndex];
-  const box = document.getElementById('fcMnemonicBox');
-  const btn = document.getElementById('fcExplainBtn');
-  if(!box || !btn || btn.disabled) return;
-  function paint(text, label){
-    box.className = 'fc-mnemonic-box';
-    box.innerHTML = '';
-    const l = document.createElement('span'); l.className = 'simplify-label'; l.textContent = label;
-    box.appendChild(l);
-    if(label === 'Worked example') fcPaintStructuredExample(box, text);
-    else { const t = document.createElement('span'); t.style.whiteSpace = 'pre-line'; t.textContent = text; box.appendChild(t); }
-    box.style.display = 'block';
-  }
-  const ctx = fcExplainContext(card);
-  const sig = fcExplainSignature(card, ctx);
-  const cached = fcExplainCache[card.id];
-  if(cached && cached.sig === sig){ paint(cached.text, 'Worked example'); return; }
-  if(!aiFeaturesAvailable){ paint(fcExplainLocal(card, ctx), 'Worked example'); return; }
-  btn.disabled = true; btn.textContent = 'Working one out…';
-  box.className = 'fc-mnemonic-box loading';
-  box.innerHTML = '<span class="simplify-label">Worked example</span>Putting an example together…';
-  box.style.display = 'block';
-  const idAt = card.id, indexAt = fcIndex;
-  const same = () => fcQueue[indexAt] && fcQueue[indexAt].id === idAt && fcIndex === indexAt;
-  const lines = [];
-  lines.push('Teach this CFP exam flashcard in exactly this order, plain text, no markdown, under 120 words:\n' +
-    '1) The idea: one plain sentence.\n' +
-    '2) Client example: one short, concrete client situation. Use figures only from the definition; if you add any, label them as illustrative.\n' +
-    '3) The exam trap: how the exam disguises this and the wrong answer it invites. If the student\'s own wrong picks are given below, address those first; otherwise use the common wrong answer given.\n' +
-    '4) Check: one quick question the student can answer in their head, then the answer on the next line.');
-  // Vary the client: a different person, job and life stage each time, and never one already used this session.
-  const cast = ['a retired nurse in her 70s', 'a freelance graphic designer with irregular income', 'a couple with twin toddlers', 'a small-business owner selling her company', 'a new graduate with student loans', 'a widower managing his late wife\'s accounts', 'a tech employee with stock options', 'a contractor paid in cash and checks', 'a farmer with a seasonal income', 'a physician in her second year of practice', 'a divorced father sharing custody', 'a young couple buying their first home'];
-  const usedCast = fcClientsUsed.slice(-8);
-  const pool = cast.filter(c => !usedCast.includes(c)); const pick = pool[Math.floor(Math.random() * pool.length)] || cast[0];
-  fcClientsUsed.push(pick);
-  lines.push('Client for the example: ' + pick + '. Use this client, give them a first name of your own choosing, and do not reuse names or situations from other examples.');
-  lines.push('Term: ' + card.term + '\nDefinition: ' + card.def);
-  if(ctx.picks.length) lines.push('Their own wrong picks on related questions:\n' + ctx.picks.map(p => '- "' + p.stem + '" They chose "' + p.wrong + '" (correct: "' + p.right + '")' + (p.n > 1 ? ' ' + p.n + ' times' : '')).join('\n'));
-  if(ctx.mix) lines.push('They have mixed this up with: ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '.');
-  if(ctx.distractor) lines.push('A wrong answer that often appears on this idea in practice questions: "' + ctx.distractor + '".');
-  if(ctx.justRated) lines.push(ctx.justRated.knew ? 'Just now they said they knew this card. Confirm the idea briefly, then push on the trap.' : 'Just now they said they did not know this card. Start with the idea in the plainest words.');
-  if(ctx.quiz) lines.push('The quiz question they have open is about the same idea: "' + ctx.quiz.stem + '"' + (ctx.quiz.answered ? (ctx.quiz.right ? ' They got it right.' : ' They got it wrong.') : '') + ' Connect the example to that question.');
-  const lp = fcLapseN(card); if(lp) lines.push('They have missed this card ' + lp + ' time' + (lp === 1 ? '' : 's') + '.');
-  try{ const st = computeStats(); if(st && st.weakestMeta && st.weakestMeta.name) lines.push('Their weakest area right now is ' + st.weakestMeta.name + '.'); }catch(e){}
-  lines.push('Do not invent rules or figures beyond the definition unless you are certain; if unsure, stay general.');
-  try{
-    const reply = trimToSentence(await anthropicMessagesRequest({ messages:[{role:'user', content: lines.join('\n\n')}], maxTokens:520 }));
-    if(!same()) return;
-    if(reply && reply.length >= 60){
-      fcExplainCache[idAt] = { sig, text: reply };
-      paint(reply, 'Worked example');
-    } else {
-      paint(fcExplainLocal(card, ctx), 'Worked example');
-    }
-  }catch(e){
-    if(!same()) return;
-    paint(aiFailText(e), 'Worked example');
-  }
-  btn.textContent = 'Explain it with an example'; btn.disabled = false;
+  const out = [{ k:'idea', label:'The idea', text: String(card.def || '') }];
+  if(ctx.mix) out.push({ k:'trip', label:'Where it trips you', text:'You have mixed this up with ' + ctx.mix.other + (ctx.mix.n ? ' (' + ctx.mix.n + ' times)' : '') + '. Ask which of the two the question is about before choosing.' });
+  else if(ctx.picks.length) out.push({ k:'trip', label:'Where it trips you', text:'You chose "' + ctx.picks[0].wrong + '" on a related question. The right answer was "' + ctx.picks[0].right + '".' });
+  else if(ctx.distractor) out.push({ k:'trip', label:'Where it trips you', text:'A wrong answer that often shows up on this idea is "' + ctx.distractor + '". Check whether it describes this idea before choosing it.' });
+  if(ctx.quiz && ctx.quiz.answered) out.push({ k:'quiz', label:'Quiz question open now', text: ctx.quiz.right ? 'You got it right, so this card is a good way to lock it in.' : 'You missed it, so read this card before going back to it.' });
+  return out;
 }
 
 async function speakFlashcard(){
@@ -51965,7 +51896,7 @@ function tutorItemText(){
       const c = fcQueue[Math.min(fcIndex, fcQueue.length - 1)];
       if(c){
         const flipped = typeof fcFlipped !== 'undefined' && fcFlipped;
-        let ex = ''; try{ const fe = fcExplainCache[c.id]; if(fe && fe.text) ex = ' The worked example they were shown for this card: "' + stageClip(fe.text, 600) + '"'; }catch(e){}
+        let ex = ''; try{ const fe = DATA && DATA.fcTeach && DATA.fcTeach[c.id]; if(fe && Array.isArray(fe.sections) && fe.sections.length) ex = ' The lesson they were shown for this card: "' + stageClip(fe.sections.map(s => s.text).join(' '), 600) + '"'; }catch(e){}
         parts.push('a flashcard on screen: "' + stageClip(String(c.term || ''), 80) + '"' + (flipped ? ', already flipped to show its definition: "' + stageClip(String(c.def || ''), 260) + '"' : ', not flipped yet (do not give the definition unless they ask)') + ex);
       }
     }
@@ -55240,7 +55171,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000442';
+const BUILD_ID = '2026-11-02.00000443';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
