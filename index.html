@@ -36697,10 +36697,24 @@ function planChipChoices(cur){
   while(arr.length > 5){ const drop = arr.find(v => v !== cur && !(a && v === a.minutes) && PLAN_MINUTE_CHOICES.includes(v)); if(drop === undefined) break; arr.splice(arr.indexOf(drop), 1); }
   return { arr, sug: a ? a.minutes : 0 };
 }
+// Exam start as a time: the appointment time you entered in the day-before walkthrough, or 8:30 AM.
+function examStartMs(){
+  const p = String(DATA.examDate || '').split('-').map(Number); if(!p[0]) return null;
+  let hm = '08:30'; try{ const s = JSON.parse(localStorage.getItem('cfp-dayBefore-v1') || 'null'); if(s && /^\d{1,2}:\d{2}$/.test(s.time || '')) hm = s.time; }catch(e){}
+  const hh = Number(hm.split(':')[0]), mm = Number(hm.split(':')[1]);
+  return new Date(p[0], (p[1] || 1) - 1, p[2] || 1, hh, mm).getTime();
+}
+// Teaching and new material run until half a day (12 hours) before the exam starts, so the day before keeps teaching in the morning and afternoon.
+function teachingDone(days){
+  if(days === null || days >= 2) return false;
+  if(days <= 0) return true;
+  const st = examStartMs(); return st ? Date.now() >= st - 12 * 3600000 : false;
+}
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
   if(days < 0) return { key:'after', label:'After the exam' };
   if(days === 0) return { key:'exam', label:'Exam day' };
+  if(days === 1 && !teachingDone(days)) return { key:'taper', label:'Taper' };
   if(days <= 1) return { key:'rest', label:'Light day' };
   if(days <= 3) return { key:'taper', label:'Taper' };
   if(days <= 14) return { key:'sharpen', label:'Sharpen' };
@@ -37586,8 +37600,8 @@ function buildStudyPlanCore(minutes){
       run: () => { showTab('study'); openFormulaDrill(name); } };
   };
   // The day before the exam is review only; the last two days add no extra new-card steps.
-  const reviewOnlyDay = days !== null && days >= 0 && days <= 1;
-  const lateNewStop = days !== null && days >= 0 && days <= 2;
+  const reviewOnlyDay = days !== null && days >= 0 && teachingDone(days);
+  const lateNewStop = reviewOnlyDay;
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
@@ -38055,7 +38069,7 @@ function buildStudyPlanCore(minutes){
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
-    taper:      ['cards','weak','missed','tool','calc','figures','logistics','listen'],
+    taper:      ['cards','weak','missed','tool','newcards','adaptive','teach','calc','figures','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
     after:      []
@@ -62977,7 +62991,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000514';
+const BUILD_ID = '2026-11-03.00000515';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
