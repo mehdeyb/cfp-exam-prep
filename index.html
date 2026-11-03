@@ -4861,7 +4861,6 @@
         <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg" hidden></em></button>
       </div>
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
-    <div id="hubNext" style="display:none;margin:0 0 14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(127,127,127,.25);"></div>
     <div class="card" id="blueprintCard" data-pv="domains">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
@@ -34592,10 +34591,18 @@ function buildStudyPlanCore(minutes){
   // Topics already drilled today keep their place, so progress on them is never lost when your accuracy shifts.
   let freshWeak = []; try{ freshWeak = weakSubtopics(12); }catch(e){}
   // Cross-mode evidence joins the list: flashcard lapses and confident misses lift a topic in the ranking, and a topic with question history from any mode can be picked.
-  try{ const cmw = crossModeWeakPoints(); const xb = {}; cmw.forEach(c => { xb[c.dk + '-' + c.idx] = Math.min(0.2, 0.03 * (c.lapse + 2 * c.overconf)); }); freshWeak.forEach(w => { w.xboost = xb[w.key + '-' + w.idx] || 0; }); cmw.slice(0, 6).forEach(c => { if(freshWeak.some(w => w.key === c.dk && w.idx === c.idx)) return; const st = subtopicStats(c.dk, c.idx); if(st.acc === null) return; freshWeak.push({ key: c.dk, idx: c.idx, name: c.name, st: st, xboost: xb[c.dk + '-' + c.idx] || 0 }); }); }catch(e){}
+  let cmwTop = null;
+  try{ const cmw = crossModeWeakPoints(); if(cmw[0] && cmw[0].value >= 6) cmwTop = cmw[0]; const xb = {}; cmw.forEach(c => { xb[c.dk + '-' + c.idx] = Math.min(0.2, 0.03 * (c.lapse + 2 * c.overconf)); }); freshWeak.forEach(w => { w.xboost = xb[w.key + '-' + w.idx] || 0; }); cmw.slice(0, 6).forEach(c => { if(freshWeak.some(w => w.key === c.dk && w.idx === c.idx)) return; const st = subtopicStats(c.dk, c.idx); if(st.acc === null) return; freshWeak.push({ key: c.dk, idx: c.idx, name: c.name, st: st, xboost: xb[c.dk + '-' + c.idx] || 0 }); }); }catch(e){}
   // Day to day: a topic drilled in the last couple of days steps aside for an equally shaky one that has waited longer, so the plan does not hand you the same drill every morning.
   try{ const dr = DATA.subtopicDrillAt || {}; const pen = w => { const t = dr[w.key + '-' + w.idx]; if(!t) return 0; const d = (Date.now() - t) / ONE_DAY_MS; return d < 2 ? 0.15 : d < 4 ? 0.07 : 0; }; freshWeak.sort((a, b) => (a.st.acc + pen(a) - (a.xboost || 0)) - (b.st.acc + pen(b) - (b.xboost || 0))); }catch(e){}
   freshWeak = freshWeak.slice(0, 8);
+  // The topic with the most evidence across all modes leads the weak-topic step, so the plan and the study hub never disagree about where to start.
+  if(cmwTop){
+    const at = freshWeak.findIndex(w => w.key === cmwTop.dk && w.idx === cmwTop.idx);
+    let entry = at >= 0 ? freshWeak.splice(at, 1)[0] : null;
+    if(!entry){ const st = subtopicStats(cmwTop.dk, cmwTop.idx); if(st.acc !== null) entry = { key: cmwTop.dk, idx: cmwTop.idx, name: cmwTop.name, st: st }; }
+    if(entry){ entry.x = { miss: cmwTop.miss, lapse: cmwTop.lapse, overconf: cmwTop.overconf }; freshWeak.unshift(entry); }
+  }
   let tutorFlagged = []; try{ tutorFlagged = tutorFlagsActive().filter(f => f.key).map(f => { let st = null; try{ st = subtopicStats(f.key, f.idx); }catch(e){} return { key:f.key, idx:f.idx, name:f.name, flag:f, st: st || { acc:null, attempts:0 } }; }); }catch(e){}
   const ov = planOverrideToday();
   const ovPins = ov ? ov.pins.map(x => { let st = null; try{ st = subtopicStats(x.key, x.idx); }catch(e){} return { key:x.key, idx:x.idx, name:x.name, flag:{ reason: ov.reason }, st: st || { acc:null, attempts:0 } }; }) : [];
@@ -34728,7 +34735,7 @@ function buildStudyPlanCore(minutes){
     },
     weak: () => {
       if(wk) return { id:'weak', topic:wk.key + '-' + wk.idx, title:`Drill: ${wk.name}`, minutes:18, need: needFor(wk), have: Math.min(haveFor(wk), needFor(wk)), unit:'questions',
-        why: wk.flag ? `Your tutor flagged this after your last conversation${wk.flag.reason ? ': ' + wk.flag.reason : ''}. A short drill now shows whether it has settled.` : `You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`,
+        why: (wk.flag ? `Your tutor flagged this after your last conversation${wk.flag.reason ? ': ' + wk.flag.reason : ''}. A short drill now shows whether it has settled.` : `You are at ${accTxt(wk)} on this topic. Focused practice on a weak topic, right after trying to answer, closes a gap fastest.`) + (wk.x ? ` Across your modes this topic has ${wk.x.miss} missed answers${wk.x.lapse ? ` and ${wk.x.lapse} flashcards that keep coming back` : ''}.` : ''),
         run: () => { showTab('study'); startSubtopicDrill(wk.key, wk.idx); } };
       if(answered >= 20 && weakDom && (weakDom.mastery === null || weakDom.mastery < 75)){
         // Pinned for the day, so answering questions never swaps the step's topic out from under the count.
@@ -35117,7 +35124,7 @@ function buildStudyPlanCore(minutes){
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
-    taper:      ['cards','missed','calc','figures','logistics','listen'],
+    taper:      ['cards','weak','missed','calc','figures','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
     after:      []
@@ -36304,7 +36311,6 @@ function refreshCoachSurfaces(){
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
   try{ renderStudyTechniques(); }catch(e){}
   try{ renderWorkshop(); }catch(e){}
-  try{ renderHubNext(); }catch(e){}
   renderReadinessExtras(stats);
   try{ tnTick(); tnRenderCard(); }catch(e){}
   renderNextStepCard(stats);
@@ -51484,20 +51490,6 @@ function adaptiveNextTarget(){
   const dom = DOMAINS.find(d => d.key === dk);
   return { dk, idx, name, domName: dom ? dom.name : dk, miss: best.n, total: tried[best.key] || best.n };
 }
-// The hub's next step: the weakest subtopic across every mode, shown whether or not a sitting just ended.
-function renderHubNext(){
-  const el = document.getElementById('hubNext'); if(!el) return;
-  const cm = (() => { try{ return crossModeWeakPoints()[0]; }catch(e){ return null; } })();
-  if(!cm){ el.style.display = 'none'; el.innerHTML = ''; return; }
-  const cdom = DOMAINS.find(d => d.key === cm.dk);
-  el.innerHTML = '<div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Next step, from all your modes</div>'
-    + '<div style="font-size:17px;font-weight:600;margin:4px 0 2px;">' + escapeHtml(cm.name) + ' <span style="font-weight:400;opacity:.7;">· ' + escapeHtml(cdom ? cdom.name : cm.dk) + '</span></div>'
-    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">' + cm.miss + ' missed answers and ' + cm.lapse + ' flashcards that keep coming back here' + (cm.overconf ? ', including ' + cm.overconf + ' you were confident about and got wrong' : '') + '.</div>'
-    + '<button class="btn" id="hubNextBtn" type="button">Work on this subtopic</button>';
-  el.style.display = 'block';
-  const btn = document.getElementById('hubNextBtn');
-  if(btn) btn.onclick = () => { try{ startSubtopicDrill(cm.dk, cm.idx); }catch(e){} };
-}
 function renderAdaptiveNext(){
   const box = document.getElementById('adaptiveNext'); if(!box) return;
   const t = adaptiveNextTarget();
@@ -60009,7 +60001,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000493';
+const BUILD_ID = '2026-11-03.00000494';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
