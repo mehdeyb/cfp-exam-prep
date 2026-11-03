@@ -27620,6 +27620,790 @@ const COVERAGE_GEN1_QUESTIONS = [
  }
 ];
 QUESTIONS.push(...COVERAGE_GEN1_QUESTIONS);
+
+// Investment coverage batch: vehicle taxation, risk types, return measures, valuation, allocation, strategies and alternatives.
+const COVERAGE_INV1_QUESTIONS = [
+ {
+  "id": "inv-cov-01",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "A zero-coupon bond's imputed interest (original issue discount) is generally:",
+  "choices": [
+   "Taxed yearly, with no cash received",
+   "Taxed only when the bond matures, in full",
+   "Tax-free at the federal level, always, for any holder",
+   "Deductible each year by the holder as an expense"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — imputed interest on a zero-coupon bond is taxed each year even though no cash is paid.",
+   "Wrong — the imputed interest is not deferred until maturity for tax purposes.",
+   "Wrong — zero-coupon imputed interest is generally taxable at the federal level.",
+   "Wrong — the imputed interest is not a deductible expense for the holder."
+  ]
+ },
+ {
+  "id": "inv-cov-02",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "Inflation adjustments to TIPS principal are:",
+  "choices": [
+   "Paid only at maturity, never in between at all",
+   "Taxable yearly, though not received",
+   "Tax-free until the bond is sold, in every case",
+   "Deductible each year by the holder as a loss"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the adjustments are not deferred until maturity for tax purposes.",
+   "Correct — inflation adjustments to TIPS principal are taxable each year, though received only at maturity or sale.",
+   "Wrong — the adjustments are not tax-free until sale.",
+   "Wrong — the adjustments are income, not a deductible loss."
+  ]
+ },
+ {
+  "id": "inv-cov-03",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "Interest on a municipal bond is generally:",
+  "choices": [
+   "Exempt from all tax, state included, always",
+   "Subject to the alternative minimum tax only, no exceptions",
+   "Taxable at ordinary rates in all cases",
+   "Exempt from federal income tax"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — state tax treatment depends on the state and the issuer, so this is not always true.",
+   "Wrong — some municipal interest is subject to the AMT, but not as the only rule.",
+   "Wrong — municipal bond interest is generally excluded from federal income tax.",
+   "Correct — municipal bond interest is generally exempt from federal income tax."
+  ]
+ },
+ {
+  "id": "inv-cov-04",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "Capital gains distributions from a mutual fund are taxable:",
+  "choices": [
+   "Only if the investor takes the cash out",
+   "Never, if held over ten years",
+   "Only in tax-deferred accounts",
+   "Even if the investor reinvests them"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — reinvested distributions are still taxable.",
+   "Wrong — holding period does not eliminate tax on distributions.",
+   "Wrong — distributions in taxable accounts are taxed; the rule is not limited to tax-deferred accounts.",
+   "Correct — capital gains distributions are taxable in the year paid, even when reinvested."
+  ]
+ },
+ {
+  "id": "inv-cov-05",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "ETFs are often more tax-efficient than mutual funds mainly because:",
+  "choices": [
+   "In-kind redemptions limit gain distributions",
+   "They pay no dividends at all, ever, to holders",
+   "They are exempt from capital gains tax altogether",
+   "They are always held inside tax-advantaged IRAs"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — in-kind redemptions let ETFs shed low-basis shares without realizing gains for remaining holders.",
+   "Wrong — ETFs can pay dividends.",
+   "Wrong — ETF shares are subject to capital gains tax when sold.",
+   "Wrong — ETFs are held in both taxable and tax-advantaged accounts."
+  ]
+ },
+ {
+  "id": "inv-cov-06",
+  "domain": "invest",
+  "sub": "Characteristics, uses and taxation of investment vehicles",
+  "q": "Qualified dividends are generally taxed at:",
+  "choices": [
+   "No tax at all, ever",
+   "Long-term capital gain rates",
+   "Ordinary income rates",
+   "Only the net investment income tax"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — qualified dividends are taxable.",
+   "Correct — qualified dividends receive the lower long-term capital gain rates.",
+   "Wrong — ordinary rates apply to nonqualified dividends.",
+   "Wrong — the net investment income tax is an additional tax, not the rate on dividends."
+  ]
+ },
+ {
+  "id": "inv-cov-07",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "Reinvestment risk is greatest when:",
+  "choices": [
+   "Bonds are held to maturity without any coupons",
+   "The issuer is rated AAA always, with no risk",
+   "Interest rates fall after bond purchases",
+   "Interest rates rise after bond purchases, and bond prices fall"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — a zero-coupon bond has no coupons to reinvest, so this does not describe the risk.",
+   "Wrong — a high credit rating does not create reinvestment risk.",
+   "Correct — falling rates force coupon payments to be reinvested at lower yields.",
+   "Wrong — rising rates help reinvestment; the risk is from falling rates."
+  ]
+ },
+ {
+  "id": "inv-cov-08",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "Call risk is the risk that a bond will be redeemed:",
+  "choices": [
+   "Late, when rates rise",
+   "On the issue date, always",
+   "Only at the maturity date",
+   "Early, when rates fall"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — rising rates make calls unlikely, not likely.",
+   "Wrong — bonds are not redeemed on the issue date.",
+   "Wrong — call risk is the risk of early redemption, not redemption at maturity.",
+   "Correct — issuers call bonds early when rates fall, forcing reinvestment at lower yields."
+  ]
+ },
+ {
+  "id": "inv-cov-09",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "The risk that inflation erodes returns is called:",
+  "choices": [
+   "Purchasing power risk, the inflation risk",
+   "Credit risk",
+   "Liquidity risk, the risk of slow selling at fair prices",
+   "Call risk"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — purchasing power risk is the risk that inflation reduces what an investment can buy.",
+   "Wrong — credit risk is the risk of default.",
+   "Wrong — liquidity risk is the risk of not selling quickly at fair value.",
+   "Wrong — call risk is the risk of early redemption."
+  ]
+ },
+ {
+  "id": "inv-cov-10",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "Systematic risk is:",
+  "choices": [
+   "Eliminated by holding bonds in the same issuer",
+   "Not eliminated by diversification",
+   "Eliminated by owning 30 stocks",
+   "Specific to one company only"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — holding bonds from one issuer adds concentration, not diversification.",
+   "Correct — systematic (market) risk affects the whole market and remains after diversification.",
+   "Wrong — owning many stocks reduces unsystematic risk, not systematic risk.",
+   "Wrong — company-specific risk is unsystematic."
+  ]
+ },
+ {
+  "id": "inv-cov-11",
+  "domain": "invest",
+  "sub": "Types of investment risk",
+  "q": "Credit risk is best described as:",
+  "choices": [
+   "The chance of inflation eroding value",
+   "The chance of selling at a poor price quickly",
+   "The issuer fails to pay as promised",
+   "The chance prices fall with rising rates"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — that describes purchasing power risk.",
+   "Wrong — that describes liquidity risk.",
+   "Correct — credit risk is the risk that the issuer fails to pay interest or principal as promised.",
+   "Wrong — that describes interest rate risk."
+  ]
+ },
+ {
+  "id": "inv-cov-12",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "The Sharpe ratio measures:",
+  "choices": [
+   "Return per unit of market risk only",
+   "Dividend yield relative to price",
+   "Return compared with inflation only",
+   "Excess return per unit of risk"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — that describes the Treynor ratio, which uses beta.",
+   "Wrong — dividend yield is a separate measure.",
+   "Wrong — comparing returns with inflation is not the Sharpe ratio.",
+   "Correct — the Sharpe ratio divides excess return over the risk-free rate by standard deviation."
+  ]
+ },
+ {
+  "id": "inv-cov-13",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A portfolio with a beta of 1.2 is expected to move:",
+  "choices": [
+   "About 20% more than the market",
+   "20% less than the market, always, in every case",
+   "Exactly the same as the market, always, in every case",
+   "Opposite to the market direction, every time"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a beta of 1.2 implies about 20% more market sensitivity than the market.",
+   "Wrong — a beta above 1 means more sensitivity, not less.",
+   "Wrong — a beta of 1.2 is not the same as the market.",
+   "Wrong — a positive beta moves in the same direction as the market."
+  ]
+ },
+ {
+  "id": "inv-cov-14",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "Dollar-weighted return differs from time-weighted return mainly because:",
+  "choices": [
+   "It is always higher than the time-weighted return",
+   "It is affected by the timing of cash flows",
+   "It ignores all fees entirely, in every case",
+   "It uses only the first year's value of the account"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the two can be higher or lower depending on cash flows.",
+   "Correct — dollar-weighted return reflects the size and timing of deposits and withdrawals.",
+   "Wrong — fees affect both measures.",
+   "Wrong — dollar-weighted return uses the full account history."
+  ]
+ },
+ {
+  "id": "inv-cov-15",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "For volatile returns, the geometric mean is generally:",
+  "choices": [
+   "Equal to the arithmetic mean, always",
+   "Equal to the standard deviation",
+   "Lower than the arithmetic mean",
+   "Higher than the arithmetic mean"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — the two are equal only when returns are constant.",
+   "Wrong — the geometric mean is a return, not a standard deviation.",
+   "Correct — volatility drags the geometric mean below the arithmetic mean.",
+   "Wrong — the geometric mean is lower, not higher, when returns vary."
+  ]
+ },
+ {
+  "id": "inv-cov-16",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A correlation coefficient of -1 means:",
+  "choices": [
+   "Assets are unrelated to market risk entirely",
+   "Assets move together perfectly, always",
+   "No relationship between the two assets",
+   "Perfectly opposite movements"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — correlation describes the relationship between assets, not market risk.",
+   "Wrong — a correlation of +1 means assets move together perfectly.",
+   "Wrong — zero correlation means no linear relationship.",
+   "Correct — a correlation of -1 means the two assets move in perfectly opposite directions."
+  ]
+ },
+ {
+  "id": "inv-cov-17",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "The Treynor ratio divides excess return by:",
+  "choices": [
+   "Beta",
+   "Standard deviation",
+   "Downside deviation only",
+   "Total assets under management"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — the Treynor ratio uses beta as its risk measure.",
+   "Wrong — standard deviation is the Sharpe ratio's risk measure.",
+   "Wrong — downside deviation is the Sortino ratio's measure.",
+   "Wrong — assets under management do not measure risk."
+  ]
+ },
+ {
+  "id": "inv-cov-18",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "Alpha measures:",
+  "choices": [
+   "Dividend growth rate",
+   "Return above beta-predicted return",
+   "Total return with no risk adjustment",
+   "The market's overall return only"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — dividend growth is a separate measure.",
+   "Correct — alpha is the return above what beta-based risk predicts.",
+   "Wrong — total return with no adjustment is not alpha.",
+   "Wrong — the market's return is the benchmark, not alpha."
+  ]
+ },
+ {
+  "id": "inv-cov-19",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "A bond with higher duration is:",
+  "choices": [
+   "Unaffected by interest rate changes, always",
+   "Guaranteed against default, in every case",
+   "More rate-sensitive",
+   "Less sensitive to interest rate changes"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — duration measures rate sensitivity; it is not zero for any bond.",
+   "Wrong — duration does not measure credit risk.",
+   "Correct — higher duration means greater price sensitivity to rate changes.",
+   "Wrong — higher duration means greater, not lower, sensitivity."
+  ]
+ },
+ {
+  "id": "inv-cov-20",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "When a bond's coupon rate is above its yield to maturity, the bond trades:",
+  "choices": [
+   "At a discount",
+   "At par, always, regardless of rates",
+   "At zero value",
+   "At a premium"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — a discount occurs when the coupon is below the yield.",
+   "Wrong — the price moves with the yield relationship, not always at par.",
+   "Wrong — the bond has value while it pays coupons and principal.",
+   "Correct — a coupon above the market yield makes the bond worth more than face value."
+  ]
+ },
+ {
+  "id": "inv-cov-21",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "A zero-coupon bond's price is the present value of:",
+  "choices": [
+   "Its face value only",
+   "Its coupon payments plus face value",
+   "Its coupon payments only",
+   "Its market index value"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a zero-coupon bond has one cash flow, its face value at maturity.",
+   "Wrong — there are no coupon payments on a zero-coupon bond.",
+   "Wrong — the coupons do not exist for a zero-coupon bond.",
+   "Wrong — a market index is not part of the bond's price."
+  ]
+ },
+ {
+  "id": "inv-cov-22",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "In the Gordon growth model, a higher expected growth rate, all else equal, makes stock value:",
+  "choices": [
+   "Undefined when growth is positive",
+   "Higher",
+   "Lower",
+   "Unchanged, always"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the model is defined when the required return exceeds growth, not undefined.",
+   "Correct — with the required return fixed, higher growth raises the value.",
+   "Wrong — higher growth raises the value in this model.",
+   "Wrong — growth changes the value."
+  ]
+ },
+ {
+  "id": "inv-cov-23",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Adding assets with low correlation to a portfolio generally:",
+  "choices": [
+   "Has no effect on portfolio risk",
+   "Raises the expected return by the correlation amount",
+   "Reduces portfolio risk for a given return",
+   "Increases risk for every return level"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — diversification does change portfolio risk.",
+   "Wrong — correlation does not add to expected return.",
+   "Correct — low correlation lowers portfolio volatility for a given expected return.",
+   "Wrong — low correlation reduces risk, not increases it."
+  ]
+ },
+ {
+  "id": "inv-cov-24",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Portfolios on the efficient frontier:",
+  "choices": [
+   "Have zero risk, always, in all cases",
+   "Hold only one asset class at a time",
+   "Ignore correlation between assets entirely",
+   "Maximize return for a given level of risk"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — efficient portfolios still carry risk.",
+   "Wrong — efficient portfolios usually hold several asset classes.",
+   "Wrong — correlation is central to building the efficient frontier.",
+   "Correct — efficient portfolios offer the highest expected return for a given risk level."
+  ]
+ },
+ {
+  "id": "inv-cov-25",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Rebalancing a portfolio back to target weights generally:",
+  "choices": [
+   "Sells winners, buys laggards",
+   "Buys whatever has risen most recently, always",
+   "Eliminates all investment risk permanently, always",
+   "Avoids all transaction costs and taxes"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — rebalancing trims assets that have grown beyond target and adds to those that have fallen.",
+   "Wrong — that is momentum buying, the opposite of rebalancing.",
+   "Wrong — rebalancing reduces drift but does not eliminate risk.",
+   "Wrong — rebalancing can trigger transaction costs and taxes."
+  ]
+ },
+ {
+  "id": "inv-cov-26",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Tactical asset allocation differs from strategic mainly by:",
+  "choices": [
+   "Using only bonds and cash, for every client",
+   "Short-term shifts around targets",
+   "Setting one fixed mix forever, with no changes",
+   "Ignoring market conditions entirely, always"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — tactical allocation is not limited to bonds and cash.",
+   "Correct — tactical allocation makes short-term shifts around long-term strategic targets.",
+   "Wrong — that describes a static strategic allocation.",
+   "Wrong — tactical allocation responds to market conditions."
+  ]
+ },
+ {
+  "id": "inv-cov-27",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "Dollar-cost averaging involves:",
+  "choices": [
+   "Timing purchases to market lows only",
+   "Selling at fixed intervals to lock gains",
+   "A fixed amount at regular intervals",
+   "Investing a lump sum all at once only"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — dollar-cost averaging does not depend on timing market lows.",
+   "Wrong — dollar-cost averaging involves buying, not selling.",
+   "Correct — dollar-cost averaging invests a fixed amount on a regular schedule.",
+   "Wrong — a lump sum is the opposite of dollar-cost averaging."
+  ]
+ },
+ {
+  "id": "inv-cov-28",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "Value investors typically favor stocks with:",
+  "choices": [
+   "High growth with high P/E ratios, always",
+   "No earnings at all, for future potential",
+   "Only the largest market caps in the index",
+   "Low price relative to earnings"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — high growth with high P/E describes growth investing.",
+   "Wrong — value investors look for earnings, not the absence of them.",
+   "Wrong — value is not defined by market cap.",
+   "Correct — value investors look for stocks priced low relative to earnings or book value."
+  ]
+ },
+ {
+  "id": "inv-cov-29",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "Index funds are generally:",
+  "choices": [
+   "Low-cost and track a benchmark",
+   "High-cost and seek to beat the market always",
+   "Guaranteed to outperform active funds",
+   "Available only in bonds"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — index funds are typically low-cost and track a chosen benchmark.",
+   "Wrong — index funds are usually low-cost and do not seek to beat the market.",
+   "Wrong — index funds do not guarantee outperformance.",
+   "Wrong — index funds exist for stocks and bonds."
+  ]
+ },
+ {
+  "id": "inv-cov-30",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "A core-satellite approach combines:",
+  "choices": [
+   "Only alternative investments, every time",
+   "Low-cost core plus satellite picks",
+   "Only one fund across all asset classes",
+   "Cash alone with no investment at all"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — alternatives are not the only element.",
+   "Correct — a low-cost core holds most assets, with satellites for targeted higher-conviction positions.",
+   "Wrong — core-satellite uses more than one holding.",
+   "Wrong — the approach invests across holdings, not in cash alone."
+  ]
+ },
+ {
+  "id": "inv-cov-31",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "q": "Hedge funds are generally:",
+  "choices": [
+   "Required to publish holdings daily, by law",
+   "Guaranteed to beat the S&P 500 each year",
+   "Less liquid, with redemption limits",
+   "Daily liquid like index funds, always"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — hedge funds generally do not publish holdings daily by law.",
+   "Wrong — hedge funds carry no guarantee of beating the index.",
+   "Correct — hedge funds often have lock-ups and limited redemption windows.",
+   "Wrong — hedge funds are typically not daily liquid."
+  ]
+ },
+ {
+  "id": "inv-cov-32",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "q": "Private equity investments typically carry:",
+  "choices": [
+   "Daily pricing and full liquidity, always, for all",
+   "No risk of loss at all, ever, in any case",
+   "Guaranteed annual income, with no exceptions",
+   "Illiquidity and long holding periods"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — private equity is not daily priced or fully liquid.",
+   "Wrong — private equity carries risk of loss.",
+   "Wrong — private equity income is not guaranteed.",
+   "Correct — private equity is illiquid and held for years."
+  ]
+ },
+ {
+  "id": "inv-cov-33",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "q": "Commodities held for investment generally produce:",
+  "choices": [
+   "No income; returns from prices",
+   "Steady dividends each quarter, always, for holders",
+   "Guaranteed inflation protection, with no risk anywhere",
+   "Fixed coupon payments, with no price effect at all"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — commodities pay no income; returns come from price changes.",
+   "Wrong — commodities do not pay dividends.",
+   "Wrong — commodities provide no guaranteed inflation protection.",
+   "Wrong — commodities pay no fixed coupons."
+  ]
+ },
+ {
+  "id": "inv-cov-34",
+  "domain": "invest",
+  "sub": "Alternative investments and liquidity risk",
+  "q": "Liquidity risk is the risk that:",
+  "choices": [
+   "Interest rates change over the holding period of the bond",
+   "Assets cannot be sold quickly at fair prices",
+   "The issuer defaults on its bonds",
+   "Prices rise with inflation over time"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — rate changes are interest rate risk.",
+   "Correct — liquidity risk is the risk an asset cannot be sold quickly at a fair price.",
+   "Wrong — default is credit risk.",
+   "Wrong — rising prices from inflation are purchasing power risk."
+  ]
+ },
+ {
+  "id": "inv-cov-35",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "Yield to maturity assumes:",
+  "choices": [
+   "Coupons are spent, not reinvested, in every case",
+   "The price never changes over the holding period at all",
+   "Coupons reinvested at the YTM, held to maturity",
+   "The bond is sold the day after purchase, at par value"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — YTM assumes coupons are reinvested at the yield, not spent.",
+   "Wrong — the price changes with market rates, and YTM does not assume otherwise.",
+   "Correct — yield to maturity assumes coupons are reinvested at the YTM and the bond is held to maturity.",
+   "Wrong — YTM assumes holding to maturity, not an immediate sale."
+  ]
+ },
+ {
+  "id": "inv-cov-36",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "When market yields fall, a bond's price:",
+  "choices": [
+   "Falls",
+   "Stays fixed by law",
+   "Equals its coupon rate exactly",
+   "Rises"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — falling yields raise bond prices.",
+   "Wrong — bond prices are set by the market, not fixed by law.",
+   "Wrong — price is not set equal to the coupon rate.",
+   "Correct — bond prices move inversely to yields, so falling yields raise prices."
+  ]
+ },
+ {
+  "id": "inv-cov-37",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "The Gordon growth model values a stock as dividend divided by:",
+  "choices": [
+   "Required return minus growth rate",
+   "Required return plus growth rate, always",
+   "The stock's book value only",
+   "Earnings per share alone"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — value equals next dividend divided by required return minus growth.",
+   "Wrong — the denominator subtracts growth from the required return.",
+   "Wrong — book value is not the denominator in this model.",
+   "Wrong — earnings per share is not the denominator in this model."
+  ]
+ },
+ {
+  "id": "inv-cov-38",
+  "domain": "invest",
+  "sub": "Bond and stock valuation concepts",
+  "q": "A high price-to-earnings ratio usually suggests:",
+  "choices": [
+   "Guaranteed earnings each year",
+   "Higher growth expectations",
+   "Lower growth expectations",
+   "A bond-like income stream"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a high P/E does not guarantee earnings.",
+   "Correct — a high P/E generally reflects expectations of higher future growth.",
+   "Wrong — lower growth expectations usually mean a lower P/E.",
+   "Wrong — a high P/E is not a bond-like income stream."
+  ]
+ },
+ {
+  "id": "inv-cov-39",
+  "domain": "invest",
+  "sub": "Quantitative investment concepts and measures of investment returns",
+  "q": "Standard deviation measures:",
+  "choices": [
+   "The average return of the portfolio, annualized",
+   "Market beta, measured directly from data",
+   "Total volatility around the average",
+   "Only downside losses, measured from zero"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — standard deviation measures dispersion, not the average return.",
+   "Wrong — beta is a separate measure of market sensitivity.",
+   "Correct — standard deviation measures total volatility of returns around the mean.",
+   "Wrong — downside-only measures are different, such as downside deviation."
+  ]
+ },
+ {
+  "id": "inv-cov-40",
+  "domain": "invest",
+  "sub": "Investment strategies",
+  "q": "A buy-and-hold strategy generally:",
+  "choices": [
+   "Trades frequently on short-term signals, daily",
+   "Requires daily rebalancing to target weights",
+   "Avoids all taxes permanently by design",
+   "Holds long term, with minimal trading"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — frequent trading is the opposite of buy-and-hold.",
+   "Wrong — buy-and-hold does not require daily rebalancing.",
+   "Wrong — buy-and-hold lowers turnover but does not avoid taxes permanently.",
+   "Correct — buy-and-hold keeps positions long term with little trading."
+  ]
+ },
+ {
+  "id": "inv-cov-41",
+  "domain": "invest",
+  "sub": "Asset allocation and portfolio diversification",
+  "q": "Defensive sectors such as consumer staples and utilities often hold up relatively well:",
+  "choices": [
+   "Late in the business cycle",
+   "Only at the cycle peak, in every case",
+   "Only during a deep recession, with no exceptions",
+   "Never, in any phase of the cycle at all"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — defensive sectors are often relatively resilient late in the cycle and during downturns.",
+   "Wrong — defensive sectors are not limited to the peak.",
+   "Wrong — defensive sectors are not limited to deep recessions.",
+   "Wrong — defensive sectors can hold up in some phases of the cycle."
+  ]
+ }
+];
+QUESTIONS.push(...COVERAGE_INV1_QUESTIONS);
 FLASHCARDS.push(...COVERAGE_V418_FLASHCARDS);
 FLASHCARDS.push({"id":"v18f-29","domain":"tax","sub":"Income tax","term":"Kiddie tax","def":"Unearned income above a set threshold for a child under the age limits is taxed at the parent's rate, so shifting investments to a child saves little tax beyond that amount."});
 /* A quick second tap on the same answer is treated as part of the first tap, so it never zooms the page or re-picks the answer. */
@@ -57352,7 +58136,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000483';
+const BUILD_ID = '2026-11-02.00000484';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
