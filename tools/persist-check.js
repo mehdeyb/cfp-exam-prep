@@ -1,5 +1,6 @@
-// Guard against lost progress: saves a marker through the app's own persist(),
-// reloads the page, and fails unless the marker and answer counter come back.
+// Guard against lost progress: saves real progress through the app's own persist(),
+// reloads the page, and fails unless the progress comes back. Covers the counter, a marker,
+// question history, missed questions, flashcard history, and confidence records.
 // Run before every push: node tools/persist-check.js
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
@@ -16,15 +17,34 @@ const PORT = 8790 + Math.floor(Math.random() * 500);
     const url = 'http://localhost:' + PORT + '/index.html';
     await page.goto(url, { waitUntil: 'load' });
     await page.waitForFunction(() => window._dataReady === true, null, { timeout: 60000 });
-    await page.evaluate(() => { DATA.answerCounter = 4242; DATA.persistMarker = 'kept'; persist(); });
+    // Seed real progress through the app's own structures.
+    const seeded = await page.evaluate(() => {
+      const qs = allQuestions().slice(0, 60);
+      qs.forEach((q, i) => {
+        const c = i % 3 !== 0;
+        DATA.questionStats[q.id] = { seen: 2, correct: c ? 2 : 0, box: c ? 2 : 0, dueAt: Date.now() + 86400000, lastSeenAt: Date.now() - i * 3600000 };
+        if (!c) { DATA.missed = DATA.missed || []; if (!DATA.missed.includes(q.id)) DATA.missed.push(q.id); DATA.confByQ[q.id] = { level: 'confident', correct: false, at: Date.now() }; }
+      });
+      allFlashcards().slice(0, 20).forEach((f, i) => { DATA.flashcardStats[f.id] = { seen: 2, correct: 1, box: 2, dueAt: 0, lastSeenAt: Date.now() - i * 1000 }; });
+      DATA.answerCounter = 4242; DATA.persistMarker = 'kept';
+      persist();
+      return { questions: Object.keys(DATA.questionStats).length, missed: DATA.missed.length, conf: Object.keys(DATA.confByQ).length, cards: Object.keys(DATA.flashcardStats).length };
+    });
     await page.waitForTimeout(800);
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => window._dataReady === true, null, { timeout: 60000 });
-    const got = await page.evaluate(() => ({ counter: DATA.answerCounter, marker: DATA.persistMarker, loadFailed: !!window.loadFailed }));
-    if (got.counter === 4242 && got.marker === 'kept' && !got.loadFailed && pageErrors.length === 0) {
-      console.log('OK: progress survives a reload'); code = 0;
+    const got = await page.evaluate(() => ({
+      counter: DATA.answerCounter, marker: DATA.persistMarker,
+      questions: Object.keys(DATA.questionStats).length, missed: (DATA.missed || []).length,
+      conf: Object.keys(DATA.confByQ || {}).length, cards: Object.keys(DATA.flashcardStats || {}).length,
+      loadFailed: typeof loadFailed !== 'undefined' && loadFailed === true
+    }));
+    const kept = got.counter === 4242 && got.marker === 'kept' && !got.loadFailed
+      && got.questions === seeded.questions && got.missed === seeded.missed && got.conf === seeded.conf && got.cards === seeded.cards;
+    if (kept && pageErrors.length === 0) {
+      console.log('OK: progress survives a reload (' + got.questions + ' questions, ' + got.missed + ' missed, ' + got.cards + ' flashcards, ' + got.conf + ' confidence records)'); code = 0;
     } else {
-      console.log('FAIL: progress did not survive a reload', JSON.stringify(got), pageErrors.slice(0, 3));
+      console.log('FAIL: progress did not survive a reload', JSON.stringify({ seeded, got }), pageErrors.slice(0, 3));
     }
   } catch (e) {
     console.log('FAIL: persistence check could not run:', e.message);
