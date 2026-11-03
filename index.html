@@ -24978,6 +24978,695 @@ const COVERAGE_TK_ESTATE_QUESTIONS = [
 {"id":"tk-pdv-10","domain":"estate","sub":"Planning for divorce, unmarried couples and other special circumstances","q":"What are pension division methods for qualified plans and IRAs?","choices":["A court order for all accounts, including retirement plans and IRAs","A QDRO for plans, transfer incident to divorce for IRAs","A simple beneficiary change filed with the plan administrator only","Division by the IRS at the time of the divorce decree"],"correct":1,"rationale":["Wrong — a single court order does not cover IRAs and plans in the same way.","Correct — qualified plans need a QDRO, while IRA division generally uses a transfer incident to divorce.","Wrong — a beneficiary change does not divide the account.","Wrong — the IRS does not divide retirement accounts at the divorce decree."]}
 ];
 QUESTIONS.push(...COVERAGE_TK_ESTATE_QUESTIONS);
+
+// Retirement coverage batch: closes the domain-mix gap toward official weights. Each correct answer is keyed and checked against the rule it tests.
+const COVERAGE_RET2_QUESTIONS = [
+ {
+  "id": "ret-cov-01",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "A top-heavy 401(k) plan must generally give each non-key employee a minimum contribution of what percentage of pay?",
+  "choices": [
+   "1%",
+   "3%",
+   "5%",
+   "7.5%"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — 1% is below the top-heavy minimum for non-key employees.",
+   "Correct — the top-heavy minimum for non-key employees is generally 3% of compensation.",
+   "Wrong — 5% is not the top-heavy minimum rule.",
+   "Wrong — 7.5% is not a top-heavy minimum."
+  ]
+ },
+ {
+  "id": "ret-cov-02",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "Under the actual deferral percentage test, a 2026 employee is highly compensated if prior-year pay exceeds:",
+  "choices": [
+   "$135,000",
+   "$160,000",
+   "$235,000, the key employee threshold",
+   "$360,000"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — $135,000 is below the 2026 highly compensated threshold.",
+   "Correct — the 2026 highly compensated employee threshold is $160,000.",
+   "Wrong — $235,000 is the key employee threshold, not the highly compensated threshold.",
+   "Wrong — $360,000 is the compensation limit under Section 401(a)(17)."
+  ]
+ },
+ {
+  "id": "ret-cov-03",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "A safe harbor 401(k) that uses a nonelective contribution must generally provide each eligible non-highly compensated employee:",
+  "choices": [
+   "A 3% of pay contribution, whether or not the employee defers",
+   "A match of 50% on the first 6% deferred only",
+   "A contribution only for employees who defer at least 3%",
+   "A 100% match on the first 3% deferred, funded only for highly compensated staff"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a 3% nonelective safe harbor contribution is owed to all eligible non-highly compensated employees, regardless of deferrals.",
+   "Wrong — the 50%-of-6% formula is a matching design, not the nonelective design.",
+   "Wrong — a nonelective safe harbor does not depend on employee deferrals.",
+   "Wrong — a safe harbor must cover all eligible non-highly compensated employees, not only highly compensated staff."
+  ]
+ },
+ {
+  "id": "ret-cov-04",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "Employer contributions to a safe harbor 401(k) generally must be:",
+  "choices": [
+   "Fully vested immediately",
+   "Vested over three years",
+   "Vested only at retirement",
+   "Vested after five years of service"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — safe harbor contributions must be 100% vested when they are made.",
+   "Wrong — a three-year schedule does not meet the safe harbor vesting rule.",
+   "Wrong — vesting at retirement is not a safe harbor requirement.",
+   "Wrong — a five-year schedule does not meet the safe harbor vesting rule."
+  ]
+ },
+ {
+  "id": "ret-cov-05",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "For a worker born in 1965, the full retirement age for Social Security is:",
+  "choices": [
+   "Age 62, the earliest age to claim",
+   "Age 65, the traditional Medicare age",
+   "Age 66 and two months",
+   "Age 67"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 62 is the earliest claiming age, not full retirement age.",
+   "Wrong — 65 applied to earlier birth years, not to someone born in 1965.",
+   "Wrong — 66 and two months applies to a different birth-year range.",
+   "Correct — full retirement age is 67 for workers born in 1960 or later."
+  ]
+ },
+ {
+  "id": "ret-cov-06",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "Delayed retirement credits raise a Social Security benefit by about 8% for each year a worker waits past full retirement age, up to age:",
+  "choices": [
+   "Age 62, when the first benefit can be claimed",
+   "Age 65, the traditional retirement age",
+   "Age 67, the full retirement age for most people born in 1960 or later",
+   "Age 70"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — age 62 is the earliest claiming age, and credits do not start there.",
+   "Wrong — credits continue past 65 when full retirement age is later.",
+   "Wrong — 67 is full retirement age for most people, so credits go on past it.",
+   "Correct — delayed retirement credits stop accruing at age 70."
+  ]
+ },
+ {
+  "id": "ret-cov-07",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "Most people qualify for premium-free Medicare Part A after working and paying Medicare taxes for at least how many quarters?",
+  "choices": [
+   "10 quarters, about 2.5 years",
+   "20 quarters, about 5 years",
+   "30 quarters, about 7.5 years",
+   "40 quarters"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 10 quarters is too few for premium-free Part A.",
+   "Wrong — 20 quarters is too few for premium-free Part A.",
+   "Wrong — 30 quarters is still short of the requirement.",
+   "Correct — 40 quarters, about ten years of covered work, qualifies for premium-free Part A."
+  ]
+ },
+ {
+  "id": "ret-cov-08",
+  "domain": "retirement",
+  "sub": "Eldercare and special needs planning",
+  "q": "For Medicaid long-term care eligibility, most states look back how far when reviewing transfers of assets for less than fair value?",
+  "choices": [
+   "12 months before the application",
+   "36 months before the application",
+   "60 months before the application",
+   "120 months before the application"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — 12 months is shorter than the look-back most states apply.",
+   "Wrong — 36 months is not the standard look-back.",
+   "Correct — most states apply a five-year (60-month) look-back.",
+   "Wrong — 120 months is longer than the usual look-back."
+  ]
+ },
+ {
+  "id": "ret-cov-09",
+  "domain": "retirement",
+  "sub": "Distribution rules and taxation",
+  "q": "For an IRA owner born in 1962, the required beginning age for required minimum distributions is:",
+  "choices": [
+   "Age 70½, the old rule",
+   "Age 72, the rule for some earlier cohorts",
+   "Age 73, the rule for owners born 1951 to 1959",
+   "Age 75"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 70½ applied before the SECURE Act changes.",
+   "Wrong — 72 applied to earlier cohorts, not to someone born in 1962.",
+   "Wrong — 73 applies to owners born 1951 to 1959.",
+   "Correct — owners born in 1960 or later begin required distributions at age 75."
+  ]
+ },
+ {
+  "id": "ret-cov-10",
+  "domain": "retirement",
+  "sub": "Distribution rules and taxation",
+  "q": "The 10% additional tax on an early IRA withdrawal before age 59½ is waived for a distribution taken:",
+  "choices": [
+   "For a new car purchase",
+   "To pay a credit card balance and other consumer debts in full",
+   "Because the owner became totally disabled",
+   "For a vacation after a job change"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — buying a car is not an exception to the 10% additional tax.",
+   "Wrong — paying general consumer debt is not an exception.",
+   "Correct — distributions because of total and permanent disability are exempt from the 10% additional tax.",
+   "Wrong — a vacation is not an exception to the 10% additional tax."
+  ]
+ },
+ {
+  "id": "ret-cov-11",
+  "domain": "retirement",
+  "sub": "Distribution rules and taxation",
+  "q": "A 401(k) loan generally may not exceed the lesser of $50,000 or:",
+  "choices": [
+   "100% of the account balance",
+   "50% of the vested balance",
+   "25% of the salary",
+   "75% of the vested balance"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the loan cap is not the full account balance.",
+   "Correct — the limit is 50% of the vested balance, capped at $50,000.",
+   "Wrong — salary is not the test for a plan loan.",
+   "Wrong — 75% of the vested balance is above the loan limit."
+  ]
+ },
+ {
+  "id": "ret-cov-12",
+  "domain": "retirement",
+  "sub": "Distribution rules and taxation",
+  "q": "Starting in 2026, employees with prior-year FICA wages above $150,000 must make catch-up contributions as:",
+  "choices": [
+   "Pre-tax deferrals",
+   "Roth contributions",
+   "Employer contributions only",
+   "Nonelective contributions"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — pre-tax catch-up contributions are no longer allowed for this group.",
+   "Correct — catch-up contributions for this group must be made as Roth contributions.",
+   "Wrong — catch-up is an employee contribution, not employer-only money.",
+   "Wrong — nonelective contributions come from the employer, not as catch-up."
+  ]
+ },
+ {
+  "id": "ret-cov-13",
+  "domain": "retirement",
+  "sub": "Types of retirement plans",
+  "q": "A SEP's employer contribution for a year is limited to the lesser of 25% of compensation or:",
+  "choices": [
+   "the IRA contribution limit",
+   "$72,000 for 2026",
+   "the employee's full salary",
+   "$23,500"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the IRA limit is a separate, lower limit that does not cap SEP contributions.",
+   "Correct — the Section 415(c) limit of $72,000 for 2026 caps SEP contributions.",
+   "Wrong — the employee's full salary is not the test.",
+   "Wrong — $23,500 was the 2025 employee deferral limit, not a SEP cap."
+  ]
+ },
+ {
+  "id": "ret-cov-14",
+  "domain": "retirement",
+  "sub": "Types of retirement plans",
+  "q": "A cash balance plan credits each participant's hypothetical account each year with:",
+  "choices": [
+   "Investment gains only",
+   "A pay credit and an interest credit",
+   "Employee deferrals only",
+   "Whatever the employer earned that year on its own accounts"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — investment gains alone are not the credit mechanism.",
+   "Correct — each year the account receives a pay credit and an interest credit.",
+   "Wrong — employee deferrals are not the mechanism in a cash balance plan.",
+   "Wrong — the employer's own earnings are not credited to participants."
+  ]
+ },
+ {
+  "id": "ret-cov-15",
+  "domain": "retirement",
+  "sub": "Key factors affecting plan selection for businesses",
+  "q": "Compared with a solo 401(k), a SEP-IRA for a one-owner business generally:",
+  "choices": [
+   "Allows employee deferrals in addition to employer contributions",
+   "Allows only employer contributions, no employee deferrals",
+   "Requires annual Form 5500 filing once assets pass $250,000",
+   "Requires actuarial certification every year"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a SEP does not allow employee deferrals; a solo 401(k) does.",
+   "Correct — SEP contributions are employer-only.",
+   "Wrong — a SEP generally has no Form 5500 filing requirement of this kind.",
+   "Wrong — a SEP does not require actuarial certification."
+  ]
+ },
+ {
+  "id": "ret-cov-16",
+  "domain": "retirement",
+  "sub": "Non-qualified plan rules and options",
+  "q": "A rabbi trust protects a deferred-pay participant against:",
+  "choices": [
+   "The employer changing its mind about paying",
+   "The employer's general creditors in bankruptcy",
+   "Income tax on deferred amounts when they are earned",
+   "Required minimum distributions after age 73"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a rabbi trust guards against a change of heart by the employer, but not against its creditors.",
+   "Wrong — assets in a rabbi trust remain subject to the employer's general creditors.",
+   "Wrong — deferred pay is still taxed when received, not when earned.",
+   "Wrong — required minimum distributions do not relate to a rabbi trust."
+  ]
+ },
+ {
+  "id": "ret-cov-17",
+  "domain": "retirement",
+  "sub": "Non-qualified plan rules and options",
+  "q": "A nonqualified plan's promise to pay deferred compensation is generally:",
+  "choices": [
+   "Secured by plan assets held for the participant",
+   "An unsecured promise of the employer",
+   "Guaranteed by the PBGC",
+   "Protected by ERISA's minimum funding rules"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — assets secured for the participant would generally cause current taxation.",
+   "Correct — the employer's promise to pay is unsecured.",
+   "Wrong — the PBGC does not insure nonqualified executive plans.",
+   "Wrong — ERISA's funding rules do not apply to these executive plans."
+  ]
+ },
+ {
+  "id": "ret-cov-18",
+  "domain": "retirement",
+  "sub": "Retirement needs analysis",
+  "q": "In a capital needs analysis, reducing the retirement income that a client wants to replace will:",
+  "choices": [
+   "Increase the capital needed",
+   "Reduce the capital needed",
+   "Have no effect on the capital needed",
+   "Only change the Social Security estimate"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — a lower income target reduces the capital needed, it does not increase it.",
+   "Correct — less income to replace means less capital is needed.",
+   "Wrong — the income target is a direct input to the calculation.",
+   "Wrong — the analysis is not driven only by the Social Security estimate."
+  ]
+ },
+ {
+  "id": "ret-cov-19",
+  "domain": "retirement",
+  "sub": "Retirement needs analysis",
+  "q": "The replacement ratio method estimates retirement income need by:",
+  "choices": [
+   "A target percent of pre-retirement income",
+   "Projecting each expense year by year",
+   "Using the client's life expectancy alone",
+   "Matching the client's current portfolio value to a fixed income target"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — the replacement ratio applies a target percentage to pre-retirement income.",
+   "Wrong — a year-by-year expense projection is a different method.",
+   "Wrong — life expectancy alone does not estimate retirement need.",
+   "Wrong — matching the current portfolio is not the replacement ratio method."
+  ]
+ },
+ {
+  "id": "ret-cov-20",
+  "domain": "retirement",
+  "sub": "Retirement income and distribution strategies",
+  "q": "A retirement income floor is built mainly from:",
+  "choices": [
+   "Guaranteed income: Social Security, pensions, annuities",
+   "Growth stocks held for the long term, rebalanced each year to target weights",
+   "Cash held in a checking account for emergencies and daily spending",
+   "Real estate purchased with a mortgage and rented to tenants"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — guaranteed income covers essential spending in the floor.",
+   "Wrong — growth stocks do not provide a guaranteed floor.",
+   "Wrong — cash in a checking account does not provide ongoing guaranteed income.",
+   "Wrong — mortgaged rental property adds risk and is not a guaranteed income floor."
+  ]
+ },
+ {
+  "id": "ret-cov-21",
+  "domain": "retirement",
+  "sub": "Retirement income and distribution strategies",
+  "q": "The original 4% withdrawal study tested portfolios against a retirement horizon of about:",
+  "choices": [
+   "About 15 years of retirement spending in total",
+   "About 20 years of retirement spending in total",
+   "About 30 years",
+   "About 40 years of retirement spending in total"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — 15 years is shorter than the study's horizon.",
+   "Wrong — 20 years is shorter than the study's horizon.",
+   "Correct — the original study modeled a horizon of about 30 years.",
+   "Wrong — 40 years is longer than the study's horizon."
+  ]
+ },
+ {
+  "id": "ret-cov-22",
+  "domain": "retirement",
+  "sub": "Retirement income and distribution strategies",
+  "q": "Under a bucket strategy, the portion of the portfolio meant for spending in the next few years is typically held in:",
+  "choices": [
+   "Cash and short-term bonds",
+   "Growth stocks only, which need no safe holdings at all",
+   "Private equity funds with long lock-up periods",
+   "Collectibles and art held for long-term appreciation"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — near-term spending comes from safer, liquid holdings.",
+   "Wrong — growth stocks carry too much risk for near-term spending.",
+   "Wrong — private equity is illiquid and unsuitable for near-term spending.",
+   "Wrong — collectibles are illiquid and unsuitable for near-term spending."
+  ]
+ },
+ {
+  "id": "ret-cov-23",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "Up to what percentage of Social Security benefits may be taxable federally for recipients with high combined income?",
+  "choices": [
+   "50% of benefits, the lower tier applied",
+   "100% of benefits, for all recipients",
+   "75% of benefits, a middle tier not used",
+   "85%"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 50% applies to a lower income tier, not the maximum.",
+   "Wrong — not all benefits are taxable for everyone.",
+   "Wrong — 75% is not a tier in the taxation rules.",
+   "Correct — up to 85% of Social Security benefits can be taxable."
+  ]
+ },
+ {
+  "id": "ret-cov-24",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "A widow or widower generally can claim a full survivor benefit at what age if born in 1962 or later?",
+  "choices": [
+   "Age 60, the earliest reduced survivor age",
+   "Age 62, the earliest age for a worker",
+   "Age 65, the traditional Medicare age",
+   "Age 67"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 60 is the earliest reduced survivor age, not the full age.",
+   "Wrong — 62 is the earliest claiming age for a worker, not the survivor full age.",
+   "Wrong — 65 is not the full survivor age for this birth-year group.",
+   "Correct — the full survivor benefit age is 67 for those born in 1962 or later."
+  ]
+ },
+ {
+  "id": "ret-cov-25",
+  "domain": "retirement",
+  "sub": "Social Security and Medicare planning",
+  "q": "The Medigap open enrollment period, which guarantees the right to buy a policy, generally lasts for:",
+  "choices": [
+   "Six months from Part B start at 65 or older",
+   "One year after the Part B start date",
+   "One month, the month of first Medicare enrollment",
+   "Until the beneficiary is 70"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — the Medigap open enrollment period is six months from Part B start at 65 or older.",
+   "Wrong — one year is not the Medigap open enrollment period.",
+   "Wrong — one month is too short for the Medigap open enrollment period.",
+   "Wrong — age 70 is not a Medigap enrollment deadline."
+  ]
+ },
+ {
+  "id": "ret-cov-26",
+  "domain": "retirement",
+  "sub": "Eldercare and special needs planning",
+  "q": "A third-party supplemental needs trust is generally funded with assets from:",
+  "choices": [
+   "The disabled beneficiary's own earnings from a job",
+   "A family member or friend, not the beneficiary",
+   "Medicaid's recovery from the beneficiary's estate",
+   "The beneficiary's Social Security check each month"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — the beneficiary's own assets would make it a first-party trust with different rules.",
+   "Correct — a third-party trust is funded with assets from someone other than the beneficiary.",
+   "Wrong — Medicaid recovery is not a funding source for a supplemental needs trust.",
+   "Wrong — the beneficiary's own benefit check would be counted as the beneficiary's resource."
+  ]
+ },
+ {
+  "id": "ret-cov-27",
+  "domain": "retirement",
+  "sub": "Business succession planning",
+  "q": "A book-value buy-sell price is generally weakest because it:",
+  "choices": [
+   "Is easy to calculate every year",
+   "May not match current market value",
+   "Requires an outside appraiser each year",
+   "Guarantees a fair price to the family"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — ease of calculation is not the weakness.",
+   "Correct — book value often differs from what the business would sell for.",
+   "Wrong — book value does not require an outside appraiser.",
+   "Wrong — a book-value price does not guarantee a fair price."
+  ]
+ },
+ {
+  "id": "ret-cov-28",
+  "domain": "retirement",
+  "sub": "Business succession planning",
+  "q": "In a business succession plan, a buy-sell agreement is most often funded with:",
+  "choices": [
+   "Life insurance on owners, or cash reserves",
+   "Only the business's bank loan with no reserves",
+   "Stock held as collateral with no valuation",
+   "Lower salaries paid to the owners"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — insurance or reserves provide the cash for the buyout.",
+   "Wrong — a loan with no reserves may not be available at death or disability.",
+   "Wrong — stock held as collateral is not a funding method.",
+   "Wrong — changing salaries does not fund a buyout."
+  ]
+ },
+ {
+  "id": "ret-cov-29",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "Under the ratio percentage test, a plan's coverage of non-highly compensated employees must be at least what percent of its coverage of highly compensated employees?",
+  "choices": [
+   "50% of the highly compensated coverage rate, as a rough planning guide",
+   "70% of the highly compensated coverage rate",
+   "80% of the highly compensated coverage rate, used by some plans in practice",
+   "100% of the highly compensated coverage rate, for all plans in every year"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — 50% is below the ratio test.",
+   "Correct — the ratio percentage test requires 70% of the highly compensated coverage rate.",
+   "Wrong — 80% is not the ratio test.",
+   "Wrong — 100% is more than the test requires."
+  ]
+ },
+ {
+  "id": "ret-cov-30",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "A profit-sharing plan's employer contribution can generally vary from year to year because it is:",
+  "choices": [
+   "Discretionary each year",
+   "Fixed at 10% of pay by law",
+   "Required by ERISA each year",
+   "Set by each employee's deferral"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — profit-sharing contributions are discretionary.",
+   "Wrong — no law fixes profit-sharing contributions at 10% of pay.",
+   "Wrong — ERISA does not require a profit-sharing contribution each year.",
+   "Wrong — employee deferrals are employee choices, not the employer contribution."
+  ]
+ },
+ {
+  "id": "ret-cov-31",
+  "domain": "retirement",
+  "sub": "Distribution rules and taxation",
+  "q": "A qualified charitable distribution from an IRA is available starting at age:",
+  "choices": [
+   "Age 59½, the usual early distribution age",
+   "Age 65, the Medicare starting age",
+   "Age 70½, the QCD starting age",
+   "Age 73, the RMD starting age"
+  ],
+  "correct": 2,
+  "rationale": [
+   "Wrong — 59½ is the early distribution age, not the QCD age.",
+   "Wrong — 65 is the Medicare starting age, not the QCD age.",
+   "Correct — qualified charitable distributions can be made starting at age 70½.",
+   "Wrong — 73 is the RMD starting age, not the QCD age."
+  ]
+ },
+ {
+  "id": "ret-cov-32",
+  "domain": "retirement",
+  "sub": "Retirement income and distribution strategies",
+  "q": "Sequence-of-returns risk is most dangerous for a retiree who is withdrawing money in:",
+  "choices": [
+   "Early retirement, when losses lock in withdrawals",
+   "The last years of retirement, when spending is lowest",
+   "Years with no withdrawals at all",
+   "Years when inflation is below 2%"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — early losses force sales at low prices while withdrawals continue.",
+   "Wrong — late-retirement losses matter less because the portfolio has less time to recover.",
+   "Wrong — with no withdrawals there is no sequence-of-returns risk.",
+   "Wrong — inflation below 2% is not the source of this risk."
+  ]
+ },
+ {
+  "id": "ret-cov-33",
+  "domain": "retirement",
+  "sub": "Types of retirement plans",
+  "q": "A defined benefit plan's annual benefit for a participant is generally limited under Section 415(b) to:",
+  "choices": [
+   "$72,000, the defined contribution limit for 2026",
+   "$290,000 for 2026",
+   "$360,000, the compensation limit for 2026",
+   "$235,000, the key employee threshold for 2026"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — $72,000 is the Section 415(c) limit for defined contribution plans.",
+   "Correct — the Section 415(b) annual benefit limit is $290,000 for 2026.",
+   "Wrong — $360,000 is the Section 401(a)(17) compensation limit.",
+   "Wrong — $235,000 is the key employee threshold, not the benefit limit."
+  ]
+ },
+ {
+  "id": "ret-cov-34",
+  "domain": "retirement",
+  "sub": "Non-qualified plan rules and options",
+  "q": "Under Section 409A, a participant who wants to delay a payment already scheduled must generally make the election at least:",
+  "choices": [
+   "12 months before the scheduled payment date",
+   "Before the payment date, by any amount of time",
+   "On the date the payment is made",
+   "After the payment is received"
+  ],
+  "correct": 0,
+  "rationale": [
+   "Correct — a delay generally must be elected at least 12 months before the scheduled payment.",
+   "Wrong — the rule is not satisfied by any amount of advance notice.",
+   "Wrong — an election on the payment date is too late.",
+   "Wrong — an election after receipt is too late."
+  ]
+ },
+ {
+  "id": "ret-cov-35",
+  "domain": "retirement",
+  "sub": "Qualified plan rules and options",
+  "q": "Under current rules, a 401(k) plan must generally allow a long-term part-time employee to defer after working at least:",
+  "choices": [
+   "1,000 hours in a single year, with no minimum service in later years",
+   "250 hours in one year, counted from the first day of work",
+   "2,080 hours in one year, counted as full-time service",
+   "500 hours in each of two consecutive years"
+  ],
+  "correct": 3,
+  "rationale": [
+   "Wrong — 1,000 hours in a single year is the old full-year standard, not the long-term part-time rule.",
+   "Wrong — 250 hours in one year is not the rule.",
+   "Wrong — 2,080 hours is full-time service, not the long-term part-time test.",
+   "Correct — a long-term part-time employee with 500 hours in each of two consecutive years must be allowed to defer."
+  ]
+ },
+ {
+  "id": "ret-cov-36",
+  "domain": "retirement",
+  "sub": "Eldercare and special needs planning",
+  "q": "A long-term care insurance policy generally begins paying benefits when the insured cannot perform at least how many of six activities of daily living?",
+  "choices": [
+   "One of six activities of daily living",
+   "Two of six activities of daily living",
+   "Three of six activities of daily living",
+   "All six activities of daily living"
+  ],
+  "correct": 1,
+  "rationale": [
+   "Wrong — one activity is too few for most policies.",
+   "Correct — most policies pay when the insured needs help with at least two of six activities of daily living.",
+   "Wrong — three is more than the usual trigger.",
+   "Wrong — requiring all six is stricter than typical policies."
+  ]
+ }
+];
+QUESTIONS.push(...COVERAGE_RET2_QUESTIONS);
 FLASHCARDS.push(...COVERAGE_V418_FLASHCARDS);
 FLASHCARDS.push({"id":"v18f-29","domain":"tax","sub":"Income tax","term":"Kiddie tax","def":"Unearned income above a set threshold for a child under the age limits is taxed at the parent's rate, so shifting investments to a child saves little tax beyond that amount."});
 /* A quick second tap on the same answer is treated as part of the first tap, so it never zooms the page or re-picks the answer. */
@@ -54710,7 +55399,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000479';
+const BUILD_ID = '2026-11-02.00000480';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
