@@ -501,6 +501,8 @@
   html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > #dtSwitch{column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > .card:has(> #toolsTutorChips){column-span:all;}
   html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > .dt-card[data-dt="trust"]{column-span:all;}
+  /* Tools tab on wide screens: keep the page wrapper full width, so an expanded tool is not shrunk to its multi-column content and centered with empty margins. */
+  html:is([data-lay="wide"],[data-lay="xwide"]) .wrap:has(> #tab-tools.active){width:100%;}
   .dt-card[data-dt="trust"]{container:dtTrust / inline-size;}
   .dtw-split{display:block;}
   .dtw-logs .dtw-side-empty{display:none;}
@@ -40554,6 +40556,8 @@ function studyFitScreen(){
     if(window._quizFitHold && document.body.classList.contains('quiz-active')) return;
     const wrap = document.querySelector('.wrap'); if(!wrap) return;
     wrap.style.zoom = '';
+    // An open decision walk on the Tools tab keeps full size and full width: the rest of the tab scrolls below it instead of shrinking the walk.
+    if(document.querySelector('#tab-tools.active .dt-card[data-dt="trust"].cc-open .dtw-split')) return;
     // The full-screen quiz is a fixed layer: its own panel is scaled to fit the same way.
     const qin = document.querySelector('#quizFullscreenHost .quiz-inner');
     if(qin){ qin.style.zoom = ''; if(qin.scrollHeight > qin.clientHeight + 1 && qin.clientHeight > 0) qin.style.zoom = String(Math.max(0.72, Math.round((qin.clientHeight / qin.scrollHeight) * 100) / 100)); }
@@ -63067,7 +63071,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000533';
+const BUILD_ID = '2026-11-03.00000534';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
