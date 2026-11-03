@@ -29894,9 +29894,15 @@ function buildStudyPlanCore(minutes){
       const dbwWhy = dbwTotal ? (dbwHave >= dbwTotal ? 'Every item on the exam-day walkthrough is ticked. ' : dbwHave + ' of ' + dbwTotal + ' items ticked on the exam-day walkthrough. Tick them as you go; this step completes when they are all ticked. ') : 'Open the exam-day walkthrough and tick its items as you go. ';
       const nx = (typeof window.dbwFirstOpen === 'function') ? window.dbwFirstOpen() : null;
       const nextTxt = nx && nx.index >= 0 ? `Next up: "${nx.title}" (${nx.n} ${nx.n === 1 ? 'item' : 'items'} to tick). ` : '';
+      // Coaching for the last days: what the day is for, and where your review time goes (your weakest domain by mastery).
+      const wdName = (() => { try{ const d = weakDom && (DOMAINS.find(x => x.key === weakDom.key) || weakDom); return d && d.name ? d.name : ''; }catch(e){ return ''; } })();
+      const wdShaky = !!(weakDom && weakDom.mastery != null && weakDom.mastery < 60 && wdName);
+      let coach = '';
+      if(days === 1) coach = 'Tomorrow is a light day: no new material. ' + (wdShaky ? `Spend your review time on ${wdName} (${Math.round(weakDom.mastery)}% mastery): re-read the rationale on your recent misses there, then stop. ` : 'Review your recent misses, then stop. ');
+      else if(days === 0) coach = 'Exam day: review only your key numbers and the walkthrough, not new material. ';
       return { id:'logistics', title: when ? `Check your exam-day plan: ${when}` : 'Check your exam-day plan', minutes:5,
       need: dbwTotal || 1, have: dbwTotal ? dbwHave : 0, unit:'items',
-      why: (days !== null && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} to go. ` : '') + dbwWhy + nextTxt + 'Knowing the route, timing, ID and calculator rules removes avoidable stress.',
+      why: (days !== null && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} to go. ` : '') + dbwWhy + nextTxt + coach + 'Knowing the route, timing, ID and calculator rules removes avoidable stress.',
       run: () => { if(typeof window.dbwOpenAtFirstOpen === 'function') window.dbwOpenAtFirstOpen(); showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }; },
     keys: () => {
       const wkD = (() => { try{ return weakestDrillTarget(stats); }catch(e){ return null; } })();
@@ -54765,7 +54771,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000473';
+const BUILD_ID = '2026-11-02.00000474';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
