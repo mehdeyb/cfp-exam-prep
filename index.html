@@ -4748,6 +4748,38 @@
   .dbw-answer{font-size:14px;color:var(--gold, #c9a227);margin:0 0 10px;}
   .dbw-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;}
   .dbw-count{font-size:13px;color:var(--muted);text-align:center;flex:1;}
+  /* Which trust fits?: its own full-screen workspace, opened from the card. The walk renders here as a case file beside the decision path. */
+  #trustHost{position:fixed;inset:0;z-index:9500;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--ink);color:var(--paper);padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));box-sizing:border-box;}
+  body.trust-active #trustHost{display:block;}
+  #trustHost .tr-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;max-width:1240px;margin:0 auto 18px;}
+  #trustHost .tr-kicker{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+  #trustHost .tr-title{font-family:Georgia,'Source Serif 4',serif;font-size:28px;line-height:1.2;color:var(--paper);}
+  #trustStage{max-width:1240px;margin:0 auto;}
+  #trustStage .tr-body{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:22px;align-items:start;}
+  #trustStage .tr-main{min-width:0;}
+  #trustStage .tr-facts{background:var(--surface);border:1px solid var(--hair);border-left:3px solid var(--gold);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+  #trustStage .tr-facts .tr-kicker{color:var(--gold);}
+  #trustStage .tr-facts p{margin:6px 0 0;font-size:19px;line-height:1.55;color:var(--paper);}
+  #trustStage .tr-path{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:18px;position:sticky;top:12px;max-height:calc(100dvh - 40px);overflow:auto;}
+  #trustStage .tr-path .tr-kicker{color:var(--gold);}
+  #trustStage .tr-score{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);margin-top:6px;}
+  #trustStage .tr-steps{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px;}
+  #trustStage .tr-dot{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 12px 'IBM Plex Mono',monospace;border:1px solid var(--hair);color:var(--muted);}
+  #trustStage .tr-dot.done{background:var(--gold);color:var(--on-gold);border-color:var(--gold);}
+  #trustStage .tr-dot.now{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 3px var(--gold-tint);}
+  #trustStage .dt-question{font-family:Georgia,'Source Serif 4',serif;font-size:24px;line-height:1.3;color:var(--paper);margin:0 0 16px;}
+  #trustStage .dt-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  #trustStage .dt-option{font-size:17px;line-height:1.35;min-height:84px;padding:18px 20px;display:flex;align-items:center;text-align:left;}
+  #trustStage .dtw-msg{font-size:15px;}
+  #trustStage .dt-result-title{font-size:24px;}
+  #trustStage .dtw-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+  @media (max-width:900px), (orientation:portrait){
+    #trustStage .tr-body{grid-template-columns:minmax(0,1fr);}
+    #trustStage .tr-path{position:static;max-height:none;}
+    #trustStage .dt-options{grid-template-columns:minmax(0,1fr);}
+    #trustHost .tr-title{font-size:22px;}
+    #trustStage .tr-facts p{font-size:17px;}
+  }
 </style>
 <style>
   /* Progress hub: a compact, slim layout so the whole view fits the screen without wasted space. */
@@ -44376,7 +44408,8 @@ function dtwResume(inst){
   }catch(e){ return false; }
 }
 function dtwRender(inst){
-  const host = document.getElementById('dt-' + inst); if(!host) return;
+  const trustFull = inst === 'trust' && document.body.classList.contains('trust-active');
+  const host = trustFull ? document.getElementById('trustStage') : document.getElementById('dt-' + inst); if(!host) return;
   if(!dtwState[inst]) dtwResume(inst);
   if(!dtwState[inst]){
     if(dtwLoading[inst]) return;
@@ -44406,8 +44439,9 @@ function dtwRender(inst){
     const cue = (w.gen && w.s.cues && w.s.cues[w.step] && !w.wrongHere.length && (w.level === 1 || (w.level === 2 && w.step === 0))) ? `<div class="dtw-cue">Look for: ${escapeHtml(w.s.cues[w.step])}</div>` : '';
     body = `<div class="dt-question">${node.question}</div>${cue}<div class="dt-options">${opts}</div>${msg}`;
   }
+  if(trustFull){ host.innerHTML = trustStageHtml(w, key, body, logHtml); if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } } return; }
   host.innerHTML = `<div class="dt-widget dtw">
-    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span></div>
+    <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span>${inst === 'trust' ? `<button type="button" class="btn ghost dtw-full" onclick="trustFullscreen(true)">Open full screen</button>` : ''}</div>
     ${w.gen ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
     ${w.resumed && !w.done ? `<div class="dtw-plan">Picking up where you left off: question ${w.step + 1} of ${w.route.length}.</div>` : ''}${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
     <div class="dtw-split"><div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
@@ -44430,6 +44464,42 @@ function openTreeRun(key, o){
   return true;
 }
 function dtwRunDone(){ const r = dtwRun; dtwRun = null; focusExit({ done:true }); return r; }
+// Which trust fits?: a purpose-built workspace. The walk is the whole screen: the client file on the left, the decision path on the right.
+function trustStageHtml(w, key, body, logHtml){
+  const total = w.route.length;
+  const steps = w.route.map((s, i) => '<span class="tr-dot' + (i < w.step || w.done ? ' done' : '') + (i === w.step && !w.done ? ' now' : '') + '">' + (i + 1) + '</span>').join('');
+  const count = (dtwRun && dtwRun.key === key) ? 'Scenario ' + Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1)) + ' of ' + dtwRun.goal
+    : (w.gen ? dtwConceptStats(key).clean + ' of ' + dtwConceptStats(key).total + ' ideas walked clean' : dtwStats(key).clean + ' of ' + w.total + ' walked clean');
+  const score = w.done ? '' : '<span class="tr-score">' + escapeHtml(count) + '</span>';
+  return '<div class="tr-body">'
+    + '<main class="tr-main">'
+    + '<div class="tr-facts"><div class="tr-kicker">Client file' + (w.done ? '' : ' · question ' + (w.step + 1) + ' of ' + total) + '</div><p>' + escapeHtml(w.s.facts) + '</p></div>'
+    + body
+    + '</main>'
+    + '<aside class="tr-path"><div class="tr-kicker">Decision path</div>' + score
+    + '<div class="tr-steps">' + steps + '</div>'
+    + (logHtml || '<div class="dtw-side-empty">Your path builds here. Each right answer adds a line, and a wrong turn shows the fact that decides it.</div>')
+    + '</aside></div>';
+}
+function trustFullscreen(on){
+  let host = document.getElementById('trustHost');
+  if(!host){
+    host = document.createElement('div'); host.id = 'trustHost';
+    host.innerHTML = '<div class="tr-bar"><div><div class="tr-kicker">Decision tool · Trust</div><div class="tr-title">Which trust fits?</div></div><button type="button" class="btn ghost" onclick="trustFullscreen(false)">Close</button></div><div id="trustStage"></div>';
+    document.body.appendChild(host);
+  }
+  if(on){
+    document.body.classList.add('trust-active');
+    document.addEventListener('keydown', trustKey);
+    try{ if(!dtwState.trust || dtwState.trust.done){ delete dtwState.trust; dtwResume('trust'); } }catch(e){}
+    try{ dtwRender('trust'); }catch(e){}
+  } else {
+    document.body.classList.remove('trust-active');
+    document.removeEventListener('keydown', trustKey);
+    try{ dtwRender('trust'); }catch(e){}
+  }
+}
+function trustKey(e){ if(e.key === 'Escape') trustFullscreen(false); }
 function openTreeWalk(key){
   dtwRun = null;
   showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
@@ -63071,7 +63141,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000534';
+const BUILD_ID = '2026-11-03.00000535';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
