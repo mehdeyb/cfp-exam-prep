@@ -60288,6 +60288,7 @@ function osFitStudy(extra){
     if(document.body.classList.contains('os-one') && innerWidth >= 900 && innerWidth > innerHeight && innerHeight <= 900){
       c.style.zoom = ''; c.style.transform = ''; c.style.transformOrigin = ''; c.style.width = ''; c.style.marginBottom = ''; c.style.maxHeight = ''; c.style.minHeight = '';
       c.classList.remove('os-fit', 'os-end', 'pt-tiny', 'pt-dt', 'pt-dfull', 'pt-dwhy', 'pt-rich'); c.classList.add('pt-dense');
+      { const hi = c.querySelector('.pt-rows'); if(hi){ const ni = hi.children.length; const ci = (ni >= 13 && innerWidth >= 1500) ? 4 : 3; hi.style.setProperty('--plan-cols', String(ci)); hi.style.setProperty('--plan-rows', String(Math.max(1, Math.ceil(ni / ci)))); } } // keep the grid sized to the items on iPad, so no item spills into an extra column
       c.querySelectorAll('.pt-fitmore').forEach(x => x.remove());
       c.querySelectorAll('.os-shed').forEach(x => { x.classList.remove('os-shed'); x.style.display = ''; });
       // Your progress has no list to trim, so on iPad landscape it is scaled down to fit the screen instead, and never scrolls.
@@ -63061,7 +63062,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000529';
+const BUILD_ID = '2026-11-03.00000530';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
