@@ -33985,10 +33985,14 @@ function learnerProfileText(){
     const weakSpots = (() => { try{ return weakSubtopics(2).map(w => w.name); }catch(e){ return []; } })();
     const hasTool = t => ctList().some(x => String(x.title || '').toLowerCase().includes(String(t || '').toLowerCase()));
     const untooled = weakSpots.filter(w => !hasTool(w));
+    const crossWeak = (() => { try{ return crossModeWeakPoints().slice(0, 3).map(w => w.name + ' (' + w.miss + ' missed answers, ' + w.lapse + ' flashcard lapses)'); }catch(e){ return []; } })();
+    const confNote = (() => { const c = (DATA.confidenceStats || {}).confident || {}; return c.total >= 5 ? 'answers marked confident are right ' + Math.round(100 * c.correct / c.total) + '%' : ''; })();
     return ' LEARNER PROFILE: strongest ' + (strongest.join('; ') || 'not enough data') + '; weakest ' + (weakest.join('; ') || 'not enough data')
       + '; statements right ' + fmt(fs) + ', EXCEPT questions right ' + fmt(fn)
       + '; about ' + (recent.length ? Math.round(recent.reduce((a, s) => a + sessionQuestionCount(s), 0) / Math.max(1, new Set(recent.map(s => new Date(s.date).toDateString())).size)) : 0) + ' questions a study day'
       + '; difficulty: ' + difficulty + '.'
+      + (crossWeak.length ? ' WEAKEST ACROSS ALL MODES (drills, reviews, mocks, flashcards): ' + crossWeak.join('; ') + '.' : '')
+      + (confNote ? ' CONFIDENCE CALIBRATION: ' + confNote + '.' : '')
       + (untooled.length ? ' WEAK SPOTS WITHOUT A TOOL YET: ' + untooled.join('; ') + '. Consider build_custom_tool for the most important one.' : '');
   }catch(e){ return ''; }
 }
@@ -50952,8 +50956,26 @@ function adaptiveAfterAnswer(q, isCorrect){
 }
 // An adaptive sitting ends on one concrete next step: the subtopic where it cost the most, with a button
 // that opens its drill. Only shown when two or more misses share a subtopic, since one miss is not a pattern yet.
+// Every mode's evidence in one ranking: questions missed in any mode (questionStats) plus flashcards that keep coming back (fcLapse).
+function crossModeWeakPoints(){
+  const rows = [];
+  Object.keys(SUBTOPICS).forEach(dk => SUBTOPICS[dk].forEach((name, i) => {
+    const key = dk + '-' + i;
+    let miss = 0, seen = 0;
+    subtopicPool(dk, i).forEach(q => {
+      const st = getSpacedStat(DATA.questionStats, q.id);
+      if(st.seen > 0){ seen++; miss += Math.max(0, st.seen - Math.min(st.correct, st.seen)); }
+    });
+    let lapse = 0;
+    (covTopicCards()[key] || []).forEach(id => { const c = (DATA.fcLapse || {})[id]; if(c) lapse += (c.n || 0); });
+    const value = miss + lapse;
+    if(value >= 3) rows.push({ key, dk, idx: i, name, miss, lapse, seen, value });
+  }));
+  rows.sort((a, b) => b.value - a.value);
+  return rows;
+}
 function adaptiveNextTarget(){
-  if(!session || session.mode !== 'adaptive') return null;
+  if(!session) return null;
   const hit = {}, tried = {};
   (session.answerLog || []).forEach(a => {
     const q = session.queue[a.index]; const key = q && inferQuestionSubtopic(q);
@@ -50962,7 +50984,12 @@ function adaptiveNextTarget(){
     if(!a.correct) hit[key] = (hit[key] || 0) + 1;
   });
   const best = Object.keys(hit).map(key => ({ key, n: hit[key] })).filter(x => x.n >= 2).sort((a, b) => b.n - a.n)[0];
-  if(!best) return null;
+  if(!best){
+    const cm = crossModeWeakPoints()[0];
+    if(!cm) return null;
+    const cdom = DOMAINS.find(d => d.key === cm.dk);
+    return { dk: cm.dk, idx: cm.idx, name: cm.name, domName: cdom ? cdom.name : cm.dk, miss: cm.miss, total: cm.seen, lapse: cm.lapse, src: 'all' };
+  }
   const cut = best.key.lastIndexOf('-');
   const dk = best.key.slice(0, cut), idx = +best.key.slice(cut + 1);
   const name = (SUBTOPICS[dk] || [])[idx];
@@ -50976,7 +51003,9 @@ function renderAdaptiveNext(){
   if(!t){ box.style.display = 'none'; box.innerHTML = ''; return; }
   box.innerHTML = '<div class="an-h" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Next step</div>'
     + '<div style="font-size:17px;font-weight:600;margin:4px 0 2px;">' + escapeHtml(t.name) + ' <span style="font-weight:400;opacity:.7;">· ' + escapeHtml(t.domName) + '</span></div>'
-    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">You missed ' + t.miss + ' of ' + t.total + ' questions here. The drill starts with the ones you missed. Misses in this sitting are saved and come back in later sessions.</div>'
+    + (t.src === 'all'
+      ? '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">Across all your modes: ' + t.miss + ' missed answers and ' + (t.lapse || 0) + ' flashcards that keep coming back here. The drill starts with the questions you missed.</div>'
+      : '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">You missed ' + t.miss + ' of ' + t.total + ' questions here. The drill starts with the ones you missed. Misses in this sitting are saved and come back in later sessions.</div>')
     + '<button class="btn" id="adaptiveNextBtn" type="button">Work on this subtopic</button>';
   box.style.display = 'block';
   const btn = document.getElementById('adaptiveNextBtn');
@@ -59476,7 +59505,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000486';
+const BUILD_ID = '2026-11-02.00000487';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
