@@ -44373,7 +44373,7 @@ function dtwFinish(inst){
     DATA.treeWalk[w.id] = { seen: prev.seen + 1, clean: prev.clean + (w.wrong ? 0 : 1), miss: prev.miss + w.wrong, lastClean: w.wrong === 0, lastAt: Date.now() };
     { const L = planDayLog(); L.trees = L.trees || []; L.trees.push(dtKeyOf(inst)); }
     if(w.gen){ w.lvlChange = dtwBump(dtKeyOf(inst), w.wrong); setTimeout(() => dtwPrefetch(inst), 50); }
-    if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); }
+    if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); dtwRunSave(); }
     recordStudyDay(); persist();
     try{ renderToolPracticeButtons(); }catch(e){}
     try{ renderTodayPlan(); refreshCoachSurfaces(); conductorRefreshPill(); }catch(e){}
@@ -44408,7 +44408,15 @@ function dtwResume(inst){
     return true;
   }catch(e){ return false; }
 }
+// The plan's scenario run (goal, count, seen) is saved with today's plan log, so it survives a reload and resets the next day.
+function dtwRunSave(){
+  try{ const L = planDayLog(); L.treeRun = dtwRun ? { key: dtwRun.key, goal: dtwRun.goal, n: dtwRun.n, seen: dtwRun.seen.slice(), stepId: dtwRun.stepId || null } : null; persist(); }catch(e){}
+}
+function dtwRunRestore(){
+  try{ if(dtwRun) return; const r = planDayLog().treeRun; if(r && r.key && r.n < r.goal) dtwRun = Object.assign({}, r, { seen: (r.seen || []).slice() }); }catch(e){}
+}
 function dtwRender(inst){
+  dtwRunRestore();
   const trustFull = inst === 'trust' && document.body.classList.contains('trust-active');
   const host = trustFull ? document.getElementById('trustStage') : document.getElementById('dt-' + inst); if(!host) return;
   if(!dtwState[inst]) dtwResume(inst);
@@ -44456,6 +44464,7 @@ function openTreeRun(key, o){
   o = o || {};
   const avail = dtwList(key).length; if(!avail) return false;
   dtwRun = { key, goal: Math.max(1, Math.min(o.goal || 3, 6)), n: 0, seen: [], stepId: o.stepId || null };
+  dtwRunSave();
   showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   if(key === 'trust'){ trustFullscreen(true); return true; }
@@ -44465,7 +44474,7 @@ function openTreeRun(key, o){
   focusEnter({ tab:'tools', el:card, title:o.title || ('Decision tool: ' + nm), stepId:o.stepId || null });
   return true;
 }
-function dtwRunDone(){ const r = dtwRun; dtwRun = null; if(document.body.classList.contains('trust-active')){ trustFullscreen(false); } else { focusExit({ done:true }); } return r; }
+function dtwRunDone(){ const r = dtwRun; dtwRun = null; dtwRunSave(); if(document.body.classList.contains('trust-active')){ trustFullscreen(false); } else { focusExit({ done:true }); } return r; }
 // Which trust fits?: a purpose-built workspace. The walk is the whole screen: the client file on the left, the decision path on the right.
 function trustStageHtml(w, key, body, logHtml){
   const total = w.route.length;
@@ -44506,7 +44515,7 @@ function trustFullscreen(on){
 function trustKey(e){ if(e.key === 'Escape') trustFullscreen(false); }
 const TRUST_TODAY = '2026-11-03'; // the trust workspace is today's decision-tool step on this day
 function openTreeWalk(key){
-  dtwRun = null;
+  dtwRun = null; dtwRunSave();
   showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
   try{ dtRender(key); }catch(e){}
   const host = document.getElementById('dt-' + key), card = host ? host.closest('.card') : null;
@@ -63146,7 +63155,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000537';
+const BUILD_ID = '2026-11-03.00000538';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
