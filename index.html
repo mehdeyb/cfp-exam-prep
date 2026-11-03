@@ -33987,8 +33987,10 @@ function pruneRetiredQuestionIds(){
   try{
     const live = new Set(allQuestions().map(q => q.id));
     const isGen = id => String(id).startsWith('tvmq-');
+    // Nothing you have done is discarded when an update retires a question or card: it is kept under retiredProgress.
+    const archiveRetired = (k, v, id) => { DATA.retiredProgress = DATA.retiredProgress || {}; if(Array.isArray(v)){ DATA.retiredProgress[k] = (DATA.retiredProgress[k] || []).concat(v); } else { DATA.retiredProgress[k] = DATA.retiredProgress[k] || {}; DATA.retiredProgress[k][id] = v; } };
     ['missed','hypercorrectionQueue'].forEach(k => {
-      if(Array.isArray(DATA[k])) DATA[k] = DATA[k].filter(id => live.has(id) && !isGen(id));
+      if(Array.isArray(DATA[k])){ const keep = [], retired = []; DATA[k].forEach(id => (live.has(id) && !isGen(id) ? keep : retired).push(id)); DATA[k] = keep; if(retired.length) archiveRetired(k, retired); }
     });
     if(DATA.flashcardStats && typeof DATA.flashcardStats === 'object'){
       // Duplicate cards were merged into one: carry over what you already knew about the dropped copy.
@@ -33998,7 +34000,7 @@ function pruneRetiredQuestionIds(){
         if(a && (!DATA.flashcardStats[to] || (a.lastSeenAt||0) > (DATA.flashcardStats[to].lastSeenAt||0))) DATA.flashcardStats[to] = a;
       });
       const liveCards = new Set(allFlashcards().map(f => f.id));
-      Object.keys(DATA.flashcardStats).forEach(id => { if(!liveCards.has(id)) delete DATA.flashcardStats[id]; });
+      Object.keys(DATA.flashcardStats).forEach(id => { if(!liveCards.has(id)) archiveRetired('flashcardStats', DATA.flashcardStats[id], id); });
     }
     ['questionStats','wrongChoiceHistory'].forEach(k => {
       if(DATA[k] && typeof DATA[k] === 'object') Object.keys(DATA[k]).forEach(id => { if(!live.has(id)) delete DATA[k][id]; });
@@ -62943,7 +62945,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000509';
+const BUILD_ID = '2026-11-03.00000510';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
