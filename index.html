@@ -5600,13 +5600,7 @@
       <div class="calc-list"><span class="calc-chip calc-chip-mine">Your calculator: HP 10bII+</span></div>
       <p class="hint" style="margin-top:10px;">The full list of approved models is on cfp.net.</p>
       <p class="hint" style="margin-top:14px;"><b>Before each section, on your HP 10bII+</b> (staff inspect the calculator but won't clear it for you):</p>
-      <ol class="hint" style="margin:6px 0 0 20px;">
-        <li>Clear memory: press Orange Shift, then C. The display flashes "12 P/YR" as memory clears. P/YR stays at 12. The HP 10bII+ manual confirms this in its clear-all section.</li>
-        <li>Set P/YR to 12: press 12, then Shift and PMT. The factory default is also 12.</li>
-        <li>Check END mode is on, meaning BEGIN is not showing on screen.</li>
-        <li>Run the setup test: N 12, I/YR 12, PV −1000, then FV. The answer should be 1,126.83. If it shows 1,138.09, BEGIN mode is still on.</li>
-        <li>Clear memory again (Orange Shift, then C), so no test values carry into the section.</li>
-      </ol>
+      <ol class="hint" id="calcResetSteps" style="margin:6px 0 0 20px;"></ol>
       <p class="hint" style="margin-top:10px;">Practise this on your own calculator before exam day. Key labels differ between models, so the manual is the authority, and if a step doesn't match, check the manual. Cover any printed formulas or notes on the calculator with solid tape.</p>
       <button type="button" class="ck-link" onclick="openCalcKeys()">Review your calculator keystrokes</button>
     </div>
@@ -39796,14 +39790,29 @@ function setCoach(text, busy){
   document.getElementById('coachDot').className = 'coach-dot' + (busy ? ' busy' : '');
 }
 
-const EXAM_CHECKLIST = [["Test drive", ["Drive to the test center at the same time of day", "Identify 1-2 parking options (and pricing)", "Locate the test center entrance", "Book a hotel if the center is an hour or more away (optional)"]], ["Clothing", ["Light, comfortable clothing", "Extra sweater or sweatshirt", "Reading glasses (optional)"]], ["Check-in", ["Photo ID with name matching registration", "Board-approved calculator: the HP 10bII+ (the model you practiced on)", "Fresh batteries in calculator", "Know how to clear calculator memory", "Know how to reset calculator preferences (4 digits)", "Backup calculator (optional)"]], ["Food and water", ["Hearty breakfast", "Clear water bottle, labels and stickers removed (no metal or opaque bottles)", "Lunch with complex carbs and protein, plus a treat", "Caffeinated drink or unwrapped cough drops (optional)"]], ["Mindset", ["Music playlist for the drive and the break", "Mantra and power poses", "Leave study notes at home"]]];
+const CALC_FMT = n => n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const CALC_FV_END = CALC_FMT(1000*Math.pow(1.01,12));
+const CALC_FV_BEGIN = CALC_FMT(1000*Math.pow(1.01,13));
+function calcTokens(s){ return String(s).replace(/\{FV_END\}/g, CALC_FV_END).replace(/\{FV_BEGIN\}/g, CALC_FV_BEGIN); }
+const CALC_RESET_LINES = [
+  'Clear memory: press Orange Shift, then C. The display flashes "12 P/YR" as memory clears, and P/YR stays at 12.',
+  'Check P/YR is 12. If not, press 12, then Shift, then PMT.',
+  'Check END mode: no BEGIN annunciator on screen. If BEGIN shows, turn it off, then retest.',
+  'Run the setup test: N 12, I/YR 12, PV −1000, then FV. The answer should be {FV_END}. If it shows {FV_BEGIN}, BEGIN is still on.',
+  'Clear memory again (Orange Shift, then C), so no test values carry into the section.'
+];
+const calcEsc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderCalcReset(){ const ol=document.getElementById('calcResetSteps'); if(!ol) return; ol.innerHTML = CALC_RESET_LINES.map(t=>'<li>'+calcEsc(calcTokens(t))+'</li>').join(''); }
+const EXAM_CHECKLIST = [["Test drive", ["Drive to the test center at the same time of day", "Identify 1-2 parking options (and pricing)", "Locate the test center entrance", "Book a hotel if the center is an hour or more away (optional)"]], ["Clothing", ["Light, comfortable clothing", "Extra sweater or sweatshirt", "Reading glasses (optional)"]], ["Check-in", ["Photo ID with name matching registration", "Board-approved calculator: the HP 10bII+ (the model you practiced on)", "Fresh batteries in calculator", "Know the clear-memory keys (Orange Shift, then C)", "Know the calculator reset steps (see Calculator reset)", "Backup calculator (optional)"]], ["Food and water", ["Hearty breakfast", "Clear water bottle, labels and stickers removed (no metal or opaque bottles)", "Lunch with complex carbs and protein, plus a treat", "Caffeinated drink or unwrapped cough drops (optional)"]], ["Mindset", ["Music playlist for the drive and the break", "Mantra and power poses", "Leave study notes at home"]], ["Calculator reset", CALC_RESET_LINES]];
 function renderExamChecklist(){
+  renderCalcReset();
   const host = document.getElementById('edChecklist'); if(!host) return;
   if(!Array.isArray(DATA.examChecklist)) DATA.examChecklist = [];
   let total = 0, done = 0, html = '';
   EXAM_CHECKLIST.forEach((g,gi)=>{
     html += '<div class="ed-item"><b>'+g[0]+'</b>';
-    g[1].forEach((t,ti)=>{
+    g[1].forEach((t0,ti)=>{
+      const t = calcTokens(t0);
       const id = gi+'-'+ti, on = DATA.examChecklist.includes(id);
       total++; if(on) done++;
       html += '<label style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer;"><input type="checkbox" '+(on?'checked ':'')+'onchange="toggleExamChecklist(\''+id+'\',this.checked)" style="margin-top:2px;flex:none;"><span style="'+(on?'text-decoration:line-through;opacity:.6;':'')+'">'+t+'</span></label>';
@@ -62910,7 +62919,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000507';
+const BUILD_ID = '2026-11-03.00000508';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -63555,7 +63564,7 @@ function perfEnable(){
         {id:'c1',text:'Fresh batteries, tested tonight. Loose spare batteries are allowed without packaging'},
         {id:'c2',text:'Any notes or formulas printed on the back are covered with solid tape, and pull-out cards are removed'},
         {id:'c3',text:'Clear memory before each section: Orange Shift, then C. It keeps P/YR, so check that too. Staff will not do it for you'},
-        {id:'c4',text:'Set P/YR to 12 and check END mode, then run the setup test: N 12, I/YR 12, PV −1000, FV should show 1,126.83'},
+        {id:'c4',text:'Set P/YR to 12 and check END mode, then run the setup test: N 12, I/YR 12, PV −1000, FV should show {FV_END}'},
         {id:'c5',text:'Clear memory again after the test, so no test values carry into the section'}
       ] },
     { id:'leave', title:'What stays out of the room',
@@ -63665,7 +63674,7 @@ function perfEnable(){
       return `<button type="button" data-i="${i}" ${i===s.step?'aria-current="step"':''} class="${allDone?'dbw-done':''}" aria-label="Step ${i+1}: ${esc(x.title)}">${i+1}</button>`;
     }).join('');
 
-    const listHTML = st.items.map(it => `<li><input type="checkbox" id="dbwc-${esc(it.id)}" data-id="${esc(it.id)}" ${s.checks[it.id]?'checked':''}><label for="dbwc-${esc(it.id)}">${esc(it.text)}</label></li>`).join('');
+    const listHTML = st.items.map(it => `<li><input type="checkbox" id="dbwc-${esc(it.id)}" data-id="${esc(it.id)}" ${s.checks[it.id]?'checked':''}><label for="dbwc-${esc(it.id)}">${esc(calcTokens(it.text))}</label></li>`).join('');
     const plainHTML = st.plain ? `<ul class="dbw-plain" style="list-style:none;padding:0;display:grid;gap:6px;">${st.plain.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '';
     body.innerHTML = `<div class="dbw-title">${esc(st.title)}</div>
       <p class="dbw-intro">${esc(st.intro)}</p>
