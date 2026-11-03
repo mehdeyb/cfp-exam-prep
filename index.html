@@ -35036,9 +35036,32 @@ function recentExamAccuracy(){
   return { accuracy: wt > 0 ? wo/wt : ok/total, total, sittings: sits.length, weight: 0.4*Math.min(1, total/170) };
 }
 
+// Progress numbers come from one source: the per-question history (questionStats). Each question's seen and correct counts add up to the topic and headline totals.
+function historyDomainTotals(){
+  const out = {}; DOMAINS.forEach(d=>{ out[d.key] = {correct:0,total:0}; });
+  allQuestions().forEach(q=>{
+    const s = DATA.questionStats && DATA.questionStats[q.id];
+    if(s && s.seen > 0 && out[q.domain]){ out[q.domain].total += s.seen; out[q.domain].correct += Math.min(s.seen, s.correct || 0); }
+  });
+  return out;
+}
+// Answers counted before question history was saved (or without a history record). Shown as a labelled note, never dropped.
+function legacyDomainTotals(H){
+  const out = {};
+  DOMAINS.forEach(d=>{
+    const ds = (DATA.domainStats && DATA.domainStats[d.key]) || {correct:0,total:0};
+    const h = (H && H[d.key]) || {correct:0,total:0};
+    const total = Math.max(0, (ds.total||0) - h.total);
+    const correct = Math.min(total, Math.max(0, (ds.correct||0) - h.correct));
+    out[d.key] = {correct, total};
+  });
+  return out;
+}
 function computeStats(){
   let totalCorrect=0, totalAnswered=0;
-  DOMAINS.forEach(d=>{ totalCorrect += DATA.domainStats[d.key].correct; totalAnswered += DATA.domainStats[d.key].total; });
+  const HT = historyDomainTotals(), LG = legacyDomainTotals(HT);
+  DOMAINS.forEach(d=>{ totalCorrect += HT[d.key].correct; totalAnswered += HT[d.key].total; });
+  const legacyAnswered = DOMAINS.reduce((a,d)=>a+LG[d.key].total,0), legacyCorrect = DOMAINS.reduce((a,d)=>a+LG[d.key].correct,0);
   const accuracy = totalAnswered ? Math.round((totalCorrect/totalAnswered)*100) : null;
 
   // Confidence calibration factor. If "very sure" answers are actually
@@ -35224,9 +35247,9 @@ function computeStats(){
   const order = allDomainsWeakestFirst();
   const weakestKey = order[0];
   const weakestMeta = DOMAINS.find(d=>d.key===weakestKey);
-  const weakestStat = DATA.domainStats[weakestKey];
+  const weakestStat = HT[weakestKey];
   const weakestMastery = weakestStat.total ? Math.round((weakestStat.correct/weakestStat.total)*100) : null;
-  return { totalAnswered, accuracy, readiness, readinessExact: weighted * calibrationFactor, weakestMeta, weakestMastery, parts, calibration, rawReadiness: weighted, expectedAccuracy: Math.round(expectedAcc*100), accuracyMargin: margin, triedTotal, exam, scoredWeight: scoredShare, untriedWeight: 100 - scoredShare, untriedDomains: parts.filter(p => !p.attempted).map(p => p.name) };
+  return { totalAnswered, correctTotal: totalCorrect, legacyAnswered, legacyCorrect, accuracy, readiness, readinessExact: weighted * calibrationFactor, weakestMeta, weakestMastery, parts, calibration, rawReadiness: weighted, expectedAccuracy: Math.round(expectedAcc*100), accuracyMargin: margin, triedTotal, exam, scoredWeight: scoredShare, untriedWeight: 100 - scoredShare, untriedDomains: parts.filter(p => !p.attempted).map(p => p.name) };
 }
 
 // What forgetting costs right now: the score if nothing were overdue, minus the score as it stands.
@@ -35525,14 +35548,13 @@ function renderProgressValue(){
           const best = ranked[0], worst = ranked[ranked.length - 1];
           const dd = getDaysUntilExam();
           const daysTxt = dd === null ? 'set date' : dd >= 0 ? String(dd) : 'passed';
-          const tc = DOMAINS.reduce((a, d) => a + ((DATA.domainStats[d.key] || {}).correct || 0), 0);
-          const ta = DOMAINS.reduce((a, d) => a + ((DATA.domainStats[d.key] || {}).total || 0), 0);
+          const tc = st.correctTotal || 0, ta = st.totalAnswered || 0;
           const acc = ta ? Math.round(100 * tc / ta) + '%' : '—';
           const cell = (k, v, sub) => `<div class="bp-snap-cell"><div class="bp-snap-k">${k}</div><div class="bp-snap-v">${v}</div><div class="bp-snap-s">${sub}</div></div>`;
           nx.innerHTML = `<div class="bp-value-head">Snapshot</div><div class="bp-snap">`
             + cell('Readiness', st.readiness + '<small>/100</small>', st.readiness >= 75 ? 'exam-ready zone' : st.readiness >= 60 ? 'in the working zone' : 'still building')
             + cell('Days to exam', daysTxt, dd === null ? 'add your exam date' : dd >= 0 ? 'until exam day' : 'exam date has passed')
-            + cell('Right', acc, st.totalAnswered + ' questions answered')
+            + cell('Right', acc, st.totalAnswered + ' questions answered' + (st.legacyAnswered ? ' (' + st.legacyAnswered + ' earlier answers not in topic detail)' : ''))
             + cell('Topics seen', (function(){ try{ const E = exposureModel(); return E.seenPct + '%'; }catch(e){ return '—'; } })(), (function(){ try{ const E = exposureModel(); return E.nSolid + ' of ' + E.total + ' solid'; }catch(e){ return ''; } })())
             + cell('Strongest', best ? escapeHtml(best.code) + ' ' + pctOf(best) + '%' : '—', best ? escapeHtml(best.name) : '')
             + cell('Weakest', worst ? escapeHtml(worst.code) + ' ' + pctOf(worst) + '%' : '—', worst ? escapeHtml(worst.name) : '')
@@ -35563,7 +35585,7 @@ function studyTimeHtml(){
     const hpct = Math.min(100, Math.round(100 * hours / 250));
     const hoursRow = `<div class="bp-hours"><div class="bp-hours-top"><span class="bp-num-k">Study hours</span><span class="bp-hours-v">${hours < 10 ? hours.toFixed(1) : Math.round(hours)} <span class="bp-hours-of">of 250</span></span></div><div class="bp-hours-bar"><i style="width:${hpct}%"></i></div><div class="bp-num-s">The CFP Board's recommended minimum is 250 hours.</div></div>`;
     return hoursRow;
-    const dstats = DOMAINS.map(d => ({ d, n: (DATA.domainStats[d.key] || {}).total || 0 }));
+    const HTd = historyDomainTotals(); const dstats = DOMAINS.map(d => ({ d, n: (HTd[d.key] || {}).total || 0 }));
     const sumN = dstats.reduce((a, x) => a + x.n, 0);
     const rows = dstats.map(x => {
       const timeShare = 100 * x.n / sumN, wShare = x.d.weight;
@@ -35637,9 +35659,10 @@ function renderBlueprint(){
   let overall = null; try{ const cs = computeStats(); overall = cs.totalAnswered ? cs.readiness : null; }catch(e){}
   const bn = document.getElementById('bpNote');
   if(bn) bn.textContent = E ? `${E.seenPct}% of exam topics seen · ${E.nSolid} of ${E.total} solid` : 'width = exam weight · fill = readiness';
-  const sumAnswered = DOMAINS.reduce((a, x) => a + ((DATA.domainStats[x.key] || {}).total || 0), 0);
+  const HTs = historyDomainTotals();
+  const sumAnswered = DOMAINS.reduce((a, x) => a + ((HTs[x.key] || {}).total || 0), 0);
   DOMAINS.forEach(d=>{
-    const s = DATA.domainStats[d.key];
+    const s = HTs[d.key];
     const dx = E ? E.topics.filter(t => t.dom === d.key) : [];
     const dxSeen = dx.filter(t => t.state !== 'new').length, dxNew = dx.length - dxSeen, dxShaky = dx.filter(t => t.state === 'shaky').length;
     const accuracy = s.total ? Math.round((s.correct/s.total)*100) : 0;
@@ -35774,8 +35797,9 @@ function applyBlueprintCompactStyling(){
 }
 
 function domainMasteryList(){
+  const HTm = historyDomainTotals();
   return DOMAINS.map(d=>{
-    const s = DATA.domainStats[d.key];
+    const s = HTm[d.key];
     const mastery = s.total ? Math.round((s.correct/s.total)*100) : null;
     return {...d, mastery, total:s.total};
   });
@@ -62919,7 +62943,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000508';
+const BUILD_ID = '2026-11-03.00000509';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.

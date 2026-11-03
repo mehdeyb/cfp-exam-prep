@@ -19,6 +19,10 @@ const file = 'file://' + path.resolve(__dirname, '..', 'index.html');
     DOMAINS.forEach(d => { DATA.domainStats[d.key] = Object.assign({ total: 0, correct: 0 }, DATA.domainStats[d.key] || {}); });
     DATA.domainStats.tax = { total: 30, correct: 14 };
     DATA.domainStats.invest = { total: 30, correct: 25 };
+    // Keep question history in step with the counters, as the app does when you answer: progress totals read from it.
+    const seedHist = (dom, n, ok) => allQuestions().filter(q => q.domain === dom).slice(0, n).forEach((q, i) => { DATA.questionStats[q.id] = { seen: 1, correct: i < ok ? 1 : 0, box: 1, dueAt: Date.now(), lastSeenAt: Date.now(), known: i < ok, firstOk: i < ok }; });
+    seedHist("tax", 30, 14);
+    seedHist("invest", 30, 25);
     _dataVer++;
     const steps = buildStudyPlan().steps;
     const walk = steps.find(x => /^Walk through/.test(x.title));
