@@ -36729,8 +36729,16 @@ function logActivity(kind, n){
   }catch(e){}
 }
 // New cards learned today: counted the moment a card is first rated, in any mode (plan, flashcards tab, tutor, quiz), so the plan's new-card steps report real progress.
-function fcNoteFirstView(prevStat){ if(!prevStat || !prevStat.seen){ const dl = planDayLog(); dl.newCards = (dl.newCards || 0) + 1; } }
-function fcNewToday(){ return planDayLog().newCards || 0; }
+// Cards first seen today that were rated before this count existed are counted once, from their history (seen once, last seen today).
+function fcEnsureNewCount(dl){
+  if(dl.newCards === undefined){
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+    dl.newCards = Object.keys(DATA.flashcardStats || {}).filter(id => { const s = DATA.flashcardStats[id]; return s && s.seen === 1 && (s.lastSeenAt || 0) >= t0.getTime(); }).length;
+  }
+  return dl;
+}
+function fcNoteFirstView(prevStat){ if(!prevStat || !prevStat.seen){ const dl = fcEnsureNewCount(planDayLog()); dl.newCards += 1; } }
+function fcNewToday(){ return fcEnsureNewCount(planDayLog()).newCards || 0; }
 function planDayLog(){
   const d = localDayKey();
   if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvmKinds:{}, tvm:0, formula:0 };
@@ -63000,7 +63008,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000517';
+const BUILD_ID = '2026-11-03.00000518';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
