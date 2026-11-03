@@ -37752,7 +37752,8 @@ function buildStudyPlanCore(minutes){
       // The decision tree that matches the ideas you keep missing.
       const counts = {};
       (DATA.missed || []).forEach(id => { const q = allQuestions().find(x => x.id === id); if(!q) return; const hay = [q.q, q.scenario || '', (q.choices || [])[q.correct] || ''].join(' '); RESULT_TOOL_MATCH.forEach(t => { if(t.re.test(hay)) counts[t.key] = (counts[t.key] || 0) + 1; }); });
-      let top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= 2).sort((a, b) => counts[b.key] - counts[a.key])[0], src = top ? 'missed' : null, srcTopic = '';
+      const need = t => (t.key === 'trust' || t.key === 'entity') ? 1 : 2; // the estate and entity tools are core, so one miss is enough
+      let top = RESULT_TOOL_MATCH.filter(t => counts[t.key] >= need(t)).sort((a, b) => counts[b.key] - counts[a.key])[0], src = top ? 'missed' : null, srcTopic = '';
       const pinned = planDayLog().targets.toolKey;
       // No repeated misses yet: a tool still earns a place when a topic it teaches is new, thin or shaky, or when one has gone a week unpracticed.
       if(!top && !pinned && answered >= 10){
@@ -37770,7 +37771,7 @@ function buildStudyPlanCore(minutes){
       const key = pinned || (top ? planTarget('toolKey', top.key) : null); // pinned for the day once chosen; no pin while nothing qualifies
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
-      if(!src) src = (counts[t.key] || 0) >= 2 ? 'missed' : (planDayLog().targets.toolSrc || 'upkeep');
+      if(!src) src = (counts[t.key] || 0) >= need(t) ? 'missed' : (planDayLog().targets.toolSrc || 'upkeep');
       // In the last days a tool only earns a place for ideas you keep missing: no new material, and no upkeep or topic detours.
       if(phase.key === 'taper' && src !== 'missed') return null;
       if(planDayLog().targets.toolSrc !== src){ planDayLog().targets.toolSrc = src; }
@@ -58363,7 +58364,7 @@ function startChatRevisit(){
 // A miss on a topic one of the Tools cards covers points to that card, so the picture is one tap from the mistake.
 const RESULT_TOOL_MATCH = [
   { key:'college', name:'College funding: which vehicle?', re:/\b(529|Coverdell|education (savings|funding|credit)|college (fund|sav|cost)\w*|American Opportunity|Lifetime Learning|Series EE|UTMA|UGMA|FAFSA)\b/i },
-  { key:'trust', name:'Which trust fits?', re:/\b(trusts?|CRUT|CRAT|CLAT|QPRT|GRAT|ILIT|SLAT|crummey|grantor)\b/i },
+  { key:'trust', name:'Which trust fits?', re:/(?<!investment )\b(trusts?|CRUT|CRAT|CLAT|QPRT|GRAT|ILIT|SLAT|crummey|grantor)\b/i },
   { key:'entity', name:'Which business entity fits?', re:/\b(S corporation|S corp|LLC|C corporation|C corp|sole proprietor|general partnership|business entity|pass-through entity)\b/i },
   { key:'roth', name:'Roth IRA: direct, backdoor or none?', re:/\bbackdoor\b|\bpro-rata\b|\bRoth IRA\b[^.?]{0,80}\b(phase|income|MAGI|eligib)\w*|\b(phase|income|MAGI|eligib)\w*[^.?]{0,80}\bRoth IRA\b/i },
   { key:'ira', name:'Traditional IRA deductibility', re:/\bdeduct\w*[^.?]{0,80}\bIRA\b|\bIRA\b[^.?]{0,80}\bdeduct\w*|active participant/i },
@@ -63029,7 +63030,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000519';
+const BUILD_ID = '2026-11-03.00000520';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
