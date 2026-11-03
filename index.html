@@ -43668,6 +43668,12 @@ const DECISION_TREES = {
           {label:"Shift future appreciation at a discount while keeping an income stream now", next:'r_grat'},
           {label:"Provide for a beneficiary with a disability without losing government benefits", next:'r_sns'},
           {label:"Provide for a surviving spouse who isn't a U.S. citizen", next:'r_qdot'},
+          {label:"Give to charity now, keep an income stream, and leave the rest to heirs later", next:'r_crut'},
+          {label:"Give to charity for a set term, with the remainder going to heirs later", next:'r_clat'},
+          {label:"Transfer a home at a discount while keeping the right to live in it for a set term", next:'r_qprt'},
+          {label:"Give a spouse access to trust assets while removing them from both estates", next:'r_slat'},
+          {label:"Make gifts to a child's trust that qualify for the annual exclusion", next:'r_crummey'},
+          {label:"Skip a generation and shelter assets from transfer tax at each level", next:'r_gst'},
         ] },
       r_qtip: { result:true, title:"QTIP trust",
         body:"Gives the surviving spouse income for life, but the deceased spouse's own choice of final beneficiaries controls who gets the principal afterward — the standard tool for making sure children from a first marriage aren't cut out. Qualifies for the unlimited marital deduction." },
@@ -43683,6 +43689,18 @@ const DECISION_TREES = {
         body:"Provides supplemental support for a beneficiary with a disability without disqualifying them from means-tested government benefits like Medicaid or SSI." },
       r_qdot: { result:true, title:"Qualified domestic trust (QDOT)",
         body:"Doesn't technically earn the unlimited marital deduction the way a citizen spouse's trust would, but mimics the effect by deferring estate tax until distributions are made or the surviving spouse dies. Requires a domestic trustee." },
+      r_crut: { result:true, title:"Charitable remainder trust (CRUT or CRAT)",
+        body:"Pays income to the donor or another beneficiary for a term or life, and the charity receives what remains. The donor gets a current income tax deduction for the present value of the charity's remainder. A CRUT pays a fixed percentage of the assets, revalued each year; a CRAT pays a fixed dollar amount. The trust is generally tax-exempt, so assets can be sold inside it without an immediate capital gains tax." },
+      r_clat: { result:true, title:"Charitable lead trust (CLAT)",
+        body:"The reverse of a CRUT: charity receives the income for a term of years, and the remainder passes to family. The gift is taxable on the value of the remainder, so the structure works best when assets are expected to grow faster than the IRS assumed rate." },
+      r_qprt: { result:true, title:"Qualified personal residence trust (QPRT)",
+        body:"The grantor transfers a home and keeps the right to live in it for a set term. The gift is valued at the discounted remainder interest. If the grantor dies during the term, the home is pulled back into the taxable estate, so the grantor must outlive the term for the plan to work." },
+      r_slat: { result:true, title:"Spousal lifetime access trust (SLAT)",
+        body:"The grantor gives assets to a trust for a spouse, who can receive distributions, and the assets leave both estates. The gift uses the grantor's exemption. Spouses who create mirror-image trusts for each other risk having them treated as reciprocal and unwound, so the trusts should differ in terms." },
+      r_crummey: { result:true, title:"Crummey trust",
+        body:"A trust that gives the beneficiary a temporary right to withdraw each gift, usually for 30 to 60 days. Because the beneficiary has a present interest, the gift qualifies for the annual gift tax exclusion even though the funds stay in trust. If the beneficiary does not withdraw, the money stays in the trust." },
+      r_gst: { result:true, title:"Dynasty trust (GST-exempt trust)",
+        body:"Allocates the grantor's generation-skipping transfer (GST) tax exemption so that assets can pass to grandchildren and later generations without transfer tax at each generation. The GST tax would otherwise apply in addition to estate or gift tax when assets skip a generation." },
     }
   },
   entity: {
@@ -43977,6 +43995,18 @@ const TREE_SCENARIOS = {
       why:["Her estate planning needs to move assets out of her own name.","She will give up control permanently.","Support for a person with a disability without losing means-tested benefits is a special needs trust."] },
     { to:'r_qdot', facts:"Jun, a U.S. citizen with a $14M estate, is married to a spouse who is not a U.S. citizen. He wants to defer estate tax on what passes to her at his death, and accepts an irrevocable trust with a U.S. trustee.",
       why:["A $14M estate makes estate tax planning relevant.","He accepts giving up control permanently.","A non-citizen surviving spouse does not get the unlimited marital deduction directly; a QDOT defers the tax."] },
+    { to:'r_crut', facts:"Ruth, 68, has a $2M stock portfolio with a low basis. She wants to sell it without a large capital gains tax now, keep an income for life, and leave what is left to a charity she supports.",
+      why:["She wants income for life with a charity receiving the remainder.","A charitable remainder trust lets the assets be sold inside the trust without an immediate capital gains tax."] },
+    { to:'r_clat', facts:"Owen, 55, expects his investment property to grow sharply. He wants a charity to receive income for 15 years, and then his children to receive the property at a lower transfer tax cost than if he left it to them outright.",
+      why:["The charity gets the income first, and the family gets the remainder.","Growth above the IRS assumed rate passes to the children with less transfer tax."] },
+    { to:'r_qprt', facts:"Carol, 63, wants to give her $1.2M vacation home to her children but keep living there for 10 years.",
+      why:["She keeps the right to live in the home for a fixed term.","The gift is valued at the discounted remainder, and it only works if she outlives the term."] },
+    { to:'r_slat', facts:"David, 59, has a $25M estate and wants to use his exemption now, with his wife still able to benefit from the assets if needed.",
+      why:["Removing assets from both estates while keeping spousal access is the SLAT goal.","The trust should differ from any trust his wife creates for him, to avoid reciprocal-trust problems."] },
+    { to:'r_crummey', facts:"Lena wants to give her 16-year-old $18,000 a year toward a trust for him, and she wants the gifts to qualify for the annual exclusion.",
+      why:["The annual exclusion only applies to a present interest, so the gift must be withdrawable.","A Crummey withdrawal right makes each gift a present interest."] },
+    { to:'r_gst', facts:"Ben, 70, wants his assets to benefit his grandchildren and later generations and to avoid transfer tax at each generation. He has a large estate and plenty of exemption available.",
+      why:["Skipping a generation is the purpose, so the GST tax is the issue.","Allocating his GST exemption to a dynasty trust lets assets pass down without transfer tax at each generation."] },
   ],
   entity: [
     { to:'r_sole', facts:"Lena freelances as a graphic designer, working alone from home. She has no employees, her clients are small, and she wants the simplest setup with no filings.",
@@ -62945,7 +62975,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000511';
+const BUILD_ID = '2026-11-03.00000512';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
