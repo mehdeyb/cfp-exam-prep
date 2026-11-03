@@ -4861,6 +4861,7 @@
         <button type="button" data-v="progress" onclick="hubShow('progress')"><span>Your progress</span><em id="hubSegProg" hidden></em></button>
       </div>
     <div class="card plan-today" id="todayPlanCard" role="region" aria-label="Today's plan" style="display:none;"></div>
+    <div id="hubNext" style="display:none;margin:0 0 14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(127,127,127,.25);"></div>
     <div class="card" id="blueprintCard" data-pv="domains">
       <div class="card-head">
         <h2>The Blueprint Bar</h2>
@@ -35820,6 +35821,7 @@ function refreshCoachSurfaces(){
   renderReadinessGauge(stats); // the score now fades with time, so the ring must follow it too
   try{ renderStudyTechniques(); }catch(e){}
   try{ renderWorkshop(); }catch(e){}
+  try{ renderHubNext(); }catch(e){}
   renderReadinessExtras(stats);
   try{ tnTick(); tnRenderCard(); }catch(e){}
   renderNextStepCard(stats);
@@ -50997,6 +50999,20 @@ function adaptiveNextTarget(){
   const dom = DOMAINS.find(d => d.key === dk);
   return { dk, idx, name, domName: dom ? dom.name : dk, miss: best.n, total: tried[best.key] || best.n };
 }
+// The hub's next step: the weakest subtopic across every mode, shown whether or not a sitting just ended.
+function renderHubNext(){
+  const el = document.getElementById('hubNext'); if(!el) return;
+  const cm = (() => { try{ return crossModeWeakPoints()[0]; }catch(e){ return null; } })();
+  if(!cm){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  const cdom = DOMAINS.find(d => d.key === cm.dk);
+  el.innerHTML = '<div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Next step, from all your modes</div>'
+    + '<div style="font-size:17px;font-weight:600;margin:4px 0 2px;">' + escapeHtml(cm.name) + ' <span style="font-weight:400;opacity:.7;">· ' + escapeHtml(cdom ? cdom.name : cm.dk) + '</span></div>'
+    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">' + cm.miss + ' missed answers and ' + cm.lapse + ' flashcards that keep coming back here.</div>'
+    + '<button class="btn" id="hubNextBtn" type="button">Work on this subtopic</button>';
+  el.style.display = 'block';
+  const btn = document.getElementById('hubNextBtn');
+  if(btn) btn.onclick = () => { try{ startSubtopicDrill(cm.dk, cm.idx); }catch(e){} };
+}
 function renderAdaptiveNext(){
   const box = document.getElementById('adaptiveNext'); if(!box) return;
   const t = adaptiveNextTarget();
@@ -58476,7 +58492,7 @@ function tutorLocalGuide(text){
         dom ? { label: 'Drill ' + dom.name, run: () => startDrill(dom.key) } : null,
       ]);
     } else if(kind === 'weak'){
-      let topics = ''; try{ const wt = weakSubtopics(3); if(wt.length) topics = ' Shakiest topics: ' + wt.map(w => `${w.name} (${Math.round(w.st.acc * 100)}%)`).join('; ') + '.'; }catch(e){}
+      let topics = ''; try{ const wt = crossModeWeakPoints().slice(0, 3); if(wt.length) topics = ' Shakiest topics across all your modes: ' + wt.map(w => `${w.name} (${w.miss} missed, ${w.lapse} flashcard lapses)`).join('; ') + '.'; }catch(e){}
       const gapCards = (()=>{ try{ return fcGapCards().length; }catch(e){ return 0; } })();
       tutorGuideBubble(`Your weakest domain right now is ${dom.name}${stats.weakestMastery === null ? ', which you have not tried yet' : ' at ' + stats.weakestMastery + '% correct'}.${topics}`, [
         { label: 'Drill ' + dom.name, primary: true, run: () => startDrill(dom.key) },
@@ -59505,7 +59521,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000487';
+const BUILD_ID = '2026-11-02.00000488';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
