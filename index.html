@@ -497,6 +497,26 @@
   .dtw-score{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
   .dtw-score.clean{color:var(--correct);}
   .dtw-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  /* Which trust fits?: a purpose-built widescreen layout. The card spans the whole Tools tab, and once it is wide enough (container query) the walk splits into a question column and a live path column. */
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > #dtSwitch{column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > .card:has(> #toolsTutorChips){column-span:all;}
+  html:is([data-lay="wide"],[data-lay="xwide"]) #tab-tools.active > .dt-card[data-dt="trust"]{column-span:all;}
+  .dt-card[data-dt="trust"]{container:dtTrust / inline-size;}
+  .dtw-split{display:block;}
+  .dtw-logs .dtw-side-empty{display:none;}
+  @container dtTrust (min-width:760px){
+    .dt-card[data-dt="trust"] .dt-widget{padding:22px 24px;}
+    .dt-card[data-dt="trust"] .dt-question{font-size:18px;line-height:1.4;margin-bottom:14px;}
+    .dt-card[data-dt="trust"] .dt-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+    .dt-card[data-dt="trust"] .dt-option{font-size:14px;padding:14px 16px;min-height:58px;display:flex;align-items:center;}
+    .dt-card[data-dt="trust"] .dtw-split{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,0.8fr);column-gap:26px;row-gap:14px;align-items:start;}
+    .dt-card[data-dt="trust"] .dtw-facts{grid-column:1;grid-row:1;margin-bottom:0;}
+    .dt-card[data-dt="trust"] .dtw-logs{grid-column:2;grid-row:1 / span 2;background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;min-height:100%;}
+    .dt-card[data-dt="trust"] .dtw-logs .dtw-side-empty{display:block;font-size:13px;line-height:1.55;color:var(--muted);}
+    .dt-card[data-dt="trust"] .dtw-logs::before{content:'Your path so far';display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:10px;}
+    .dt-card[data-dt="trust"] .dtw-body{grid-column:1;grid-row:2;min-width:0;}
+    .dt-card[data-dt="trust"] .dtw-log:last-child{margin-bottom:0;}
+  }
   .dt-result{background:var(--teal);background:color-mix(in srgb, var(--teal) 12%, var(--surface));border:1.5px solid var(--teal);border-radius:12px;padding:16px;}
   .dt-result-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--paper);margin-bottom:8px;}
   .dt-result-body{font-size:13px;line-height:1.55;color:var(--paper);}
@@ -44349,8 +44369,9 @@ function dtwRender(inst){
     <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span></div>
     ${w.gen ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
     ${w.resumed && !w.done ? `<div class="dtw-plan">Picking up where you left off: question ${w.step + 1} of ${w.route.length}.</div>` : ''}${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
-    <div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
-    ${logHtml}${body}</div>`;
+    <div class="dtw-split"><div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
+      <div class="dtw-logs">${logHtml || '<div class="dtw-side-empty">Your path builds here. Each right answer adds a line, and a wrong turn shows the fact that decides it.</div>'}</div>
+      <div class="dtw-body">${body}</div></div></div>`;
   if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } }
 }
 
@@ -63008,7 +63029,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000518';
+const BUILD_ID = '2026-11-03.00000519';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
