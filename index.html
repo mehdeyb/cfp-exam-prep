@@ -34591,8 +34591,10 @@ function buildStudyPlanCore(minutes){
   const L = act.L, cnt = act.counts;
   // Topics already drilled today keep their place, so progress on them is never lost when your accuracy shifts.
   let freshWeak = []; try{ freshWeak = weakSubtopics(12); }catch(e){}
+  // Cross-mode evidence joins the list: flashcard lapses and confident misses lift a topic in the ranking, and a topic with question history from any mode can be picked.
+  try{ const cmw = crossModeWeakPoints(); const xb = {}; cmw.forEach(c => { xb[c.dk + '-' + c.idx] = Math.min(0.2, 0.03 * (c.lapse + 2 * c.overconf)); }); freshWeak.forEach(w => { w.xboost = xb[w.key + '-' + w.idx] || 0; }); cmw.slice(0, 6).forEach(c => { if(freshWeak.some(w => w.key === c.dk && w.idx === c.idx)) return; const st = subtopicStats(c.dk, c.idx); if(st.acc === null) return; freshWeak.push({ key: c.dk, idx: c.idx, name: c.name, st: st, xboost: xb[c.dk + '-' + c.idx] || 0 }); }); }catch(e){}
   // Day to day: a topic drilled in the last couple of days steps aside for an equally shaky one that has waited longer, so the plan does not hand you the same drill every morning.
-  try{ const dr = DATA.subtopicDrillAt || {}; const pen = w => { const t = dr[w.key + '-' + w.idx]; if(!t) return 0; const d = (Date.now() - t) / ONE_DAY_MS; return d < 2 ? 0.15 : d < 4 ? 0.07 : 0; }; freshWeak.sort((a, b) => (a.st.acc + pen(a)) - (b.st.acc + pen(b))); }catch(e){}
+  try{ const dr = DATA.subtopicDrillAt || {}; const pen = w => { const t = dr[w.key + '-' + w.idx]; if(!t) return 0; const d = (Date.now() - t) / ONE_DAY_MS; return d < 2 ? 0.15 : d < 4 ? 0.07 : 0; }; freshWeak.sort((a, b) => (a.st.acc + pen(a) - (a.xboost || 0)) - (b.st.acc + pen(b) - (b.xboost || 0))); }catch(e){}
   freshWeak = freshWeak.slice(0, 8);
   let tutorFlagged = []; try{ tutorFlagged = tutorFlagsActive().filter(f => f.key).map(f => { let st = null; try{ st = subtopicStats(f.key, f.idx); }catch(e){} return { key:f.key, idx:f.idx, name:f.name, flag:f, st: st || { acc:null, attempts:0 } }; }); }catch(e){}
   const ov = planOverrideToday();
@@ -60007,7 +60009,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000490';
+const BUILD_ID = '2026-11-02.00000491';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
