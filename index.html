@@ -30353,6 +30353,7 @@ function defaultData(){
     lastTab: 'study',
     theme: 'light',
     confidenceStats: { confident:{correct:0,total:0}, somewhat:{correct:0,total:0}, unsure:{correct:0,total:0} },
+    confByQ: {},
     examDate: '2026-11-05', examDateConfirmedV1: true,
     recentAccuracyLog: [],
     lastBackupAtAnswerCount: 0,
@@ -50970,8 +50971,10 @@ function crossModeWeakPoints(){
     });
     let lapse = 0;
     (covTopicCards()[key] || []).forEach(id => { const c = (DATA.fcLapse || {})[id]; if(c) lapse += (c.n || 0); });
-    const value = miss + lapse;
-    if(value >= 3) rows.push({ key, dk, idx: i, name, miss, lapse, seen, value });
+    let overconf = 0;
+    subtopicPool(dk, i).forEach(q => { const c = (DATA.confByQ || {})[q.id]; if(c && c.level === 'confident' && !c.correct) overconf++; });
+    const value = miss + lapse + 2 * overconf;
+    if(value >= 3) rows.push({ key, dk, idx: i, name, miss, lapse, overconf, seen, value });
   }));
   rows.sort((a, b) => b.value - a.value);
   return rows;
@@ -51007,7 +51010,7 @@ function renderHubNext(){
   const cdom = DOMAINS.find(d => d.key === cm.dk);
   el.innerHTML = '<div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Next step, from all your modes</div>'
     + '<div style="font-size:17px;font-weight:600;margin:4px 0 2px;">' + escapeHtml(cm.name) + ' <span style="font-weight:400;opacity:.7;">· ' + escapeHtml(cdom ? cdom.name : cm.dk) + '</span></div>'
-    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">' + cm.miss + ' missed answers and ' + cm.lapse + ' flashcards that keep coming back here.</div>'
+    + '<div style="font-size:14px;opacity:.85;margin-bottom:10px;">' + cm.miss + ' missed answers and ' + cm.lapse + ' flashcards that keep coming back here' + (cm.overconf ? ', including ' + cm.overconf + ' you were confident about and got wrong' : '') + '.</div>'
     + '<button class="btn" id="hubNextBtn" type="button">Work on this subtopic</button>';
   el.style.display = 'block';
   const btn = document.getElementById('hubNextBtn');
@@ -53882,6 +53885,9 @@ function selectAnswerCore(i){
     if(!DATA.confidenceStats[level]) DATA.confidenceStats[level] = {correct:0, total:0};
     DATA.confidenceStats[level].total++;
     if(isCorrect) DATA.confidenceStats[level].correct++;
+    // Per question, so a confident miss can be found and re-learned first.
+    if(!DATA.confByQ) DATA.confByQ = {};
+    DATA.confByQ[q.id] = { level: level, correct: !!isCorrect, at: Date.now() };
   }
 
   // An easier take must not credit the harder original, and a miss on a harder take must not blame it: only a clean harder take counts.
@@ -59521,7 +59527,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000488';
+const BUILD_ID = '2026-11-02.00000489';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
