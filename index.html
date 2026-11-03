@@ -26744,6 +26744,64 @@ function staleBonusDepQ(q){
 const RETIRED_CONTENT_IDS = new Set(['ret-77','inv3-08','inv4-11','tu-tx-03','inv3-07','tax-02','tax-15','ret-100',
   'xj-11','xj-08','xj-03','tgc54','xi-12','nfc-138',
   'fid-q03','sc2-19-2','gap2-4','x-bsv-4','ft-06','tax2-14','sst6-1','cv22-07','tsc-02','xt-07','t-prop-01','xt-05','rt2-05','ret-06','gap2-16','tgq24','gen-09','gen-05','v8-cpa-02','tgq34','v8-cpa-01','xt-06','gap2-11','sc-f3','cv20-22','v8-dii-06','v8-chd-01','x-ifx-5','tu-cd-04','cv23-125','cv23-48','v8-esl-02','v8-esl-03','cv23-09','v8-cpl-02','x-div-1','v8-pdv-07','inv2-16','cx-ret-09','xi2-04','inv-18','inv4-07','gap-p04','cv23-13','v8-fpi-04','con2-10','cv23-19','cv23-33','cs-e-08','sc2-07-1','v23-59','v22-27','tu-gn-05','v19-15','xi3-11','v23-48','tu-gn-22','v8-cpl-09','cv23-14','tu-cd-11','v8-cpl-01','tu-gn-03','v8-fst-01','inv3-06','rt2-03','ret-04','gen-06','gen-04','irk-q03','v19-22','rmi-q02','v8-dii-03','v22-28','cv23-124','v8-cpl-04','v8-cpl-03','v8-fpi-02','gen-16','ptb-q02','v8-cpa-12','v9-q11','md-02','ret-38','con2-06','tax-25','xi3-09','irk-q02','v22-44','irk-q05','tax2-19','tax2-09','gen3-09','fs-01','v19-37']);
+// Question tags that are not official topic names are mapped to the official topic they belong to, so they count toward it and drill with it.
+const SUB_TOPIC_ALIAS = {
+ "retirement|Qualified plan rules": "Qualified plan rules and options",
+ "retirement|Qualified plans": "Qualified plan rules and options",
+ "retirement|Non-qualified plan rules": "Non-qualified plan rules and options",
+ "retirement|Social Security and Medicare": "Social Security and Medicare planning",
+ "retirement|Social Security": "Social Security and Medicare planning",
+ "retirement|Retirement income distribution": "Retirement income and distribution strategies",
+ "retirement|Retirement plan design": "Types of retirement plans",
+ "retirement|Plan selection for businesses": "Key factors affecting plan selection for businesses",
+ "invest|Investment vehicles": "Characteristics, uses and taxation of investment vehicles",
+ "invest|Types of investment vehicles": "Characteristics, uses and taxation of investment vehicles",
+ "invest|Structured products": "Characteristics, uses and taxation of investment vehicles",
+ "invest|Quantitative investment concepts": "Quantitative investment concepts and measures of investment returns",
+ "invest|Bond and stock valuation": "Bond and stock valuation concepts",
+ "invest|Fixed income": "Bond and stock valuation concepts",
+ "invest|Asset allocation and diversification": "Asset allocation and portfolio diversification",
+ "invest|Asset allocation": "Asset allocation and portfolio diversification",
+ "invest|Socially responsible investing": "Investment strategies",
+ "invest|Risk measurement": "Types of investment risk",
+ "invest|Portfolio management": "Portfolio development and analysis",
+ "tax|Income tax fundamentals": "Income tax fundamentals and calculations",
+ "tax|Special tax circumstances": "Tax implications of special circumstances",
+ "tax|Tax reduction techniques": "Tax reduction/management techniques",
+ "tax|Property transactions": "Tax consequences of property transactions",
+ "tax|Charitable giving": "Charitable/philanthropic contributions and deductions",
+ "tax|Trusts and estates": "Income taxation of trusts and estates",
+ "tax|Business entities": "Characteristics and income taxation of business entities",
+ "tax|Gift and income tax strategies": "Tax reduction/management techniques",
+ "tax|Tax law": "Fundamental and current tax law",
+ "general|Financing strategies and debt": "Financing strategies and debt management",
+ "general|Installment loans": "Financing strategies and debt management",
+ "general|Time value of money": "Time value of money concepts and calculations",
+ "risk|Life insurance": "Life insurance (individual and group)",
+ "risk|Long-term care insurance": "Long-term care insurance and long-term care planning (individual and group)",
+ "risk|Property and casualty insurance": "Principles of risk and insurance",
+ "estate|Probate and administration": "Estate and incapacity planning documents",
+ "estate|Property titling": "Property titling and beneficiary designations",
+ "estate|Business entities for estates": "Intra-family and other business transfer techniques",
+ "estate|Estate tax valuation": "Gift, estate, and GST tax compliance and calculation",
+ "estate|Estate tax planning": "Gift, estate, and GST tax compliance and calculation",
+ "estate|Estate tax": "Gift, estate, and GST tax compliance and calculation",
+ "estate|Special needs planning": "Planning for special needs and circumstances",
+ "estate|Incapacity planning": "Estate and incapacity planning documents",
+ "estate|Basis and inheritance": "Postmortem estate planning techniques",
+ "estate|Digital assets": "Estate and incapacity planning documents",
+ "psych|Client behavior": "Client and planner attitudes, values, biases",
+ "psych|Client profiling": "Client and planner attitudes, values, biases",
+ "psych|Money scripts": "Client and planner attitudes, values, biases",
+ "psych|Couples and money": "Sources of money conflict",
+ "psych|Divorce": "Sources of money conflict",
+ "psych|Financial behavior": "Behavioral finance",
+ "psych|Money behavior": "Behavioral finance",
+ "psych|Life events": "Crisis events with severe consequences",
+ "psych|Client interviewing": "General principles of effective communication",
+ "psych|Client engagement": "General principles of effective communication",
+ "conduct|Regulation": "Financial services regulations and requirements"
+};
 function allQuestions(){
   const g = DATA.generatedBank, m = _aqMemo;
   if(m && g === m.g && (g ? g.length : -1) === m.n && (g ? g[0] : 0) === m.f && (g ? g[g.length - 1] : 0) === m.l) return m.out;
@@ -26755,6 +26813,7 @@ function allQuestions(){
   { const fx = DATA.questionFixes || {}; const sameAsBank = (pv, q) => !!pv && pv.q === q.q && JSON.stringify(pv.choices) === JSON.stringify(q.choices) && pv.correct === q.correct && JSON.stringify(pv.rationale || null) === JSON.stringify(q.rationale || null); QUESTIONS.concat(g || []).forEach(q => { const f = q && fx[String(q.id)]; if(f && (!f.prev || sameAsBank(f.prev, q))){ q.q = f.q; q.choices = f.choices; q.correct = f.correct; q.rationale = f.rationale; q.scenario = f.scenario || undefined; } }); }
   QUESTIONS.concat((g || []).filter(q => !staleBonusDepQ(q))).forEach(q => { const k = q && Array.isArray(q.choices) ? String(q.q).trim().toLowerCase() + '|' + String(q.choices[q.correct]).trim().toLowerCase() : null; if(k){ if(seen.has(k)) return; seen.add(k); } out.push(q); });
   const kept = out.filter(q => !RETIRED_CONTENT_IDS.has(String(q.id)));
+  kept.forEach(q => { const a = SUB_TOPIC_ALIAS[q.domain + "|" + q.sub]; if(a) q.sub = a; });
   _aqMemo = { g, n: g ? g.length : -1, f: g ? g[0] : 0, l: g ? g[g.length - 1] : 0, out: kept };
   return kept;
 }
@@ -54651,7 +54710,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000478';
+const BUILD_ID = '2026-11-02.00000479';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
