@@ -29892,10 +29892,12 @@ function buildStudyPlanCore(minutes){
       const dbw = (DATA && DATA.dayBefore) || (() => { try{ return JSON.parse(localStorage.getItem('cfp-dayBefore-count')) || { checked: 0, total: 0 }; }catch(e){ return { checked: 0, total: 0 }; } })();
       const dbwTotal = dbw.total || 0, dbwHave = Math.min(dbw.checked || 0, dbwTotal);
       const dbwWhy = dbwTotal ? (dbwHave >= dbwTotal ? 'Every item on the exam-day walkthrough is ticked. ' : dbwHave + ' of ' + dbwTotal + ' items ticked on the exam-day walkthrough. Tick them as you go; this step completes when they are all ticked. ') : 'Open the exam-day walkthrough and tick its items as you go. ';
+      const nx = (typeof window.dbwFirstOpen === 'function') ? window.dbwFirstOpen() : null;
+      const nextTxt = nx && nx.index >= 0 ? `Next up: "${nx.title}" (${nx.n} ${nx.n === 1 ? 'item' : 'items'} to tick). ` : '';
       return { id:'logistics', title: when ? `Check your exam-day plan: ${when}` : 'Check your exam-day plan', minutes:5,
       need: dbwTotal || 1, have: dbwTotal ? dbwHave : 0, unit:'items',
-      why: (days !== null && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} to go. ` : '') + dbwWhy + 'Knowing the route, timing, ID and calculator rules removes avoidable stress.',
-      run: () => { showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }; },
+      why: (days !== null && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} to go. ` : '') + dbwWhy + nextTxt + 'Knowing the route, timing, ID and calculator rules removes avoidable stress.',
+      run: () => { if(typeof window.dbwOpenAtFirstOpen === 'function') window.dbwOpenAtFirstOpen(); showTab('examday'); focusEnter({ tab:'examday', el:document.getElementById('tab-examday'), title:'Your exam-day plan', stepId:'logistics' }); } }; },
     keys: () => {
       const wkD = (() => { try{ return weakestDrillTarget(stats); }catch(e){ return null; } })();
       const kn = wkD ? (KEY_NUMBERS || []).filter(k => k.domain === wkD.key) : [];
@@ -29935,6 +29937,8 @@ function buildStudyPlanCore(minutes){
   // The last four days: no new ground or new cards, only consolidation and timed work.
   const finalStretch = phase.key === 'sharpen' && days !== null && days <= 4;
   if(finalStretch) order.splice(0, order.length, ...order.filter(k => !['gap', 'gap2'].includes(k)));
+  // The exam-day walkthrough is for the evening before, so it is not due earlier in the taper.
+  if(days !== null && days >= 2){ for(let i = order.length - 1; i >= 0; i--) if(order[i] === 'logistics') order.splice(i, 1); }
   // Today's focus reorders the list and says why; it never adds or removes steps, only what comes first.
   let focus = null;
   if(!['taper','rest','exam','after'].includes(phase.key)){
@@ -54761,7 +54765,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-02.00000472';
+const BUILD_ID = '2026-11-02.00000473';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
@@ -55556,6 +55560,10 @@ function perfEnable(){
 
   const _dbwRender = render;
   render = function(){ try{ syncDayBefore(load()); }catch(e){} return _dbwRender(); };
+  // The first step with something still unticked, so the plan can point at it.
+  function dbwFirstOpen(){ const s = load(); const i = STEPS.findIndex(st => st.items.some(it => !s.checks[it.id])); return { index: i, title: i < 0 ? '' : STEPS[i].title, n: i < 0 ? 0 : STEPS[i].items.filter(it => !s.checks[it.id]).length }; }
+  window.dbwFirstOpen = dbwFirstOpen;
+  window.dbwOpenAtFirstOpen = function(){ const f = dbwFirstOpen(); if(f.index < 0) return; const s = load(); s.step = f.index; save(s); render(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
 })();
 </script>
