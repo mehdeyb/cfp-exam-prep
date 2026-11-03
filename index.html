@@ -45935,7 +45935,7 @@ const FCN_MAP = [
   [/529.*roth|529 rollover/i, /529 to Roth/],
   [/american opportunity|lifetime learning|education credit/i, /Education credits/],
   [/72\(t\)|sepp|rule of 55|early withdrawal|10% penalty/i, /Early withdrawal/],
-  [/five-year|5-year|roth/i, /five-year rule/]
+  [/^(?!.*529)(?=.*(five-year|5-year|roth))/i, /five-year rule/]
 ];
 // Figures are matched from the words of the text they sit beside (a card's term and definition, or a question and its
 // correct explanation), so any concept with a matching key number gets it, not only the terms in the hand-written map.
@@ -45994,7 +45994,7 @@ function fcNumbersFor(card, max){
     const curated = out.filter(k => sc(k) >= 1).slice(0, max || 3);
     if(curated.length >= (max || 3)) return curated;
     const extra = figuresForText(card.term + ' ' + card.def, { domain: card.domain, max: (max || 3) + 2 })
-      .filter(k => !curated.includes(k) && (reverse || !/HECM/.test(k.label)));
+      .filter(k => !curated.includes(k) && k.domain === card.domain && (reverse || !/HECM/.test(k.label)));
     return curated.concat(extra).slice(0, max || 3);
   }catch(e){ return []; }
 }
@@ -62945,7 +62945,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000510';
+const BUILD_ID = '2026-11-03.00000511';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
