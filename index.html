@@ -34652,9 +34652,6 @@ function buildStudyPlanCore(minutes){
   // The day before the exam is review only; the last two days add no extra new-card steps.
   const reviewOnlyDay = days !== null && days >= 0 && days <= 1;
   const lateNewStop = days !== null && days >= 0 && days <= 2;
-  // Taper (the last three days): consolidation only, so steps that introduce new ground are left out of the fill passes.
-  const NEW_GROUND = ['read', 'newcards', 'cards2', 'gap', 'gap2', 'teach'];
-  const taperNoNew = phase.key === 'taper';
   const mk = {
     cards: () => {
       const gapN = Math.min(20, fcGapCards().length);
@@ -34666,14 +34663,14 @@ function buildStudyPlanCore(minutes){
       const kind = gapT >= 4 ? 'gap' : null;
       let K = null; try{ K = fcBalCounts(n, { kind }, fcBalListsCached({})); }catch(e){}
       const R = K ? K.gap + K.learn + K.due + K.leech : n, F = K ? K.fresh : 0;
-      if(lateNewStop){
-        // The last two days: review what you have already met. No new cards, and no step when nothing is due.
+      if(reviewOnlyDay){
+        // The day before the exam: review what you have already met. No new cards, and no step when nothing is due.
         const Kr = fcBalCounts(n, { kind, noNew:true }, fcBalListsCached({}));
         const rv = Kr.gap + Kr.learn + Kr.due + Kr.leech;
         if(rv < 1) return null;
         const nr = Math.min(n, rv);
         return { id:'cards', title:`Review ${nr} flashcards`, minutes: Math.max(4, Math.ceil(nr * 0.4)), need:nr, have:Math.min(act.cards, nr), unit:'cards',
-          why:'In the last two days, review what you have already met. New cards wait until after the exam.',
+          why:'The day before the exam: review what you have already met. New cards wait until after the exam.',
           run: () => { fcStepRef('cards'); const b = fcBalanced(nr, { kind, noNew:true }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
       }
       const title = F > 0 && R > 0 ? `Review ${n} flashcards, ${R} to review and ${F} new` : F > 0 ? `Learn ${n} new flashcards` : `Review ${n} due flashcards`;
@@ -35257,7 +35254,6 @@ function buildStudyPlanCore(minutes){
     const ranked = fillOrder.filter(k => fillScore[k] && fillScore[k][0] >= 1).sort((a, b) => fillScore[b][0] - fillScore[a][0]);
     let curated = 0;
     ranked.forEach(k => {
-      if(taperNoNew && NEW_GROUND.includes(k)) return;
       if(curated >= 6 || used >= minutes * 0.92 || steps.some(x => x.id === k) || !mk[k]) return;
       const fam = famOf(k); if((famUsed[fam] || 0) >= (fam === 'drill' ? 2 : 1)) return;
       const st = finish(k, mk[k]()); if(!st) return;
@@ -35294,7 +35290,6 @@ function buildStudyPlanCore(minutes){
         : ['read','newcards','cards2','figures2','keys','calc2','refresh','adaptive','tutor2','stmts'];
       for(const k of padOrder){
         if(used >= minutes * 0.92) break;
-        if(taperNoNew && NEW_GROUND.includes(k)) continue;
         if(steps.some(x => x.id === k) || !mk[k]) continue;
         const st = finish(k, mk[k]());
         if(!st || st.done || !(st.minutes > 0)) continue;
@@ -60014,7 +60009,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000492';
+const BUILD_ID = '2026-11-03.00000493';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
