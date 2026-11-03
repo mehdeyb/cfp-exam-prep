@@ -37730,6 +37730,8 @@ function buildStudyPlanCore(minutes){
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
       if(!src) src = (counts[t.key] || 0) >= 2 ? 'missed' : (planDayLog().targets.toolSrc || 'upkeep');
+      // In the last days a tool only earns a place for ideas you keep missing: no new material, and no upkeep or topic detours.
+      if(phase.key === 'taper' && src !== 'missed') return null;
       if(planDayLog().targets.toolSrc !== src){ planDayLog().targets.toolSrc = src; }
       const whyIntro = src === 'missed' ? `You have missed ${counts[t.key] || 'several'} questions that this tool sorts out.` : src === 'topic' ? `${srcTopic ? srcTopic + ' is not solid for you yet, and' : 'A topic you are still building is not solid yet, and'} this tool is how the exam tests it.` : `You have not used this tool in a week, and the exam keeps asking which choice fits.`;
       if(TREE_SCENARIOS[t.key]){
@@ -38053,7 +38055,7 @@ function buildStudyPlanCore(minutes){
     foundation: ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','teach'],
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
-    taper:      ['cards','weak','missed','calc','figures','logistics','listen'],
+    taper:      ['cards','weak','missed','tool','calc','figures','logistics','listen'],
     rest:       ['keys','logistics','cards'],
     exam:       ['logistics','keys'],
     after:      []
@@ -62975,7 +62977,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000513';
+const BUILD_ID = '2026-11-03.00000514';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
