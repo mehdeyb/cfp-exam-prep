@@ -36728,6 +36728,9 @@ function logActivity(kind, n){
     DATA.totalStudyMinutes = (DATA.totalStudyMinutes || 0) + m;
   }catch(e){}
 }
+// New cards learned today: counted the moment a card is first rated, in any mode (plan, flashcards tab, tutor, quiz), so the plan's new-card steps report real progress.
+function fcNoteFirstView(prevStat){ if(!prevStat || !prevStat.seen){ const dl = planDayLog(); dl.newCards = (dl.newCards || 0) + 1; } }
+function fcNewToday(){ return planDayLog().newCards || 0; }
 function planDayLog(){
   const d = localDayKey();
   if(!DATA.dayLog || DATA.dayLog.day !== d) DATA.dayLog = { day:d, modes:{}, drill:{}, meta:{}, manual:{}, targets:{}, snap:{}, tvmKinds:{}, tvm:0, formula:0 };
@@ -37618,11 +37621,13 @@ function buildStudyPlanCore(minutes){
           run: () => { fcStepRef('cards'); const b = fcBalanced(nr, { kind, noNew:true }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
       }
       const title = F > 0 && R > 0 ? `Review ${n} flashcards, ${R} to review and ${F} new` : F > 0 ? `Learn ${n} new flashcards` : `Review ${n} due flashcards`;
-      return { id:'cards', title, minutes: mins, need:n, have:act.cards, unit:'cards',
+      // A pure 'Learn new' step counts only new cards learned today; a mixed step counts every card you have done today.
+      const haveN = F > 0 && R === 0 ? fcNewToday() : act.cards;
+      return { id:'cards', title, minutes: mins, need:n, have:haveN, unit:'cards',
         why: gapT >= 4
           ? 'A mix on purpose: cards on ideas you missed, ones that are due, and new ones you have not met. Seeing an idea from a new angle helps it stick, and new cards keep the deck from going stale.'
           : 'A mix on purpose: cards that are due as they start to fade, and new ones you have not met. Pulling an answer from memory strengthens it more than rereading does.',
-        run: () => { fcStepRef('cards'); const remain = Math.max(8, n - act.cards); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
+        run: () => { fcStepRef('cards'); const remain = Math.max(8, n - haveN); const b = fcBalanced(remain, { kind }); window._fcLastMix = b.mix; if(!startFlashcardSet(b.cards, 'plan')) showTab('flashcards'); } };
     },
     stmts: () => {
       if(answered < 15 || !QUESTIONS.some(q => q.ordered)) return null;
@@ -37953,7 +37958,7 @@ function buildStudyPlanCore(minutes){
       if(!L.targets.cards2 && unseen - first < 8) return null;
       let n = planTarget('cards2', Math.min(Math.max(0, unseen - first), 15));
       if(!n) return null;
-      const haveRaw = Math.max(0, act.cards - first);
+      const haveRaw = Math.max(0, fcNewToday() - (L.targets.newcards || 0));
       // Never promise more new cards than are left to show: the number shrinks to what is real, so the step can always be finished.
       let availNew = 99; try{ const FL = fcBalListsCached({}); availNew = FL.weakNew.length + FL.newer.length; }catch(e){}
       n = Math.min(n, Math.max(haveRaw, haveRaw + availNew));
@@ -37992,7 +37997,7 @@ function buildStudyPlanCore(minutes){
       if(!(unseen >= 8 && dueCards < 5 && !L.targets.newcards) && !L.targets.newcards) return null;
       let n = planTarget('newcards', Math.min(unseen, 15));
       if(!n) return null;
-      const base = L.targets.cards || 0, haveRaw = Math.max(0, act.cards - base);
+      const haveRaw = fcNewToday();
       let availNew = 99; try{ const FL = fcBalListsCached({}); availNew = FL.weakNew.length + FL.newer.length; }catch(e){}
       n = Math.min(n, Math.max(haveRaw, haveRaw + availNew));
       if(n < 1) return null;
@@ -38309,14 +38314,15 @@ function buildStudyPlanCore(minutes){
   // One activity can only count toward one step. Flashcards seen today, formula problems and the like are shared out in plan order,
   // so a finished review of 25 cards does not also tick off "learn 15 new cards" a few rows down.
   { let attributed = 0; Object.keys(L.drill).forEach(k => { attributed += L.drill[k] || 0; });
-    const pool = { cards: act.cards || 0, tvm: act.tvm || 0, formula: act.formula || 0, drill: Math.max(0, (cnt.drill || 0) - attributed) };
+    // New-card steps draw on the cards first rated as new today; every card step draws on all cards done today. A new card counts once, in both.
+    const pool = { cards: act.cards || 0, newc: fcNewToday(), tvm: act.tvm || 0, formula: act.formula || 0, drill: Math.max(0, (cnt.drill || 0) - attributed) };
     const tpool = Object.assign({}, L.drill), kpool = Object.assign({}, L.tvmKinds || {});
-    const poolOf = st => st.manual ? null : st.unit === 'cards' ? 'cards' : (st.id === 'calc' || st.id === 'calc2') ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.domPool ? 'drill' : null;
+    const poolOf = st => st.manual ? null : st.unit === 'cards' ? ((st.id === 'newcards' || st.id === 'cards2' || /^Learn /.test(st.title)) ? 'newc' : 'cards') : (st.id === 'calc' || st.id === 'calc2') ? (/^Calculator practice/.test(st.title) ? 'tvm' : 'formula') : st.domPool ? 'drill' : null;
     steps.forEach(st => {
-      if(st.kept || st.manual || !(st.need > 0)){ const kk = poolOf(st); if(kk && st.kept) pool[kk] = Math.max(0, pool[kk] - (st.need || 0)); return; }
+      if(st.kept || st.manual || !(st.need > 0)){ const kk = poolOf(st); if(kk && st.kept){ pool[kk] = Math.max(0, pool[kk] - (st.need || 0)); if(kk === 'newc') pool.cards = Math.max(0, pool.cards - (st.need || 0)); } return; }
       if(st.kindKey){ const h = Math.max(0, Math.min(st.need, kpool[st.kindKey] || 0)); kpool[st.kindKey] = (kpool[st.kindKey] || 0) - h; st.have = h; st.done = h >= st.need; }
       else if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
-      else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; st.have = h; st.done = h >= st.need; }
+      else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; if(k === 'newc') pool.cards = Math.max(0, pool.cards - h); st.have = h; st.done = h >= st.need; }
       const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have){ sn.have = st.have; try{ persist(); }catch(e){} }
     }); }
   // Activities the tutor added for today go in right after the first part, so they are seen and not buried at the bottom.
@@ -40184,6 +40190,7 @@ function ebGrade(g){
     if(keys.length > 400){ keys.sort((a, b) => DATA.teachStats[a].last - DATA.teachStats[b].last).slice(0, keys.length - 400).forEach(k => delete DATA.teachStats[k]); }
     if(st.kind === 'card'){
       const id = st.key.slice(2), prevStat = getSpacedStat(DATA.flashcardStats, id);
+      fcNoteFirstView(prevStat);
       if(g === 'nailed') DATA.flashcardStats[id] = advanceSpacedStat(prevStat, true);
       else if(g === 'missed') DATA.flashcardStats[id] = advanceSpacedStat(prevStat, false);
       else if(prevStat.seen === 0) DATA.flashcardStats[id] = advanceSpacedStat(prevStat, false);
@@ -43552,7 +43559,7 @@ function showConceptSheet(kicker, title, items, onGo, recall){
     const rate = (knew) => {
       if(it.rate) it.rate(knew);
       else {
-        const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew);
+        const prev = getSpacedStat(DATA.flashcardStats, it.id), ns = advanceSpacedStat(prev, knew); fcNoteFirstView(prev);
         if(!knew) ns.dueAt = Date.now() + FC_STILL_RETURN_MS;
         DATA.flashcardStats[it.id] = ns;
         try{ persist(); }catch(e){}
@@ -46909,7 +46916,7 @@ let _fcUndo = null;
 function fcUndoRefresh(){ const b = document.getElementById('fcUndoBtn'); if(!b) return; const rc = document.getElementById('fcRecap'); const ok = _fcUndo && _fcUndo.queue === fcQueue && !(rc && rc.style.display === 'block'); b.classList.toggle('show', !!ok); }
 function undoFlashcardRating(){
   const u = _fcUndo; if(!u || u.queue !== fcQueue) return;
-  if(u.had) DATA.flashcardStats[u.id] = u.stat; else delete DATA.flashcardStats[u.id];
+  if(u.had) DATA.flashcardStats[u.id] = u.stat; else { delete DATA.flashcardStats[u.id]; const dl = planDayLog(); dl.newCards = Math.max(0, (dl.newCards || 0) - 1); }
   try{ _fcSess.seen.delete(u.id); }catch(e){}
   DATA.flashcardRatingCount = u.count;
   try{ if(!DATA.fcLapse) DATA.fcLapse = {}; if(u.lapse) DATA.fcLapse[u.id] = u.lapse; else delete DATA.fcLapse[u.id]; }catch(e){}
@@ -46925,6 +46932,7 @@ function rateFlashcard(knowsIt){
   _fcUndo = { id:card.id, queue:fcQueue, index:fcIndex, knew:!!knowsIt, round:fcRound, had:Object.prototype.hasOwnProperty.call(DATA.flashcardStats, card.id), stat:DATA.flashcardStats[card.id] ? JSON.parse(JSON.stringify(DATA.flashcardStats[card.id])) : null, count:DATA.flashcardRatingCount || 0, lapse:(DATA.fcLapse && DATA.fcLapse[card.id]) ? JSON.parse(JSON.stringify(DATA.fcLapse[card.id])) : null };
   fcRound.total++; if(knowsIt) fcRound.knew++; else { fcRound.missed.push(card.term); fcRound.missedIds.push(card.id); }
   const prevStat = getSpacedStat(DATA.flashcardStats, card.id);
+  fcNoteFirstView(prevStat);
   DATA.flashcardStats[card.id] = advanceSpacedStat(prevStat, knowsIt);
   // Still learning comes back later the same day, not straight away: a 4-hour wait gives the material room to settle and lets other cards in first.
   if(!knowsIt) DATA.flashcardStats[card.id].dueAt = Date.now() + FC_STILL_RETURN_MS;
@@ -62992,7 +63000,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000516';
+const BUILD_ID = '2026-11-03.00000517';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
