@@ -4687,6 +4687,11 @@
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-why,html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-prog{display:none !important;}
   html body.os-one #studyCols .pt-rows.pt-many{row-gap:2px !important;}
   /* Any extra column the plan needs (for example, when finished steps follow the pending ones) is the same width as the rest, so no row stretches to fit a long title. */
+  /* iPad landscape: a fixed three-column grid that flows row by row and scrolls inside the card. The column count never depends on how many items there are, so nothing spills into extra columns. */
+  @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
+    html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{grid-template-columns:repeat(3,minmax(0,1fr)) !important;grid-template-rows:none !important;grid-auto-rows:auto !important;grid-auto-flow:row !important;grid-auto-columns:auto;align-content:start;overflow-y:auto !important;overflow-x:hidden !important;column-gap:22px;}
+    html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows > .pt-donehead{grid-column:1 / -1;}
+  }
   html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{grid-auto-columns:minmax(0,1fr);}
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step{padding-top:3px !important;padding-bottom:3px !important;}
   /* Long plans (13+ steps) get tighter rows. The column and row counts come from the fit script, so the plan keeps three columns on an iPad. */
@@ -63062,7 +63067,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000530';
+const BUILD_ID = '2026-11-03.00000531';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
