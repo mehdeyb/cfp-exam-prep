@@ -4037,6 +4037,18 @@
   .mw-tagline{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;color:var(--muted);}
   .mw-c.pick .mw-tagline{color:var(--incorrect);} .mw-c.right .mw-tagline{color:var(--correct);}
   .mw-ask > b{display:block;font-size:16px;margin:2px 0 10px;color:var(--paper);}
+  /* Misses review: no step bars on this screen. On wide screens the question uses the full width, with the answers beside it. */
+  #mwHost .pp, #mwHost .mw-dots{display:none !important;}
+  @media (min-width:900px){
+    #mwHost .dp-inner{max-width:min(1240px, 100%);}
+    #mwHost .dp-inner{margin:0 auto;}
+    #mwBody{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:44px;row-gap:12px;align-items:start;}
+    #mwBody:not(:has(> .mw-choices)){display:block;}
+    #mwBody > .mw-choices{grid-column:2;grid-row:1 / span 8;margin:0;}
+    #mwBody > .mw-q{font-size:22px;line-height:1.4;margin:6px 0 4px;}
+    #mwBody > .mw-c, #mwBody .mw-c{font-size:15px;}
+    #mwBody .mw-choices .mw-c{padding:16px 18px;min-height:64px;}
+  }
   .mw-chips{display:flex;flex-wrap:wrap;gap:8px;}
   .mw-chip{min-height:44px;padding:10px 16px;border-radius:22px;border:1px solid var(--hair-strong);background:var(--surface);color:var(--paper);font:inherit;font-size:14px;cursor:pointer;}
   .mw-chip:active{transform:scale(.97);border-color:var(--gold);}
@@ -63030,7 +63042,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000523';
+const BUILD_ID = '2026-11-03.00000524';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
