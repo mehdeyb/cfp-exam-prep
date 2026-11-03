@@ -4686,6 +4686,8 @@
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-title{-webkit-line-clamp:3 !important;}
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-why,html body.os-one #studyCols .pt-rows.pt-many > .pt-step .pt-prog{display:none !important;}
   html body.os-one #studyCols .pt-rows.pt-many{row-gap:2px !important;}
+  /* Any extra column the plan needs (for example, when finished steps follow the pending ones) is the same width as the rest, so no row stretches to fit a long title. */
+  html body.os-one #tab-study.active > #studyCols > #studyHub > #todayPlanCard > .plan-fold > .pt-rows{grid-auto-columns:minmax(0,1fr);}
   html body.os-one #studyCols .pt-rows.pt-many > .pt-step{padding-top:3px !important;padding-bottom:3px !important;}
   /* Long plans (13+ steps) get tighter rows. The column and row counts come from the fit script, so the plan keeps three columns on an iPad. */
   @media (min-width:900px) and (orientation:landscape) and (max-height:900px){
@@ -38388,6 +38390,17 @@ function buildStudyPlanCore(minutes){
     } }
   // A step you finished today stays on the list, marked done, even when the conditions that put it there have since changed.
   // Without this, a finished step could vanish the moment its trigger eased (for example, misses cleared below the threshold).
+  // Done is sticky for the day: once a step is finished today it stays finished on every rebuild, even if its counts later move.
+  try{
+    const LD = planDayLog(); LD.doneIds = LD.doneIds || {};
+    let changed = false;
+    steps.forEach(st => {
+      if(st.manual || st.id === 'keys' || !(st.need > 0)) return;
+      if(st.done){ if(LD.doneIds[st.id] !== st.title){ LD.doneIds[st.id] = st.title; changed = true; } return; }
+      if(LD.doneIds[st.id] === st.title){ st.done = true; st.have = st.need; }
+    });
+    if(changed) persist();
+  }catch(e){}
   try{
     const present = new Set(steps.map(x => x.id));
     Object.keys(L.snap || {}).forEach(k => {
@@ -63048,7 +63061,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000528';
+const BUILD_ID = '2026-11-03.00000529';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
