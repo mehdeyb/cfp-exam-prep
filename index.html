@@ -38167,10 +38167,14 @@ function buildStudyPlanCore(minutes){
       return null;
     }
     st.manual = !!st.manual;
+    // A step you already finished today stays finished: the same step cannot drop back to undone because a count went down or the tool behind it changed.
+    { const sd = L.snap[k]; if(!st.manual && sd && sd.title === st.title && sd.need === st.need && (sd.have || 0) >= sd.need && st.need > 0 && st.have < st.need) st.have = st.need; }
     st.done = st.id === 'keys' ? !!(keySkimToday() && (keySkimToday().done || ((keySkimToday().ids || []).length > 0 && (keySkimToday().i || 0) >= keySkimToday().ids.length))) : st.manual ? !!L.manual[st.id] : (st.need > 0 ? st.have >= st.need : false);
     if(st.manual && st.done && !(L.snap[k] && L.snap[k].manual)){ L.snap[k] = { title:st.title, minutes:st.minutes, why:st.why, need:1, have:1, unit:st.unit, manual:true }; try{ persist(); }catch(e){} }
     if(!st.manual && st.need > 0){
       const sn = L.snap[k];
+      // A finished step whose title changed (for example, the tool behind it changed) is kept under its own key, so it stays done.
+      if(sn && sn.title !== st.title && sn.need > 0 && (sn.have || 0) >= sn.need) { L.snap[k + '#' + sn.title] = sn; }
       if(!sn || sn.title !== st.title || sn.have !== st.have || sn.need !== st.need){ L.snap[k] = { title:st.title, minutes:st.minutes, why:st.why, need:st.need, have:st.have, unit:st.unit }; try{ persist(); }catch(e){} }
     }
     return st;
@@ -38367,7 +38371,8 @@ function buildStudyPlanCore(minutes){
       if(st.kindKey){ const h = Math.max(0, Math.min(st.need, kpool[st.kindKey] || 0)); kpool[st.kindKey] = (kpool[st.kindKey] || 0) - h; st.have = h; st.done = h >= st.need; }
       else if(st.topic){ const h = Math.max(0, Math.min(st.need, tpool[st.topic] || 0)); tpool[st.topic] = (tpool[st.topic] || 0) - h; st.have = h; st.done = h >= st.need; }
       else { const k = poolOf(st); if(!k) return; const h = Math.max(0, Math.min(st.need, pool[k])); pool[k] -= h; if(k === 'newc') pool.cards = Math.max(0, pool.cards - h); st.have = h; st.done = h >= st.need; }
-      const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have){ sn.have = st.have; try{ persist(); }catch(e){} }
+      { const sd0 = L.snap[st.id]; if(sd0 && sd0.title === st.title && sd0.need === st.need && (sd0.have || 0) >= sd0.need && st.have < st.need){ st.have = st.need; st.done = true; } } // a step finished today stays finished
+      const sn = L.snap[st.id]; if(sn && sn.title === st.title && sn.need === st.need && sn.have !== st.have && !((sn.have || 0) >= sn.need && st.have < sn.need)){ sn.have = st.have; try{ persist(); }catch(e){} }
     }); }
   // Activities the tutor added for today go in right after the first part, so they are seen and not buried at the bottom.
   { const ovA = planOverrideToday();
@@ -63045,7 +63050,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000526';
+const BUILD_ID = '2026-11-03.00000527';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
