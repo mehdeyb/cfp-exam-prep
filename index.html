@@ -36697,18 +36697,12 @@ function planChipChoices(cur){
   while(arr.length > 5){ const drop = arr.find(v => v !== cur && !(a && v === a.minutes) && PLAN_MINUTE_CHOICES.includes(v)); if(drop === undefined) break; arr.splice(arr.indexOf(drop), 1); }
   return { arr, sug: a ? a.minutes : 0 };
 }
-// Exam start as a time: the appointment time you entered in the day-before walkthrough, or 8:30 AM.
-function examStartMs(){
-  const p = String(DATA.examDate || '').split('-').map(Number); if(!p[0]) return null;
-  let hm = '08:30'; try{ const s = JSON.parse(localStorage.getItem('cfp-dayBefore-v1') || 'null'); if(s && /^\d{1,2}:\d{2}$/.test(s.time || '')) hm = s.time; }catch(e){}
-  const hh = Number(hm.split(':')[0]), mm = Number(hm.split(':')[1]);
-  return new Date(p[0], (p[1] || 1) - 1, p[2] || 1, hh, mm).getTime();
-}
-// Teaching and new material run until half a day (12 hours) before the exam starts, so the day before keeps teaching in the morning and afternoon.
+// The day before the exam, study stops at 4 PM. Teaching and new material run until then; the evening is for rest.
+const DAY_BEFORE_STUDY_END_HOUR = 16;
 function teachingDone(days){
   if(days === null || days >= 2) return false;
   if(days <= 0) return true;
-  const st = examStartMs(); return st ? Date.now() >= st - 12 * 3600000 : false;
+  return new Date().getHours() >= DAY_BEFORE_STUDY_END_HOUR;
 }
 function planPhaseFor(days){
   if(days === null) return { key:'build', label:'Build phase' };
@@ -38031,6 +38025,13 @@ function buildStudyPlanCore(minutes){
         why:'One miss at a time: say why the wrong answer looked right, see the fix, then try a similar question. Understanding the pull of the wrong answer fixes the reasoning, not just the answer.',
         run: () => { mwOpen(w.pin.length, w.pin); } };
     },
+    wind: () => {
+      // Study stops at 4 PM the day before; this step is the wind-down that replaces it. It cannot be counted, so it is ticked by hand.
+      const done = !!planDayLog().manual.wind;
+      return { id:'wind', title:'Breathing and wind-down: 5 minutes', minutes:5, manual:true, need:1, have: done ? 1 : 0, unit:'exercise', done,
+        why:'Study stops at 4 PM so what you learned can settle. Try box breathing for five minutes: in for 4, hold for 4, out for 4, hold for 4, repeated. Then put the books away and eat something normal.',
+        run: () => { try{ showTab('today'); }catch(e){} } };
+    },
     logistics: () => {
       let when = ''; try{ if(DATA.examDate){ const p = String(DATA.examDate).split('-').map(Number); when = new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }); } }catch(e){}
       const days = getDaysUntilExam();
@@ -38070,8 +38071,8 @@ function buildStudyPlanCore(minutes){
     build:      ['cards','adaptive','listen','stmts','pretest','gap','weak','wkdrill','refresh','newcards','missed','stuck','tutor','calc','tool','mytool','figures','case','checkpoint','teach'],
     sharpen:    ['cards','missed','stuck','weak','wkdrill','listen','refresh','gap','calc','tool','mytool','tutor','adaptive','stmts','figures','checkpoint','teach','newcards'],
     taper:      ['cards','weak','missed','tool','newcards','adaptive','teach','calc','figures','logistics','listen'],
-    rest:       ['keys','logistics','cards'],
-    exam:       ['logistics','keys'],
+    rest:       ['wind','keys','logistics'],
+    exam:       ['wind','logistics','keys'],
     after:      []
   };
   // Where you stand decides which work the last days hold: shaky results repair what you know, strong results rehearse pace.
@@ -62991,7 +62992,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000515';
+const BUILD_ID = '2026-11-03.00000516';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
