@@ -54688,10 +54688,10 @@ function crossModeWeakPoints(){
     let miss = 0, seen = 0;
     subtopicPool(dk, i).forEach(q => {
       const st = getSpacedStat(DATA.questionStats, q.id);
-      if(st.seen > 0){ seen++; miss += Math.max(0, st.seen - Math.min(st.correct, st.seen)); }
+      if(st.seen > 0){ seen++; if(st.box === 0) miss++; } // a question counts as weak only while its last answer was wrong; a correct answer clears it
     });
     let lapse = 0;
-    (covTopicCards()[key] || []).forEach(id => { const c = (DATA.fcLapse || {})[id]; if(c) lapse += (c.n || 0); });
+    (covTopicCards()[key] || []).forEach(id => { const c = (DATA.fcLapse || {})[id]; if(c) lapse += (c.run || 0); }); // cards still missed in a row; a known card clears it
     let overconf = 0;
     subtopicPool(dk, i).forEach(q => { const c = (DATA.confByQ || {})[q.id]; if(c && c.level === 'confident' && !c.correct) overconf++; });
     const value = miss + lapse + 2 * overconf;
@@ -63235,7 +63235,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-04.00000544';
+const BUILD_ID = '2026-11-04.00000545';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
