@@ -4773,6 +4773,19 @@
   #trustStage .dtw-msg{font-size:15px;}
   #trustStage .dt-result-title{font-size:24px;}
   #trustStage .dtw-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+  #trustStage .tr-rules{list-style:none;margin:10px 0 16px;padding:0;display:grid;gap:8px;}
+  #trustStage .tr-rules li{border:1px solid var(--hair);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.45;color:var(--muted);}
+  #trustStage .tr-rules li b{display:block;color:var(--paper);font-weight:600;margin-bottom:2px;}
+  #trustStage .tr-rules li.on{border-color:var(--gold);background:var(--gold-tint);}
+  #trustStage .tr-rules li.on b{color:var(--gold);}
+  #trustStage .tr-teach{margin-top:18px;border:1px solid var(--hair);border-left:3px solid var(--gold);border-radius:var(--radius);padding:16px 18px;background:var(--surface);}
+  #trustStage .tr-teach .tr-core{font-size:16px;line-height:1.55;color:var(--paper);margin:6px 0 12px;}
+  #trustStage .tr-teach .tr-row{font-size:14px;line-height:1.5;color:var(--muted);margin-top:6px;}
+  #trustStage .tr-teach .tr-row b{color:var(--paper);font-weight:600;}
+  .dt-card[data-dt="trust"] .tr-teach{margin-top:14px;border:1px solid var(--hair);border-left:3px solid var(--gold);border-radius:var(--radius);padding:14px 16px;background:var(--surface);}
+  .dt-card[data-dt="trust"] .tr-teach .tr-kicker{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
+  .dt-card[data-dt="trust"] .tr-teach .tr-core{font-size:14px;line-height:1.5;margin:6px 0 10px;}
+  .dt-card[data-dt="trust"] .tr-teach .tr-row{font-size:13px;line-height:1.5;color:var(--muted);margin-top:4px;}
   @media (max-width:900px), (orientation:portrait){
     #trustStage .tr-body{grid-template-columns:minmax(0,1fr);}
     #trustStage .tr-path{position:static;max-height:none;}
@@ -44408,6 +44421,36 @@ function dtwResume(inst){
     return true;
   }catch(e){ return false; }
 }
+// Which trust fits?: what each trust is for, shown on its result so the tool teaches the concept as well as the answer.
+const TRUST_TEACH = {
+  r_revocable_a: { core:"A revocable living trust avoids probate and keeps the grantor in full control, but the assets stay in the taxable estate.", fits:"Probate avoidance, incapacity planning and flexibility when the estate is under the exemption.", not:"An irrevocable trust. Only a permanent loss of control moves assets out of the taxable estate." },
+  r_revocable_b: { core:"A revocable living trust avoids probate and keeps the grantor in full control, but the assets stay in the taxable estate.", fits:"The client will not give up control, so no structure can remove the assets from the estate.", not:"An irrevocable trust, which would remove assets only if the client truly gives up control." },
+  r_qtip: { core:"A QTIP trust pays income to the surviving spouse for life, qualifies for the marital deduction, and lets the first spouse decide who receives the principal afterward.", fits:"A remarried client who wants a spouse cared for but children from a first marriage to receive the principal.", not:"An A trust, where the surviving spouse controls who receives the remainder." },
+  r_a: { core:"A marital power-of-appointment (A) trust qualifies for the marital deduction, and the surviving spouse controls where the remainder goes.", fits:"A surviving spouse who should decide the final beneficiaries.", not:"A QTIP trust, where the first spouse, not the survivor, chooses the remainder beneficiaries." },
+  r_credit: { core:"A credit shelter (bypass) trust uses the first spouse's exemption, so its assets and growth escape the survivor's estate.", fits:"A combined estate large enough that both spouses' exemptions should be used.", not:"A marital trust, which defers tax to the survivor's death instead of using the first exemption." },
+  r_ilit: { core:"An irrevocable life insurance trust owns the policy, so the proceeds stay outside the taxable estate. The insured must not keep any ownership.", fits:"Insurance proceeds that would push the estate over the exemption.", not:"Owning the policy personally, which pulls the proceeds back into the taxable estate." },
+  r_grat: { core:"A grantor retained annuity trust pays the grantor an annuity. Growth above the IRS hurdle passes to heirs with little or no gift tax.", fits:"Shifting future appreciation while keeping an income stream now.", not:"A charitable remainder trust, which sends the remainder to charity rather than to heirs." },
+  r_sns: { core:"A special needs trust holds assets for a disabled beneficiary without disqualifying means-tested benefits such as SSI and Medicaid.", fits:"A beneficiary with a disability who relies on government benefits.", not:"An outright gift, which would count as the beneficiary's resources and could end benefits." },
+  r_qdot: { core:"A qualified domestic trust lets a non-citizen spouse qualify for the marital deduction by keeping a U.S. trustee in place.", fits:"A surviving spouse who is not a U.S. citizen.", not:"A QTIP or A trust. Those work for a U.S. citizen spouse; a non-citizen spouse needs a QDOT." },
+  r_crut: { core:"A charitable remainder trust pays an income to the donor or another person for life or a term, with the remainder going to charity, and gives an income-tax deduction now.", fits:"Giving to charity now while keeping an income stream.", not:"A charitable lead trust, which pays charity first and sends the remainder to heirs." },
+  r_clat: { core:"A charitable lead trust pays charity an income for a term, then the remainder passes to heirs with reduced gift or estate tax.", fits:"Giving to charity for a set term with the remainder going to heirs later.", not:"A charitable remainder trust, where the order is reversed." },
+  r_qprt: { core:"A qualified personal residence trust lets the grantor keep the home for a set term, and the remainder passes at a discounted gift value.", fits:"Transferring a home at a discount while keeping the right to live in it for a term.", not:"A GRAT, which is for appreciating assets generally rather than a residence." },
+  r_slat: { core:"A spousal lifetime access trust is funded by one spouse for the other spouse's benefit and removes assets from both estates, subject to the reciprocal trust rule.", fits:"Giving a spouse access to trust assets while removing them from both estates.", not:"A revocable trust, which gives access but leaves the assets in the estate." },
+  r_crummey: { core:"A Crummey trust makes gifts to a trust qualify for the annual exclusion, because beneficiaries have a temporary right to withdraw them.", fits:"Annual gifts to a trust for children or grandchildren.", not:"A trust with no withdrawal right, which would not qualify for the annual exclusion." },
+  r_gst: { core:"A dynasty (GST-exempt) trust uses the generation-skipping transfer exemption to hold assets across several generations without transfer tax at each.", fits:"Passing wealth to grandchildren and later generations while sheltering it from transfer tax.", not:"An ordinary trust for children, which is taxed again at the next generation." }
+};
+function trustTeach(id, key){
+  const t = key === 'trust' && TRUST_TEACH[id];
+  if(!t) return '';
+  return '<div class="tr-teach"><div class="tr-kicker">Concept</div><p class="tr-core">' + t.core + '</p>'
+    + '<div class="tr-row"><b>Fits when</b> ' + t.fits + '</div>'
+    + '<div class="tr-row"><b>Do not confuse it with</b> ' + t.not + '</div></div>';
+}
+const TRUST_RULES = [
+  { q:"Do you need to remove the assets from the taxable estate?", a:"Only a permanent loss of control moves assets out of the estate." },
+  { q:"Can the client give up control permanently?", a:"A revocable trust keeps control, so it never removes assets from the estate." },
+  { q:"What is the primary goal?", a:"Each goal points to one trust family: spouse, charity, insurance, business or disability." }
+];
 // The plan's scenario run (goal, count, seen) is saved with today's plan log, so it survives a reload and resets the next day.
 function dtwRunSave(){
   try{ const L = planDayLog(); L.treeRun = dtwRun ? { key: dtwRun.key, goal: dtwRun.goal, n: dtwRun.n, seen: dtwRun.seen.slice(), stepId: dtwRun.stepId || null } : null; persist(); }catch(e){}
@@ -44433,7 +44476,7 @@ function dtwRender(inst){
     const res = tree.nodes[w.s.to];
     const clean = w.wrong === 0;
     const am = dtwAfterMsg(w);
-    body = `<div class="dt-result"><div class="dtw-score ${clean ? 'clean' : ''}">${clean ? 'Clean walk, no wrong turns' : w.wrong + ' wrong turn' + (w.wrong === 1 ? '' : 's')}</div><div class="dt-result-title">${res.title}</div><div class="dt-result-body">${res.body}</div></div>
+    body = `<div class="dt-result"><div class="dtw-score ${clean ? 'clean' : ''}">${clean ? 'Clean walk, no wrong turns' : w.wrong + ' wrong turn' + (w.wrong === 1 ? '' : 's')}</div><div class="dt-result-title">${res.title}</div><div class="dt-result-body">${res.body}</div>${trustTeach(w.s.to, key)}</div>
       ${w.s.contrast ? `<div class="dtw-after"><b>Why not the tempting one</b>${escapeHtml(w.s.contrast)}</div>` : ''}${am ? `<div class="dtw-after"><b>Where you go next</b>${escapeHtml(am)}</div>` : ''}
       <div class="dtw-actions">${(dtwRun && dtwRun.key === key) ? (dtwRun.n >= dtwRun.goal ? `<button type="button" class="btn" onclick="dtwRunDone()">Finish this part</button><button type="button" class="btn ghost" onclick="dtwNext('${inst}')">One more</button>` : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario, ${dtwRun.n + 1} of ${dtwRun.goal}</button>`) : `<button type="button" class="btn" onclick="dtwNext('${inst}')">Next scenario</button>`}<button type="button" class="btn ghost" onclick="dtwReplay('${inst}')">Walk it again</button><button type="button" class="btn ghost" onclick="dtwAskTutor('${inst}')">Ask the tutor</button></div>`;
   } else {
@@ -44488,7 +44531,9 @@ function trustStageHtml(w, key, body, logHtml){
     + ((w.resumed && !w.done) ? '<div class="dtw-plan">Picking up where you left off: question ' + (w.step + 1) + ' of ' + total + '.</div>' : '')
     + body
     + '</main>'
-    + '<aside class="tr-path"><div class="tr-kicker">Decision path</div>' + score
+    + '<aside class="tr-path"><div class="tr-kicker">Three questions that decide it</div>'
+    + '<ol class="tr-rules">' + TRUST_RULES.map((r, i) => '<li class="' + (!w.done && i === Math.min(w.step, 2) ? 'on' : '') + '"><b>' + r.q + '</b><span>' + r.a + '</span></li>').join('') + '</ol>'
+    + '<div class="tr-kicker">Decision path</div>' + score
     + '<div class="tr-steps">' + steps + '</div>'
     + (logHtml || '<div class="dtw-side-empty">Your path builds here. Each right answer adds a line, and a wrong turn shows the fact that decides it.</div>')
     + '</aside></div>';
@@ -63155,7 +63200,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000538';
+const BUILD_ID = '2026-11-03.00000539';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
