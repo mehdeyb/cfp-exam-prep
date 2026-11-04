@@ -43816,6 +43816,8 @@ const DECISION_TREES = {
           {label:"Give to charity for a set term, with the remainder going to heirs later", next:'r_clat'},
           {label:"Transfer a home at a discount while keeping the right to live in it for a set term", next:'r_qprt'},
           {label:"Give a spouse access to trust assets while removing them from both estates", next:'r_slat'},
+          {label:"Let the grantor pay the trust's income tax as an extra gift while the assets grow outside the estate", next:'r_idgt'},
+          {label:"Give a minor a gift held in trust until age 21, still using the annual exclusion", next:'r_2503c'},
           {label:"Make gifts to a child's trust that qualify for the annual exclusion", next:'r_crummey'},
           {label:"Skip a generation and shelter assets from transfer tax at each level", next:'r_gst'},
         ] },
@@ -43841,6 +43843,10 @@ const DECISION_TREES = {
         body:"The grantor transfers a home and keeps the right to live in it for a set term. The gift is valued at the discounted remainder interest. If the grantor dies during the term, the home is pulled back into the taxable estate, so the grantor must outlive the term for the plan to work." },
       r_slat: { result:true, title:"Spousal lifetime access trust (SLAT)",
         body:"The grantor gives assets to a trust for a spouse, who can receive distributions, and the assets leave both estates. The gift uses the grantor's exemption. Spouses who create mirror-image trusts for each other risk having them treated as reciprocal and unwound, so the trusts should differ in terms." },
+      r_idgt: { result:true, title:"Intentionally defective grantor trust (IDGT)",
+        body:"Removes the assets from the taxable estate while the grantor pays the trust's income tax. Because the trust is defective for income tax only, that payment is not a separate gift, so the assets keep growing outside the estate." },
+      r_2503c: { result:true, title:"Minor's trust (Section 2503(c))",
+        body:"Holds a gift for a minor until age 21 and still qualifies for the annual gift exclusion without a Crummey withdrawal right, as long as the assets pass to the child at 21 or on the child's death." },
       r_crummey: { result:true, title:"Crummey trust",
         body:"A trust that gives the beneficiary a temporary right to withdraw each gift, usually for 30 to 60 days. Because the beneficiary has a present interest, the gift qualifies for the annual gift tax exclusion even though the funds stay in trust. If the beneficiary does not withdraw, the money stays in the trust." },
       r_gst: { result:true, title:"Dynasty trust (GST-exempt trust)",
@@ -44121,6 +44127,10 @@ function dtRender(treeKey){
 =========================================================== */
 const TREE_SCENARIOS = {
   trust: [
+    { to:'r_idgt', facts:"Carla, 52, has a $9M estate and a fast-growing business interest she wants her son to own. She is willing to give up the assets permanently, and she can comfortably pay the income tax on the trust's earnings herself.",
+      why:["A $9M estate above the exemption makes removing assets from the taxable estate a real goal.", "She is willing to give up the assets permanently, which an irrevocable structure requires.", "Her payment of the trust's income tax is intentional and keeps the growth in the trust, so the trust is intentionally defective for income tax only."] },
+    { to:'r_2503c', facts:"Ben, 45, wants to give $30,000 this year to his 9-year-old granddaughter, and he wants the money held for her until she turns 21. He understands the gift is permanent.",
+      why:["Removing the gift from his estate is the goal, and the gift is permanent.", "He gives up control permanently, which a completed gift requires.", "A minor's trust under Section 2503(c) holds the gift until 21 and still qualifies for the annual exclusion, so no Crummey withdrawal right is needed."] },
     { to:'r_revocable_a', facts:"Maria, 58, owns her home and a brokerage account worth $1.4M. She wants her two children to inherit without probate. Her estate is far below the federal exemption, and she wants to keep full control and be free to change her mind.",
       why:["Her estate is far below the exemption, so getting assets out of the taxable estate is not the goal."] },
     { to:'r_revocable_b', facts:"Dev, 66, has a $32M estate, well above the exemption, and would like it out of his taxable estate. But he says he will not give up the right to revoke or to take assets back if he needs them.",
@@ -44442,6 +44452,8 @@ const TRUST_TEACH = {
   r_qprt: { core:"A qualified personal residence trust lets the grantor keep the home for a set term, and the remainder passes at a discounted gift value.", fits:"Transferring a home at a discount while keeping the right to live in it for a term.", not:"A GRAT, which is for appreciating assets generally rather than a residence." },
   r_slat: { core:"A spousal lifetime access trust is funded by one spouse for the other spouse's benefit and removes assets from both estates, subject to the reciprocal trust rule.", fits:"Giving a spouse access to trust assets while removing them from both estates.", not:"A revocable trust, which gives access but leaves the assets in the estate." },
   r_crummey: { core:"A Crummey trust makes gifts to a trust qualify for the annual exclusion, because beneficiaries have a temporary right to withdraw them.", fits:"Annual gifts to a trust for children or grandchildren.", not:"A trust with no withdrawal right, which would not qualify for the annual exclusion." },
+  r_idgt: { core:"An intentionally defective grantor trust is irrevocable and removes the assets from the estate, but it is deliberately defective for income tax, so the grantor pays the trust's income tax without that payment counting as a gift.", fits:"Fast-growing assets and a grantor who can afford to pay the trust's income tax.", not:"A GRAT, which returns an annuity to the grantor, or a standard irrevocable trust that pays its own income tax." },
+  r_2503c: { core:"A Section 2503(c) minor's trust holds a gift for a child until age 21 and qualifies for the annual exclusion without a Crummey withdrawal right, as long as the assets pass to the child at 21 or on the child's death.", fits:"A gift to a minor where the donor wants to keep control of the money until the child is an adult.", not:"A Crummey trust, which lets the beneficiary withdraw the gift and so needs no age-21 payout." },
   r_gst: { core:"A dynasty (GST-exempt) trust uses the generation-skipping transfer exemption to hold assets across several generations without transfer tax at each.", fits:"Passing wealth to grandchildren and later generations while sheltering it from transfer tax.", not:"An ordinary trust for children, which is taxed again at the next generation." }
 };
 function trustTeach(id, key){
@@ -63209,7 +63221,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000540';
+const BUILD_ID = '2026-11-03.00000541';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
