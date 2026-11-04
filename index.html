@@ -37848,7 +37848,7 @@ function buildStudyPlanCore(minutes){
           if(stale){ top = stale; src = 'upkeep'; }
         }
       }
-      const forcedTrust = localDayKey() === TRUST_TODAY; // the trust tool is in today's plan on this day
+      const forcedTrust = TRUST_DAYS.indexOf(localDayKey()) >= 0; // the trust tool is in today's plan on this day
       const key = forcedTrust ? 'trust' : (pinned || (top ? planTarget('toolKey', top.key) : null)); // pinned for the day once chosen; no pin while nothing qualifies
       const t = key ? RESULT_TOOL_MATCH.find(x => x.key === key) : null;
       if(!t) return null;
@@ -44587,7 +44587,7 @@ function trustFullscreen(on){
   }
 }
 function trustKey(e){ if(e.key === 'Escape') trustFullscreen(false); }
-const TRUST_TODAY = '2026-11-03'; // the trust workspace is today's decision-tool step on this day
+const TRUST_DAYS = ['2026-11-03', '2026-11-04']; // the trust workspace is the decision-tool step on these days
 function openTreeWalk(key){
   dtwRun = null; dtwRunSave();
   showTab('tools'); dtSelectTree(key); dtModeMap[key] = 'walk'; if(!dtwState[key] || dtwState[key].done){ delete dtwState[key]; dtwResume(key); }
@@ -63229,7 +63229,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000542';
+const BUILD_ID = '2026-11-03.00000543';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
