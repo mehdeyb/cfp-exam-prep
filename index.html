@@ -4773,6 +4773,11 @@
   #trustStage .dtw-msg{font-size:15px;}
   #trustStage .dt-result-title{font-size:24px;}
   #trustStage .dtw-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+  #trustStage .tr-coach{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:14px;color:var(--muted);margin:0 0 14px;}
+  #trustStage .tr-level{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);}
+  #trustStage .tr-change{flex-basis:100%;font-size:13px;font-weight:600;color:var(--paper);margin-top:4px;}
+  #trustStage .tr-change.up{color:var(--correct,#2F7A4F);}
+  #trustStage .tr-change.down{color:var(--incorrect,#97551B);}
   #trustStage .tr-rules{list-style:none;margin:10px 0 16px;padding:0;display:grid;gap:8px;}
   #trustStage .tr-rules li{border:1px solid var(--hair);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.45;color:var(--muted);}
   #trustStage .tr-rules li b{display:block;color:var(--paper);font-weight:600;margin-bottom:2px;}
@@ -44525,10 +44530,14 @@ function trustStageHtml(w, key, body, logHtml){
   const count = (dtwRun && dtwRun.key === key) ? 'Scenario ' + Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1)) + ' of ' + dtwRun.goal
     : (w.gen ? dtwConceptStats(key).clean + ' of ' + dtwConceptStats(key).total + ' ideas walked clean' : dtwStats(key).clean + ' of ' + w.total + ' walked clean');
   const score = w.done ? '' : '<span class="tr-score">' + escapeHtml(count) + '</span>';
+  const lc = w.lvlChange;
+  const change = (w.done && lc && lc.from !== lc.to) ? '<div class="tr-change ' + (lc.to > lc.from ? 'up' : 'down') + '">' + (lc.to > lc.from ? 'Clean walk: moving up to ' : 'Two or more misses: stepping back to ') + escapeHtml(DTW_LEVELS[lc.to].name) + '</div>' : '';
+  const coach = w.gen ? '<div class="tr-coach"><span class="tr-level">Level ' + w.level + ' of 4 · ' + escapeHtml(DTW_LEVELS[w.level].name) + '</span><span>' + escapeHtml(DTW_LEVELS[w.level].intent) + '</span>' + change + '</div>' : '';
   return '<div class="tr-body">'
     + '<main class="tr-main">'
     + '<div class="tr-facts"><div class="tr-kicker">Client file' + (w.done ? '' : ' · question ' + (w.step + 1) + ' of ' + total) + '</div><p>' + escapeHtml(w.s.facts) + '</p></div>'
     + ((w.resumed && !w.done) ? '<div class="dtw-plan">Picking up where you left off: question ' + (w.step + 1) + ' of ' + total + '.</div>' : '')
+    + coach
     + body
     + '</main>'
     + '<aside class="tr-path"><div class="tr-kicker">Three questions that decide it</div>'
@@ -63200,7 +63209,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000539';
+const BUILD_ID = '2026-11-03.00000540';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
