@@ -44135,39 +44135,39 @@ function dtRender(treeKey){
 =========================================================== */
 const TREE_SCENARIOS = {
   trust: [
-    { to:'r_idgt', facts:"Carla, 52, has a $9M estate and a fast-growing business interest she wants her son to own. She is willing to give up the assets permanently, and she can comfortably pay the income tax on the trust's earnings herself.",
+    { to:'r_idgt', tier:3, facts:"Carla, 52, has a $9M estate and a fast-growing business interest she wants her son to own. She is willing to give up the assets permanently, and she can comfortably pay the income tax on the trust's earnings herself.",
       why:["A $9M estate above the exemption makes removing assets from the taxable estate a real goal.", "She is willing to give up the assets permanently, which an irrevocable structure requires.", "Her payment of the trust's income tax is intentional and keeps the growth in the trust, so the trust is intentionally defective for income tax only."] },
-    { to:'r_2503c', facts:"Ben, 45, wants to give $30,000 this year to his 9-year-old granddaughter, and he wants the money held for her until she turns 21. He understands the gift is permanent.",
+    { to:'r_2503c', tier:1, facts:"Ben, 45, wants to give $30,000 this year to his 9-year-old granddaughter, and he wants the money held for her until she turns 21. He understands the gift is permanent.",
       why:["Removing the gift from his estate is the goal, and the gift is permanent.", "He gives up control permanently, which a completed gift requires.", "A minor's trust under Section 2503(c) holds the gift until 21 and still qualifies for the annual exclusion, so no Crummey withdrawal right is needed."] },
-    { to:'r_revocable_a', facts:"Maria, 58, owns her home and a brokerage account worth $1.4M. She wants her two children to inherit without probate. Her estate is far below the federal exemption, and she wants to keep full control and be free to change her mind.",
+    { to:'r_revocable_a', tier:1, facts:"Maria, 58, owns her home and a brokerage account worth $1.4M. She wants her two children to inherit without probate. Her estate is far below the federal exemption, and she wants to keep full control and be free to change her mind.",
       why:["Her estate is far below the exemption, so getting assets out of the taxable estate is not the goal."] },
-    { to:'r_revocable_b', facts:"Dev, 66, has a $32M estate, well above the exemption, and would like it out of his taxable estate. But he says he will not give up the right to revoke or to take assets back if he needs them.",
+    { to:'r_revocable_b', tier:3, facts:"Dev, 66, has a $32M estate, well above the exemption, and would like it out of his taxable estate. But he says he will not give up the right to revoke or to take assets back if he needs them.",
       why:["A $32M estate above the exemption makes removing assets from the taxable estate a real goal.","He refuses to give up control, and removing assets requires doing exactly that, so an irrevocable structure cannot work."] },
-    { to:'r_qtip', facts:"Tom, 71, has a $20M estate and is remarried. He wants his wife to receive income for life, but he wants his children from his first marriage to be the ones who receive the principal afterward. He is willing to put the assets in an irrevocable trust.",
+    { to:'r_qtip', tier:3, facts:"Tom, 71, has a $20M estate and is remarried. He wants his wife to receive income for life, but he wants his children from his first marriage to be the ones who receive the principal afterward. He is willing to put the assets in an irrevocable trust.",
       why:["A $20M estate calls for taking assets out of the taxable estate.","He is willing to give up control permanently.","He, not his wife, decides who gets the principal after she dies, which is the QTIP feature."] },
-    { to:'r_a', facts:"Raj, 69, has a $19M estate. After his death he wants his wife to receive income and to hold the power to decide who ultimately receives what is left, including changing her mind later. He accepts an irrevocable trust.",
+    { to:'r_a', tier:3, facts:"Raj, 69, has a $19M estate. After his death he wants his wife to receive income and to hold the power to decide who ultimately receives what is left, including changing her mind later. He accepts an irrevocable trust.",
       why:["The estate is large enough that taxable-estate removal matters.","He accepts permanent loss of control.","The surviving spouse, not the deceased, controls the final beneficiaries: the reverse of a QTIP."] },
-    { to:'r_credit', facts:"Ellen and Mark have $26M combined and each has a full exemption. They want the first spouse's exemption used so that growth on those assets stays out of the survivor's estate. They accept an irrevocable structure.",
+    { to:'r_credit', tier:2, facts:"Ellen and Mark have $26M combined and each has a full exemption. They want the first spouse's exemption used so that growth on those assets stays out of the survivor's estate. They accept an irrevocable structure.",
       why:["Combined assets exceed what one exemption covers.","They accept giving up control permanently.","Using both spouses' exemptions and sheltering future growth is the credit shelter (bypass) goal."] },
-    { to:'r_ilit', facts:"Priya, 62, owns a $5M life insurance policy on her own life. If she owns it at death the proceeds would be added to her estate, which is already over the exemption. She is willing to give up ownership of the policy.",
+    { to:'r_ilit', tier:2, facts:"Priya, 62, owns a $5M life insurance policy on her own life. If she owns it at death the proceeds would be added to her estate, which is already over the exemption. She is willing to give up ownership of the policy.",
       why:["Her estate is over the exemption, so removing assets matters.","She will give up ownership, so an irrevocable structure is available.","The goal is keeping the insurance proceeds out of her taxable estate: an ILIT."] },
-    { to:'r_grat', facts:"Hal, 60, owns a stake in a private company expected to appreciate quickly. He wants to keep an income stream for the next 10 years and pass the growth above the IRS assumed rate to his children while using little or none of his lifetime exemption.",
+    { to:'r_grat', tier:2, facts:"Hal, 60, owns a stake in a private company expected to appreciate quickly. He wants to keep an income stream for the next 10 years and pass the growth above the IRS assumed rate to his children while using little or none of his lifetime exemption.",
       why:["Expected appreciation on a large asset makes estate removal worthwhile.","He is willing to transfer the asset irrevocably.","Keeping an annuity now and shifting future appreciation at a discount is a GRAT."] },
-    { to:'r_sns', facts:"Cara, 64, has an adult son with a developmental disability. He receives SSI and Medicaid. She wants to leave him money for extras without disqualifying him from those benefits. She accepts an irrevocable trust.",
+    { to:'r_sns', tier:1, facts:"Cara, 64, has an adult son with a developmental disability. He receives SSI and Medicaid. She wants to leave him money for extras without disqualifying him from those benefits. She accepts an irrevocable trust.",
       why:["Her estate planning needs to move assets out of her own name.","She will give up control permanently.","Support for a person with a disability without losing means-tested benefits is a special needs trust."] },
-    { to:'r_qdot', facts:"Jun, a U.S. citizen with a $14M estate, is married to a spouse who is not a U.S. citizen. He wants to defer estate tax on what passes to her at his death, and accepts an irrevocable trust with a U.S. trustee.",
+    { to:'r_qdot', tier:1, facts:"Jun, a U.S. citizen with a $14M estate, is married to a spouse who is not a U.S. citizen. He wants to defer estate tax on what passes to her at his death, and accepts an irrevocable trust with a U.S. trustee.",
       why:["A $14M estate makes estate tax planning relevant.","He accepts giving up control permanently.","A non-citizen surviving spouse does not get the unlimited marital deduction directly; a QDOT defers the tax."] },
-    { to:'r_crut', facts:"Ruth, 68, has a $2M stock portfolio with a low basis. She wants to sell it without a large capital gains tax now, keep an income for life, and leave what is left to a charity she supports. She is willing to give up control of the assets permanently.",
+    { to:'r_crut', tier:2, facts:"Ruth, 68, has a $2M stock portfolio with a low basis. She wants to sell it without a large capital gains tax now, keep an income for life, and leave what is left to a charity she supports. She is willing to give up control of the assets permanently.",
       why:["Leaving the remainder to charity removes the assets from her taxable estate.","She gives up control of the assets permanently, which the trust requires.","She keeps income for life and charity takes the remainder, so a charitable remainder trust fits."] },
-    { to:'r_clat', facts:"Owen, 55, expects his investment property to grow sharply. He wants a charity to receive income for 15 years, and then his children to receive the property at a lower transfer tax cost than if he left it to them outright. She is willing to give up control of the assets permanently.",
+    { to:'r_clat', tier:3, facts:"Owen, 55, expects his investment property to grow sharply. He wants a charity to receive income for 15 years, and then his children to receive the property at a lower transfer tax cost than if he left it to them outright. She is willing to give up control of the assets permanently.",
       why:["Growth above the IRS rate removes value from his taxable estate for the children.","He gives up control permanently, which a lead trust requires.","Charity receives the income for a set term, so a charitable lead trust fits."] },
-    { to:'r_qprt', facts:"Carol, 63, wants to give her $1.2M vacation home to her children but keep living there for 10 years. She is willing to give up control of the assets permanently.",
+    { to:'r_qprt', tier:2, facts:"Carol, 63, wants to give her $1.2M vacation home to her children but keep living there for 10 years. She is willing to give up control of the assets permanently.",
       why:["Giving the home to children removes it from the taxable estate.","She gives up ownership, which the trust requires.","The home is transferred at a discounted remainder while she keeps living there, so a QPRT fits."] },
-    { to:'r_slat', facts:"David, 59, has a $25M estate and wants to use his exemption now, with his wife still able to benefit from the assets if needed. She is willing to give up control of the assets permanently.",
+    { to:'r_slat', tier:4, facts:"David, 59, has a $25M estate and wants to use his exemption now, with his wife still able to benefit from the assets if needed. She is willing to give up control of the assets permanently.",
       why:["Removing assets from both estates is the goal.","He gives up control permanently, which an irrevocable trust requires.","His wife can benefit while the assets leave both estates, so a spousal lifetime access trust fits."] },
-    { to:'r_crummey', facts:"Lena wants to give her 16-year-old $18,000 a year toward a trust for him, and she wants the gifts to qualify for the annual exclusion. She is willing to give up control of the assets permanently.",
+    { to:'r_crummey', tier:1, facts:"Lena wants to give her 16-year-old $18,000 a year toward a trust for him, and she wants the gifts to qualify for the annual exclusion. She is willing to give up control of the assets permanently.",
       why:["Annual gifts gradually move value out of her taxable estate.","She gives up control of the gifts permanently.","Gifts must be present interests to qualify for the annual exclusion, so a Crummey withdrawal right fits."] },
-    { to:'r_gst', facts:"Ben, 70, wants his assets to benefit his grandchildren and later generations and to avoid transfer tax at each generation. He has a large estate and plenty of exemption available. She is willing to give up control of the assets permanently.",
+    { to:'r_gst', tier:4, facts:"Ben, 70, wants his assets to benefit his grandchildren and later generations and to avoid transfer tax at each generation. He has a large estate and plenty of exemption available. She is willing to give up control of the assets permanently.",
       why:["Her large estate makes removing assets from the taxable estate worthwhile.","He gives up control permanently, which an irrevocable trust requires.","Skipping generations with GST-exempt assets is the goal, so a dynasty trust fits."] },
   ],
   entity: [
@@ -44271,7 +44271,9 @@ function dtwWhy(w){
 function dtwPick(key, avoidId){
   const l = dtwList(key); if(!l.length) return null;
   const seen = (dtwRun && dtwRun.key === key) ? dtwRun.seen : [];
-  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
+  const lvl = key === 'trust' ? dtwLevelRec(key).lvl : 2;
+  let cyc = ((DATA.dtwCycle || {})[key]) || []; if(cyc.length >= l.length){ cyc = []; try{ DATA.dtwCycle = DATA.dtwCycle || {}; DATA.dtwCycle[key] = []; }catch(e){} }
+  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; if(cyc.indexOf(x.id) >= 0) sc -= 30; sc -= Math.abs(((x.s && x.s.tier) || 2) - lvl) * 2; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
   return scored[0].x;
 }
 
@@ -44300,7 +44302,7 @@ function dtwLevelRec(key){
 }
 function dtwBump(key, wrong){
   const l = dtwLevelRec(key), from = l.lvl;
-  if(wrong === 0){ l.streak = (l.streak || 0) + 1; if(l.streak >= (l.lvl === 1 ? 1 : 2) && l.lvl < 4){ l.lvl++; l.streak = 0; } }
+  if(wrong === 0){ l.streak = (l.streak || 0) + 1; if(l.streak >= 1 && l.lvl < 4){ l.lvl++; l.streak = 0; } }
   else if(wrong >= 2){ l.lvl = Math.max(1, l.lvl - 1); l.streak = 0; }
   else l.streak = 0;
   return { from, to: l.lvl };
@@ -44314,7 +44316,9 @@ function dtwConceptStats(key){
 function dtwPickTarget(key, avoidId){
   const seen = (dtwRun && dtwRun.key === key) ? dtwRun.seen : [];
   const l = dtwResultIds(key).map(id => ({ to:id, id: key + ':' + id, route: dtwRoute(key, id) }));
-  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
+  const lvl = key === 'trust' ? dtwLevelRec(key).lvl : 2;
+  let cyc = ((DATA.dtwCycle || {})[key]) || []; if(cyc.length >= l.length){ cyc = []; try{ DATA.dtwCycle = DATA.dtwCycle || {}; DATA.dtwCycle[key] = []; }catch(e){} }
+  const scored = l.map(x => { const st = dtwStatOf(x.id); let sc = !st ? 3 : (st.lastClean ? 0 : 4) + Math.min(2, st.miss || 0) * 0.3; if(x.id === avoidId) sc -= 5; if(seen.indexOf(x.id) >= 0) sc -= 8; if(cyc.indexOf(x.id) >= 0) sc -= 30; sc -= Math.abs(((x.s && x.s.tier) || 2) - lvl) * 2; return { x, sc: sc + Math.random() * 1.5 }; }).sort((a, b) => b.sc - a.sc);
   return scored[0] ? scored[0].x : null;
 }
 function dtwSiblingResult(key, route){
@@ -44388,7 +44392,8 @@ function dtwAfterMsg(w){
 }
 function dtwStart(inst, avoidId){
   const key = dtKeyOf(inst), pick = dtwPick(key, avoidId); if(!pick) return false;
-  dtwState[inst] = { id: pick.id, s: pick.s, route: pick.route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwList(key).length, n: dtwList(key).findIndex(x => x.id === pick.id) + 1, shown: false, level: 0, gen: false };
+  dtwState[inst] = { id: pick.id, s: pick.s, route: pick.route, step: 0, wrong: 0, wrongHere: [], log: [], done: false, total: dtwList(key).length, n: dtwList(key).findIndex(x => x.id === pick.id) + 1, shown: false, level: key === 'trust' ? dtwLevelRec(key).lvl : 0, gen: false };
+  try{ DATA.dtwCycle = DATA.dtwCycle || {}; const c = DATA.dtwCycle[key] || []; if(c.indexOf(pick.id) < 0) c.push(pick.id); DATA.dtwCycle[key] = c; persist(); }catch(e){}
   return true;
 }
 function dtwChoose(inst, i){
@@ -44408,7 +44413,8 @@ function dtwFinish(inst){
     const prev = DATA.treeWalk[w.id] || { seen: 0, clean: 0, miss: 0 };
     DATA.treeWalk[w.id] = { seen: prev.seen + 1, clean: prev.clean + (w.wrong ? 0 : 1), miss: prev.miss + w.wrong, lastClean: w.wrong === 0, lastAt: Date.now() };
     { const L = planDayLog(); L.trees = L.trees || []; L.trees.push(dtKeyOf(inst)); }
-    if(w.gen){ w.lvlChange = dtwBump(dtKeyOf(inst), w.wrong); setTimeout(() => dtwPrefetch(inst), 50); }
+    if(w.gen || dtKeyOf(inst) === 'trust'){ w.lvlChange = dtwBump(dtKeyOf(inst), w.wrong); }
+    if(w.gen){ setTimeout(() => dtwPrefetch(inst), 50); }
     if(dtwRun && dtwRun.key === dtKeyOf(inst)){ dtwRun.n++; dtwRun.seen.push(w.id); dtwRunSave(); }
     recordStudyDay(); persist();
     try{ renderToolPracticeButtons(); }catch(e){}
@@ -44519,7 +44525,7 @@ function dtwRender(inst){
   if(trustFull){ host.innerHTML = trustStageHtml(w, key, body, logHtml); if(!w.done){ const q = host.querySelector('.dt-question'); if(q){ q.setAttribute('tabindex', '-1'); } } return; }
   host.innerHTML = `<div class="dt-widget dtw">
     <div class="dtw-top">${dtModeSwitch(inst, 'walk')}<span class="dtw-count">${(dtwRun && dtwRun.key === key) ? `Scenario ${Math.min(dtwRun.goal, dtwRun.n + (w.done ? 0 : 1))} of ${dtwRun.goal}` : (w.gen ? `${dtwConceptStats(key).clean} of ${dtwConceptStats(key).total} ideas walked clean` : `${dtwStats(key).clean} of ${w.total} walked clean`)}</span>${inst === 'trust' ? `<button type="button" class="btn ghost dtw-full" onclick="trustFullscreen(true)">Open full screen</button>` : ''}</div>
-    ${w.gen ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
+    ${(w.gen || w.level) ? `<div class="dtw-coach"><b>Level ${w.level} · ${DTW_LEVELS[w.level].name}</b><span>${escapeHtml(DTW_LEVELS[w.level].intent)}</span></div>` : ''}
     ${w.resumed && !w.done ? `<div class="dtw-plan">Picking up where you left off: question ${w.step + 1} of ${w.route.length}.</div>` : ''}${(w.gen && dtwRun && dtwRun.key === key && dtwRun.n === 0 && w.step === 0 && !w.done) ? `<div class="dtw-plan">Your tutor's plan: ${dtwRun.goal} new client${dtwRun.goal === 1 ? '' : 's'}, starting at Level ${w.level}. Clean walks move you up a level. Wrong turns bring in more help.</div>` : ''}
     <div class="dtw-split"><div class="dtw-facts"><div class="dtw-lab">Client facts${(dtwRun && dtwRun.key === key && !w.done) ? ' · ' + escapeHtml(dtwWhy(w)) : ''}</div>${escapeHtml(w.s.facts)}</div>
       <div class="dtw-logs">${logHtml || '<div class="dtw-side-empty">Your path builds here. Each right answer adds a line, and a wrong turn shows the fact that decides it.</div>'}</div>
@@ -44552,7 +44558,7 @@ function trustStageHtml(w, key, body, logHtml){
   const score = w.done ? '' : '<span class="tr-score">' + escapeHtml(count) + '</span>';
   const lc = w.lvlChange;
   const change = (w.done && lc && lc.from !== lc.to) ? '<div class="tr-change ' + (lc.to > lc.from ? 'up' : 'down') + '">' + (lc.to > lc.from ? 'Clean walk: moving up to ' : 'Two or more misses: stepping back to ') + escapeHtml(DTW_LEVELS[lc.to].name) + '</div>' : '';
-  const coach = w.gen ? '<div class="tr-coach"><span class="tr-level">Level ' + w.level + ' of 4 · ' + escapeHtml(DTW_LEVELS[w.level].name) + '</span><span>' + escapeHtml(DTW_LEVELS[w.level].intent) + '</span>' + change + '</div>' : '';
+  const coach = (w.gen || w.level) ? '<div class="tr-coach"><span class="tr-level">Level ' + w.level + ' of 4 · ' + escapeHtml(DTW_LEVELS[w.level].name) + '</span><span>' + escapeHtml(DTW_LEVELS[w.level].intent) + '</span>' + change + '</div>' : '';
   return '<div class="tr-body">'
     + '<main class="tr-main">'
     + '<div class="tr-facts"><div class="tr-kicker">Client file' + (w.done ? '' : ' · question ' + (w.step + 1) + ' of ' + total) + '</div><p>' + escapeHtml(w.s.facts) + '</p></div>'
@@ -63229,7 +63235,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-03.00000543';
+const BUILD_ID = '2026-11-04.00000544';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
