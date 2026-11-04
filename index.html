@@ -56665,6 +56665,8 @@ function takeAutoDir(q, isCorrect){
   }
   if(!isCorrect) return cur > 1 ? 'easier' : null;
   if(cur >= 3) return null;
+  // Already answered before (this answer is already counted, so more than one): the idea is known, and a harder rewrite of it only repeats it.
+  if(getSpacedStat(DATA.questionStats, q.id).seen > 1) return null;
   const log = DATA.recentAccuracyLog || [];
   const acc = log.length >= 5 ? log.filter(e => e.correct).length / log.length : null;
   let info = null; try{ info = diagnosisModel().byQ[q.id]; }catch(e){}
@@ -63235,7 +63237,7 @@ async function requestDurableStorage(){
   try{ history.replaceState({ cfpRoot:1 }, ''); }catch(e){}
 })();
 
-const BUILD_ID = '2026-11-04.00000545';
+const BUILD_ID = '2026-11-04.00000546';
 let _updChecking = false;
 // Fetches the newest page straight from the network (skipping every cache), saves it as the copy the app opens next, then reloads.
 // A plain reload would be answered from the saved copy, which is why updates used to take a couple of launches.
